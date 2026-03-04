@@ -1102,6 +1102,14 @@
 		justify-content: center;
 		padding: 2rem 1rem;
 		min-height: calc(100vh - 4rem);
+		-webkit-user-select: none;
+		user-select: none;
+	}
+
+	.page-container input,
+	.page-container textarea {
+		-webkit-user-select: text;
+		user-select: text;
 	}
 
 	.content-wrapper {
