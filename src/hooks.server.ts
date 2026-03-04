@@ -1,6 +1,7 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import { handle as authHandle } from './auth';
 import type { Handle } from '@sveltejs/kit';
+import { prisma } from '$lib/server/prisma';
 
 const authorization: Handle = async ({ event, resolve }) => {
 	const session = await event.locals.auth();
@@ -33,6 +34,12 @@ const authorization: Handle = async ({ event, resolve }) => {
 		// @ts-expect-error - Custom property
 		role: session.user.role
 	};
+
+	// Fire-and-forget lastActive update
+	prisma.user.update({
+		where: { id: session.user.id },
+		data: { lastActive: new Date() }
+	}).catch((err) => console.error('Failed to update lastActive', err));
 
 	if (event.url.pathname.startsWith('/admin') && event.locals.user.role !== 'ADMIN') {
 		return new Response(null, {

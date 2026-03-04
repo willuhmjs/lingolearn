@@ -36,6 +36,7 @@ model User {
   accounts      Account[]
   cefrLevel     String            @default("A1")
   hasOnboarded  Boolean           @default(false)
+  lastActive    DateTime          @default(now())
 }
 
 model Account {

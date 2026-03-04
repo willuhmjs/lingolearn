@@ -19,7 +19,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 				email: true,
 				role: true,
 				cefrLevel: true,
-				createdAt: true
+				createdAt: true,
+				lastActive: true
 			}
 		}),
 		getSiteSettings()

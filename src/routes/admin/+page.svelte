@@ -186,6 +186,7 @@
 						<th>Role</th>
 						<th>CEFR Level</th>
 						<th>Created At</th>
+						<th>Last Active</th>
 						<th></th>
 					</tr>
 				</thead>
@@ -193,13 +194,21 @@
 					{#each data.users as user}
 						<tr>
 							<td class="id-cell">{user.id}</td>
-							<td>{user.username}</td>
+							<td>
+								<div style="display: flex; align-items: center; gap: 0.5rem;">
+									{#if new Date().getTime() - new Date(user.lastActive).getTime() < 24 * 60 * 60 * 1000}
+										<span class="active-indicator" title="Active recently"></span>
+									{/if}
+									{user.username}
+								</div>
+							</td>
 							<td>{user.email || 'N/A'}</td>
 							<td>
 								<span class="role-badge" class:role-admin={user.role === 'ADMIN'}>{user.role}</span>
 							</td>
 							<td>{user.cefrLevel}</td>
 							<td>{new Date(user.createdAt).toLocaleDateString()}</td>
+							<td>{new Date(user.lastActive).toLocaleString()}</td>
 							<td>
 								<button class="edit-btn" on:click={() => openEditModal(user)}>Edit</button>
 							</td>
@@ -310,6 +319,14 @@
 	.admin-header p {
 		color: #6b7280;
 		margin: 0;
+	}
+
+	.active-indicator {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		background-color: #22c55e;
+		border-radius: 50%;
 	}
 
 	.seed-card {
