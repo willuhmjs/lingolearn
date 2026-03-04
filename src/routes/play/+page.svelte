@@ -1093,8 +1093,8 @@
 	:global(body) {
 		margin: 0;
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-		background-color: #f8fafc;
-		color: #334155;
+		background-color: var(--bg-color, #f8fafc);
+		color: var(--text-color, #334155);
 	}
 
 	.page-container {
@@ -1134,11 +1134,11 @@
 	}
 
 	.card {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border-radius: 12px;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 		padding: 2rem;
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--card-border, #e2e8f0);
 		margin-bottom: 1.5rem;
 	}
 
@@ -1361,11 +1361,12 @@
 	.form-group textarea {
 		width: 100%;
 		padding: 0.75rem;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--input-border, #cbd5e1);
 		border-radius: 8px;
 		font-family: inherit;
 		font-size: 1rem;
-		color: #0f172a;
+		color: var(--input-text, #0f172a);
+		background: var(--input-bg, #ffffff);
 		box-sizing: border-box;
 		resize: vertical;
 		transition: border-color 0.15s, box-shadow 0.15s;
@@ -1562,9 +1563,9 @@
 	.mode-btn {
 		padding: 0.625rem 1.25rem;
 		border-radius: 8px;
-		border: 2px solid #e2e8f0;
-		background: #ffffff;
-		color: #475569;
+		border: 2px solid var(--card-border, #e2e8f0);
+		background: var(--card-bg, #ffffff);
+		color: var(--text-color, #475569);
 		font-size: 0.9rem;
 		font-weight: 500;
 		cursor: pointer;
@@ -1651,10 +1652,10 @@
 	.mc-choice-btn {
 		width: 100%;
 		padding: 1rem 1.25rem;
-		border: 2px solid #e2e8f0;
+		border: 2px solid var(--card-border, #e2e8f0);
 		border-radius: 10px;
-		background: #ffffff;
-		color: #1e293b;
+		background: var(--card-bg, #ffffff);
+		color: var(--text-color, #1e293b);
 		font-size: 1.05rem;
 		font-weight: 500;
 		text-align: left;

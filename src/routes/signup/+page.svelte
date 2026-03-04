@@ -86,7 +86,7 @@
 	:global(body) {
 		margin: 0;
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-		background-color: #f3f4f6;
+		background-color: var(--bg-color, #f3f4f6);
 	}
 
 	.page-container {
@@ -101,11 +101,12 @@
 	.auth-card {
 		width: 100%;
 		max-width: 400px;
-		background-color: #ffffff;
+		background-color: var(--card-bg, #ffffff);
 		border-radius: 12px;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 		padding: 2.5rem 2rem;
 		box-sizing: border-box;
+		border: 1px solid var(--card-border, transparent);
 	}
 
 	.auth-header {
@@ -117,7 +118,7 @@
 		margin: 0 0 0.5rem;
 		font-size: 1.75rem;
 		font-weight: 700;
-		color: #111827;
+		color: var(--text-color, #111827);
 	}
 
 	.auth-header p {
@@ -151,9 +152,9 @@
 		justify-content: center;
 		gap: 0.75rem;
 		padding: 0.75rem 1rem;
-		background-color: #ffffff;
-		color: #374151;
-		border: 1px solid #d1d5db;
+		background-color: var(--card-bg, #ffffff);
+		color: var(--text-color, #374151);
+		border: 1px solid var(--card-border, #d1d5db);
 		border-radius: 6px;
 		font-size: 1rem;
 		font-weight: 500;
@@ -206,10 +207,11 @@
 	.form-group input {
 		width: 100%;
 		padding: 0.75rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--input-border, #d1d5db);
 		border-radius: 6px;
 		font-size: 1rem;
-		color: #111827;
+		color: var(--input-text, #111827);
+		background-color: var(--input-bg, #ffffff);
 		box-sizing: border-box;
 		transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 	}

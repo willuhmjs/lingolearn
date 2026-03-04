@@ -74,8 +74,84 @@
 	:global(body) {
 		margin: 0;
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-		background-color: #f9fafb;
-		color: #111827;
+		background-color: var(--bg-color, #f9fafb);
+		color: var(--text-color, #111827);
+		transition: background-color 0.3s, color 0.3s;
+	}
+
+	:global(html[data-theme="dark"]) {
+		--bg-color: #111827;
+		--text-color: #f9fafb;
+		--header-bg: #1f2937;
+		--header-border: #374151;
+		--card-bg: #1f2937;
+		--card-border: #374151;
+		--link-color: #d1d5db;
+		--link-hover-bg: #374151;
+		--brand-color: #60a5fa;
+		--input-bg: #374151;
+		--input-border: #4b5563;
+		--input-text: #f9fafb;
+	}
+
+	:global(html[data-theme="bavarian"]) {
+		--bg-color: #f4ecd8;
+		--text-color: #3e2723;
+		--header-bg: #eaddc0;
+		--header-border: #c8b79b;
+		--card-bg: #fff8eb;
+		--card-border: #d7ccc8;
+		--link-color: #5d4037;
+		--link-hover-bg: #d7ccc8;
+		--brand-color: #8d6e63;
+		--input-bg: #fff8eb;
+		--input-border: #a1887f;
+		--input-text: #3e2723;
+		font-family: "Georgia", serif;
+	}
+
+	:global(html[data-theme="dark"] .info-card),
+	:global(html[data-theme="dark"] .password-card),
+	:global(html[data-theme="dark"] .theme-card),
+	:global(html[data-theme="dark"] .card) {
+		background: var(--card-bg) !important;
+		border-color: var(--card-border) !important;
+	}
+
+	:global(html[data-theme="dark"] h1),
+	:global(html[data-theme="dark"] h2),
+	:global(html[data-theme="dark"] h3),
+	:global(html[data-theme="dark"] .info-value) {
+		color: var(--text-color) !important;
+	}
+
+	:global(html[data-theme="dark"] input),
+	:global(html[data-theme="dark"] select) {
+		background: var(--input-bg) !important;
+		border-color: var(--input-border) !important;
+		color: var(--input-text) !important;
+	}
+
+	:global(html[data-theme="bavarian"] .info-card),
+	:global(html[data-theme="bavarian"] .password-card),
+	:global(html[data-theme="bavarian"] .theme-card),
+	:global(html[data-theme="bavarian"] .card) {
+		background: var(--card-bg) !important;
+		border-color: var(--card-border) !important;
+	}
+
+	:global(html[data-theme="bavarian"] h1),
+	:global(html[data-theme="bavarian"] h2),
+	:global(html[data-theme="bavarian"] h3),
+	:global(html[data-theme="bavarian"] .info-value) {
+		color: var(--text-color) !important;
+	}
+
+	:global(html[data-theme="bavarian"] input),
+	:global(html[data-theme="bavarian"] select) {
+		background: var(--input-bg) !important;
+		border-color: var(--input-border) !important;
+		color: var(--input-text) !important;
 	}
 
 	.app-container {
@@ -85,8 +161,9 @@
 	}
 
 	header {
-		background-color: #ffffff;
+		background-color: var(--header-bg, #ffffff);
 		box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+		border-bottom: 1px solid var(--header-border, transparent);
 		position: sticky;
 		top: 0;
 		z-index: 10;

@@ -10,6 +10,7 @@ declare global {
 				cefrLevel: string;
 				hasOnboarded: boolean;
 				role: string;
+				theme: string;
 			} | null;
 		}
 		// interface PageData {}

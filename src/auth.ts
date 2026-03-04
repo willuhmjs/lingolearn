@@ -66,6 +66,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 				session.user.hasOnboarded = user.hasOnboarded;
 				// @ts-expect-error - Custom property
 				session.user.role = user.role;
+				// @ts-expect-error - Custom property
+				session.user.theme = user.theme;
 			}
 			return session;
 		}

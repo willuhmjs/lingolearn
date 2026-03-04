@@ -37,6 +37,7 @@ model User {
   cefrLevel     String            @default("A1")
   hasOnboarded  Boolean           @default(false)
   lastActive    DateTime          @default(now())
+  theme         String            @default("default")
 }
 
 model Account {

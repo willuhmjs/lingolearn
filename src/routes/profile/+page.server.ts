@@ -3,20 +3,25 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { getSiteSettings } from '$lib/server/settings';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
-	const user = await prisma.user.findUnique({
-		where: { id: locals.user.id },
-		select: { passwordHash: true }
-	});
+	const [user, settings] = await Promise.all([
+		prisma.user.findUnique({
+			where: { id: locals.user.id },
+			select: { passwordHash: true }
+		}),
+		getSiteSettings()
+	]);
 
 	return {
 		user: locals.user,
-		hasPassword: !!user?.passwordHash
+		hasPassword: !!user?.passwordHash,
+		localLoginEnabled: settings.localLoginEnabled
 	};
 };
 
@@ -29,6 +34,11 @@ export const actions: Actions = {
 	updatePassword: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(303, '/login');
+		}
+
+		const settings = await getSiteSettings();
+		if (!settings.localLoginEnabled) {
+			return fail(403, { error: 'Password updates are disabled because local login is disabled.' });
 		}
 
 		const formData = await request.formData();
@@ -67,6 +77,26 @@ export const actions: Actions = {
 		});
 
 		return { success: 'Password updated successfully' };
+	},
+
+	updateTheme: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
+
+		const formData = await request.formData();
+		const theme = formData.get('theme');
+
+		if (!theme || typeof theme !== 'string' || !['default', 'dark', 'bavarian'].includes(theme)) {
+			return fail(400, { themeError: 'Invalid theme selected' });
+		}
+
+		await prisma.user.update({
+			where: { id: locals.user.id },
+			data: { theme }
+		});
+
+		return { themeSuccess: 'Theme updated successfully' };
 	},
 
 	deleteAccount: async ({ locals, cookies }) => {

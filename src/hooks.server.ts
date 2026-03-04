@@ -32,7 +32,9 @@ const authorization: Handle = async ({ event, resolve }) => {
 		// @ts-expect-error - Custom property
 		hasOnboarded: session.user.hasOnboarded,
 		// @ts-expect-error - Custom property
-		role: session.user.role
+		role: session.user.role,
+		// @ts-expect-error - Custom property
+		theme: session.user.theme || 'default'
 	};
 
 	// Fire-and-forget lastActive update
@@ -62,7 +64,12 @@ const authorization: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	return resolve(event);
+	return resolve(event, {
+		transformPageChunk: ({ html }) => {
+			const theme = event.locals.user?.theme || 'default';
+			return html.replace('data-theme=""', `data-theme="${theme}"`).replace('<html lang="en">', `<html lang="en" data-theme="${theme}">`);
+		}
+	});
 };
 
 export const handle = sequence(authHandle, authorization);

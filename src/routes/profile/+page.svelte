@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
 
 	export let data: PageData;
 	export let form;
@@ -29,38 +30,71 @@
 		</div>
 	</section>
 
-	<section class="password-card">
-		<h2>Update Password</h2>
-
-		{#if form?.error}
-			<div class="alert alert-error">{form.error}</div>
+	<section class="theme-card">
+		<h2>Theme Settings</h2>
+		
+		{#if form?.themeSuccess}
+			<div class="alert alert-success">{form.themeSuccess}</div>
 		{/if}
-		{#if form?.success}
-			<div class="alert alert-success">{form.success}</div>
+		{#if form?.themeError}
+			<div class="alert alert-error">{form.themeError}</div>
 		{/if}
 
-		<form method="POST" action="?/updatePassword">
-			{#if data.hasPassword}
-				<div class="form-group">
-					<label for="currentPassword">Current Password</label>
-					<input type="password" id="currentPassword" name="currentPassword" required />
-				</div>
-			{/if}
-
+		<form method="POST" action="?/updateTheme" use:enhance={() => {
+			return async ({ result, update }) => {
+				if (result.type === 'success') {
+					const select = document.getElementById('theme') as HTMLSelectElement;
+					document.documentElement.setAttribute('data-theme', select.value);
+				}
+				await update();
+			};
+		}}>
 			<div class="form-group">
-				<label for="newPassword">New Password</label>
-				<input type="password" id="newPassword" name="newPassword" required minlength="8" />
+				<label for="theme">Select Theme</label>
+				<select id="theme" name="theme" class="theme-select">
+					<option value="default" selected={data.user?.theme === 'default'}>Default</option>
+					<option value="dark" selected={data.user?.theme === 'dark'}>Dark</option>
+					<option value="bavarian" selected={data.user?.theme === 'bavarian'}>Historic German (Bavarian)</option>
+				</select>
 			</div>
-
-			<button type="submit" class="submit-btn">Update Password</button>
+			<button type="submit" class="submit-btn">Update Theme</button>
 		</form>
 	</section>
+
+	{#if data.localLoginEnabled}
+		<section class="password-card">
+			<h2>Update Password</h2>
+
+			{#if form?.error}
+				<div class="alert alert-error">{form.error}</div>
+			{/if}
+			{#if form?.success}
+				<div class="alert alert-success">{form.success}</div>
+			{/if}
+
+			<form method="POST" action="?/updatePassword">
+				{#if data.hasPassword}
+					<div class="form-group">
+						<label for="currentPassword">Current Password</label>
+						<input type="password" id="currentPassword" name="currentPassword" required />
+					</div>
+				{/if}
+
+				<div class="form-group">
+					<label for="newPassword">New Password</label>
+					<input type="password" id="newPassword" name="newPassword" required minlength="8" />
+				</div>
+
+				<button type="submit" class="submit-btn">Update Password</button>
+			</form>
+		</section>
+	{/if}
 
 	<section class="delete-card">
 		<h2>Danger Zone</h2>
 		<p class="warning-text">Deleting your account is permanent and cannot be undone. All your progress, vocabulary, and settings will be lost.</p>
 		
-		<button class="delete-btn" on:click={() => document.getElementById('delete-modal')?.showModal()}>
+		<button class="delete-btn" on:click={() => (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal()}>
 			Delete Account
 		</button>
 
@@ -105,8 +139,9 @@
 	}
 
 	.info-card,
-	.password-card {
-		background: #ffffff;
+	.password-card,
+	.theme-card {
+		background: var(--card-bg, #ffffff);
 		border: 1px solid #e5e7eb;
 		border-radius: 0.75rem;
 		padding: 1.5rem;
@@ -114,7 +149,8 @@
 	}
 
 	.info-card h2,
-	.password-card h2 {
+	.password-card h2,
+	.theme-card h2 {
 		font-size: 1.125rem;
 		font-weight: 600;
 		color: #111827;
@@ -190,19 +226,21 @@
 		margin-bottom: 0.375rem;
 	}
 
-	.form-group input {
+	.form-group input,
+	.theme-select {
 		width: 100%;
 		padding: 0.625rem 0.75rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--input-border, #d1d5db);
 		border-radius: 0.5rem;
 		font-size: 0.875rem;
-		color: #111827;
-		background: #ffffff;
+		color: var(--input-text, #111827);
+		background: var(--input-bg, #ffffff);
 		transition: border-color 0.2s, box-shadow 0.2s;
 		box-sizing: border-box;
 	}
 
-	.form-group input:focus {
+	.form-group input:focus,
+	.theme-select:focus {
 		outline: none;
 		border-color: #2563eb;
 		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -226,7 +264,7 @@
 	}
 
 	.delete-card {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border: 1px solid #fecaca;
 		border-radius: 0.75rem;
 		padding: 1.5rem;
@@ -274,7 +312,7 @@
 	}
 
 	.modal-box {
-		background: white;
+		background: var(--card-bg, #ffffff);
 		padding: 1.5rem;
 		border-radius: 1rem;
 		max-width: 400px;
@@ -305,9 +343,9 @@
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
-		border: 1px solid #d1d5db;
-		background: white;
-		color: #374151;
+		border: 1px solid var(--card-border, #d1d5db);
+		background: var(--card-bg, #ffffff);
+		color: var(--text-color, #374151);
 	}
 
 	.btn:hover {

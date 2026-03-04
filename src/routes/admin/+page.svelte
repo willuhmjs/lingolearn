@@ -333,7 +333,7 @@
 	}
 
 	.seed-card {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border: 1px solid #e5e7eb;
 		border-radius: 0.75rem;
 		padding: 1.5rem;
@@ -415,7 +415,7 @@
 	}
 
 	.table-wrapper {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border: 1px solid #e5e7eb;
 		border-radius: 0.75rem;
 		overflow-x: auto;
@@ -508,7 +508,7 @@
 	}
 
 	.modal {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border-radius: 0.75rem;
 		width: 100%;
 		max-width: 520px;
@@ -569,11 +569,11 @@
 	.form-group select {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--input-border, #d1d5db);
 		border-radius: 0.375rem;
 		font-size: 0.875rem;
-		color: #111827;
-		background: #ffffff;
+		color: var(--input-text, #111827);
+		background: var(--input-bg, #ffffff);
 		transition: border-color 0.15s;
 		box-sizing: border-box;
 	}

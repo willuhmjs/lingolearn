@@ -7,6 +7,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(302, '/login');
 	}
 
+	if (!locals.user.hasOnboarded) {
+		throw redirect(302, '/onboarding');
+	}
+
 	const user = locals.user;
 
 	const vocabularies = await prisma.userVocabulary.findMany({

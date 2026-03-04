@@ -1,14 +1,16 @@
 <script lang="ts">
+	export let data: any;
+
 	let messages: { role: string; content: string }[] = [];
 	let userInput = '';
 	let loading = false;
 	let error = '';
-	let completed = false;
-	let completionData: { level?: string; feedback?: string } = {};
-	let lastLevelGuess = 'A1';
+	let completed = data?.user?.hasOnboarded || false;
+	let completionData: { level?: string; feedback?: string } = { level: data?.user?.cefrLevel };
+	let lastLevelGuess = data?.user?.cefrLevel || 'A1';
 
 	// Path selection: 'choose' | 'beginner' | 'test'
-	let selectedPath: 'choose' | 'beginner' | 'test' = 'choose';
+	let selectedPath: 'choose' | 'beginner' | 'test' = completed ? 'test' : 'choose';
 	let isSubmittingBeginner = false;
 
 	const startPlacementTest = () => {
@@ -316,6 +318,9 @@
 						<button class="btn btn-success" on:click={() => window.location.href = '/'}>
 							Go to Dashboard
 						</button>
+						<button class="btn btn-primary" on:click={() => window.location.href = '/play'}>
+							Start Playing
+						</button>
 					</div>
 				</div>
 			{:else}
@@ -374,8 +379,8 @@
 	:global(body) {
 		margin: 0;
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-		background-color: #f8fafc;
-		color: #334155;
+		background-color: var(--bg-color, #f8fafc);
+		color: var(--text-color, #334155);
 	}
 
 	.onboarding-container {
@@ -415,10 +420,10 @@
 		display: flex;
 		flex-direction: column;
 		flex: 1;
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		border-radius: 12px;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--card-border, #e2e8f0);
 		overflow: hidden;
 	}
 
@@ -495,7 +500,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		background-color: #f8fafc;
+		background-color: var(--bg-color, #f8fafc);
 	}
 
 	.message-wrapper {
@@ -538,9 +543,9 @@
 	}
 
 	.message-bubble.assistant {
-		background-color: #ffffff;
-		color: #1e293b;
-		border: 1px solid #e2e8f0;
+		background-color: var(--card-bg, #ffffff);
+		color: var(--text-color, #1e293b);
+		border: 1px solid var(--card-border, #e2e8f0);
 		border-bottom-left-radius: 0.25rem;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	}
@@ -570,17 +575,19 @@
 		display: flex;
 		gap: 0.75rem;
 		padding: 1rem;
-		background-color: #ffffff;
-		border-top: 1px solid #e2e8f0;
+		background-color: var(--card-bg, #ffffff);
+		border-top: 1px solid var(--card-border, #e2e8f0);
 	}
 
 	.chat-input {
 		flex: 1;
 		padding: 0.75rem 1rem;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--input-border, #cbd5e1);
 		border-radius: 0.5rem;
 		font-size: 1rem;
 		font-family: inherit;
+		color: var(--input-text, #111827);
+		background-color: var(--input-bg, #ffffff);
 		transition: border-color 0.15s, box-shadow 0.15s;
 	}
 
@@ -707,8 +714,8 @@
 		gap: 0.75rem;
 		padding: 2rem 1.5rem;
 		border-radius: 16px;
-		border: 2px solid #e2e8f0;
-		background: #ffffff;
+		border: 2px solid var(--card-border, #e2e8f0);
+		background: var(--card-bg, #ffffff);
 		cursor: pointer;
 		transition: all 0.25s;
 		text-align: center;
@@ -752,7 +759,7 @@
 
 	.beginner-card {
 		border-color: #bbf7d0;
-		background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+		background: linear-gradient(135deg, #f0fdf4 0%, var(--card-bg, #ffffff) 100%);
 	}
 
 	.beginner-card:hover:not(:disabled) {
@@ -766,7 +773,7 @@
 
 	.test-card {
 		border-color: #bfdbfe;
-		background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+		background: linear-gradient(135deg, #eff6ff 0%, var(--card-bg, #ffffff) 100%);
 	}
 
 	.test-card:hover:not(:disabled) {

@@ -88,9 +88,9 @@
 	}
 
 	.btn-secondary {
-		background-color: #ffffff;
-		color: #374151;
-		border: 1px solid #d1d5db;
+		background-color: var(--card-bg, #ffffff);
+		color: var(--text-color, #374151);
+		border: 1px solid var(--card-border, #d1d5db);
 	}
 
 	.btn-secondary:hover {
@@ -107,7 +107,7 @@
 	}
 
 	.feature-card {
-		background: #ffffff;
+		background: var(--card-bg, #ffffff);
 		padding: 2rem;
 		border-radius: 0.75rem;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
