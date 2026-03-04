@@ -208,7 +208,10 @@
 							</td>
 							<td>{user.cefrLevel}</td>
 							<td>{new Date(user.createdAt).toLocaleDateString()}</td>
-							<td>{new Date(user.lastActive).toLocaleString()}</td>
+							<td>
+								{new Date(user.lastActive).toLocaleDateString()}<br />
+								<span style="font-size: 0.85em; color: #6b7280;">{new Date(user.lastActive).toLocaleTimeString()}</span>
+							</td>
 							<td>
 								<button class="edit-btn" on:click={() => openEditModal(user)}>Edit</button>
 							</td>
