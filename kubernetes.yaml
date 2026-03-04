@@ -1,0 +1,141 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: lernendeutsch-postgresql
+  namespace: lernendeutsch
+spec:
+  instances: 3
+  storage:
+    size: 50Gi
+  bootstrap:
+    initdb:
+      database: lernendeutsch
+      owner: lernendeutsch
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lernendeutsch-secrets
+  namespace: lernendeutsch
+type: Opaque
+stringData:
+  AUTH_SECRET: ""
+  AUTH_GOOGLE_ID: ""
+  AUTH_GOOGLE_SECRET: ""
+  DEFAULT_LLM_BASE_URL: ""
+  DEFAULT_LLM_API_KEY: ""
+  DEFAULT_LLM_MODEL: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lernendeutsch
+  namespace: lernendeutsch
+  labels:
+    app: lernendeutsch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lernendeutsch
+  template:
+    metadata:
+      labels:
+        app: lernendeutsch
+    spec:
+      containers:
+        - name: lernendeutsch
+          image: ghcr.io/willuhmjs/lernendeutsch:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-postgresql-app
+                  key: uri
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: AUTH_SECRET
+            - name: AUTH_GOOGLE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: AUTH_GOOGLE_ID
+                  optional: true
+            - name: AUTH_GOOGLE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: AUTH_GOOGLE_SECRET
+                  optional: true
+            - name: DEFAULT_LLM_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: DEFAULT_LLM_BASE_URL
+                  optional: true
+            - name: DEFAULT_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: DEFAULT_LLM_API_KEY
+                  optional: true
+            - name: DEFAULT_LLM_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: lernendeutsch-secrets
+                  key: DEFAULT_LLM_MODEL
+                  optional: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: "sticky-session"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.secure: "true"
+  labels:
+    app: lernendeutsch
+  name: lernendeutsch
+  namespace: lernendeutsch
+spec:
+  ports:
+    - name: website
+      port: 3000
+  selector:
+    app: lernendeutsch
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: cs-dns-cluster
+  name: lernendeutsch
+  namespace: lernendeutsch
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: german.will.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: lernendeutsch
+                port:
+                  number: 3000
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - german.will.net
+      secretName: lernendeutsch-tls

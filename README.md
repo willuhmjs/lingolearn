@@ -47,28 +47,3 @@ docker run -d \
   -e AUTH_SECRET="your-secret" \
   ghcr.io/willuhmjs/lernendeutsch:latest
 ```
-
-### Kubernetes
-
-1. Create the secrets:
-
-```sh
-kubectl create secret generic lernendeutsch-secrets \
-  --from-literal=DATABASE_URL="postgresql://user:pass@host:5432/lernendeutsch" \
-  --from-literal=AUTH_SECRET="your-secret" \
-  --from-literal=AUTH_GOOGLE_ID="" \
-  --from-literal=AUTH_GOOGLE_SECRET="" \
-  --from-literal=DEFAULT_LLM_BASE_URL="" \
-  --from-literal=DEFAULT_LLM_API_KEY="" \
-  --from-literal=DEFAULT_LLM_MODEL=""
-```
-
-2. Apply the manifests:
-
-```sh
-kubectl apply -f kubernetes.yaml
-```
-
-This creates a `Deployment` (1 replica) and a `ClusterIP` `Service` on port 80 routing to the app on port 3000. Expose it externally with an Ingress or LoadBalancer as needed.
-
-> **Note:** The app container runs Prisma migrations and seeds the database on startup. Ensure `DATABASE_URL` points to an accessible PostgreSQL instance.
