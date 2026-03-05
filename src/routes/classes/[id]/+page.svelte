@@ -305,10 +305,12 @@
 										</a>
 										<button
 											type="button"
-											class="btn-duo btn-secondary assignment-play-btn text-center"
+											class="copy-link-icon-btn"
+											aria-label="Copy assignment link"
+											title="Copy link"
 											on:click={() => copyAssignmentLink(assignment.id)}
 										>
-											{copiedAssignmentId === assignment.id ? '&#10003; Copied!' : '&#128279; Copy Link'}
+											{copiedAssignmentId === assignment.id ? '✓' : '🔗'}
 										</button>
 									{/if}
 									<a
@@ -763,6 +765,27 @@
 	.assignment-play-btn {
 		white-space: nowrap;
 		flex-shrink: 0;
+	}
+
+	.copy-link-icon-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		flex-shrink: 0;
+		border-radius: 0.75rem;
+		border: 3px solid #e2e8f0;
+		background: var(--card-bg, #f8fafc);
+		cursor: pointer;
+		font-size: 1rem;
+		line-height: 1;
+		transition: border-color 0.15s, background 0.15s;
+	}
+
+	.copy-link-icon-btn:hover {
+		border-color: #94a3b8;
+		background: #f1f5f9;
 	}
 
 	.assignment-actions-row {

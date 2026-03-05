@@ -47,7 +47,7 @@
 				<span>Target Score: {assignment.targetScore}</span>
 			</div>
 			<button type="button" class="copy-link-btn" on:click={copyLink}>
-				{#if copied}&#10003; Copied!{:else}&#128279; Copy Link{/if}
+				{#if copied}✓ Copied!{:else}🔗 Copy Link{/if}
 			</button>
 		</div>
 		<div class="pass-rate-box">
