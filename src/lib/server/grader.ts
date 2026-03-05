@@ -239,7 +239,7 @@ export function mapLevelToElo(level: string): number {
 	return levels[level.toUpperCase()] || 1200;
 }
 
-const K_FACTOR = 32;
+const K_FACTOR = 256;
 
 function calculateNewElo(currentElo: number, score: number, baseDifficulty: number, gameMode: string): number {
 	const expectedScore = 1 / (1 + Math.pow(10, (baseDifficulty - currentElo) / 400));

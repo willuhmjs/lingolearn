@@ -63,6 +63,7 @@ r<script lang="ts">
 	}
 
 	const GENERAL_TIPS = [
+		"Originally, LingoLearn was called 'LernenDeutsch' -- but we let the other languages stick around!",
 		'Spaced repetition (SRS) is proven to make vocabulary stick up to 3× faster.',
 		'Reading just 15 minutes a day in your target language dramatically speeds up fluency.',
 		'Context beats memorization — learning words in sentences helps retention by ~40%.',
@@ -852,6 +853,18 @@ r<script lang="ts">
 									);
 								}
 								challenge.challengeText = extractedText;
+								
+								if (challenge.gameMode === 'fill-blank') {
+									const blanksCount = (extractedText.match(/___/g) || []).length;
+									if (blanksCount > fillBlankAnswers.length) {
+										const newAnswers = [...fillBlankAnswers];
+										while (newAnswers.length < blanksCount) {
+											newAnswers.push('');
+										}
+										fillBlankAnswers = newAnswers;
+									}
+								}
+
 								// Only stop loading once we have actual text to show
 								if (loading) loading = false;
 							}
@@ -1181,23 +1194,29 @@ r<script lang="ts">
 
 		<!-- Assignment context banner -->
 		{#if assignment && assignmentProgress}
-			<div class="mb-6 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 {assignmentProgress.passed ? 'bg-green-50 border-2 border-green-300' : 'bg-blue-50 border-2 border-blue-200'}">
-				<div class="flex items-center gap-3 min-w-0">
-					<span class="text-2xl">{assignmentProgress.passed ? '🏆' : '📋'}</span>
-					<div class="min-w-0">
-						<p class="font-extrabold text-gray-800 truncate">{assignment.title}</p>
-						<p class="text-sm font-bold text-gray-500">{assignment.class?.name ?? 'Class'} · {assignment.gamemode.replace(/-/g, ' ')}</p>
+			<div class="card card-duo assignment-banner {assignmentProgress.passed ? 'passed' : 'active'}">
+				<div class="assignment-info">
+					<div class="assignment-icon">
+						{assignmentProgress.passed ? '🏆' : '📋'}
+					</div>
+					<div class="assignment-details">
+						<h2 class="assignment-title">{assignment.title}</h2>
+						<div class="assignment-meta">
+							<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
+							<span class="meta-badge gamemode">{assignment.gamemode.replace(/-/g, ' ')}</span>
+						</div>
 					</div>
 				</div>
-				<div class="flex items-center gap-3 shrink-0">
-					<div class="text-right">
-						<p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Progress</p>
-						<p class="text-2xl font-extrabold {assignmentProgress.passed ? 'text-green-600' : 'text-blue-600'}">
-							{assignmentProgress.score}<span class="text-base text-gray-400">/{assignmentProgress.targetScore}</span>
+				<div class="assignment-actions">
+					<div class="progress-box">
+						<p class="progress-label">Progress</p>
+						<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
+							{assignmentProgress.score}<span class="progress-target">/{assignmentProgress.targetScore}</span>
 						</p>
 					</div>
-					<a href="/classes/{assignment.classId}" class="text-xs font-bold text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-						Back to Class →
+					<a href="/classes/{assignment.classId}" class="btn-duo btn-secondary back-btn">
+						Back to Class
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
 					</a>
 				</div>
 			</div>
@@ -1219,7 +1238,7 @@ r<script lang="ts">
 				<div class="mode-selector">
 					<span class="mode-label dark:text-slate-400">Game Mode:</span>
 					{#if assignment}
-						<p class="font-bold text-blue-600 capitalize">{assignment.gamemode.replace(/-/g, ' ')} <span class="text-gray-400 font-normal text-sm">(set by assignment)</span></p>
+						<p class="font-bold text-blue-600 dark:text-blue-400 capitalize">{assignment.gamemode.replace(/-/g, ' ')} <span class="text-gray-400 dark:text-gray-500 font-normal text-sm">(set by assignment)</span></p>
 					{:else}
 					<div class="mode-buttons">
 						<!-- Easiest first -->
@@ -1381,7 +1400,7 @@ r<script lang="ts">
 						{#if challenge.gameMode !== 'multiple-choice'}
 							<button 
 								type="submit" 
-								disabled={submitting || !challenge?.targetSentence || !challenge?.targetedVocabularyIds || !challenge?.targetedGrammarIds || (challenge.gameMode === 'fill-blank' ? (fillBlankAnswers.length === 0 || fillBlankAnswers.some(a => !a.trim())) : (challenge.gameMode === 'multiple-choice' ? !selectedChoice : !userInput.trim()))}
+								disabled={submitting || !challenge?.targetSentence || (challenge.gameMode === 'fill-blank' ? (fillBlankAnswers.length === 0 || fillBlankAnswers.some(a => !a.trim())) : (challenge.gameMode === 'multiple-choice' ? !selectedChoice : !userInput.trim()))}
 								class="btn-duo btn-primary submit-btn"
 								style="margin-top: 1.5rem; width: 100%;"
 							>
@@ -2329,4 +2348,199 @@ r<script lang="ts">
 		background-color: #fee2e2;
 		color: #991b1b;
 	}
+
+	/* Assignment Banner Styles */
+	.assignment-banner {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1.25rem;
+	}
+
+	@media (min-width: 640px) {
+		.assignment-banner {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+		}
+	}
+
+	.assignment-banner.passed {
+		background-color: #f0fdf4;
+		border-color: #bbf7d0;
+	}
+	
+	.assignment-banner.active {
+		background-color: #eff6ff;
+		border-color: #bfdbfe;
+	}
+
+	.assignment-info {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		min-width: 0;
+	}
+
+	.assignment-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		font-size: 1.5rem;
+		flex-shrink: 0;
+	}
+
+	.assignment-banner.passed .assignment-icon {
+		background-color: #dcfce7;
+	}
+
+	.assignment-banner.active .assignment-icon {
+		background-color: #dbeafe;
+	}
+
+	.assignment-details {
+		min-width: 0;
+	}
+
+	.assignment-title {
+		font-weight: 700;
+		font-size: 1.125rem;
+		margin: 0;
+		color: #1e293b;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.assignment-meta {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	.meta-badge {
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.125rem 0.5rem;
+		border-radius: 0.25rem;
+		background-color: rgba(255, 255, 255, 0.6);
+		color: #475569;
+	}
+
+	.meta-badge.gamemode {
+		text-transform: capitalize;
+	}
+
+	.assignment-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		width: 100%;
+	}
+
+	@media (min-width: 640px) {
+		.assignment-actions {
+			flex-direction: row;
+			align-items: center;
+			width: auto;
+		}
+	}
+
+	.progress-box {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		background-color: rgba(255, 255, 255, 0.5);
+		border-radius: 0.75rem;
+		padding: 0.5rem 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.progress-box {
+			flex-direction: column;
+			align-items: flex-end;
+			background-color: transparent;
+			padding: 0;
+		}
+	}
+
+	.progress-label {
+		font-size: 0.65rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #64748b;
+		margin: 0 0 0.125rem 0;
+	}
+
+	.progress-value {
+		font-size: 1.5rem;
+		font-weight: 800;
+		line-height: 1;
+		margin: 0;
+	}
+
+	.progress-value.passed { color: #16a34a; }
+	.progress-value.active { color: #2563eb; }
+
+	.progress-target {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #94a3b8;
+		margin-left: 0.125rem;
+	}
+
+	.back-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
+		padding: 0.625rem 1rem;
+		font-size: 0.875rem;
+	}
+	
+	/* Dark mode support for assignment banner if implemented */
+	:global(.dark) .assignment-banner.passed {
+		background-color: rgba(6, 78, 59, 0.2);
+		border-color: rgba(6, 95, 70, 0.5);
+	}
+	
+	:global(.dark) .assignment-banner.active {
+		background-color: rgba(30, 58, 138, 0.2);
+		border-color: rgba(30, 64, 175, 0.5);
+	}
+	
+	:global(.dark) .assignment-banner.passed .assignment-icon {
+		background-color: rgba(6, 78, 59, 0.5);
+	}
+	
+	:global(.dark) .assignment-banner.active .assignment-icon {
+		background-color: rgba(30, 58, 138, 0.5);
+	}
+	
+	:global(.dark) .assignment-title {
+		color: #f1f5f9;
+	}
+	
+	:global(.dark) .meta-badge {
+		background-color: rgba(30, 41, 59, 0.6);
+		color: #94a3b8;
+	}
+	
+	:global(.dark) .progress-box {
+		background-color: rgba(30, 41, 59, 0.5);
+	}
+	
+	@media (min-width: 640px) {
+		:global(.dark) .progress-box {
+			background-color: transparent;
+		}
+	}
+	
+	:global(.dark) .progress-value.passed { color: #34d399; }
+	:global(.dark) .progress-value.active { color: #60a5fa; }
 </style>

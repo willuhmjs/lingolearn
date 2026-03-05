@@ -8,7 +8,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	try {
-		const { name, description } = await request.json();
+		const { name, description, primaryLanguage } = await request.json();
 
 		if (!name || typeof name !== 'string') {
 			return json({ error: 'Name is required' }, { status: 400 });
@@ -43,6 +43,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			data: {
 				name,
 				description: description || null,
+				primaryLanguage: primaryLanguage || 'international',
 				inviteCode,
 				members: {
 					create: {

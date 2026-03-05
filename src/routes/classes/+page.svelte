@@ -9,6 +9,7 @@
 
 	let createName = '';
 	let createDescription = '';
+	let createLanguage = 'international';
 	let isCreating = false;
 	let createError = '';
 
@@ -32,7 +33,7 @@
 			const res = await fetch('/api/classes/create', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: createName, description: createDescription })
+				body: JSON.stringify({ name: createName, description: createDescription, primaryLanguage: createLanguage })
 			});
 			const result = await res.json();
 			if (!res.ok) {
@@ -40,6 +41,7 @@
 			} else {
 				createName = '';
 				createDescription = '';
+				createLanguage = 'international';
 				await invalidateAll();
 			}
 		} catch (e) {
@@ -108,6 +110,14 @@
 						placeholder="What is this class about?"
 						rows="3"
 					></textarea>
+				</div>
+				<div class="field">
+					<label for="language">Primary Language</label>
+					<select id="language" bind:value={createLanguage}>
+						<option value="international">International</option>
+						<option value="de">German</option>
+						<option value="es">Spanish</option>
+					</select>
 				</div>
 				{#if createError}
 					<p class="form-error">{createError}</p>
@@ -286,7 +296,8 @@
 	}
 
 	.field input,
-	.field textarea {
+	.field textarea,
+	.field select {
 		width: 100%;
 		padding: 0.75rem 1rem;
 		border-radius: 1rem;
@@ -302,7 +313,8 @@
 	}
 
 	.field input:focus,
-	.field textarea:focus {
+	.field textarea:focus,
+	.field select:focus {
 		border-color: #3b82f6;
 	}
 

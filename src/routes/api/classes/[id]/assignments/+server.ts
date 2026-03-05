@@ -9,10 +9,10 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 
 	try {
 		const classId = params.id;
-		const { title, description, gamemode, targetScore, dueDate } = await request.json();
+		const { title, description, gamemode, language, targetScore, dueDate } = await request.json();
 
-		if (!title || !gamemode || targetScore === undefined) {
-			return json({ error: 'Title, gamemode, and targetScore are required' }, { status: 400 });
+		if (!title || !gamemode || !language || targetScore === undefined) {
+			return json({ error: 'Title, gamemode, language, and targetScore are required' }, { status: 400 });
 		}
 
 		// Verify the user is a TEACHER in this class
@@ -36,6 +36,7 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 				title,
 				description: description || null,
 				gamemode,
+				language,
 				targetScore: Number(targetScore),
 				dueDate: dueDate ? new Date(dueDate) : null
 			}

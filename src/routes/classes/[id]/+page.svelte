@@ -13,6 +13,7 @@
 	let createAssignmentDescription = '';
 	let createAssignmentMode = 'multiple-choice';
 	let createAssignmentTargetScore = 10;
+	let createAssignmentLanguage = data.classDetails.primaryLanguage;
 	let isCreatingAssignment = false;
 	let assignmentError = '';
 
@@ -32,7 +33,8 @@
 					title: createAssignmentTitle,
 					description: createAssignmentDescription || undefined,
 					gamemode: createAssignmentMode,
-					targetScore: createAssignmentTargetScore
+					targetScore: createAssignmentTargetScore,
+					language: createAssignmentLanguage
 				})
 			});
 			const result = await res.json();
@@ -41,6 +43,7 @@
 			} else {
 				createAssignmentTitle = '';
 				createAssignmentDescription = '';
+				createAssignmentLanguage = data.classDetails.primaryLanguage;
 				await invalidateAll();
 			}
 		} catch (e) {
@@ -214,6 +217,14 @@
 								</select>
 							</div>
 							<div class="field field-small">
+								<label for="language">Language</label>
+								<select id="language" bind:value={createAssignmentLanguage}>
+									<option value="international">International</option>
+									<option value="de">German</option>
+									<option value="es">Spanish</option>
+								</select>
+							</div>
+							<div class="field field-small">
 								<label for="targetScore">Pass Score</label>
 								<input
 									type="number"
@@ -275,12 +286,22 @@
 										{/if}
 									</div>
 								</div>
-								<a
-									href="/play?assignmentId={assignment.id}"
-									class="btn-duo {passed ? 'btn-secondary' : 'btn-primary'} assignment-play-btn"
-								>
-									{passed ? 'Play Again' : myScore ? 'Keep Playing' : 'Start'}
-								</a>
+								<div class="assignment-actions-row">
+									{#if currentUserRole === 'TEACHER'}
+										<a
+											href="/classes/{classDetails.id}/assignments/{assignment.id}"
+											class="btn-duo btn-secondary assignment-play-btn text-center"
+										>
+											View Details
+										</a>
+									{/if}
+									<a
+										href="/play?assignmentId={assignment.id}"
+										class="btn-duo {passed ? 'btn-secondary' : 'btn-primary'} assignment-play-btn text-center"
+									>
+										{passed ? 'Play Again' : myScore ? 'Keep Playing' : 'Start'}
+									</a>
+								</div>
 							</div>
 
 							<!-- Teacher: per-student progress -->
@@ -726,6 +747,19 @@
 	.assignment-play-btn {
 		white-space: nowrap;
 		flex-shrink: 0;
+	}
+
+	.assignment-actions-row {
+		display: flex;
+		flex-direction: row;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+	
+	@media (min-width: 640px) {
+		.assignment-actions-row {
+			margin-top: 0;
+		}
 	}
 
 	/* Student Progress */

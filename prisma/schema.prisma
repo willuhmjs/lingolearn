@@ -198,12 +198,13 @@ enum ClassRole {
 }
 
 model Class {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  inviteCode  String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  inviteCode      String   @unique
+  primaryLanguage String   @default("international")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   members     ClassMember[]
   assignments Assignment[]
@@ -228,6 +229,7 @@ model Assignment {
   title       String
   description String?
   gamemode    String
+  language    String
   targetScore Int
   dueDate     DateTime?
   createdAt   DateTime  @default(now())

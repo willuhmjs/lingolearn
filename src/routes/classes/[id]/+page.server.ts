@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	// Check if the current user is a member of this class
-	const currentUserMember = classDetails.members.find((m) => m.userId === locals.user.id);
+	const currentUserMember = classDetails.members.find((m) => m.userId === locals.user?.id);
 	
 	if (!currentUserMember) {
 		error(403, 'You are not a member of this class');
