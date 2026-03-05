@@ -9,13 +9,34 @@
 	$: currentUserRole = data.currentUserRole;
 
 	// Assignment Creation
+	let showCreateAssignmentModal = false;
 	let createAssignmentTitle = '';
 	let createAssignmentDescription = '';
 	let createAssignmentMode = 'multiple-choice';
 	let createAssignmentTargetScore = 10;
 	let createAssignmentLanguage = data.classDetails.primaryLanguage;
+	let createAssignmentTargetCefrLevel = '';
+	let createAssignmentTopic = '';
+	let createAssignmentTargetGrammar = '';
 	let isCreatingAssignment = false;
 	let assignmentError = '';
+
+	function openCreateAssignmentModal() {
+		showCreateAssignmentModal = true;
+		createAssignmentTitle = '';
+		createAssignmentDescription = '';
+		createAssignmentMode = 'multiple-choice';
+		createAssignmentTargetScore = 10;
+		createAssignmentLanguage = data.classDetails.primaryLanguage;
+		createAssignmentTargetCefrLevel = '';
+		createAssignmentTopic = '';
+		createAssignmentTargetGrammar = '';
+		assignmentError = '';
+	}
+
+	function closeCreateAssignmentModal() {
+		showCreateAssignmentModal = false;
+	}
 
 	async function handleCreateAssignment() {
 		if (!createAssignmentTitle.trim()) {
@@ -24,6 +45,11 @@
 		}
 		isCreatingAssignment = true;
 		assignmentError = '';
+
+		const targetGrammar = createAssignmentTargetGrammar
+			.split(',')
+			.map(g => g.trim())
+			.filter(g => g.length > 0);
 
 		try {
 			const res = await fetch(`/api/classes/${classDetails.id}/assignments`, {
@@ -34,16 +60,17 @@
 					description: createAssignmentDescription || undefined,
 					gamemode: createAssignmentMode,
 					targetScore: createAssignmentTargetScore,
-					language: createAssignmentLanguage
+					language: createAssignmentLanguage,
+					targetCefrLevel: createAssignmentTargetCefrLevel || undefined,
+					topic: createAssignmentTopic || undefined,
+					targetGrammar: targetGrammar.length > 0 ? targetGrammar : undefined
 				})
 			});
 			const result = await res.json();
 			if (!res.ok) {
 				assignmentError = result.error || 'Failed to create assignment';
 			} else {
-				createAssignmentTitle = '';
-				createAssignmentDescription = '';
-				createAssignmentLanguage = data.classDetails.primaryLanguage;
+				closeCreateAssignmentModal();
 				await invalidateAll();
 			}
 		} catch (e) {
@@ -187,78 +214,14 @@
 	<div class="content-grid" in:fly={{ y: 20, duration: 400, delay: 200 }}>
 		<!-- Main Content: Assignments -->
 		<div class="main-col">
-			<h2 class="section-title">Assignments</h2>
-
-			<!-- Create Assignment Form (TEACHER only) -->
-			{#if currentUserRole === 'TEACHER'}
-				<div class="card-duo create-form-card">
-					<h3 class="create-form-title">Create New Assignment</h3>
-					<form on:submit|preventDefault={handleCreateAssignment} class="create-form">
-						<div class="create-form-row">
-							<div class="field">
-								<label for="title">Title <span class="required">*</span></label>
-								<input
-									type="text"
-									id="title"
-									bind:value={createAssignmentTitle}
-									placeholder="e.g. Verb practice week 3"
-									required
-								/>
-							</div>
-							<div class="field">
-								<label for="desc">Description (optional)</label>
-								<input
-									type="text"
-									id="desc"
-									bind:value={createAssignmentDescription}
-									placeholder="Any notes for students"
-							/>
-							</div>
-						</div>
-						<div class="create-form-bottom">
-							<div class="field">
-								<label for="gamemode">Game Mode</label>
-								<select id="gamemode" bind:value={createAssignmentMode}>
-									<option value="multiple-choice">Multiple Choice</option>
-									<option value="native-to-target">Native to Target</option>
-									<option value="target-to-native">Target to Native</option>
-									<option value="fill-blank">Fill in the Blank</option>
-								</select>
-							</div>
-							<div class="field field-small">
-								<label for="language">Language</label>
-								<select id="language" bind:value={createAssignmentLanguage}>
-									<option value="international">International</option>
-									<option value="de">German</option>
-									<option value="es">Spanish</option>
-								</select>
-							</div>
-							<div class="field field-small">
-								<label for="targetScore">Pass Score</label>
-								<input
-									type="number"
-									id="targetScore"
-									bind:value={createAssignmentTargetScore}
-									min="1"
-									max="100"
-								/>
-							</div>
-							<div class="create-form-submit">
-								<button
-									type="submit"
-									disabled={isCreatingAssignment}
-									class="btn-duo btn-primary"
-								>
-									{isCreatingAssignment ? 'Creating...' : 'Create'}
-								</button>
-							</div>
-						</div>
-					</form>
-					{#if assignmentError}
-						<p class="form-error">{assignmentError}</p>
-					{/if}
-				</div>
-			{/if}
+			<div class="section-header">
+				<h2 class="section-title">Assignments</h2>
+				{#if currentUserRole === 'TEACHER'}
+					<button class="btn-duo btn-primary btn-small" on:click={openCreateAssignmentModal}>
+						+ New Assignment
+					</button>
+				{/if}
+			</div>
 
 			<!-- Assignments List -->
 			{#if classDetails.assignments.length > 0}
@@ -409,6 +372,120 @@
 		</div>
 	</div>
 </div>
+
+{#if showCreateAssignmentModal}
+	<div class="modal-backdrop" on:click={closeCreateAssignmentModal} transition:fly={{ duration: 200, opacity: 0 }}>
+		<div class="modal-content card-duo" on:click|stopPropagation>
+			<div class="modal-header">
+				<h3 class="create-form-title">Create New Assignment</h3>
+				<button class="btn-close" on:click={closeCreateAssignmentModal}>&times;</button>
+			</div>
+			
+			<form on:submit|preventDefault={handleCreateAssignment} class="create-form">
+				<div class="create-form-row">
+					<div class="field">
+						<label for="title">Title <span class="required">*</span></label>
+						<input
+							type="text"
+							id="title"
+							bind:value={createAssignmentTitle}
+							placeholder="e.g. Verb practice week 3"
+							required
+						/>
+					</div>
+					<div class="field">
+						<label for="desc">Description (optional)</label>
+						<input
+							type="text"
+							id="desc"
+							bind:value={createAssignmentDescription}
+							placeholder="Any notes for students"
+					/>
+					</div>
+				</div>
+
+				<div class="create-form-row">
+					<div class="field">
+						<label for="topic">Topic (optional)</label>
+						<input
+							type="text"
+							id="topic"
+							bind:value={createAssignmentTopic}
+							placeholder="e.g. Ordering food, Traveling"
+						/>
+					</div>
+					<div class="field">
+						<label for="grammar">Target Grammar Rules (optional)</label>
+						<input
+							type="text"
+							id="grammar"
+							bind:value={createAssignmentTargetGrammar}
+							placeholder="e.g. Past tense, Dative case (comma separated)"
+						/>
+					</div>
+				</div>
+
+				<div class="create-form-bottom">
+					<div class="field">
+						<label for="gamemode">Game Mode</label>
+						<select id="gamemode" bind:value={createAssignmentMode}>
+							<option value="multiple-choice">Multiple Choice</option>
+							<option value="native-to-target">Native to Target</option>
+							<option value="target-to-native">Target to Native</option>
+							<option value="fill-blank">Fill in the Blank</option>
+						</select>
+					</div>
+					<div class="field field-small">
+						<label for="language">Language</label>
+						<select id="language" bind:value={createAssignmentLanguage}>
+							<option value="international">International</option>
+							<option value="de">German</option>
+							<option value="es">Spanish</option>
+						</select>
+					</div>
+					<div class="field field-small">
+						<label for="targetCefrLevel">CEFR Level</label>
+						<select id="targetCefrLevel" bind:value={createAssignmentTargetCefrLevel}>
+							<option value="">Use Student's Level</option>
+							<option value="A1">A1</option>
+							<option value="A2">A2</option>
+							<option value="B1">B1</option>
+							<option value="B2">B2</option>
+							<option value="C1">C1</option>
+							<option value="C2">C2</option>
+						</select>
+					</div>
+					<div class="field field-small">
+						<label for="targetScore">Pass Score</label>
+						<input
+							type="number"
+							id="targetScore"
+							bind:value={createAssignmentTargetScore}
+							min="1"
+							max="100"
+						/>
+					</div>
+				</div>
+				
+				<div class="modal-actions">
+					<button type="button" class="btn-duo btn-secondary" on:click={closeCreateAssignmentModal}>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={isCreatingAssignment}
+						class="btn-duo btn-primary"
+					>
+						{isCreatingAssignment ? 'Creating...' : 'Create Assignment'}
+					</button>
+				</div>
+			</form>
+			{#if assignmentError}
+				<p class="form-error">{assignmentError}</p>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <style>
 	.class-detail-container {
@@ -1009,5 +1086,83 @@
 	.action-remove:hover {
 		background-color: #fef2f2;
 		color: #ef4444;
+	}
+
+	/* Modal Styles */
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		border-bottom: 2px solid var(--card-border, #e2e8f0);
+		padding-bottom: 0.5rem;
+	}
+
+	.section-header .section-title {
+		border-bottom: none;
+		margin-bottom: 0;
+		padding-bottom: 0;
+	}
+
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(15, 23, 42, 0.6);
+		backdrop-filter: blur(4px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 1rem;
+	}
+
+	.modal-content {
+		width: 100%;
+		max-width: 600px;
+		max-height: 90vh;
+		overflow-y: auto;
+		background: var(--card-bg, #ffffff);
+		padding: 2rem;
+		border-radius: 1.5rem;
+		position: relative;
+		box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.modal-header .create-form-title {
+		margin-bottom: 0;
+	}
+
+	.btn-close {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		line-height: 1;
+		color: #94a3b8;
+		cursor: pointer;
+		padding: 0.5rem;
+		transition: color 0.2s;
+	}
+
+	.btn-close:hover {
+		color: #0f172a;
+	}
+
+	.modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 1rem;
+		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 2px solid var(--card-border, #e2e8f0);
 	}
 </style>

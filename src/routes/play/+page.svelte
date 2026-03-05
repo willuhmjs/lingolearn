@@ -819,7 +819,10 @@ r<script lang="ts">
 			const res = await fetch('/api/generate-lesson', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ gameMode }),
+				body: JSON.stringify({ 
+					gameMode,
+					assignmentId: assignment?.id ?? undefined
+				}),
 				signal: generateController.signal
 			});
 			

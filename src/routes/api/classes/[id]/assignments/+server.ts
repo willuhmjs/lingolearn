@@ -9,7 +9,7 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 
 	try {
 		const classId = params.id;
-		const { title, description, gamemode, language, targetScore, dueDate } = await request.json();
+		const { title, description, gamemode, language, targetScore, targetCefrLevel, dueDate, topic, targetGrammar } = await request.json();
 
 		if (!title || !gamemode || !language || targetScore === undefined) {
 			return json({ error: 'Title, gamemode, language, and targetScore are required' }, { status: 400 });
@@ -47,7 +47,10 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 				gamemode,
 				language,
 				targetScore: Number(targetScore),
-				dueDate: dueDate ? new Date(dueDate) : null
+				targetCefrLevel: targetCefrLevel || null,
+				dueDate: dueDate ? new Date(dueDate) : null,
+				topic: topic || null,
+				targetGrammar: Array.isArray(targetGrammar) ? targetGrammar : []
 			}
 		});
 

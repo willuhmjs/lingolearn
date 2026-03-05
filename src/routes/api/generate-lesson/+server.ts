@@ -19,12 +19,30 @@ export async function POST(event) {
 	try {
 		const body = await request.json().catch(() => ({}));
 		const gameMode: GameMode = body.gameMode || 'native-to-target';
-		const activeLangName = locals.user.activeLanguage?.name || '${activeLangName}';
+		const assignmentId = body.assignmentId;
+		const activeLangName = locals.user.activeLanguage?.name || 'Target Language';
 		const userId = locals.user.id;
 		const activeLanguageId = locals.user.activeLanguage?.id;
 
+		let targetCefrLevel = locals.user.cefrLevel || 'A1';
+		let assignmentTopic: string | null = null;
+		let assignmentTargetGrammar: string[] = [];
+
+		if (assignmentId) {
+			const assignment = await prisma.assignment.findUnique({
+				where: { id: assignmentId }
+			}) as any;
+			if (assignment && assignment.targetCefrLevel) {
+				targetCefrLevel = assignment.targetCefrLevel;
+			}
+			if (assignment) {
+				assignmentTopic = assignment.topic || null;
+				assignmentTargetGrammar = assignment.targetGrammar || [];
+			}
+		}
+
 		const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-		const userLevelIndex = cefrLevels.indexOf(locals.user.cefrLevel || 'A1');
+		const userLevelIndex = cefrLevels.indexOf(targetCefrLevel);
 		const allowedLevels = cefrLevels.slice(0, userLevelIndex + 1);
 
 		// Target a larger pool (10-15 words) so the LLM has choices for thematic coherence
@@ -239,6 +257,9 @@ export async function POST(event) {
 			? `Generate EXACTLY ONE simple, natural ${activeLangName} sentence (no run-ons/semi-colons) as a challenge.`
 			: `Generate a natural ${activeLangName} challenge (complex sentence or exactly 2 STRICTLY related, narrative sentences forming a micro-story) suitable for ${userLevel}.`;
 
+		const topicConstraint = assignmentTopic ? `\nCRITICAL THEMATIC CONSTRAINT: The sentence(s) MUST be about the topic: "${assignmentTopic}". This is a mandatory requirement.` : '';
+		const grammarConstraint = assignmentTargetGrammar.length > 0 ? `\nCRITICAL GRAMMAR CONSTRAINT: The sentence(s) MUST incorporate the following grammar rule(s): ${assignmentTargetGrammar.join(', ')}. This is a mandatory requirement.` : '';
+
 		// Build mode-specific prompt parts
 		let modeInstruction: string;
 		let vocabTagInstruction: string;
@@ -368,7 +389,7 @@ MULTI-WORD MEANINGS: If a ${activeLangName} word's English meaning contains mult
 		const systemPrompt = `Act as an expert ${activeLangName} tutor for a ${userLevel} student. Output ONLY strictly valid JSON, no markdown or extra text.
 ${beginnerGuidance}
 
-${sentenceConstraint}
+${sentenceConstraint}${topicConstraint}${grammarConstraint}
 Compose the ${activeLangName} text focusing on the "Mastered" and "Learning" vocabulary provided below. You are ALLOWED to use other natural ${activeLangName} vocabulary appropriate for a ${userLevel} student, even if it is not in the provided lists. However, you MUST ABSOLUTELY AVOID using any custom or user-provided words that are not explicitly present in the provided vocabulary lists below. If you think the user might have learned a specific obscure word elsewhere but it is not in these lists, do not use it.
 CRITICAL THEMATIC INJECTION: The "Learning Concepts" list below is a POOL of words. You MUST choose ONE word from it to establish a central theme. Then, try to incorporate other words from the Learning list ONLY if they fit naturally within that theme.
 CRITICAL QUALITY INSTRUCTION: Prioritize sentence quality, natural flow, and logic over using every single word provided in the lists. Do NOT try to force or jam words together if they don't make sense. You DO NOT have to use all the words provided, just pick the ones that fit naturally and make logical sense.
