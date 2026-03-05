@@ -3,10 +3,16 @@ import { SrsState } from '@prisma/client';
 import { prisma } from '$lib/server/prisma';
 import { generateChatCompletion } from '$lib/server/llm';
 import { recordLoadTime } from '$lib/server/loadTimeStat';
+import { generateLessonRateLimiter } from '$lib/server/ratelimit';
 
 export type GameMode = 'native-to-target' | 'target-to-native' | 'fill-blank' | 'multiple-choice';
 
-export async function POST({ request, locals }) {
+export async function POST(event) {
+	const { request, locals } = event;
+	if (await generateLessonRateLimiter.isLimited(event)) {
+		return json({ error: 'Too many requests. Limit is 10/min, 200/day.' }, { status: 429 });
+	}
+
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}

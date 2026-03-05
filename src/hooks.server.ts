@@ -3,11 +3,27 @@ import { handle as authHandle } from './auth';
 import type { Handle } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { initLoadTimeStat } from '$lib/server/loadTimeStat';
+import { apiRateLimiter, authRateLimiter } from '$lib/server/ratelimit';
 
 // Hydrate rolling load-time average from DB on startup
 initLoadTimeStat();
 
 const authorization: Handle = async ({ event, resolve }) => {
+	// Rate limiting logic
+	if (event.url.pathname.startsWith('/api')) {
+		if (await apiRateLimiter.isLimited(event)) {
+			return new Response(JSON.stringify({ error: 'Too Many Requests' }), {
+				status: 429,
+				headers: { 'Content-Type': 'application/json', 'Retry-After': '60' }
+			});
+		}
+	} else if (event.url.pathname.startsWith('/login') || event.url.pathname.startsWith('/signup')) {
+		if (await authRateLimiter.isLimited(event)) {
+			// SvelteKit form actions handle JSON differently, but simple Response is fine if standard page/api
+			return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '60' } });
+		}
+	}
+
 	const session = await event.locals.auth();
 
 	if (!session || !session.user || !session.user.id) {

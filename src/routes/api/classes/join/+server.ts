@@ -14,6 +14,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Invite code is required' }, { status: 400 });
 		}
 
+		// Enforce user membership limit
+		const joinedClassesCount = await prisma.classMember.count({
+			where: { userId: locals.user.id }
+		});
+
+		if (joinedClassesCount >= 20) {
+			return json({ error: 'Maximum classes joined limit reached (20)' }, { status: 403 });
+		}
+
 		const targetClass = await prisma.class.findUnique({
 			where: { inviteCode },
 			include: {
@@ -21,6 +30,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					where: {
 						userId: locals.user.id
 					}
+				},
+				_count: {
+					select: { members: true }
 				}
 			}
 		});
@@ -31,6 +43,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		if (targetClass.members.length > 0) {
 			return json({ error: 'You are already a member of this class' }, { status: 400 });
+		}
+
+		if (targetClass._count.members >= 20) {
+			return json({ error: 'This class has reached the maximum number of members (20)' }, { status: 403 });
 		}
 
 		const classMember = await prisma.classMember.create({

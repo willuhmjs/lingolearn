@@ -14,6 +14,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Name is required' }, { status: 400 });
 		}
 
+		// Enforce max class ownership (20)
+		const ownedClassesCount = await prisma.classMember.count({
+			where: {
+				userId: locals.user.id,
+				role: 'TEACHER'
+			}
+		});
+
+		if (ownedClassesCount >= 20) {
+			return json({ error: 'Maximum class ownership limit reached (20)' }, { status: 403 });
+		}
+
 		// Generate a 6-character alphanumeric invite code
 		const generateInviteCode = () => {
 			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

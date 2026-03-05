@@ -271,7 +271,7 @@
 							<div class="assignment-header">
 								<div class="assignment-info">
 									<div class="assignment-title-row">
-										<h4>{assignment.title}</h4>
+										<h4 class="assignment-title">{assignment.title}</h4>
 										{#if passed}
 											<span class="badge badge-green">&#10003; Passed</span>
 										{:else if myScore}
@@ -296,6 +296,12 @@
 									</div>
 								</div>
 								<div class="assignment-actions-row">
+									<a
+										href="/play?assignmentId={assignment.id}"
+										class="btn-duo {passed ? 'btn-secondary' : 'btn-primary'} assignment-play-btn text-center"
+									>
+										{passed ? 'Play Again' : myScore ? 'Keep Playing' : 'Start'}
+									</a>
 									{#if currentUserRole === 'TEACHER'}
 										<a
 											href="/classes/{classDetails.id}/assignments/{assignment.id}"
@@ -305,20 +311,13 @@
 										</a>
 										<button
 											type="button"
-											class="copy-link-icon-btn"
+											class="btn-duo btn-copy assignment-play-btn text-center"
 											aria-label="Copy assignment link"
-											title="Copy link"
 											on:click={() => copyAssignmentLink(assignment.id)}
 										>
-											{copiedAssignmentId === assignment.id ? '✓' : '🔗'}
+											{copiedAssignmentId === assignment.id ? '✓ Copied' : '🔗 Copy Link'}
 										</button>
 									{/if}
-									<a
-										href="/play?assignmentId={assignment.id}"
-										class="btn-duo {passed ? 'btn-secondary' : 'btn-primary'} assignment-play-btn text-center"
-									>
-										{passed ? 'Play Again' : myScore ? 'Keep Playing' : 'Start'}
-									</a>
 								</div>
 							</div>
 
@@ -696,7 +695,7 @@
 	}
 
 	.assignment-title-row h4 {
-		font-size: 1.1rem;
+		font-size: 1.4rem;
 		color: var(--text-color, #1e293b);
 		margin: 0;
 		text-transform: uppercase;
@@ -762,37 +761,40 @@
 		color: #8b5cf6;
 	}
 
+	.assignment-title {
+		font-size: 1.4rem !important;
+	}
+
 	.assignment-play-btn {
 		white-space: nowrap;
 		flex-shrink: 0;
+		padding: 0.5rem 1rem !important;
+		font-size: 0.75rem !important;
 	}
 
-	.copy-link-icon-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.5rem;
-		height: 2.5rem;
-		flex-shrink: 0;
-		border-radius: 0.75rem;
-		border: 3px solid #e2e8f0;
-		background: var(--card-bg, #f8fafc);
-		cursor: pointer;
-		font-size: 1rem;
-		line-height: 1;
-		transition: border-color 0.15s, background 0.15s;
+	.btn-copy {
+		background-color: #f1f5f9;
+		color: #475569;
+		border-color: transparent;
+		box-shadow: 0 4px 0 #cbd5e1;
 	}
 
-	.copy-link-icon-btn:hover {
-		border-color: #94a3b8;
-		background: #f1f5f9;
+	.btn-copy:hover {
+		background-color: #e2e8f0;
+		transform: scale(1.02);
+	}
+
+	.btn-copy:active {
+		transform: scale(0.98) translateY(2px);
+		box-shadow: 0 2px 0 #cbd5e1;
 	}
 
 	.assignment-actions-row {
 		display: flex;
-		flex-direction: row;
-		gap: 0.5rem;
+		flex-direction: column;
+		gap: 0.4rem;
 		margin-top: 0.5rem;
+		min-width: 8rem;
 	}
 	
 	@media (min-width: 640px) {

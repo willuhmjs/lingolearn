@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { buildEvaluationPrompt, parseEvaluationResponse, updateEloRatings } from '$lib/server/grader';
 import { generateChatCompletion } from '$lib/server/llm';
 import { prisma } from '$lib/server/prisma';
+import { submitAnswerRateLimiter } from '$lib/server/ratelimit';
 
 /** Track a correct/incorrect answer against an assignment score record. */
 async function updateAssignmentScore(assignmentId: string, userId: string, isCorrect: boolean) {
@@ -31,7 +32,12 @@ async function updateAssignmentScore(assignmentId: string, userId: string, isCor
 	}
 }
 
-export async function POST({ request, locals }) {
+export async function POST(event) {
+	const { request, locals } = event;
+	if (await submitAnswerRateLimiter.isLimited(event)) {
+		return json({ error: 'Too many requests. Limit is 15/min, 300/day.' }, { status: 429 });
+	}
+
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
