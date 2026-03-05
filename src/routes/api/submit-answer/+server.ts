@@ -3,6 +3,34 @@ import { buildEvaluationPrompt, parseEvaluationResponse, updateEloRatings } from
 import { generateChatCompletion } from '$lib/server/llm';
 import { prisma } from '$lib/server/prisma';
 
+/** Track a correct/incorrect answer against an assignment score record. */
+async function updateAssignmentScore(assignmentId: string, userId: string, isCorrect: boolean) {
+	try {
+		const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
+		if (!assignment) return null;
+
+		const increment = isCorrect ? 1 : 0;
+
+		const current = await prisma.assignmentScore.findUnique({
+			where: { assignmentId_userId: { assignmentId, userId } }
+		});
+
+		const newScore = (current?.score ?? 0) + increment;
+		const passed = newScore >= assignment.targetScore;
+
+		const updated = await prisma.assignmentScore.upsert({
+			where: { assignmentId_userId: { assignmentId, userId } },
+			create: { assignmentId, userId, score: newScore, passed },
+			update: { score: newScore, passed }
+		});
+
+		return { score: updated.score, targetScore: assignment.targetScore, passed: updated.passed };
+	} catch (e) {
+		console.error('Failed to update assignment score:', e);
+		return null;
+	}
+}
+
 export async function POST({ request, locals }) {
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
@@ -10,7 +38,7 @@ export async function POST({ request, locals }) {
 
 	try {
 		const body = await request.json();
-		const { userInput, targetSentence, targetedVocabularyIds, targetedGrammarIds, gameMode: bodyGameMode } = body;
+		const { userInput, targetSentence, targetedVocabularyIds, targetedGrammarIds, gameMode: bodyGameMode, assignmentId } = body;
 		const userId = locals.user.id;
 		const gameMode = bodyGameMode || 'native-to-target';
 
@@ -49,12 +77,12 @@ export async function POST({ request, locals }) {
 			console.log('Sending payload to updateEloRatings:', JSON.stringify(evaluation, null, 2));
 			await updateEloRatings(userId, evaluation, gameMode);
 
-			return new Response(JSON.stringify(evaluation), {
-				headers: {
-					'Content-Type': 'application/json',
-					'Cache-Control': 'no-cache'
-				}
-			});
+			let assignmentProgress = null;
+			if (assignmentId) {
+				assignmentProgress = await updateAssignmentScore(assignmentId, userId, isCorrect);
+			}
+
+			return json({ ...evaluation, assignmentProgress });
 		}
 
 		// Build prompt and call LLM with streaming
@@ -145,9 +173,7 @@ export async function POST({ request, locals }) {
 					console.error('Stream read error in submit-answer', err);
 				}
 
-				controller.close();
-
-				// Background processing: parse response and update Elo/SRS
+				// Post-stream processing: parse response, update Elo/SRS, then send final payload, then close
 				try {
 					const evaluation = parseEvaluationResponse(fullContent);
 					// Remap short IDs (v0, g0, ...) back to real UUIDs
@@ -161,9 +187,21 @@ export async function POST({ request, locals }) {
 					}));
 					console.log('Sending payload to updateEloRatings:', JSON.stringify(evaluation, null, 2));
 					await updateEloRatings(userId, evaluation, gameMode);
+
+					// Track assignment score if applicable
+					let assignmentProgress = null;
+					if (assignmentId) {
+						const isCorrect = (evaluation.globalScore ?? 0) >= 0.5;
+						assignmentProgress = await updateAssignmentScore(assignmentId, userId, isCorrect);
+					}
+
+					// Send the final evaluation payload before closing the stream
+					controller.enqueue(new TextEncoder().encode(`\n\nJSON_PAYLOAD:${JSON.stringify({ ...evaluation, assignmentProgress })}`));
 				} catch (e) {
 					console.error('Post-stream processing error in submit-answer:', e);
 				}
+
+				controller.close();
 			},
 			cancel() {
 				// Client disconnected — cancel upstream LLM reader

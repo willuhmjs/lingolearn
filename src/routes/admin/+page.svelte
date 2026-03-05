@@ -7,6 +7,79 @@
 
 	let isRunningSeed = false;
 
+	// Language data management state
+	let selectedLangId = '';
+	let isExporting = false;
+	let isImporting = false;
+	let importFile: FileList | undefined;
+	let langDataMsg = '';
+	let langDataError = false;
+	let showDeleteLangConfirm = false;
+	let deleteScope: 'vocab' | 'grammar' | 'all' = 'all';
+	let isDeletingLangData = false;
+
+	$: selectedLang = data.languages.find((l: any) => l.id === selectedLangId);
+
+	async function exportLangData() {
+		if (!selectedLangId) return;
+		isExporting = true;
+		const res = await fetch(`/api/admin/language-data?languageId=${selectedLangId}`);
+		isExporting = false;
+		if (!res.ok) { langDataMsg = 'Export failed.'; langDataError = true; return; }
+		const blob = await res.blob();
+		const cd = res.headers.get('Content-Disposition') || '';
+		const fnMatch = cd.match(/filename="([^"]+)"/);
+		const filename = fnMatch ? fnMatch[1] : 'language-data.json';
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url; a.download = filename; a.click();
+		URL.revokeObjectURL(url);
+		langDataMsg = `Exported ${filename}`;
+		langDataError = false;
+	}
+
+	async function importLangData() {
+		if (!selectedLangId || !importFile?.length) return;
+		isImporting = true;
+		const text = await importFile[0].text();
+		try {
+			const payload = JSON.parse(text);
+			const res = await fetch('/api/admin/language-data', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ...payload, languageId: selectedLangId })
+			});
+			const result = await res.json();
+			if (!res.ok) { langDataMsg = result.error || 'Import failed.'; langDataError = true; }
+			else {
+				const v = result.vocab; const g = result.grammar;
+				langDataMsg = `Import complete — Vocab: +${v.created} created, ${v.updated} updated · Grammar: +${g.created} created, ${g.updated} updated`;
+				langDataError = false;
+				await invalidateAll();
+			}
+		} catch {
+			langDataMsg = 'Invalid JSON file.';
+			langDataError = true;
+		} finally {
+			isImporting = false;
+		}
+	}
+
+	async function deleteLangData() {
+		if (!selectedLangId) return;
+		isDeletingLangData = true;
+		const res = await fetch(`/api/admin/language-data?languageId=${selectedLangId}&scope=${deleteScope}`, { method: 'DELETE' });
+		const result = await res.json();
+		isDeletingLangData = false;
+		showDeleteLangConfirm = false;
+		if (!res.ok) { langDataMsg = result.error || 'Delete failed.'; langDataError = true; }
+		else {
+			langDataMsg = `Deleted ${result.vocabDeleted} vocab + ${result.grammarDeleted} grammar entries.`;
+			langDataError = false;
+			await invalidateAll();
+		}
+	}
+
 	// Modal state
 	let editingUser: {
 		id: string;
@@ -183,6 +256,72 @@
 			<span>{form.message}</span>
 		</div>
 	{/if}
+
+	<section class="lang-data-card">
+		<h2>Language Data</h2>
+		<p class="lang-data-desc">Export a full JSON snapshot of vocabulary and grammar rules for any language — copy it into your seed scripts for source control. Import a JSON file to upsert entries into the database.</p>
+
+		<div class="lang-data-controls">
+			<div class="form-group mb-0">
+				<label for="lang-select">Language</label>
+				<select id="lang-select" bind:value={selectedLangId}>
+					<option value="" disabled>Select a language…</option>
+					{#each data.languages as lang}
+						<option value={lang.id}>{lang.flag} {lang.name} — {(lang as any)._count.vocabularies} vocab, {(lang as any)._count.grammarRules} grammar rules</option>
+					{/each}
+				</select>
+			</div>
+		</div>
+
+		{#if selectedLangId}
+			<div class="lang-data-actions">
+				<div class="lang-action-group">
+					<span class="lang-action-label">Export</span>
+					<button class="seed-btn" on:click={exportLangData} disabled={isExporting}>
+						{isExporting ? 'Exporting…' : 'Download JSON'}
+					</button>
+				</div>
+
+				<div class="lang-action-group">
+					<span class="lang-action-label">Import (upsert)</span>
+					<div class="lang-import-row">
+						<input type="file" accept=".json" bind:files={importFile} class="file-input" />
+						<button class="seed-btn" on:click={importLangData} disabled={isImporting || !importFile?.length}>
+							{isImporting ? 'Importing…' : 'Import'}
+						</button>
+					</div>
+				</div>
+
+				<div class="lang-action-group">
+					<span class="lang-action-label">Clear data</span>
+					{#if !showDeleteLangConfirm}
+						<div class="lang-import-row">
+							<select bind:value={deleteScope} class="scope-select">
+								<option value="vocab">Vocabulary only</option>
+								<option value="grammar">Grammar only</option>
+								<option value="all">All (vocab + grammar)</option>
+							</select>
+							<button class="delete-btn" on:click={() => showDeleteLangConfirm = true}>Delete…</button>
+						</div>
+					{:else}
+						<div class="delete-confirm">
+							<span class="delete-warning">Delete all {deleteScope === 'all' ? 'vocab + grammar' : deleteScope} for {selectedLang?.name}?</span>
+							<button class="delete-confirm-btn" on:click={deleteLangData} disabled={isDeletingLangData}>
+								{isDeletingLangData ? 'Deleting…' : 'Confirm'}
+							</button>
+							<button class="cancel-delete-btn" on:click={() => showDeleteLangConfirm = false}>Cancel</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		{#if langDataMsg}
+			<div class="alert" class:alert-success={!langDataError} class:alert-error={langDataError} style="margin: 1rem 0 0 0;">
+				{langDataMsg}
+			</div>
+		{/if}
+	</section>
 
 	<section class="users-section">
 		<h2>Users</h2>
@@ -768,6 +907,78 @@
 		font-weight: 500;
 		color: #111827;
 		font-size: 0.875rem;
+	}
+
+	.lang-data-card {
+		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e5e7eb);
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.lang-data-card h2 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--text-color, #111827);
+		margin: 0 0 0.4rem 0;
+	}
+
+	.lang-data-desc {
+		color: #6b7280;
+		font-size: 0.875rem;
+		margin: 0 0 1.25rem 0;
+	}
+
+	.lang-data-controls {
+		max-width: 480px;
+		margin-bottom: 1.25rem;
+	}
+
+	.lang-data-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.lang-action-group {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.lang-action-label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: #374151;
+		width: 110px;
+		flex-shrink: 0;
+	}
+
+	.lang-import-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.file-input {
+		font-size: 0.8rem;
+		color: var(--text-color, #374151);
+		cursor: pointer;
+	}
+
+	.scope-select {
+		padding: 0.4rem 0.6rem;
+		border: 1px solid var(--input-border, #d1d5db);
+		border-radius: 0.375rem;
+		font-size: 0.8rem;
+		color: var(--input-text, #374151);
+		background: var(--input-bg, #fff);
+		cursor: pointer;
 	}
 
 	.mb-0 {

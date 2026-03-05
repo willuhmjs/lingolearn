@@ -2,6 +2,7 @@ r<script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import toast from 'svelte-french-toast';
+	import { marked } from 'marked';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
@@ -37,73 +38,31 @@ r<script lang="ts">
 	let shuffledChoices: string[] = [];
 	let hasSubmittedMc = false;
 
+	// Assignment context
+	const assignment = data.assignment ?? null;
+	let assignmentProgress = data.assignmentScore
+		? { score: data.assignmentScore.score, targetScore: assignment?.targetScore ?? 0, passed: data.assignmentScore.passed }
+		: assignment
+			? { score: 0, targetScore: assignment.targetScore, passed: false }
+			: null;
+	// Lock game mode to assignment's required mode when in assignment context
+	if (assignment) {
+		gameMode = (assignment.gamemode as GameMode) ?? gameMode;
+	}
+
 	// Loading progress & cycling tips
 	let loadProgressPct = 0;
 	let loadTipIndex = 0;
 	let estimatedLoadMs = 9000;
 	let _loadProgressInterval: ReturnType<typeof setInterval> | null = null;
 	let _loadTipInterval: ReturnType<typeof setInterval> | null = null;
+	let expandedGrammarId: string | null = null;
 
-	const LOADING_TIPS = [
-		// German tips
-		'All nouns in German are capitalized — even in the middle of a sentence.',
-		'The word \'Schadenfreude\' has no direct English equivalent: joy at others\' misfortune.',
-		'German compound nouns can be infinitely long — \'Donaudampfschifffahrtsgesellschaft\' is a real word.',
-		'\'Fingerspitzengefühl\' means \'fingertip feeling\' — a delicate touch or sensitivity.',
-		'German has formal (Sie) and informal (du) ways of addressing people.',
-		'In German main clauses, the conjugated verb always sits in the second position.',
-		'\'Weltschmerz\' meaning world-weariness was coined by Jean Paul, a German author.',
-		'German and English share about 60% of their vocabulary roots.',
-		'The German alphabet adds 4 extra letters: ä, ö, ü, and ß.',
-		'\'Doch\' can contradict a negative question — like \'Oh yes it is!\' in English.',
-		'Modal verbs (können, müssen, dürfen…) push the main verb to the very end of the clause.',
-		'German has 4 grammatical cases: Nominative, Accusative, Dative, and Genitive.',
-		'German word order in subordinate clauses sends the verb to the very end.',
-		'\'Gemütlichkeit\' describes a feeling of warmth, coziness, and belonging — untranslatable in English.',
-		'The longest German word in everyday use is \'Rechtsschutzversicherungsgesellschaften\' (legal insurance companies).',
-		'German separable verbs split apart in main clauses — \'anfangen\' becomes \'Ich fange an.\'',
-		'The German \'ch\' sound doesn\'t exist in English — it\'s like a soft hiss from the roof of your mouth.',
-		'In German, adjective endings change based on case, gender, and whether an article is present.',
-		'\'Kummerspeck\' literally means \'grief bacon\' — weight gained from emotional eating.',
-		'German uses three genders: der (masculine), die (feminine), and das (neuter).',
-		'The Dative case is used after prepositions like mit, bei, nach, seit, von, zu, and aus.',
-		// Spanish tips
-		'Spanish is the 2nd most spoken native language in the world with ~500 million speakers.',
-		'Spanish has two verbs for \'to be\': ser (permanent) and estar (temporary).',
-		'In Spanish, nouns have grammatical gender — either masculine or feminine.',
-		'The ¡ and ¿ marks at the start of sentences are unique to Spanish.',
-		'Spanish is spoken in over 20 countries across 4 continents.',
-		'The subjunctive mood in Spanish expresses doubt, wishes, and hypotheticals — and it\'s used constantly.',
-		'\'Sobremesa\' is the time spent chatting at the table after a meal — there\'s no English word for it.',
-		'Spanish \'ll\' and \'y\' sound the same in most dialects — a phenomenon called yeísmo.',
-		'The letter ñ is unique to Spanish and represents a palatal nasal sound.',
-		'In Spanish, adjectives usually come after the noun: \'casa blanca\' not \'blanca casa.\'',
-		'\'Empalagar\' means to feel sick from eating too much of something sweet.',
-		'The Spanish Royal Academy (RAE) officially regulates the language since 1713.',
-		'Spanish has about 10 million words, but you only need ~2,000 for everyday conversation.',
-		'The word \'ojalá\' comes from Arabic (inshallah) and means \'hopefully\' or \'God willing.\'',
-		'Ser vs. estar: \'Estoy aburrido\' = I am bored, but \'Soy aburrido\' = I am boring!',
-		'Spanish uses the personal \'a\' before direct objects that are people: \'Veo a María.\'',
-		'\'Madrugada\' refers to the wee hours between midnight and dawn — a single word English lacks.',
-		// French tips
-		'French is spoken on all 5 continents and is an official language in 29 countries.',
-		'About 45% of modern English vocabulary comes from French or Norman French.',
-		'In French, adjectives usually agree in gender and number with the noun they describe.',
-		'The French \'r\' is pronounced in the back of the throat — quite different from the English \'r.\'',
-		'French has a formal \'vous\' and informal \'tu\' — using the wrong one can be a social faux pas.',
-		'\'Dépaysement\' describes the disorienting feeling of being in a foreign country.',
-		'French liaisons connect words together: \'les amis\' is pronounced \'lez-ami.\'',
-		'The Académie française has regulated the French language since 1635.',
-		'In French, the number 80 is \'quatre-vingts\' — literally \'four twenties.\'',
-		'\'L\'esprit de l\'escalier\' means thinking of the perfect comeback too late — on the staircase leaving.',
-		'French has 16 vowel sounds compared to English\'s ~12, making pronunciation tricky.',
-		'Most final consonants in French are silent: \'petit\' is pronounced \'puh-TEE.\'',
-		'The passé composé vs. imparfait distinction is one of the trickiest parts of French grammar.',
-		'\'Flâner\' means to stroll without purpose, soaking in your surroundings — a very Parisian concept.',
-		'French nasal vowels (on, an, in, un) don\'t exist in English and take practice to master.',
-		'Ne...pas wraps around the verb to make it negative: \'Je ne sais pas\' (I don\'t know).',
-		'The word \'croissant\' literally means \'crescent\' in French, referring to its shape.',
-		// General language learning tips
+	function toggleGrammar(id: string) {
+		expandedGrammarId = expandedGrammarId === id ? null : id;
+	}
+
+	const GENERAL_TIPS = [
 		'Spaced repetition (SRS) is proven to make vocabulary stick up to 3× faster.',
 		'Reading just 15 minutes a day in your target language dramatically speeds up fluency.',
 		'Context beats memorization — learning words in sentences helps retention by ~40%.',
@@ -117,6 +76,78 @@ r<script lang="ts">
 		'Immersion doesn\'t require travel — change your phone\'s language for instant practice.',
 		'You need roughly 3,000 words to understand ~95% of everyday conversation in most languages.',
 	];
+
+	const LANG_TIPS: Record<string, string[]> = {
+		'German': [
+			'All nouns in German are capitalized — even in the middle of a sentence.',
+			'The word \'Schadenfreude\' has no direct English equivalent: joy at others\' misfortune.',
+			'German compound nouns can be infinitely long — \'Donaudampfschifffahrtsgesellschaft\' is a real word.',
+			'\'Fingerspitzengefühl\' means \'fingertip feeling\' — a delicate touch or sensitivity.',
+			'German has formal (Sie) and informal (du) ways of addressing people.',
+			'In German main clauses, the conjugated verb always sits in the second position.',
+			'\'Weltschmerz\' meaning world-weariness was coined by Jean Paul, a German author.',
+			'German and English share about 60% of their vocabulary roots.',
+			'The German alphabet adds 4 extra letters: ä, ö, ü, and ß.',
+			'\'Doch\' can contradict a negative question — like \'Oh yes it is!\' in English.',
+			'Modal verbs (können, müssen, dürfen…) push the main verb to the very end of the clause.',
+			'German has 4 grammatical cases: Nominative, Accusative, Dative, and Genitive.',
+			'German word order in subordinate clauses sends the verb to the very end.',
+			'\'Gemütlichkeit\' describes a feeling of warmth, coziness, and belonging — untranslatable in English.',
+			'The longest German word in everyday use is \'Rechtsschutzversicherungsgesellschaften\' (legal insurance companies).',
+			'German separable verbs split apart in main clauses — \'anfangen\' becomes \'Ich fange an.\'',
+			'The German \'ch\' sound doesn\'t exist in English — it\'s like a soft hiss from the roof of your mouth.',
+			'In German, adjective endings change based on case, gender, and whether an article is present.',
+			'\'Kummerspeck\' literally means \'grief bacon\' — weight gained from emotional eating.',
+			'German uses three genders: der (masculine), die (feminine), and das (neuter).',
+			'The Dative case is used after prepositions like mit, bei, nach, seit, von, zu, and aus.',
+		],
+		'Spanish': [
+			'Spanish is the 2nd most spoken native language in the world with ~500 million speakers.',
+			'Spanish has two verbs for \'to be\': ser (permanent) and estar (temporary).',
+			'In Spanish, nouns have grammatical gender — either masculine or feminine.',
+			'The ¡ and ¿ marks at the start of sentences are unique to Spanish.',
+			'Spanish is spoken in over 20 countries across 4 continents.',
+			'The subjunctive mood in Spanish expresses doubt, wishes, and hypotheticals — and it\'s used constantly.',
+			'\'Sobremesa\' is the time spent chatting at the table after a meal — there\'s no English word for it.',
+			'Spanish \'ll\' and \'y\' sound the same in most dialects — a phenomenon called yeísmo.',
+			'The letter ñ is unique to Spanish and represents a palatal nasal sound.',
+			'In Spanish, adjectives usually come after the noun: \'casa blanca\' not \'blanca casa.\'',
+			'\'Empalagar\' means to feel sick from eating too much of something sweet.',
+			'The Spanish Royal Academy (RAE) officially regulates the language since 1713.',
+			'Spanish has about 10 million words, but you only need ~2,000 for everyday conversation.',
+			'The word \'ojalá\' comes from Arabic (inshallah) and means \'hopefully\' or \'God willing.\'',
+			'Ser vs. estar: \'Estoy aburrido\' = I am bored, but \'Soy aburrido\' = I am boring!',
+			'Spanish uses the personal \'a\' before direct objects that are people: \'Veo a María.\'',
+			'\'Madrugada\' refers to the wee hours between midnight and dawn — a single word English lacks.',
+		],
+		'French': [
+			'French is spoken on all 5 continents and is an official language in 29 countries.',
+			'About 45% of modern English vocabulary comes from French or Norman French.',
+			'In French, adjectives usually agree in gender and number with the noun they describe.',
+			'The French \'r\' is pronounced in the back of the throat — quite different from the English \'r.\'',
+			'French has a formal \'vous\' and informal \'tu\' — using the wrong one can be a social faux pas.',
+			'\'Dépaysement\' describes the disorienting feeling of being in a foreign country.',
+			'French liaisons connect words together: \'les amis\' is pronounced \'lez-ami.\'',
+			'The Académie française has regulated the French language since 1635.',
+			'In French, the number 80 is \'quatre-vingts\' — literally \'four twenties.\'',
+			'\'L\'esprit de l\'escalier\' means thinking of the perfect comeback too late — on the staircase leaving.',
+			'French has 16 vowel sounds compared to English\'s ~12, making pronunciation tricky.',
+			'Most final consonants in French are silent: \'petit\' is pronounced \'puh-TEE.\'',
+			'The passé composé vs. imparfait distinction is one of the trickiest parts of French grammar.',
+			'\'Flâner\' means to stroll without purpose, soaking in your surroundings — a very Parisian concept.',
+			'French nasal vowels (on, an, in, un) don\'t exist in English and take practice to master.',
+			'Ne...pas wraps around the verb to make it negative: \'Je ne sais pas\' (I don\'t know).',
+			'The word \'croissant\' literally means \'crescent\' in French, referring to its shape.',
+		]
+	};
+
+	let loadingTips: string[] = [];
+
+	$: {
+		const langName = data.language?.name;
+		const specificTips = langName && LANG_TIPS[langName] ? LANG_TIPS[langName] : [];
+		loadingTips = [...specificTips, ...GENERAL_TIPS];
+	}
 
 	// User level tracking (populated from page data and updated from lesson metadata)
 	let userLevel = data.cefrLevel || 'A1';
@@ -374,6 +405,7 @@ r<script lang="ts">
 		let html = `<span class="word-tooltip">`;
 		html += `<span class="word-tooltip-header">${overrideArticle ?? lemmaDisplay}${isAiGenerated ? '<span class="word-tooltip-ai-badge">AI</span>' : ''}</span>`;
 		html += `<span class="word-tooltip-body">`;
+
 		if (inflectionNote) {
 			html += `<span class="word-tooltip-row"><strong>Form:</strong> ${inflectionNote}</span>`;
 		}
@@ -688,6 +720,21 @@ r<script lang="ts">
 		return parseTextWithTooltips(challenge.targetSentence, false);
 	})();
 
+	let showAfterElo = false;
+
+	function calculateEloProgress(elo: number) {
+		return Math.max(0, Math.min(100, ((elo - 1000) / 1000) * 100));
+	}
+
+	$: if (feedback) {
+		// Delay to start animation after feedback is displayed
+		setTimeout(() => {
+			showAfterElo = true;
+		}, 100);
+	} else {
+		showAfterElo = false;
+	}
+
 	async function generateChallenge() {
 		// Cancel any in-flight requests before starting a new one
 		cancelAllRequests();
@@ -727,9 +774,9 @@ r<script lang="ts">
 		}, 80);
 
 		// Start cycling tips
-		loadTipIndex = Math.floor(Math.random() * LOADING_TIPS.length);
+		loadTipIndex = Math.floor(Math.random() * loadingTips.length);
 		_loadTipInterval = setInterval(() => {
-			loadTipIndex = (loadTipIndex + 1) % LOADING_TIPS.length;
+			loadTipIndex = (loadTipIndex + 1) % loadingTips.length;
 		}, 3500);
 
 		generateController = new AbortController();
@@ -807,6 +854,68 @@ r<script lang="ts">
 								challenge.challengeText = extractedText;
 								// Only stop loading once we have actual text to show
 								if (loading) loading = false;
+							}
+
+							// Progressive extraction of other fields to allow early submission
+							const targetMatch = accumulatedJson.match(/"targetSentence"\s*:\s*"((?:[^"\\]|\\.)*)/);
+							if (targetMatch && targetMatch[1]) {
+								challenge.targetSentence = targetMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+							}
+
+							const vocabIdsMatch = accumulatedJson.match(/"targetedVocabularyIds"\s*:\s*\[([^\]]*)\]/);
+							if (vocabIdsMatch && vocabIdsMatch[1]) {
+								const rawIds = vocabIdsMatch[1].split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+								challenge.targetedVocabularyIds = rawIds.map(id => idMap[id] || id);
+								
+								// Immediate filtering of vocabulary
+								if (challenge.targetedVocabularyIds.length > 0 && challenge.targetedVocabulary?.length > 0) {
+									const usedIds = new Set(challenge.targetedVocabularyIds);
+									// Store the original metadata-sourced list if we haven't yet, so we can re-filter if needed
+									if (!challenge._allMetadataVocab) challenge._allMetadataVocab = [...challenge.targetedVocabulary];
+									challenge.targetedVocabulary = challenge._allMetadataVocab.filter((v: any) => usedIds.has(v.id));
+								}
+							}
+
+							const grammarIdsMatch = accumulatedJson.match(/"targetedGrammarIds"\s*:\s*\[([^\]]*)\]/);
+							if (grammarIdsMatch && grammarIdsMatch[1]) {
+								const rawIds = grammarIdsMatch[1].split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+								challenge.targetedGrammarIds = rawIds.map(id => idMap[id] || id);
+
+								// Immediate filtering of grammar
+								if (challenge.targetedGrammarIds.length > 0 && challenge.targetedGrammar?.length > 0) {
+									const usedIds = new Set(challenge.targetedGrammarIds);
+									// Store original
+									if (!challenge._allMetadataGrammar) challenge._allMetadataGrammar = [...challenge.targetedGrammar];
+									challenge.targetedGrammar = challenge._allMetadataGrammar.filter((g: any) => usedIds.has(g.id));
+								}
+							}
+
+							// Progressive extraction of distractors for multiple-choice
+							const distractorsMatch = accumulatedJson.match(/"distractors"\s*:\s*\[([^\]]*)\]/);
+							if (distractorsMatch && distractorsMatch[1] && challenge.targetSentence) {
+								const distractors = distractorsMatch[1].split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+								if (distractors.length > 0 && (!shuffledChoices || shuffledChoices.length === 0)) {
+									const allChoices = [...distractors, challenge.targetSentence];
+									shuffledChoices = allChoices.sort(() => Math.random() - 0.5);
+								}
+							}
+
+							// Progressive extraction of hints for fill-blank
+							const hintsMatch = accumulatedJson.match(/"hints"\s*:\s*\[(.*?)\]\s*(?:,|$)/);
+							if (hintsMatch && hintsMatch[1]) {
+								try {
+									// Try to parse the partial hints array
+									const hints = JSON.parse(`[${hintsMatch[1]}]`);
+									if (hints.length > 0 && fillBlankAnswers.length === 0) {
+										challenge.hints = hints.map((h: any) => ({
+											...h,
+											vocabId: idMap[h.vocabId] || h.vocabId
+										}));
+										fillBlankAnswers = challenge.hints.map(() => '');
+									}
+								} catch (e) {
+									// Partial hints array might not be valid JSON yet, ignore
+								}
 							}
 						}
 					} catch (e) {
@@ -927,8 +1036,8 @@ r<script lang="ts">
 		}
 
 		if (isStreaming) {
-			toast('Please wait for the challenge to finish generating.', { icon: '⏳' });
-			return;
+			// Removed restriction to allow early submission
+			console.warn('Challenge is still generating, but submission is allowed.');
 		}
 		if (!challenge?.targetSentence) {
 			toast.error('Challenge was not properly generated (missing target sentence). Please generate a new challenge.');
@@ -954,7 +1063,8 @@ r<script lang="ts">
 					targetSentence: challenge.targetSentence,
 					targetedVocabularyIds: challenge.targetedVocabulary?.map((v: any) => v.id) || [],
 					targetedGrammarIds: challenge.targetedGrammar?.map((g: any) => g.id) || [],
-					gameMode: challenge.gameMode || 'native-to-target'
+					gameMode: challenge.gameMode || 'native-to-target',
+					assignmentId: assignment?.id ?? null
 				}),
 				signal: submitController.signal
 			});
@@ -1008,7 +1118,13 @@ r<script lang="ts">
 
 			// Parse the complete JSON response for all structured data
 			try {
-				const data = JSON.parse(responseText);
+				// For streaming responses, the server appends \n\nJSON_PAYLOAD:{...} at the end
+				const payloadMarker = '\n\nJSON_PAYLOAD:';
+				const payloadIdx = responseText.indexOf(payloadMarker);
+				const jsonToParse = payloadIdx >= 0
+					? responseText.slice(payloadIdx + payloadMarker.length)
+					: responseText;
+				const data = JSON.parse(jsonToParse);
 				// Build grader idMap from the order of IDs we sent (same order the grader used)
 				const graderIdMap: Record<string, string> = {};
 				(challenge.targetedVocabulary || []).forEach((v: any, i: number) => { graderIdMap[`v${i}`] = v.id; });
@@ -1026,6 +1142,10 @@ r<script lang="ts">
 					feedback: data.feedback || '',
 					feedbackEnglish: data.feedbackEnglish || ''
 				};
+				// Update assignment progress if we got it back
+				if (data.assignmentProgress && assignmentProgress) {
+					assignmentProgress = data.assignmentProgress;
+				}
 				// Auto-show English feedback for beginners
 				if (isAbsoluteBeginner && feedback.feedbackEnglish) {
 					showEnglishFeedback = true;
@@ -1059,6 +1179,30 @@ r<script lang="ts">
 			<p class="dark:text-slate-400">Test your skills with personalized challenges.</p>
 		</header>
 
+		<!-- Assignment context banner -->
+		{#if assignment && assignmentProgress}
+			<div class="mb-6 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 {assignmentProgress.passed ? 'bg-green-50 border-2 border-green-300' : 'bg-blue-50 border-2 border-blue-200'}">
+				<div class="flex items-center gap-3 min-w-0">
+					<span class="text-2xl">{assignmentProgress.passed ? '🏆' : '📋'}</span>
+					<div class="min-w-0">
+						<p class="font-extrabold text-gray-800 truncate">{assignment.title}</p>
+						<p class="text-sm font-bold text-gray-500">{assignment.class?.name ?? 'Class'} · {assignment.gamemode.replace(/-/g, ' ')}</p>
+					</div>
+				</div>
+				<div class="flex items-center gap-3 shrink-0">
+					<div class="text-right">
+						<p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Progress</p>
+						<p class="text-2xl font-extrabold {assignmentProgress.passed ? 'text-green-600' : 'text-blue-600'}">
+							{assignmentProgress.score}<span class="text-base text-gray-400">/{assignmentProgress.targetScore}</span>
+						</p>
+					</div>
+					<a href="/classes/{assignment.classId}" class="text-xs font-bold text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
+						Back to Class →
+					</a>
+				</div>
+			</div>
+		{/if}
+
 		{#if !challenge && !loading}
 			<div class="card card-duo empty-state dark:bg-slate-800 dark:border-slate-700" in:fly={{ y: 20, duration: 400 }}>
 				<h2 class="dark:text-white">Ready to test your skills?</h2>
@@ -1074,6 +1218,9 @@ r<script lang="ts">
 
 				<div class="mode-selector">
 					<span class="mode-label dark:text-slate-400">Game Mode:</span>
+					{#if assignment}
+						<p class="font-bold text-blue-600 capitalize">{assignment.gamemode.replace(/-/g, ' ')} <span class="text-gray-400 font-normal text-sm">(set by assignment)</span></p>
+					{:else}
 					<div class="mode-buttons">
 						<!-- Easiest first -->
 						<button
@@ -1105,6 +1252,7 @@ r<script lang="ts">
 							<span class="mode-difficulty hard">Hardest</span>
 						</button>
 					</div>
+					{/if}
 				</div>
 				<button on:click={generateChallenge} class="btn-duo btn-primary" style="margin-top: 1.5rem; width: 100%;">
 					Generate Next Challenge
@@ -1121,7 +1269,7 @@ r<script lang="ts">
 				<div class="load-tip-container">
 					{#key loadTipIndex}
 						<p class="load-tip dark:text-slate-400" in:fade={{ duration: 350, delay: 50 }} out:fade={{ duration: 300 }}>
-							{LOADING_TIPS[loadTipIndex]}
+							{loadingTips[loadTipIndex]}
 						</p>
 					{/key}
 				</div>
@@ -1158,7 +1306,26 @@ r<script lang="ts">
 					<h3 class="dark:text-slate-400">Grammar:</h3>
 					<ul class="concept-list">
 						{#each challenge.targetedGrammar as grammar}
-							<li class="dark:text-slate-300"><span class="concept-type dark:bg-slate-700 dark:text-slate-300">Grammar</span> {grammar.title}</li>
+							<li class="dark:text-slate-300 grammar-item">
+								<div class="grammar-header">
+									<span class="concept-type dark:bg-slate-700 dark:text-slate-300">Grammar</span> 
+									<span class="grammar-title">{grammar.title}</span>
+									{#if grammar.guide}
+										<button 
+											type="button" 
+											class="guide-toggle-btn dark:text-slate-400 dark:hover:text-slate-200"
+											on:click={() => toggleGrammar(grammar.id)}
+										>
+											{expandedGrammarId === grammar.id ? 'Hide Guide' : 'Show Guide'}
+										</button>
+									{/if}
+								</div>
+								{#if grammar.guide && expandedGrammarId === grammar.id}
+									<div class="grammar-guide markdown-body dark:bg-slate-900 dark:border-slate-700" transition:fly={{ y: -5, duration: 200 }}>
+										{@html marked(grammar.guide)}
+									</div>
+								{/if}
+							</li>
 						{/each}
 					</ul>
 				</div>
@@ -1214,7 +1381,7 @@ r<script lang="ts">
 						{#if challenge.gameMode !== 'multiple-choice'}
 							<button 
 								type="submit" 
-								disabled={submitting || !challenge?.targetSentence || (challenge.gameMode === 'fill-blank' ? fillBlankAnswers.some(a => !a.trim()) : !userInput.trim())}
+								disabled={submitting || !challenge?.targetSentence || !challenge?.targetedVocabularyIds || !challenge?.targetedGrammarIds || (challenge.gameMode === 'fill-blank' ? (fillBlankAnswers.length === 0 || fillBlankAnswers.some(a => !a.trim())) : (challenge.gameMode === 'multiple-choice' ? !selectedChoice : !userInput.trim()))}
 								class="btn-duo btn-primary submit-btn"
 								style="margin-top: 1.5rem; width: 100%;"
 							>
@@ -1275,11 +1442,32 @@ r<script lang="ts">
 									{@const v = challenge.targetedVocabulary.find((v: any) => v.id === update.id)}
 									<li class="dark:text-slate-300">
 										<span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
-										{#if v}
-											{[genderToArticle(v.gender), v.lemma].filter(Boolean).join('\u00A0') + (v.plural ? '\u00A0(pl: ' + v.plural + ')' : '')}
-										{:else}
-											{update.id}
-										{/if}
+										<div class="item-info">
+											<div class="item-row">
+												<span class="item-label">
+													{#if v}
+														{[genderToArticle(v.gender), v.lemma].filter(Boolean).join('\u00A0') + (v.plural ? '\u00A0(pl: ' + v.plural + ')' : '')}
+													{:else}
+														{update.id}
+													{/if}
+												</span>
+												<span class="elo-display dark:bg-slate-900 dark:text-slate-400">
+													ELO {Math.round(showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000))}
+													{#if showAfterElo && update.eloAfter !== update.eloBefore}
+														{@const delta = Math.round(update.eloAfter - update.eloBefore)}
+														<span class="elo-delta" class:positive={delta > 0} class:negative={delta < 0}>
+															{delta > 0 ? '+' : ''}{delta}
+														</span>
+													{/if}
+												</span>
+											</div>
+											<div class="progress-bar-container dark:bg-slate-700 dark:border-slate-600">
+												<div 
+													class="progress-bar-fill" 
+													style="width: {calculateEloProgress(showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000))}%"
+												></div>
+											</div>
+										</div>
 									</li>
 								{/each}
 							</ul>
@@ -1293,7 +1481,28 @@ r<script lang="ts">
 								{#each feedback.grammarUpdates as update}
 									<li class="dark:text-slate-300">
 										<span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
-										{challenge.targetedGrammar.find((g: any) => g.id === update.id)?.title || update.id}
+										<div class="item-info">
+											<div class="item-row">
+												<span class="item-label">
+													{challenge.targetedGrammar.find((g: any) => g.id === update.id)?.title || update.id}
+												</span>
+												<span class="elo-display dark:bg-slate-900 dark:text-slate-400">
+													ELO {Math.round(showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000))}
+													{#if showAfterElo && update.eloAfter !== update.eloBefore}
+														{@const delta = Math.round(update.eloAfter - update.eloBefore)}
+														<span class="elo-delta" class:positive={delta > 0} class:negative={delta < 0}>
+															{delta > 0 ? '+' : ''}{delta}
+														</span>
+													{/if}
+												</span>
+											</div>
+											<div class="progress-bar-container dark:bg-slate-700 dark:border-slate-600">
+												<div 
+													class="progress-bar-fill" 
+													style="width: {calculateEloProgress(showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000))}%"
+												></div>
+											</div>
+										</div>
 									</li>
 								{/each}
 							</ul>
@@ -1603,8 +1812,56 @@ r<script lang="ts">
 		color: #475569;
 		margin-bottom: 0.5rem;
 		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.grammar-header {
+		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.grammar-title {
+		font-weight: 500;
+	}
+
+	.guide-toggle-btn {
+		background: none;
+		border: none;
+		font-size: 0.8rem;
+		text-decoration: underline;
+		cursor: pointer;
+		padding: 0;
+		margin-left: auto;
+	}
+
+	.grammar-guide {
+		padding: 1rem;
+		border-radius: 8px;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		overflow-x: auto;
+	}
+
+	.grammar-guide :global(h1),
+	.grammar-guide :global(h2),
+	.grammar-guide :global(h3) {
+		margin-top: 0;
+		margin-bottom: 0.5rem;
+		color: var(--text-color, #1e293b);
+	}
+
+	.grammar-guide :global(p) {
+		margin-top: 0;
+		margin-bottom: 0.75rem;
+	}
+
+	.grammar-guide :global(ul) {
+		margin-top: 0;
+		margin-bottom: 0.75rem;
+		padding-left: 1.5rem;
 	}
 
 	.concept-type {
@@ -1784,11 +2041,79 @@ r<script lang="ts">
 
 	.feedback-list-section li {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		align-items: flex-start;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
 		color: #334155;
 		font-size: 0.95rem;
+	}
+
+	.item-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		flex: 1;
+	}
+
+	.item-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+	}
+
+	.elo-display {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #64748b;
+		background: #f1f5f9;
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+		white-space: nowrap;
+	}
+
+	.elo-delta {
+		font-size: 0.75rem;
+		font-weight: 800;
+		margin-left: 0.25rem;
+	}
+
+	.elo-delta.positive { color: #16a34a; }
+	.elo-delta.negative { color: #dc2626; }
+
+	.progress-bar-container {
+		height: 0.75rem;
+		background-color: #e2e8f0;
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid #cbd5e1;
+		box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+		margin-top: 0.25rem;
+		width: 100%;
+	}
+
+	.progress-bar-fill {
+		height: 100%;
+		background-color: #3b82f6; /* blue-500 */
+		background-image: linear-gradient(
+			45deg,
+			rgba(255, 255, 255, 0.15) 25%,
+			transparent 25%,
+			transparent 50%,
+			rgba(255, 255, 255, 0.15) 50%,
+			rgba(255, 255, 255, 0.15) 75%,
+			transparent 75%,
+			transparent
+		);
+		background-size: 1rem 1rem;
+		border-radius: 9999px;
+		transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+		animation: progress-stripes 1s linear infinite;
+	}
+
+	@keyframes progress-stripes {
+		from { background-position: 1rem 0; }
+		to { background-position: 0 0; }
 	}
 
 	.feedback-list-section .icon {

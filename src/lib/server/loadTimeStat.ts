@@ -40,7 +40,7 @@ export async function recordLoadTime(ms: number): Promise<void> {
 	}
 
 	const avg = getAverageLoadTime();
-	console.log(`[loadTimeStat] new sample: ${ms}ms | rolling avg (${samples.length}/${MAX_SAMPLES} samples): ${avg}ms`);
+	console.log(`[loadTimeStat] recorded load time: ${ms}ms | rolling avg (${samples.length}/${MAX_SAMPLES} samples): ${avg}ms`);
 
 	try {
 		await prisma.siteSettings.upsert({
@@ -49,7 +49,7 @@ export async function recordLoadTime(ms: number): Promise<void> {
 			create: { id: 'singleton', loadTimeSamples: samples }
 		});
 	} catch (err) {
-		console.error('[loadTimeStat] failed to persist samples:', err);
+		console.error('[loadTimeStat] failed to persist load time:', err);
 	}
 }
 

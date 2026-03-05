@@ -1,22 +1,22 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: lernendeutsch-postgresql
-  namespace: lernendeutsch
+  name: lingolearn-postgresql
+  namespace: lingolearn
 spec:
   instances: 3
   storage:
     size: 50Gi
   bootstrap:
     initdb:
-      database: lernendeutsch
-      owner: lernendeutsch
+      database: lingolearn
+      owner: lingolearn
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: lernendeutsch-secrets
-  namespace: lernendeutsch
+  name: lingolearn-secrets
+  namespace: lingolearn
 type: Opaque
 stringData:
   AUTH_SECRET: ""
@@ -29,64 +29,64 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lernendeutsch
-  namespace: lernendeutsch
+  name: lingolearn
+  namespace: lingolearn
   labels:
-    app: lernendeutsch
+    app: lingolearn
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lernendeutsch
+      app: lingolearn
   template:
     metadata:
       labels:
-        app: lernendeutsch
+        app: lingolearn
     spec:
       containers:
-        - name: lernendeutsch
-          image: ghcr.io/willuhmjs/lernendeutsch:latest
+        - name: lingolearn
+          image: ghcr.io/willuhmjs/lingolearn:latest
           ports:
             - containerPort: 3000
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-postgresql-app
+                  name: lingolearn-postgresql-app
                   key: uri
             - name: AUTH_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: AUTH_SECRET
             - name: AUTH_GOOGLE_ID
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: AUTH_GOOGLE_ID
                   optional: true
             - name: AUTH_GOOGLE_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: AUTH_GOOGLE_SECRET
                   optional: true
             - name: DEFAULT_LLM_BASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: DEFAULT_LLM_BASE_URL
                   optional: true
             - name: DEFAULT_LLM_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: DEFAULT_LLM_API_KEY
                   optional: true
             - name: DEFAULT_LLM_MODEL
               valueFrom:
                 secretKeyRef:
-                  name: lernendeutsch-secrets
+                  name: lingolearn-secrets
                   key: DEFAULT_LLM_MODEL
                   optional: true
           resources:
@@ -105,23 +105,23 @@ metadata:
     traefik.ingress.kubernetes.io/service.sticky.cookie.name: "sticky-session"
     traefik.ingress.kubernetes.io/service.sticky.cookie.secure: "true"
   labels:
-    app: lernendeutsch
-  name: lernendeutsch
-  namespace: lernendeutsch
+    app: lingolearn
+  name: lingolearn
+  namespace: lingolearn
 spec:
   ports:
     - name: website
       port: 3000
   selector:
-    app: lernendeutsch
+    app: lingolearn
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: cs-dns-cluster
-  name: lernendeutsch
-  namespace: lernendeutsch
+  name: lingolearn
+  namespace: lingolearn
 spec:
   ingressClassName: traefik
   rules:
@@ -130,7 +130,7 @@ spec:
         paths:
           - backend:
               service:
-                name: lernendeutsch
+                name: lingolearn
                 port:
                   number: 3000
             path: /
@@ -138,4 +138,4 @@ spec:
   tls:
     - hosts:
         - german.will.net
-      secretName: lernendeutsch-tls
+      secretName: lingolearn-tls

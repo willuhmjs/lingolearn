@@ -209,8 +209,8 @@ export async function POST({ request, locals }) {
 			}
 		}
 
-		const masteredVocab = masteredVocabDb.map(uv => uv.vocabulary);
-		const learningVocab = learningVocabDb.map(uv => uv.vocabulary);
+		const masteredVocab = masteredVocabDb.map((uv: any) => ({ ...uv.vocabulary, eloRating: uv.eloRating ?? 1200, srsState: uv.srsState ?? 'UNSEEN' }));
+		const learningVocab = learningVocabDb.map((uv: any) => ({ ...uv.vocabulary, eloRating: uv.eloRating ?? 1200, srsState: uv.srsState ?? 'UNSEEN' }));
 		const masteredGrammar = masteredGrammarDb.map(ug => ug.grammarRule);
 		const learningGrammar = learningGrammarDb.map(ug => ug.grammarRule);
 
@@ -681,15 +681,32 @@ ${jsonFormatBlock}`;
 										}
 										const aiResult = JSON.parse(aiResultRaw);
 										if (aiResult?.vocabulary?.length > 0) {
-											const aiVocabEntries = aiResult.vocabulary.map((v: any, idx: number) => ({
-												id: `ai_${Date.now()}_${idx}`,
-												lemma: v.lemma,
-												meaning: v.meaning,
-												partOfSpeech: v.partOfSpeech,
-												gender: v.gender ?? null,
-												plural: v.plural ?? null,
-												languageId: activeLanguageId,
-											}));
+											const aiVocabEntries = await Promise.all(
+												aiResult.vocabulary.map(async (v: any) => {
+													const existing = await prisma.vocabulary.findFirst({
+														where: { lemma: v.lemma, languageId: activeLanguageId }
+													});
+													if (existing) {
+														if (!existing.meaning && v.meaning) {
+															return prisma.vocabulary.update({
+																where: { id: existing.id },
+																data: { meaning: v.meaning, partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech }
+															});
+														}
+														return existing;
+													}
+													return prisma.vocabulary.create({
+														data: {
+															lemma: v.lemma,
+															meaning: v.meaning,
+															partOfSpeech: v.partOfSpeech,
+															gender: v.gender ?? null,
+															plural: v.plural ?? null,
+															languageId: activeLanguageId
+														}
+													});
+												})
+											);
 											controller.enqueue(
 												new TextEncoder().encode(
 													JSON.stringify({ type: 'vocab_enrichment', data: aiVocabEntries }) + '\n'
@@ -723,15 +740,32 @@ ${jsonFormatBlock}`;
 										}
 										const ctxResult = JSON.parse(ctxRaw);
 										if (ctxResult?.vocabulary?.length > 0) {
-											const ctxEntries = ctxResult.vocabulary.map((v: any, idx: number) => ({
-												id: `ai_ctx_${Date.now()}_${idx}`,
-												lemma: v.lemma,
-												meaning: v.meaning,
-												partOfSpeech: v.partOfSpeech ?? 'pronoun',
-												gender: null,
-												plural: null,
-												languageId: activeLanguageId,
-											}));
+											const ctxEntries = await Promise.all(
+												ctxResult.vocabulary.map(async (v: any) => {
+													const existing = await prisma.vocabulary.findFirst({
+														where: { lemma: v.lemma, languageId: activeLanguageId }
+													});
+													if (existing) {
+														if (!existing.meaning && v.meaning) {
+															return prisma.vocabulary.update({
+																where: { id: existing.id },
+																data: { meaning: v.meaning, partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech }
+															});
+														}
+														return existing;
+													}
+													return prisma.vocabulary.create({
+														data: {
+															lemma: v.lemma,
+															meaning: v.meaning,
+															partOfSpeech: v.partOfSpeech ?? 'pronoun',
+															gender: null,
+															plural: null,
+															languageId: activeLanguageId
+														}
+													});
+												})
+											);
 											controller.enqueue(
 												new TextEncoder().encode(
 													JSON.stringify({ type: 'vocab_enrichment', data: ctxEntries }) + '\n'

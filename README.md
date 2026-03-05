@@ -29,7 +29,7 @@ A German language learning app with spaced repetition, AI-powered lesson generat
 The image is published to GitHub Container Registry on every push to `main` for `linux/amd64` and `linux/arm64`:
 
 ```
-ghcr.io/willuhmjs/lernendeutsch:latest
+ghcr.io/willuhmjs/lingolearn:latest
 ```
 
 Run with Docker Compose (includes PostgreSQL):
@@ -43,7 +43,7 @@ Or pull and run the image directly:
 ```sh
 docker run -d \
   -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@host:5432/lernendeutsch" \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/lingolearn" \
   -e AUTH_SECRET="your-secret" \
-  ghcr.io/willuhmjs/lernendeutsch:latest
+  ghcr.io/willuhmjs/lingolearn:latest
 ```

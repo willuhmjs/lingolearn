@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: lernendeutsch
+      POSTGRES_DB: lingolearn
     ports:
       - '5432:5432'
     volumes:

@@ -25,10 +25,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 					}
 				},
 				orderBy: {
-					joinedAt: 'asc'
+					createdAt: 'asc'
 				}
 			},
 			assignments: {
+				include: {
+					scores: true
+				},
 				orderBy: {
 					createdAt: 'desc'
 				}

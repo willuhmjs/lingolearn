@@ -137,6 +137,7 @@ model GrammarRule {
   language    Language?         @relation(fields: [languageId], references: [id])
   title       String
   description String?
+  guide       String?
   level       String            @default("A1")
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt

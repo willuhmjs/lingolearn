@@ -8,8 +8,8 @@ export type GameMode = 'native-to-target' | 'target-to-native' | 'fill-blank' | 
 
 export interface EvaluationPayload {
 	globalScore: number;
-	vocabularyUpdates: { id: string; score: number }[];
-	grammarUpdates: { id: string; score: number }[];
+	vocabularyUpdates: { id: string; score: number; eloBefore?: number; eloAfter?: number }[];
+	grammarUpdates: { id: string; score: number; eloBefore?: number; eloAfter?: number }[];
 	extraVocabLemmas?: string[];
 	feedback: string;
 	feedbackEnglish?: string;
@@ -37,7 +37,7 @@ export function buildEvaluationPrompt(
 	targetedGrammar: GrammarRule[],
 	gameMode: GameMode = 'native-to-target',
 	userLevel: string = 'A1',
-	activeLanguageName: string = '${activeLanguageName}'
+	activeLanguageName: string
 ): { systemPrompt: string; userMessage: string; idMap: Record<string, string> } {
 	// Build short ID maps so the LLM sees tiny tokens like "v0" instead of full UUIDs
 	const idMap: Record<string, string> = {}; // short -> real
@@ -302,6 +302,9 @@ export async function updateEloRatings(userId: string, payload: EvaluationPayloa
 			const newState = deriveSrsState(newElo, baseDifficulty);
 			const nextReviewDate = calculateNextReviewDate(newElo, baseDifficulty);
 
+			vocabUpdate.eloBefore = currentElo;
+			vocabUpdate.eloAfter = newElo;
+
 			await prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocabUpdate.id } },
 				create: {
@@ -354,6 +357,9 @@ export async function updateEloRatings(userId: string, payload: EvaluationPayloa
 			const newState = deriveSrsState(newElo, baseDifficulty);
 			const nextReviewDate = calculateNextReviewDate(newElo, baseDifficulty);
 
+			grammarUpdate.eloBefore = currentElo;
+			grammarUpdate.eloAfter = newElo;
+
 			await prisma.userGrammarRule.upsert({
 				where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } },
 				create: {
@@ -402,6 +408,9 @@ export async function updateEloRatings(userId: string, payload: EvaluationPayloa
 			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode);
 			const newState = deriveSrsState(newElo, baseDifficulty);
 			const nextReviewDate = calculateNextReviewDate(newElo, baseDifficulty);
+
+			// We don't currently return extra vocab updates in the API response's main arrays,
+			// but we could if we wanted to show them. For now just update DB.
 
 			await prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocabExists.id } },

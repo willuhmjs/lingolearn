@@ -246,7 +246,7 @@
 
 			<button class="path-card test-card dark:bg-slate-900 dark:border-blue-900" on:click={startPlacementTest}>
 				<span class="path-icon">💬</span>
-				<h2 class="dark:text-white">I Know Some {data.user.activeLanguage.name}</h2>
+				<h2 class="dark:text-white">I Know Some {data?.user?.activeLanguage?.name}</h2>
 				<p class="dark:text-slate-400">I have some language knowledge. Chat with our AI teacher to find my level so I don't repeat what I already know.</p>
 				<span class="path-badge test-badge">Takes 2-5 minutes</span>
 			</button>

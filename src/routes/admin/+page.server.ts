@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/');
 	}
 
-	const [users, settings] = await Promise.all([
+	const [users, settings, languages] = await Promise.all([
 		prisma.user.findMany({
 			orderBy: { createdAt: 'desc' },
 			select: {
@@ -26,10 +26,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 				}
 			}
 		}),
-		getSiteSettings()
+		getSiteSettings(),
+		(prisma as any).language.findMany({
+			orderBy: { name: 'asc' },
+			include: {
+				_count: { select: { vocabularies: true, grammarRules: true } }
+			}
+		})
 	]);
 
-	return { users, localLoginEnabled: settings.localLoginEnabled };
+	return { users, localLoginEnabled: settings.localLoginEnabled, languages };
 };
 
 export const actions: Actions = {

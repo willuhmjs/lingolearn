@@ -124,6 +124,15 @@
 									{/if}
 								</div>
 								<div class="tooltip-body">
+									{#if vocab.eloRating !== undefined}
+										{@const elo = Math.round(vocab.eloRating)}
+										{@const levelText = elo < 1200 ? 'Learning' : elo < 1500 ? 'Known' : 'Mastered'}
+										{@const progressPct = Math.max(0, Math.min(100, elo < 1200 ? ((elo - 1000) / 200) * 100 : elo < 1500 ? ((elo - 1200) / 300) * 100 : 100))}
+										<div class="word-tooltip-elo">
+											<div class="elo-header"><span>Mastery: {levelText}</span><span class="elo-score">ELO {elo}</span></div>
+											<div class="elo-progress-track"><div class="elo-progress-fill {levelText.toLowerCase()}" style="width: {progressPct}%"></div></div>
+										</div>
+									{/if}
 									{#if vocab.vocabulary.partOfSpeech}
 										<div><strong>POS:</strong> {vocab.vocabulary.partOfSpeech}</div>
 									{/if}
@@ -429,6 +438,47 @@
 		flex-direction: column;
 		gap: 0.25rem;
 	}
+
+	.word-tooltip-elo {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin-bottom: 0.25rem;
+		padding-bottom: 0.25rem;
+		border-bottom: 1px solid #334155;
+	}
+
+	.elo-header {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.75rem;
+		color: #94a3b8;
+		font-weight: 600;
+	}
+
+	.elo-score {
+		color: #cbd5e1;
+	}
+
+	.elo-progress-track {
+		display: block;
+		width: 100%;
+		height: 4px;
+		background: #334155;
+		border-radius: 2px;
+		overflow: hidden;
+	}
+
+	.elo-progress-fill {
+		display: block;
+		height: 100%;
+		border-radius: 2px;
+		transition: width 0.3s ease;
+	}
+	
+	.elo-progress-fill.learning { background: #3b82f6; }
+	.elo-progress-fill.known { background: #eab308; }
+	.elo-progress-fill.mastered { background: #22c55e; }
 
 	.sr-only {
 		position: absolute;

@@ -151,51 +151,9 @@ export const pronouns = [
 		partOfSpeech: 'pronoun' as const,
 	},
 	{
-	  "lemma": "ich",
-	  "meaning": "I",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "du",
-	  "meaning": "you",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "er",
-	  "meaning": "he",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "sie",
-	  "meaning": "she, they",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "es",
-	  "meaning": "it",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "wir",
-	  "meaning": "we",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "ihr",
-	  "meaning": "you (plural)",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	},
-	{
-	  "lemma": "mich",
-	  "meaning": "me",
-	  "partOfSpeech": "pronoun",
-	  "isBeginner": true
-	}
+		lemma: "ihr",
+		meaning: "you (plural)",
+		partOfSpeech: 'pronoun' as const,
+		isBeginner: true
+ 	}
 ];
