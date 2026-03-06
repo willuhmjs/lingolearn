@@ -88,6 +88,10 @@ export async function POST(event) {
 						{ nextReviewDate: { lte: now } }
 					]
 				},
+				orderBy: [
+					{ eloRating: 'asc' },
+					{ nextReviewDate: 'asc' }
+				],
 				include: { grammarRule: true },
 				take: 5
 			}),
@@ -112,6 +116,10 @@ export async function POST(event) {
 				],
 				grammarRule: { level: { in: allowedLevels }, languageId: activeLanguageId }
 			},
+			orderBy: [
+				{ eloRating: 'asc' },
+				{ nextReviewDate: 'asc' }
+			],
 			include: { 
 				grammarRule: {
 					include: { dependencies: { select: { id: true } } }
@@ -267,7 +275,7 @@ export async function POST(event) {
 		let jsonSchemaObj: Record<string, unknown>;
 
 		if (gameMode === 'fill-blank') {
-			modeInstruction = `This is a FILL IN THE BLANK exercise. Generate a ${activeLangName} sentence, then create the "challengeText" by replacing targeted vocabulary words with blanks "___". The "targetSentence" must be the complete ${activeLangName} sentence with no blanks. Provide a "hints" array with one object per blank: each has the "vocabId" and a "hint" string (the English meaning of the missing word).`;
+			modeInstruction = `This is a FILL IN THE BLANK exercise. Generate a ${activeLangName} sentence, then create the "challengeText" by replacing targeted vocabulary words with blanks "___". The "targetSentence" must be the complete ${activeLangName} sentence with no blanks. Provide a "hints" array with one object per blank: each has the "vocabId" and a "hint" string (the English meaning of the missing word). CRUCIAL: If testing the active grammar rule, you MUST blank out the specific word, prefix, or suffix that demonstrates the grammar rule and pass the grammar rule's ID (e.g., "g0") in the "vocabId" field, with a helpful hint.`;
 			vocabTagInstruction = `Do NOT use <vocab> tags. Instead, replace targeted words with "___" in challengeText. The targetSentence has the full correct ${activeLangName} sentence.`;
 			jsonFormatBlock = `JSON format:
 {
@@ -302,8 +310,8 @@ export async function POST(event) {
 				additionalProperties: false
 			};
 		} else if (gameMode === 'multiple-choice') {
-			modeInstruction = `This is a MULTIPLE CHOICE exercise. Generate a ${activeLangName} sentence as "challengeText". Provide the correct English translation as "targetSentence". Also provide exactly 3 plausible but INCORRECT English translations as "distractors". The distractors should be similar enough to be challenging but clearly wrong.`;
-			vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName}), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
+			modeInstruction = `This is a MULTIPLE CHOICE exercise. Generate a ${activeLangName} sentence as "challengeText". Provide the correct English translation as "targetSentence". Also provide exactly 3 plausible but INCORRECT English translations as "distractors". The distractors should be similar enough to be challenging but clearly wrong. CRUCIAL: If the primary goal is to test a grammar rule, the distractors MUST be grammatically incorrect variations of the *target language* sentence instead of English translations, and the "targetSentence" should just be the correct ${activeLangName} sentence. If you do this, set "challengeText" to the English translation.`;
+			vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName} unless testing grammar), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
 			jsonFormatBlock = `JSON format:
 {
   "challengeText": "<${activeLangName} sentence with vocab tags>",
@@ -390,8 +398,9 @@ MULTI-WORD MEANINGS: If a ${activeLangName} word's English meaning contains mult
 ${beginnerGuidance}
 
 ${sentenceConstraint}${topicConstraint}${grammarConstraint}
-Compose the ${activeLangName} text focusing on the "Mastered" and "Learning" vocabulary provided below. You are ALLOWED to use other natural ${activeLangName} vocabulary appropriate for a ${userLevel} student, even if it is not in the provided lists. However, you MUST ABSOLUTELY AVOID using any custom or user-provided words that are not explicitly present in the provided vocabulary lists below. If you think the user might have learned a specific obscure word elsewhere but it is not in these lists, do not use it.
-CRITICAL THEMATIC INJECTION: The "Learning Concepts" list below is a POOL of words. You MUST choose ONE word from it to establish a central theme. Then, try to incorporate other words from the Learning list ONLY if they fit naturally within that theme.
+Compose the ${activeLangName} text focusing on the "Mastered" and "Learning" concepts provided below. You are ALLOWED to use other natural ${activeLangName} vocabulary appropriate for a ${userLevel} student, even if it is not in the provided lists. However, you MUST ABSOLUTELY AVOID using any custom or user-provided words that are not explicitly present in the provided vocabulary lists below. If you think the user might have learned a specific obscure word elsewhere but it is not in these lists, do not use it.
+CRITICAL THEMATIC INJECTION: The "Learning Vocabulary" list below is a POOL of words. You MUST choose ONE word from it to establish a central theme. Then, try to incorporate other words from the Learning Vocabulary list ONLY if they fit naturally within that theme.
+CRITICAL GRAMMAR INJECTION: The "Learning Grammar" section is NOT a pool. You MUST structurally incorporate the active grammar rule (e.g., ID: g0) into the sentence. This is mandatory.
 CRITICAL QUALITY INSTRUCTION: Prioritize sentence quality, natural flow, and logic over using every single word provided in the lists. Do NOT try to force or jam words together if they don't make sense. You DO NOT have to use all the words provided, just pick the ones that fit naturally and make logical sense.
 ${modeInstruction}
 
@@ -403,10 +412,10 @@ ${masteredVocabList || "Basic"}
 Mastered Grammar:
 ${masteredGrammarList || "Basic"}
 
-Learning Concepts (USE WHAT FITS NATURALLY):
-Vocab:
+Learning Vocabulary (USE WHAT FITS NATURALLY):
 ${learningVocabList || "None"}
-Grammar:
+
+Learning Grammar (MANDATORY TO INCORPORATE):
 ${learningGrammarList || "None"}
 
 ${jsonFormatBlock}`;
