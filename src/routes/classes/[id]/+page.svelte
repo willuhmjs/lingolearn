@@ -141,24 +141,6 @@
 		setTimeout(() => { copiedAssignmentId = null; }, 2000);
 	}
 
-	async function handleDeleteAssignment(assignmentId: string) {
-		if (!confirm('Are you sure you want to delete this assignment?')) return;
-		try {
-			const res = await fetch(`/api/classes/${classDetails.id}/assignments/${assignmentId}`, {
-				method: 'DELETE'
-			});
-			if (res.ok) {
-				toast.success('Assignment deleted');
-				await invalidateAll();
-			} else {
-				const result = await res.json();
-				toast.error(result.error || 'Failed to delete assignment.');
-			}
-		} catch (e) {
-			toast.error('An error occurred.');
-		}
-	}
-
 	async function handleLeaveClass() {
 		if (!confirm('Leave this class? You will need the invite code to rejoin.')) return;
 		try {
@@ -320,14 +302,6 @@
 											on:click={() => copyAssignmentLink(assignment.id)}
 										>
 											{copiedAssignmentId === assignment.id ? '✓ Copied' : '🔗 Copy Link'}
-										</button>
-										<button
-											type="button"
-											class="btn-duo btn-delete assignment-play-btn text-center"
-											aria-label="Delete assignment"
-											on:click={() => handleDeleteAssignment(assignment.id)}
-										>
-											Delete
 										</button>
 									{/if}
 								</div>

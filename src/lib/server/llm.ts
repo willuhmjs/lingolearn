@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { prisma } from '$lib/server/prisma';
+import { getSiteSettings } from '$lib/server/settings';
 
 export interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
@@ -33,16 +34,19 @@ export async function generateChatCompletion({
 	stream = false,
 	signal
 }: GenerateChatCompletionOptions) {
-	// 1. Fetch user credentials from database
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: { llmBaseUrl: true, llmApiKey: true, activeLanguage: true }
-	});
+	// 1. Fetch user credentials from database and site settings
+	const [user, settings] = await Promise.all([
+		prisma.user.findUnique({
+			where: { id: userId },
+			select: { llmBaseUrl: true, llmApiKey: true, activeLanguage: true }
+		}),
+		getSiteSettings()
+	]);
 
-	// 2. Resolve Base URL and API Key (User custom OR fallback to environment variables)
-	const baseUrl = (user?.llmBaseUrl || env.DEFAULT_LLM_BASE_URL || '').replace(/^["']|["']$/g, '');
+	// 2. Resolve Base URL and API Key (User custom OR Site Settings OR fallback to environment variables)
+	const baseUrl = (user?.llmBaseUrl || settings.llmEndpoint || env.DEFAULT_LLM_BASE_URL || '').replace(/^["']|["']$/g, '');
 	const apiKey = (user?.llmApiKey || env.DEFAULT_LLM_API_KEY || '').replace(/^["']|["']$/g, '');
-	const resolvedModel = (model || env.DEFAULT_LLM_MODEL || 'gpt-3.5-turbo').replace(/^["']|["']$/g, '');
+	const resolvedModel = (model || settings.llmModel || env.DEFAULT_LLM_MODEL || 'gpt-3.5-turbo').replace(/^["']|["']$/g, '');
 
 	if (!baseUrl) {
 		throw new Error('LLM Base URL is not configured.');

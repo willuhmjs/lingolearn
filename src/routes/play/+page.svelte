@@ -1407,14 +1407,14 @@ r<script lang="ts">
 
 <div class="page-container">
 	<div class="content-wrapper">
-		<header class="page-header">
+		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
 			<h1 class="dark:text-white">Play Mode</h1>
 			<p class="dark:text-slate-400">Test your skills with personalized challenges.</p>
 		</header>
 
 		<!-- Assignment context banner -->
 		{#if assignment && assignmentProgress}
-			<div class="card card-duo assignment-banner {assignmentProgress.passed ? 'passed' : 'active'}">
+			<div class="card card-duo assignment-banner {assignmentProgress.passed ? 'passed' : 'active'}" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 				<div class="assignment-info">
 					<div class="assignment-icon">
 						{assignmentProgress.passed ? '🏆' : '📋'}
@@ -1500,7 +1500,7 @@ r<script lang="ts">
 		{/if}
 
 		{#if loading}
-			<div class="card card-duo loading-state dark:bg-slate-800 dark:border-slate-700">
+			<div class="card card-duo loading-state dark:bg-slate-800 dark:border-slate-700" in:fade={{ duration: 300 }}>
 				<div class="spinner"></div>
 				<div class="load-progress-track dark:bg-slate-700">
 					<div class="load-progress-fill" style="width: {loadProgressPct}%"></div>

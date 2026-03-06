@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 
 	export let data;
 
@@ -121,12 +121,12 @@
 </svelte:head>
 
 <div class="dictionary-container">
-	<div class="header">
+	<div class="header" in:fly={{ y: 20, duration: 400 }}>
 		<h1 class="title">Dictionary</h1>
 		<p class="subtitle">Search for words and add them to your learning list.</p>
 	</div>
 
-	<div class="search-section">
+	<div class="search-section" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 		<div class="search-wrapper">
 			<div class="search-icon-wrapper">
 				<svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

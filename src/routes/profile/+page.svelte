@@ -1,18 +1,19 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import { fly } from 'svelte/transition';
 
 	export let data: PageData;
 	export let form;
 </script>
 
 <div class="profile-container">
-	<header class="profile-header">
+	<header class="profile-header" in:fly={{ y: 20, duration: 400 }}>
 		<h1 class="dark:text-white">Profile</h1>
 		<p class="dark:text-slate-400">Manage your account settings.</p>
 	</header>
 
-	<section class="info-card dark:bg-slate-800 dark:border-slate-700">
+	<section class="info-card dark:bg-slate-800 dark:border-slate-700" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 		<h2 class="dark:text-white">Your Information</h2>
 		<div class="info-grid">
 			<div class="info-item">
@@ -34,7 +35,7 @@
 		</div>
 	</section>
 
-	<section class="theme-card dark:bg-slate-800 dark:border-slate-700">
+	<section class="theme-card dark:bg-slate-800 dark:border-slate-700" in:fly={{ y: 20, duration: 400, delay: 150 }}>
 		<h2 class="dark:text-white">Theme Settings</h2>
 		
 		{#if form?.themeSuccess}
@@ -66,7 +67,7 @@
 	</section>
 
 	{#if data.localLoginEnabled}
-		<section class="password-card dark:bg-slate-800 dark:border-slate-700">
+		<section class="password-card dark:bg-slate-800 dark:border-slate-700" in:fly={{ y: 20, duration: 400, delay: 200 }}>
 			<h2 class="dark:text-white">Update Password</h2>
 
 			{#if form?.error}
@@ -94,7 +95,7 @@
 		</section>
 	{/if}
 
-	<section class="delete-card">
+	<section class="delete-card" in:fly={{ y: 20, duration: 400, delay: 250 }}>
 		<h2>Danger Zone</h2>
 		<p class="warning-text">Deleting your account is permanent and cannot be undone. All your progress, vocabulary, and settings will be lost.</p>
 		

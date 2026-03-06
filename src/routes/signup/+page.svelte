@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { signIn } from '@auth/sveltekit/client';
+	import { fly } from 'svelte/transition';
 	export let data: { localLoginEnabled: boolean };
 	export let form: { error?: string } | null = null;
 </script>
 
 <div class="page-container">
-	<div class="auth-card">
+	<div class="auth-card" in:fly={{ y: 20, duration: 400 }}>
 		<div class="auth-header">
 			<h2 class="dark:text-white">Create a new account</h2>
 			<p class="dark:text-slate-400">Join us today to get started.</p>

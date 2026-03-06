@@ -222,6 +222,7 @@
 	};
 
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 </script>
 
 <svelte:head>
@@ -231,12 +232,12 @@
 <main class="onboarding-container" class:chat-active={messages.length > 0 || (selectedPath === 'test' && !completed)}>
 	{#if selectedPath === 'choose' && !completed}
 		<!-- Path Selection Screen -->
-		<header class="page-header">
+		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
 			<h1 class="dark:text-white">Welcome to LingoLearn!</h1>
 			<p class="dark:text-slate-400">Let's set up your learning experience. Choose the option that best describes you:</p>
 		</header>
 
-		<div class="path-selection">
+		<div class="path-selection" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 			<button class="path-card beginner-card dark:bg-slate-900 dark:border-emerald-900" on:click={handleBeginnerPath} disabled={isSubmittingBeginner}>
 				<span class="path-icon">🌱</span>
 				<h2 class="dark:text-white">I'm a Complete Beginner</h2>
@@ -274,7 +275,7 @@
 		{/if}
 	{:else}
 	<!-- Placement Test / Completion -->
-	<header class="page-header">
+	<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
 		{#if completed}
 			<h1 class="dark:text-white">You're All Set!</h1>
 			<p class="dark:text-slate-400">We've prepared a personalized curriculum for you.</p>
@@ -284,7 +285,7 @@
 		{/if}
 	</header>
 
-	<div class="content-layout">
+	<div class="content-layout" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 		<div class="chat-container dark:bg-slate-800 dark:border-slate-700">
 			{#if messages.length > 0 || loading || error}
 			<div class="chat-messages dark:bg-slate-900">

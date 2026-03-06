@@ -191,6 +191,8 @@ model SiteSettings {
   id                String  @id @default("singleton")
   localLoginEnabled Boolean @default(true)
   loadTimeSamples   Int[]
+  llmEndpoint       String?
+  llmModel          String?
 }
 
 enum ClassRole {

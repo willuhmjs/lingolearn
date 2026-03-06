@@ -58,6 +58,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		users,
 		localLoginEnabled: settings.localLoginEnabled,
+		llmEndpoint: settings.llmEndpoint || '',
+		llmModel: settings.llmModel || '',
 		languages,
 		pendingVocab,
 		classes,
@@ -98,6 +100,26 @@ export const actions: Actions = {
 		} catch (error) {
 			console.error('Toggle local login failed:', error);
 			return fail(500, { message: 'Failed to toggle local login.' });
+		}
+	},
+	updateLLMSettings: async ({ request, locals }) => {
+		if (!locals.user || locals.user.role !== 'ADMIN') {
+			return fail(403, { message: 'Unauthorized' });
+		}
+		
+		const data = await request.formData();
+		const llmEndpoint = data.get('llmEndpoint')?.toString() || '';
+		const llmModel = data.get('llmModel')?.toString() || '';
+		
+		try {
+			await updateSiteSettings({ 
+				llmEndpoint: llmEndpoint || null, 
+				llmModel: llmModel || null 
+			});
+			return { success: true, message: 'LLM settings updated.' };
+		} catch (error) {
+			console.error('Update LLM settings failed:', error);
+			return fail(500, { message: 'Failed to update LLM settings.' });
 		}
 	}
 };

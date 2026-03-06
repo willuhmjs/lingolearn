@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { fly } from 'svelte/transition';
 	import type { PageData, ActionData } from './$types';
 	export let data: PageData;
 	export let form: ActionData;
@@ -17,6 +18,64 @@
 	let showDeleteLangConfirm = false;
 	let deleteScope: 'vocab' | 'grammar' | 'all' = 'all';
 	let isDeletingLangData = false;
+
+	// LLM config state
+	let llmEndpoint = data.llmEndpoint || '';
+	let llmModel = data.llmModel || '';
+	let availableModels: string[] = [];
+	let isFetchingModels = false;
+	let llmMsg = '';
+	let llmError = false;
+
+	// Fetch models whenever endpoint changes, or initially if we have an endpoint
+	async function fetchModels() {
+		if (!llmEndpoint) {
+			availableModels = [];
+			return;
+		}
+		
+		isFetchingModels = true;
+		try {
+			// Append /v1/models if the endpoint doesn't already end with it. Often base URL is provided.
+			let fetchUrl = llmEndpoint;
+			if (!fetchUrl.endsWith('/v1/models') && !fetchUrl.endsWith('/v1/models/')) {
+				fetchUrl = fetchUrl.replace(/\/+$/, '') + '/v1/models';
+			}
+
+			const res = await fetch(fetchUrl);
+			if (res.ok) {
+				const data = await res.json();
+				if (data && data.data && Array.isArray(data.data)) {
+					availableModels = data.data.map((m: any) => m.id);
+				} else if (Array.isArray(data)) {
+					// Some providers might just return an array
+					availableModels = data.map((m: any) => m.id || m);
+				} else {
+					availableModels = [];
+				}
+			} else {
+				availableModels = [];
+			}
+		} catch (error) {
+			console.error('Failed to fetch models', error);
+			availableModels = [];
+		} finally {
+			isFetchingModels = false;
+		}
+	}
+
+	// Try fetching models on load if endpoint exists
+	$: {
+		if (data.llmEndpoint) {
+			// Initialize
+		}
+	}
+	
+	// Svelte onMount is better for initial fetch to avoid SSR issues
+	import { onMount } from 'svelte';
+	onMount(() => {
+		if (llmEndpoint) fetchModels();
+	});
 
 	$: selectedLang = data.languages.find((l: any) => l.id === selectedLangId);
 
@@ -257,12 +316,12 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="admin-container">
-	<header class="admin-header">
+	<header class="admin-header" in:fly={{ y: 20, duration: 400 }}>
 		<h1>Admin Dashboard</h1>
 		<p>Manage users and system configuration.</p>
 	</header>
 
-	<section class="stats-card">
+	<section class="stats-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 		<h2>System Statistics</h2>
 		<div class="stats-grid">
 			<div class="stat-item">
@@ -288,7 +347,7 @@
 		</div>
 	</section>
 
-	<section class="seed-card">
+	<section class="seed-card" in:fly={{ y: 20, duration: 400, delay: 150 }}>
 		<div class="seed-info">
 			<h2>Vocabulary Seed</h2>
 			<p>Run the vocabulary and grammar rules seed script to update the database with the latest entries.</p>
@@ -314,7 +373,7 @@
 		</form>
 	</section>
 
-	<section class="seed-card">
+	<section class="seed-card" in:fly={{ y: 20, duration: 400, delay: 200 }}>
 		<div class="seed-info">
 			<h2>Local Login</h2>
 			<p>
@@ -336,6 +395,80 @@
 		</form>
 	</section>
 
+	<section class="seed-card" style="flex-direction: column; align-items: stretch; gap: 1rem;" in:fly={{ y: 20, duration: 400, delay: 250 }}>
+		<div class="seed-info">
+			<h2>LLM Configuration</h2>
+			<p>Configure the language model used for AI features (e.g. vocabulary generation, onboarding, chat). The endpoint must be OpenAI-compatible.</p>
+		</div>
+		
+		{#if llmMsg}
+			<div class="alert" class:alert-success={!llmError} class:alert-error={llmError} style="margin: 0;">
+				{llmMsg}
+			</div>
+		{/if}
+
+		<form 
+			method="POST" 
+			action="?/updateLLMSettings" 
+			use:enhance={() => {
+				llmMsg = '';
+				llmError = false;
+				return async ({ result, update }) => {
+					await update();
+					if (result.type === 'success' || result.type === 'redirect') {
+						llmMsg = 'LLM settings updated successfully.';
+						llmError = false;
+					} else {
+						llmMsg = 'Failed to update LLM settings.';
+						llmError = true;
+					}
+				};
+			}}
+			style="display: flex; flex-direction: column; gap: 1rem;"
+		>
+			<div class="form-group" style="margin-bottom: 0;">
+				<label for="llmEndpoint">LLM API Endpoint (e.g., http://localhost:11434/v1)</label>
+				<div style="display: flex; gap: 0.5rem;">
+					<input 
+						type="text" 
+						id="llmEndpoint" 
+						name="llmEndpoint" 
+						bind:value={llmEndpoint} 
+						placeholder="https://api.openai.com/v1"
+						style="flex: 1;"
+					/>
+					<button type="button" class="cancel-btn" on:click={fetchModels} disabled={isFetchingModels || !llmEndpoint}>
+						{isFetchingModels ? 'Fetching...' : 'Fetch Models'}
+					</button>
+				</div>
+			</div>
+
+			<div class="form-group" style="margin-bottom: 0;">
+				<label for="llmModel">Model Name</label>
+				{#if availableModels.length > 0}
+					<select id="llmModel" name="llmModel" bind:value={llmModel}>
+						<option value="" disabled>Select a model</option>
+						{#each availableModels as model}
+							<option value={model}>{model}</option>
+						{/each}
+					</select>
+				{:else}
+					<input 
+						type="text" 
+						id="llmModel" 
+						name="llmModel" 
+						bind:value={llmModel} 
+						placeholder="e.g., gpt-4o-mini"
+					/>
+				{/if}
+			</div>
+
+			<div style="align-self: flex-end;">
+				<button type="submit" class="save-btn">Save LLM Settings</button>
+			</div>
+		</form>
+	</section>
+
 	{#if form?.success}
 		<div class="alert alert-success">
 			<span>{form.message}</span>
@@ -347,7 +480,7 @@
 		</div>
 	{/if}
 
-	<section class="lang-data-card">
+	<section class="lang-data-card" in:fly={{ y: 20, duration: 400, delay: 300 }}>
 		<h2>Language Data</h2>
 		<p class="lang-data-desc">Export a full JSON snapshot of vocabulary and grammar rules for any language — copy it into your seed scripts for source control. Import a JSON file to upsert entries into the database.</p>
 
@@ -413,7 +546,7 @@
 		{/if}
 	</section>
 
-	<section class="pending-vocab-card">
+	<section class="pending-vocab-card" in:fly={{ y: 20, duration: 400, delay: 350 }}>
 		<h2>Auto-Generated Vocabulary</h2>
 		<p class="lang-data-desc">Review vocabulary generated by the LLM before finalizing it in the database.</p>
 		
@@ -456,7 +589,7 @@
 		</div>
 	</section>
 
-	<section class="classes-section">
+	<section class="classes-section" in:fly={{ y: 20, duration: 400, delay: 400 }}>
 		<h2>Class & Community Management</h2>
 		<p class="lang-data-desc">Manage existing classes and delete empty or abandoned classes.</p>
 
@@ -498,7 +631,7 @@
 		</div>
 	</section>
 
-	<section class="users-section">
+	<section class="users-section" in:fly={{ y: 20, duration: 400, delay: 450 }}>
 		<h2>Users</h2>
 		<div class="table-wrapper">
 			<table>

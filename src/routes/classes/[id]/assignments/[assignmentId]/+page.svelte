@@ -45,6 +45,56 @@
 			toast.error('An error occurred.');
 		}
 	}
+
+	// Edit Assignment
+	let showEditModal = false;
+	let editTitle = '';
+	let editDescription = '';
+	let isSaving = false;
+
+	function openEditModal() {
+		editTitle = assignment.title;
+		editDescription = assignment.description || '';
+		showEditModal = true;
+	}
+
+	function closeEditModal() {
+		showEditModal = false;
+	}
+
+	async function handleSaveEdit() {
+		if (!editTitle.trim()) {
+			toast.error('Title is required');
+			return;
+		}
+
+		isSaving = true;
+		try {
+			const res = await fetch(`/api/classes/${classDetails.id}/assignments/${assignment.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: editTitle,
+					description: editDescription || null
+				})
+			});
+
+			if (res.ok) {
+				const updatedAssignment = await res.json();
+				assignment.title = updatedAssignment.title;
+				assignment.description = updatedAssignment.description;
+				toast.success('Assignment updated');
+				closeEditModal();
+			} else {
+				const result = await res.json();
+				toast.error(result.error || 'Failed to update assignment');
+			}
+		} catch (e) {
+			toast.error('An error occurred.');
+		} finally {
+			isSaving = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -68,6 +118,9 @@
 			<div class="banner-actions">
 				<button type="button" class="copy-link-btn" on:click={copyLink}>
 					{#if copied}✓ Copied!{:else}🔗 Copy Link{/if}
+				</button>
+				<button type="button" class="edit-btn" on:click={openEditModal}>
+					Edit
 				</button>
 				<button type="button" class="delete-btn" on:click={handleDeleteAssignment}>
 					Delete
@@ -130,6 +183,52 @@
 		{/if}
 	</div>
 </div>
+
+{#if showEditModal}
+	<div class="modal-backdrop" on:click={closeEditModal} transition:fly={{ duration: 200, opacity: 0 }}>
+		<div class="modal-content card-duo" on:click|stopPropagation>
+			<div class="modal-header">
+				<h3 class="modal-title">Edit Assignment</h3>
+				<button class="btn-close" on:click={closeEditModal}>&times;</button>
+			</div>
+			
+			<form on:submit|preventDefault={handleSaveEdit} class="edit-form">
+				<div class="field">
+					<label for="title">Title <span class="required">*</span></label>
+					<input
+						type="text"
+						id="title"
+						bind:value={editTitle}
+						placeholder="e.g. Verb practice week 3"
+						required
+					/>
+				</div>
+				<div class="field">
+					<label for="desc">Description</label>
+					<textarea
+						id="desc"
+						bind:value={editDescription}
+						placeholder="Any notes for students"
+						rows="3"
+					></textarea>
+				</div>
+				
+				<div class="modal-actions">
+					<button type="button" class="btn-secondary" on:click={closeEditModal}>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={isSaving}
+						class="btn-primary"
+					>
+						{isSaving ? 'Saving...' : 'Save Changes'}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.assignment-container {
@@ -207,7 +306,7 @@
 		align-items: center;
 	}
 
-	.copy-link-btn, .delete-btn {
+	.copy-link-btn, .edit-btn, .delete-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -223,7 +322,7 @@
 		transition: background 0.15s, border-color 0.15s;
 	}
 
-	.copy-link-btn:hover {
+	.copy-link-btn:hover, .edit-btn:hover {
 		background: rgba(255, 255, 255, 0.25);
 		border-color: rgba(255, 255, 255, 0.5);
 	}
@@ -455,5 +554,162 @@
 		font-size: 0.95rem;
 		font-weight: 600;
 		margin: 0;
+	}
+
+	/* Modal Styles */
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(15, 23, 42, 0.6);
+		backdrop-filter: blur(4px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 1rem;
+	}
+
+	.modal-content {
+		width: 100%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		background: var(--card-bg, #ffffff);
+		padding: 2rem;
+		border-radius: 1.5rem;
+		position: relative;
+		box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.modal-title {
+		font-size: 1.25rem;
+		color: var(--text-color, #1e293b);
+		margin: 0;
+		font-weight: 800;
+	}
+
+	.btn-close {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		line-height: 1;
+		color: #94a3b8;
+		cursor: pointer;
+		padding: 0.5rem;
+		transition: color 0.2s;
+	}
+
+	.btn-close:hover {
+		color: #0f172a;
+	}
+
+	.edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.field label {
+		display: block;
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: #475569;
+		margin-bottom: 0.4rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.required {
+		color: #ef4444;
+	}
+
+	.field input,
+	.field textarea {
+		width: 100%;
+		padding: 0.7rem 1rem;
+		border-radius: 1rem;
+		border: 2px solid var(--card-border, #e5e7eb);
+		background-color: var(--input-bg, #ffffff);
+		color: var(--text-color, #1e293b);
+		font-family: inherit;
+		font-size: 0.95rem;
+		font-weight: 700;
+		transition: border-color 0.2s;
+		box-sizing: border-box;
+		outline: none;
+		resize: vertical;
+	}
+
+	.field input:focus,
+	.field textarea:focus {
+		border-color: #22c55e;
+	}
+
+	.modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 1rem;
+		margin-top: 1.5rem;
+		padding-top: 1rem;
+		border-top: 2px solid var(--card-border, #e2e8f0);
+	}
+
+	.btn-primary, .btn-secondary {
+		padding: 0.6rem 1.25rem;
+		border-radius: 0.75rem;
+		font-weight: 800;
+		font-size: 0.9rem;
+		cursor: pointer;
+		border: none;
+		font-family: inherit;
+	}
+
+	.btn-primary {
+		background-color: #3b82f6;
+		color: white;
+		box-shadow: 0 4px 0 #2563eb;
+	}
+
+	.btn-primary:hover:not(:disabled) {
+		background-color: #2563eb;
+		transform: translateY(-2px);
+		box-shadow: 0 6px 0 #1d4ed8;
+	}
+
+	.btn-primary:active:not(:disabled) {
+		transform: translateY(2px);
+		box-shadow: 0 2px 0 #1d4ed8;
+	}
+
+	.btn-secondary {
+		background-color: #f1f5f9;
+		color: #475569;
+		box-shadow: 0 4px 0 #cbd5e1;
+	}
+
+	.btn-secondary:hover {
+		background-color: #e2e8f0;
+		transform: translateY(-2px);
+		box-shadow: 0 6px 0 #94a3b8;
+	}
+
+	.btn-secondary:active {
+		transform: translateY(2px);
+		box-shadow: 0 2px 0 #94a3b8;
+	}
+
+	button:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 </style>
