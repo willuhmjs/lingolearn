@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { fly } from 'svelte/transition';
+	import toast from 'svelte-french-toast';
 
 	export let data: PageData;
 
@@ -8,14 +9,14 @@
 	$: classDetails = data.classDetails;
 
 	// Only consider student members for progress tracking
-	$: studentMembers = classDetails.members.filter(m => m.role === 'STUDENT');
+	$: studentMembers = classDetails.members.filter((m: any) => m.role === 'STUDENT');
 
 	function getScoreForUser(userId: string) {
-		return assignment.scores.find(s => s.userId === userId);
+		return assignment.scores.find((s: any) => s.userId === userId);
 	}
 
 	$: totalStudents = studentMembers.length;
-	$: passedStudents = studentMembers.filter(m => getScoreForUser(m.userId)?.passed).length;
+	$: passedStudents = studentMembers.filter((m: any) => getScoreForUser(m.userId)?.passed).length;
 	$: passPercentage = totalStudents > 0 ? Math.round((passedStudents / totalStudents) * 100) : 0;
 
 	let copied = false;
@@ -25,6 +26,24 @@
 		await navigator.clipboard.writeText(url);
 		copied = true;
 		setTimeout(() => { copied = false; }, 2000);
+	}
+
+	async function handleDeleteAssignment() {
+		if (!confirm('Are you sure you want to delete this assignment?')) return;
+		try {
+			const res = await fetch(`/api/classes/${classDetails.id}/assignments/${assignment.id}`, {
+				method: 'DELETE'
+			});
+			if (res.ok) {
+				toast.success('Assignment deleted');
+				window.location.href = `/classes/${classDetails.id}`;
+			} else {
+				const result = await res.json();
+				toast.error(result.error || 'Failed to delete assignment.');
+			}
+		} catch (e) {
+			toast.error('An error occurred.');
+		}
 	}
 </script>
 
@@ -46,9 +65,14 @@
 				<span class="meta-sep">&bull;</span>
 				<span>Target Score: {assignment.targetScore}</span>
 			</div>
-			<button type="button" class="copy-link-btn" on:click={copyLink}>
-				{#if copied}✓ Copied!{:else}🔗 Copy Link{/if}
-			</button>
+			<div class="banner-actions">
+				<button type="button" class="copy-link-btn" on:click={copyLink}>
+					{#if copied}✓ Copied!{:else}🔗 Copy Link{/if}
+				</button>
+				<button type="button" class="delete-btn" on:click={handleDeleteAssignment}>
+					Delete
+				</button>
+			</div>
 		</div>
 		<div class="pass-rate-box">
 			<p class="pass-rate-label">Pass Rate</p>
@@ -176,8 +200,14 @@
 		letter-spacing: 0.08em;
 	}
 
-	.copy-link-btn {
+	.banner-actions {
+		display: flex;
+		gap: 0.75rem;
 		margin-top: 1rem;
+		align-items: center;
+	}
+
+	.copy-link-btn, .delete-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -196,6 +226,16 @@
 	.copy-link-btn:hover {
 		background: rgba(255, 255, 255, 0.25);
 		border-color: rgba(255, 255, 255, 0.5);
+	}
+
+	.delete-btn {
+		background: rgba(239, 68, 68, 0.2);
+		border-color: rgba(239, 68, 68, 0.4);
+	}
+
+	.delete-btn:hover {
+		background: rgba(239, 68, 68, 0.4);
+		border-color: rgba(239, 68, 68, 0.6);
 	}
 
 	.meta-tag {
