@@ -2473,30 +2473,166 @@ r<svelte:head>
 	}
 
 	.grammar-guide {
-		padding: 1rem;
-		border-radius: 8px;
-		font-size: 0.95rem;
+		padding: 1.25rem;
+		border-radius: 0.75rem;
+		font-size: 1rem;
 		line-height: 1.6;
 		overflow-x: auto;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		color: #334155;
+		box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+	}
+
+	:global(.dark) .grammar-guide {
+		background: #0f172a;
+		border-color: #1e293b;
+		color: #cbd5e1;
 	}
 
 	.grammar-guide :global(h1),
 	.grammar-guide :global(h2),
-	.grammar-guide :global(h3) {
-		margin-top: 0;
-		margin-bottom: 0.5rem;
-		color: var(--text-color, #1e293b);
+	.grammar-guide :global(h3),
+	.grammar-guide :global(h4) {
+		color: #0f172a;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
+		font-weight: 700;
+		line-height: 1.3;
 	}
+
+	:global(.dark) .grammar-guide :global(h1),
+	:global(.dark) .grammar-guide :global(h2),
+	:global(.dark) .grammar-guide :global(h3),
+	:global(.dark) .grammar-guide :global(h4) {
+		color: #f8fafc;
+	}
+
+	.grammar-guide :global(h1:first-child),
+	.grammar-guide :global(h2:first-child),
+	.grammar-guide :global(h3:first-child) {
+		margin-top: 0;
+	}
+
+	.grammar-guide :global(h1) { font-size: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+	.grammar-guide :global(h2) { font-size: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem; }
+	.grammar-guide :global(h3) { font-size: 1.1rem; }
+
+	:global(.dark) .grammar-guide :global(h1),
+	:global(.dark) .grammar-guide :global(h2) { border-color: #1e293b; }
 
 	.grammar-guide :global(p) {
 		margin-top: 0;
-		margin-bottom: 0.75rem;
+		margin-bottom: 1rem;
 	}
 
-	.grammar-guide :global(ul) {
+	.grammar-guide :global(p:last-child) {
+		margin-bottom: 0;
+	}
+
+	.grammar-guide :global(ul),
+	.grammar-guide :global(ol) {
 		margin-top: 0;
-		margin-bottom: 0.75rem;
+		margin-bottom: 1rem;
 		padding-left: 1.5rem;
+	}
+
+	.grammar-guide :global(li) {
+		margin-bottom: 0.25rem;
+	}
+
+	.grammar-guide :global(strong),
+	.grammar-guide :global(b) {
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	:global(.dark) .grammar-guide :global(strong),
+	:global(.dark) .grammar-guide :global(b) {
+		color: #f8fafc;
+	}
+
+	.grammar-guide :global(em),
+	.grammar-guide :global(i) {
+		color: #475569;
+	}
+
+	:global(.dark) .grammar-guide :global(em),
+	:global(.dark) .grammar-guide :global(i) {
+		color: #94a3b8;
+	}
+
+	.grammar-guide :global(code) {
+		background: #e2e8f0;
+		padding: 0.1rem 0.3rem;
+		border-radius: 0.25rem;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.85em;
+		color: #db2777;
+	}
+
+	:global(.dark) .grammar-guide :global(code) {
+		background: #1e293b;
+		color: #f472b6;
+	}
+
+	.grammar-guide :global(pre) {
+		background: #1e293b;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		overflow-x: auto;
+		margin-bottom: 1rem;
+	}
+
+	.grammar-guide :global(pre code) {
+		background: transparent;
+		color: #e2e8f0;
+		padding: 0;
+		font-size: 0.9em;
+	}
+
+	.grammar-guide :global(blockquote) {
+		border-left: 4px solid #3b82f6;
+		padding-left: 1rem;
+		margin-left: 0;
+		margin-right: 0;
+		background: #f1f5f9;
+		padding-top: 0.5rem;
+		padding-bottom: 0.5rem;
+		border-radius: 0 0.25rem 0.25rem 0;
+		font-style: italic;
+	}
+
+	:global(.dark) .grammar-guide :global(blockquote) {
+		background: #1e293b;
+		border-left-color: #60a5fa;
+	}
+
+	.grammar-guide :global(table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin-bottom: 1rem;
+	}
+
+	.grammar-guide :global(th),
+	.grammar-guide :global(td) {
+		border: 1px solid #e2e8f0;
+		padding: 0.5rem;
+		text-align: left;
+	}
+
+	:global(.dark) .grammar-guide :global(th),
+	:global(.dark) .grammar-guide :global(td) {
+		border-color: #334155;
+	}
+
+	.grammar-guide :global(th) {
+		background: #f1f5f9;
+		font-weight: 600;
+	}
+
+	:global(.dark) .grammar-guide :global(th) {
+		background: #1e293b;
 	}
 
 	.concept-type {

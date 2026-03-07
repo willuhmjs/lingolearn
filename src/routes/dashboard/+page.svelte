@@ -187,13 +187,17 @@
 				<div class="grammar-web-container dark:bg-slate-800 dark:border-slate-700">
 					<!-- Visual web lines drawing actual connections -->
 					<svg class="web-svg-lines" width="100%" height="100%">
-						<line 
-							x1="50%" 
-							y1="10%" 
-							x2="50%" 
-							y2="90%" 
-							class="web-connection-line"
-						/>
+						{#each data.grammarRules as rule, i}
+							{#if i < data.grammarRules.length - 1}
+								<line 
+									x1="50%" 
+									y1="{100 / data.grammarRules.length * i + (100 / data.grammarRules.length / 2)}%" 
+									x2="50%" 
+									y2="{100 / data.grammarRules.length * (i + 1) + (100 / data.grammarRules.length / 2)}%" 
+									class="web-connection-line"
+								/>
+							{/if}
+						{/each}
 					</svg>
 					
 					<div class="web-tree-layout">
@@ -203,17 +207,35 @@
 							
 							<div 
 								class="web-node-pill" 
-								style="--node-color: {srsColor}; background-color: {srsColor}"
+								style="--node-color: {srsColor}"
 								role="button"
 								tabindex="0"
 								on:click={() => openGrammarModal(rule, srsColor, eloPercent)}
 								on:keydown={(e) => e.key === 'Enter' && openGrammarModal(rule, srsColor, eloPercent)}
 							>
-								<div class="node-pill-content">
-									<div class="node-icon">
+								<div class="node-pill-content tooltip-trigger">
+									<div class="node-icon" style="background-color: {srsColor}">
 										<span class="sr-only">{rule.srsState}</span>
 									</div>
-									<span class="node-title" style="color: #0f172a;">{rule.grammarRule.title}</span>
+									<span class="node-title">{rule.grammarRule.title}</span>
+									
+									<div class="tooltip-content dark:bg-slate-700 dark:text-white">
+										<div class="tooltip-header dark:border-slate-600">
+											{rule.grammarRule.title}
+										</div>
+										<div class="tooltip-body">
+											<div class="word-tooltip-elo">
+												<div class="elo-header">
+													<span>Status: {rule.srsState}</span>
+													<span class="elo-score">ELO {Math.ceil(rule.eloRating)}</span>
+												</div>
+												<div class="elo-progress-track">
+													<div class="elo-progress-fill {rule.srsState.toLowerCase()}" style="width: {eloPercent}%; background-color: {srsColor}"></div>
+												</div>
+											</div>
+											<p class="node-desc">{rule.grammarRule.description || 'No description available.'}</p>
+										</div>
+									</div>
 								</div>
 							</div>
 						{/each}
@@ -757,10 +779,23 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		border: 2px solid rgba(0,0,0,0.1);
+		background: #ffffff;
+		border: 2px solid var(--node-color);
 		border-radius: 9999px;
 		padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 10px var(--node-color)40;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		cursor: pointer;
+	}
+
+	.dark .web-node-pill {
+		background: #1e293b;
+	}
+
+	.web-node-pill:hover {
+		transform: translateY(-2px) scale(1.05);
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 15px var(--node-color)60;
+		z-index: 10;
 	}
 
 	.node-pill-content {
@@ -773,13 +808,17 @@
 		width: 1.5rem;
 		height: 1.5rem;
 		border-radius: 50%;
-		background-color: rgba(0,0,0,0.2);
 		box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 	}
 
 	.node-title {
-		font-weight: 700;
+		font-weight: 600;
 		font-size: 0.95rem;
+		color: #334155;
+	}
+
+	.dark .node-title {
+		color: #f8fafc;
 	}
 
 	.node-desc {
@@ -850,7 +889,7 @@
 	.modal-content {
 		position: relative;
 		background: #ffffff;
-		padding: 2rem;
+		padding: 2.5rem 2rem 2rem;
 		border-radius: 1rem;
 		max-width: 90%;
 		width: 500px;
@@ -858,6 +897,39 @@
 		display: flex;
 		flex-direction: column;
 		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+	}
+
+	.modal-close {
+		position: absolute;
+		top: 0.75rem;
+		right: 1rem;
+		background: transparent;
+		border: none;
+		font-size: 1.5rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.5rem;
+		transition: all 0.2s;
+	}
+
+	.modal-close:hover {
+		background: rgba(0,0,0,0.05);
+	}
+
+	.dark .modal-close:hover {
+		background: rgba(255,255,255,0.1);
+	}
+
+	.modal-title {
+		font-size: 1.5rem;
+		font-weight: 800;
+		margin-bottom: 1rem;
+		margin-top: 0;
+		padding-right: 1rem;
 	}
 
 	.modal-body {
@@ -915,40 +987,166 @@
 	}
 
 	.grammar-guide {
-		padding: 0.75rem;
-		border-radius: 0.5rem;
+		padding: 1.25rem;
+		border-radius: 0.75rem;
 		background: #f8fafc;
 		border: 1px solid #e2e8f0;
-		font-size: 0.95rem;
-		line-height: 1.5;
-		max-height: 300px;
+		font-size: 1rem;
+		line-height: 1.6;
+		max-height: 400px;
 		overflow-y: auto;
+		color: #334155;
+		box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 	}
 
 	.dark .grammar-guide {
 		background: #0f172a;
 		border-color: #1e293b;
+		color: #cbd5e1;
 	}
 
 	.grammar-guide :global(h1),
 	.grammar-guide :global(h2),
-	.grammar-guide :global(h3) {
-		margin-top: 0;
-		margin-bottom: 0.25rem;
+	.grammar-guide :global(h3),
+	.grammar-guide :global(h4) {
+		color: #0f172a;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
 		font-weight: 700;
+		line-height: 1.3;
 	}
+
+	.dark .grammar-guide :global(h1),
+	.dark .grammar-guide :global(h2),
+	.dark .grammar-guide :global(h3),
+	.dark .grammar-guide :global(h4) {
+		color: #f8fafc;
+	}
+
+	.grammar-guide :global(h1:first-child),
+	.grammar-guide :global(h2:first-child),
+	.grammar-guide :global(h3:first-child) {
+		margin-top: 0;
+	}
+
+	.grammar-guide :global(h1) { font-size: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+	.grammar-guide :global(h2) { font-size: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem; }
+	.grammar-guide :global(h3) { font-size: 1.1rem; }
+
+	.dark .grammar-guide :global(h1),
+	.dark .grammar-guide :global(h2) { border-color: #1e293b; }
 
 	.grammar-guide :global(p) {
 		margin-top: 0;
-		margin-bottom: 0.75rem;
+		margin-bottom: 1rem;
 	}
 
 	.grammar-guide :global(p:last-child) {
 		margin-bottom: 0;
 	}
 
-	.grammar-guide :global(ul) {
+	.grammar-guide :global(ul),
+	.grammar-guide :global(ol) {
 		margin-top: 0;
+		margin-bottom: 1rem;
 		padding-left: 1.5rem;
+	}
+
+	.grammar-guide :global(li) {
+		margin-bottom: 0.25rem;
+	}
+
+	.grammar-guide :global(strong),
+	.grammar-guide :global(b) {
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	.dark .grammar-guide :global(strong),
+	.dark .grammar-guide :global(b) {
+		color: #f8fafc;
+	}
+
+	.grammar-guide :global(em),
+	.grammar-guide :global(i) {
+		color: #475569;
+	}
+
+	.dark .grammar-guide :global(em),
+	.dark .grammar-guide :global(i) {
+		color: #94a3b8;
+	}
+
+	.grammar-guide :global(code) {
+		background: #e2e8f0;
+		padding: 0.1rem 0.3rem;
+		border-radius: 0.25rem;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.85em;
+		color: #db2777;
+	}
+
+	.dark .grammar-guide :global(code) {
+		background: #1e293b;
+		color: #f472b6;
+	}
+
+	.grammar-guide :global(pre) {
+		background: #1e293b;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		overflow-x: auto;
+		margin-bottom: 1rem;
+	}
+
+	.grammar-guide :global(pre code) {
+		background: transparent;
+		color: #e2e8f0;
+		padding: 0;
+		font-size: 0.9em;
+	}
+
+	.grammar-guide :global(blockquote) {
+		border-left: 4px solid #3b82f6;
+		padding-left: 1rem;
+		margin-left: 0;
+		margin-right: 0;
+		background: #f1f5f9;
+		padding-top: 0.5rem;
+		padding-bottom: 0.5rem;
+		border-radius: 0 0.25rem 0.25rem 0;
+		font-style: italic;
+	}
+
+	.dark .grammar-guide :global(blockquote) {
+		background: #1e293b;
+		border-left-color: #60a5fa;
+	}
+
+	.grammar-guide :global(table) {
+		width: 100%;
+		border-collapse: collapse;
+		margin-bottom: 1rem;
+	}
+
+	.grammar-guide :global(th),
+	.grammar-guide :global(td) {
+		border: 1px solid #e2e8f0;
+		padding: 0.5rem;
+		text-align: left;
+	}
+
+	.dark .grammar-guide :global(th),
+	.dark .grammar-guide :global(td) {
+		border-color: #334155;
+	}
+
+	.grammar-guide :global(th) {
+		background: #f1f5f9;
+		font-weight: 600;
+	}
+
+	.dark .grammar-guide :global(th) {
+		background: #1e293b;
 	}
 </style>
