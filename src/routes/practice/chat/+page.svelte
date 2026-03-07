@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount, tick } from 'svelte';
 	import toast from 'svelte-french-toast';
+	import { fly } from 'svelte/transition';
 
 	let sessionStarted = false;
 	let sessionId = '';
@@ -311,12 +312,12 @@
 </script>
 
 <div class="chat-container">
-	<div class="chat-header-main">
+	<div class="chat-header-main" in:fly={{ y: 20, duration: 400 }}>
 		<h1>AI Chat Practice</h1>
 	</div>
 
 	{#if !sessionStarted}
-		<div class="card-duo setup-card">
+		<div class="card-duo setup-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 			<h2>Start a new roleplay</h2>
 			<div class="form-group">
 				<div>
@@ -350,7 +351,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="card-duo chat-box">
+		<div class="card-duo chat-box" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 			<!-- Header -->
 			<div class="chat-header">
 				<div class="persona-info">

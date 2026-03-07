@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { fly, fade } from 'svelte/transition';
 	export let data: PageData;
 
 	let currentReviewIndex = 0;
@@ -46,7 +47,7 @@
 
 <div class="page-container">
 	<div class="content-wrapper">
-		<header class="page-header review-header">
+		<header class="page-header review-header" in:fly={{ y: 20, duration: 400 }}>
 			<h1>Vocabulary Review</h1>
 			{#if !isFinished && dueReviews.length > 0}
 				<span class="review-counter">
@@ -56,7 +57,7 @@
 		</header>
 
 		{#if isFinished}
-			<div class="card-duo finished-card">
+			<div class="card-duo finished-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 				<div class="success-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -67,8 +68,9 @@
 				<a href="/dashboard" class="btn-duo btn-primary back-btn">Back to Dashboard</a>
 			</div>
 		{:else if currentReview}
-			<div class="card-duo review-card">
-				<!-- Progress Bar -->
+			{#key currentReview.vocabulary.id}
+				<div class="card-duo review-card" in:fly={{ x: 50, duration: 300 }} out:fade={{ duration: 150 }}>
+					<!-- Progress Bar -->
 				<div class="progress-track">
 					<div
 						class="progress-fill"
@@ -156,7 +158,7 @@
 						{/if}
 					</div>
 				</div>
-			</div>
+			{/key}
 		{/if}
 	</div>
 </div>
