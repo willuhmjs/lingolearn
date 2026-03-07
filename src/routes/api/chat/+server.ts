@@ -21,6 +21,15 @@ export async function POST(event) {
 		return json({ error: 'Message is required' }, { status: 400 });
 	}
 
+	const normalizedMessage = message
+		.replace(/ß/g, 'ss')
+		.replace(/ä/g, 'ae')
+		.replace(/ö/g, 'oe')
+		.replace(/ü/g, 'ue')
+		.replace(/Ä/g, 'Ae')
+		.replace(/Ö/g, 'Oe')
+		.replace(/Ü/g, 'Ue');
+
 	let currentSessionId = sessionId;
 	let currentSession;
 
@@ -52,7 +61,7 @@ export async function POST(event) {
 		data: {
 			sessionId: currentSessionId,
 			role: 'user',
-			content: message
+			content: normalizedMessage
 		}
 	});
 
