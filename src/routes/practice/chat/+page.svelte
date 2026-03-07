@@ -7,7 +7,7 @@
 	let sessionId = '';
 	let persona = 'A friendly waiter at a café';
 	
-	let language = $derived($page.data.user?.activeLanguage?.name || 'German');
+	$: language = $page.data.user?.activeLanguage?.name || 'German';
 	let message = '';
 	let isLoading = false;
 	let chatContainer: HTMLElement;
