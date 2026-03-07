@@ -3,6 +3,7 @@ import { buildEvaluationPrompt, parseEvaluationResponse, updateEloRatings } from
 import { generateChatCompletion } from '$lib/server/llm';
 import { prisma } from '$lib/server/prisma';
 import { submitAnswerRateLimiter } from '$lib/server/ratelimit';
+import { updateGamification } from '$lib/server/gamification';
 
 /** Track a correct/incorrect answer against an assignment score record. */
 async function updateAssignmentScore(assignmentId: string, userId: string, isCorrect: boolean) {
@@ -86,6 +87,11 @@ export async function POST(event) {
 			let assignmentProgress = null;
 			if (assignmentId) {
 				assignmentProgress = await updateAssignmentScore(assignmentId, userId, isCorrect);
+			}
+
+			const xpToAdd = isCorrect ? 10 : 0;
+			if (xpToAdd > 0) {
+				await updateGamification(userId, xpToAdd);
 			}
 
 			return json({ ...evaluation, assignmentProgress });
@@ -196,9 +202,14 @@ export async function POST(event) {
 
 					// Track assignment score if applicable
 					let assignmentProgress = null;
+					const isCorrect = (evaluation.globalScore ?? 0) >= 0.5;
 					if (assignmentId) {
-						const isCorrect = (evaluation.globalScore ?? 0) >= 0.5;
 						assignmentProgress = await updateAssignmentScore(assignmentId, userId, isCorrect);
+					}
+
+					const xpToAdd = isCorrect ? 10 : 0;
+					if (xpToAdd > 0) {
+						await updateGamification(userId, xpToAdd);
 					}
 
 					// Send the final evaluation payload before closing the stream

@@ -345,8 +345,37 @@
 			{/if}
 		</div>
 
-		<!-- Sidebar: Members -->
+		<!-- Sidebar: Members and Leaderboard -->
 		<div class="sidebar-col">
+			<h2 class="section-title">Leaderboard</h2>
+			<div class="card-duo members-card leaderboard-card" style="margin-bottom: 2rem;">
+				<ul class="members-list">
+					{#each classDetails.members.slice().sort((a, b) => (b.user.totalXp || 0) - (a.user.totalXp || 0)) as member, index}
+						<li class="member-row">
+							<div class="member-info">
+								<div class="leaderboard-rank {index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
+									#{index + 1}
+								</div>
+								<div class="member-avatar">
+									{(member.user.name || member.user.username).charAt(0).toUpperCase()}
+								</div>
+								<div class="member-details">
+									<p class="member-name">
+										{member.user.name || member.user.username}
+										{#if member.userId === data.user?.id}
+											<span class="you-tag">(you)</span>
+										{/if}
+									</p>
+									<p class="member-xp">
+										⚡ {member.user.totalXp || 0} XP
+									</p>
+								</div>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</div>
+
 			<h2 class="section-title">Members ({classDetails.members.length})</h2>
 			<div class="card-duo members-card">
 				<ul class="members-list">
@@ -1100,6 +1129,25 @@
 		letter-spacing: 0.1em;
 		margin: 0.1rem 0 0;
 	}
+
+	.member-xp {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: #3b82f6;
+		margin: 0.1rem 0 0;
+	}
+
+	.leaderboard-rank {
+		font-size: 1.1rem;
+		font-weight: 900;
+		color: #94a3b8;
+		width: 1.5rem;
+		text-align: center;
+	}
+
+	.rank-1 { color: #f59e0b; }
+	.rank-2 { color: #94a3b8; }
+	.rank-3 { color: #b45309; }
 
 	.role-teacher {
 		color: #8b5cf6;

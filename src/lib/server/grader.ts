@@ -267,6 +267,58 @@ export function calculateNextReviewDate(eloRating: number, baseDifficulty: numbe
 	return nextDate;
 }
 
+export async function updateSrsMetrics(userId: string, vocabularyId: string, score: number) {
+	const currentProgress = await prisma.userVocabularyProgress.findUnique({
+		where: { userId_vocabularyId: { userId, vocabularyId } }
+	});
+
+	let { interval = 0, easeFactor = 2.5, consecutiveCorrect = 0 } = currentProgress || {};
+
+	// SM-2 logic
+	// Map score (0-1) to grade (0-5)
+	const grade = Math.round(score * 5);
+
+	if (grade >= 3) {
+		// Correct
+		if (consecutiveCorrect === 0) {
+			interval = 1;
+		} else if (consecutiveCorrect === 1) {
+			interval = 6;
+		} else {
+			interval = Math.round(interval * easeFactor);
+		}
+		consecutiveCorrect++;
+	} else {
+		// Incorrect
+		consecutiveCorrect = 0;
+		interval = 1;
+	}
+
+	easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+	if (easeFactor < 1.3) easeFactor = 1.3;
+
+	const nextReviewDate = new Date();
+	nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+
+	await prisma.userVocabularyProgress.upsert({
+		where: { userId_vocabularyId: { userId, vocabularyId } },
+		create: {
+			userId,
+			vocabularyId,
+			interval,
+			easeFactor,
+			consecutiveCorrect,
+			nextReviewDate
+		},
+		update: {
+			interval,
+			easeFactor,
+			consecutiveCorrect,
+			nextReviewDate
+		}
+	});
+}
+
 /**
  * Updates the user's database records based on the evaluation payload.
  * Adjusts Elo ratings and SRS states for targeted Vocabulary and Grammar rules.
@@ -304,6 +356,8 @@ export async function updateEloRatings(userId: string, payload: EvaluationPayloa
 
 			vocabUpdate.eloBefore = currentElo;
 			vocabUpdate.eloAfter = newElo;
+
+			await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score);
 
 			await prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocabUpdate.id } },
@@ -409,6 +463,8 @@ export async function updateEloRatings(userId: string, payload: EvaluationPayloa
 			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode);
 			const newState = deriveSrsState(newElo, baseDifficulty);
 			const nextReviewDate = calculateNextReviewDate(newElo, baseDifficulty);
+
+			await updateSrsMetrics(userId, vocabExists.id, 1.0);
 
 			// We don't currently return extra vocab updates in the API response's main arrays,
 			// but we could if we wanted to show them. For now just update DB.

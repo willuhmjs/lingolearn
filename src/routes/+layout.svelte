@@ -92,6 +92,15 @@
 						</a>
 					{/if}
 					
+					<div class="gamification-stats">
+						<span class="stat streak" title="Current Streak">
+							🔥 {user.currentStreak || 0}
+						</span>
+						<span class="stat xp" title="Total XP">
+							⚡ {user.totalXp || 0} XP
+						</span>
+					</div>
+
 					{#if languages.length > 0}
 						<div class="language-dropdown-container">
 							<button class="nav-item language-selector-btn" onclick={toggleDropdown}>
@@ -459,6 +468,33 @@
 		background-color: #e5e7eb;
 		margin: 0 0.5rem;
 		border-radius: 1px;
+	}
+
+	.gamification-stats {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		background-color: var(--card-bg, #f3f4f6);
+		padding: 0.375rem 0.75rem;
+		border-radius: 1rem;
+		border: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.gamification-stats .stat {
+		font-size: 0.875rem;
+		font-weight: 800;
+		color: var(--text-color, #374151);
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.gamification-stats .streak {
+		color: #f97316;
+	}
+
+	.gamification-stats .xp {
+		color: #3b82f6;
 	}
 
 	.language-dropdown-container {

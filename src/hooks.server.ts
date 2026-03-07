@@ -85,6 +85,8 @@ const authorization: Handle = async ({ event, resolve }) => {
 		hasOnboarded,
 		role: dbUser.role,
 		theme: dbUser.theme || 'default',
+		totalXp: (dbUser as { totalXp?: number }).totalXp || 0,
+		currentStreak: (dbUser as { currentStreak?: number }).currentStreak || 0,
 		activeLanguage: activeLanguage ? {
 			id: activeLanguage.id,
 			code: activeLanguage.code,

@@ -20,7 +20,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 						select: {
 							id: true,
 							name: true,
-							username: true
+							username: true,
+							totalXp: true
 						}
 					}
 				},

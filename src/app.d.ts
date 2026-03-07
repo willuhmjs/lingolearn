@@ -11,6 +11,8 @@ declare global {
 				hasOnboarded: boolean;
 				role: string;
 				theme: string;
+				totalXp: number;
+				currentStreak: number;
 				activeLanguage: {
 					id: string;
 					code: string;
