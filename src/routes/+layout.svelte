@@ -79,17 +79,17 @@
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
 					<span class="nav-text">Dictionary</span>
 				</a>
-				<a href="/onboarding" class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-					<span class="nav-text">Onboarding</span>
+				<a href="/practice/chat" class="nav-item {$page.url.pathname.startsWith('/practice/chat') ? 'active' : ''}">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+					<span class="nav-text">Chat</span>
 				</a>
 				<a href="/review" class="nav-item {$page.url.pathname.startsWith('/review') ? 'active' : ''}">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
 					<span class="nav-text">Review</span>
 				</a>
-				<a href="/practice/chat" class="nav-item {$page.url.pathname.startsWith('/practice/chat') ? 'active' : ''}">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-					<span class="nav-text">Chat</span>
+				<a href="/onboarding" class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+					<span class="nav-text">Onboarding</span>
 				</a>
 				<a href="/profile" class="nav-item {$page.url.pathname.startsWith('/profile') ? 'active' : ''}">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -159,8 +159,12 @@
 	</nav>
 
 	<div class="content-wrapper">
-		{#if user}
-			<header class="mobile-header">
+		<header class="mobile-header">
+			<a href="/" class="mobile-brand">
+				<svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+				<span class="brand-text">LingoLearn</span>
+			</a>
+			{#if user}
 				<div class="gamification-stats">
 					<span class="stat streak" title="Current Streak">
 						🔥 {user.currentStreak || 0}
@@ -169,8 +173,8 @@
 						⚡ {user.totalXp || 0} XP
 					</span>
 				</div>
-			</header>
-		{/if}
+			{/if}
+		</header>
 
 		<main class="main-content">
 			{@render children()}
@@ -610,9 +614,11 @@
 	}
 
 	.mobile-header {
-		display: flex;
-		justify-content: flex-end;
-		padding: 1rem 2rem;
+		display: none;
+	}
+
+	.mobile-brand {
+		display: none;
 	}
 
 	.gamification-stats {
@@ -759,15 +765,26 @@
 			z-index: 50;
 		}
 
-		/* Re-add brand for mobile top header */
-		.mobile-header::before {
-			content: "LingoLearn";
+		.mobile-brand {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
 			font-size: 1.25rem;
 			font-weight: 800;
 			color: #2563eb;
+			text-decoration: none;
 			position: absolute;
 			left: 50%;
 			transform: translateX(-50%);
+		}
+
+		.mobile-brand .brand-icon {
+			width: 1.5rem;
+			height: 1.5rem;
+		}
+
+		.mobile-brand .brand-text {
+			display: inline;
 		}
 
 		.gamification-stats {
