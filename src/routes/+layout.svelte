@@ -74,8 +74,8 @@
 	/>
 </svelte:head>
 
-<div class="app-container" class:no-sidebar={$page.url.pathname === '/'}>
-	{#if $page.url.pathname !== '/'}
+<div class="app-container" class:no-sidebar={$page.url.pathname === '/' || $page.url.pathname === '/login' || $page.url.pathname === '/signup'}>
+	{#if $page.url.pathname !== '/' && $page.url.pathname !== '/login' && $page.url.pathname !== '/signup'}
 		<nav class="sidebar">
 			<div class="sidebar-header">
 				<a href="/" class="brand">
