@@ -71,91 +71,92 @@
 			{#key currentReview.vocabulary.id}
 				<div class="card-duo review-card" in:fly={{ x: 50, duration: 300 }} out:fade={{ duration: 150 }}>
 					<!-- Progress Bar -->
-				<div class="progress-track">
-					<div
-						class="progress-fill"
-						style="width: {(currentReviewIndex / dueReviews.length) * 100}%"
-					></div>
-				</div>
-
-				<div class="review-content">
-					<!-- Question Area -->
-					<div class="question-area">
-						<h2 class="lemma-text">
-							{currentReview.vocabulary.lemma}
-						</h2>
-
-						{#if currentReview.vocabulary.partOfSpeech}
-							<span class="pos-badge">
-								{currentReview.vocabulary.partOfSpeech}
-							</span>
-						{/if}
+					<div class="progress-track">
+						<div
+							class="progress-fill"
+							style="width: {(currentReviewIndex / dueReviews.length) * 100}%"
+						></div>
 					</div>
 
-					<div class="answer-section">
-						{#if showingAnswer}
-							<div class="answer-reveal">
-								<!-- Divider -->
-								<div class="divider">
-									<span>Answer</span>
-								</div>
+					<div class="review-content">
+						<!-- Question Area -->
+						<div class="question-area">
+							<h2 class="lemma-text">
+								{currentReview.vocabulary.lemma}
+							</h2>
 
-								<!-- Answer Info -->
-								<div class="answer-info">
-									<p class="meaning-text">
-										{currentReview.vocabulary.meaning || 'No meaning provided'}
-									</p>
-									<div class="meta-tags">
-										{#if currentReview.vocabulary.gender}
-											<span class="meta-tag">
-												Gender: <strong>{currentReview.vocabulary.gender}</strong>
-											</span>
-										{/if}
-										{#if currentReview.vocabulary.plural}
-											<span class="meta-tag">
-												Plural: <strong>{currentReview.vocabulary.plural}</strong>
-											</span>
-										{/if}
+							{#if currentReview.vocabulary.partOfSpeech}
+								<span class="pos-badge">
+									{currentReview.vocabulary.partOfSpeech}
+								</span>
+							{/if}
+						</div>
+
+						<div class="answer-section">
+							{#if showingAnswer}
+								<div class="answer-reveal">
+									<!-- Divider -->
+									<div class="divider">
+										<span>Answer</span>
+									</div>
+
+									<!-- Answer Info -->
+									<div class="answer-info">
+										<p class="meaning-text">
+											{currentReview.vocabulary.meaning || 'No meaning provided'}
+										</p>
+										<div class="meta-tags">
+											{#if currentReview.vocabulary.gender}
+												<span class="meta-tag">
+													Gender: <strong>{currentReview.vocabulary.gender}</strong>
+												</span>
+											{/if}
+											{#if currentReview.vocabulary.plural}
+												<span class="meta-tag">
+													Plural: <strong>{currentReview.vocabulary.plural}</strong>
+												</span>
+											{/if}
+										</div>
+									</div>
+
+									<!-- Grading Buttons -->
+									<div class="grading-buttons">
+										<button
+											class="btn-duo btn-danger"
+											on:click={() => submitGrade(0)}
+											disabled={isSubmitting}
+										>
+											Again
+										</button>
+										<button
+											class="btn-duo btn-hard"
+											on:click={() => submitGrade(0.4)}
+											disabled={isSubmitting}
+										>
+											Hard
+										</button>
+										<button
+											class="btn-duo btn-primary"
+											on:click={() => submitGrade(0.8)}
+											disabled={isSubmitting}
+										>
+											Good
+										</button>
+										<button
+											class="btn-duo btn-easy"
+											on:click={() => submitGrade(1.0)}
+											disabled={isSubmitting}
+										>
+											Easy
+										</button>
 									</div>
 								</div>
-
-								<!-- Grading Buttons -->
-								<div class="grading-buttons">
-									<button
-										class="btn-duo btn-danger"
-										on:click={() => submitGrade(0)}
-										disabled={isSubmitting}
-									>
-										Again
-									</button>
-									<button
-										class="btn-duo btn-hard"
-										on:click={() => submitGrade(0.4)}
-										disabled={isSubmitting}
-									>
-										Hard
-									</button>
-									<button
-										class="btn-duo btn-primary"
-										on:click={() => submitGrade(0.8)}
-										disabled={isSubmitting}
-									>
-										Good
-									</button>
-									<button
-										class="btn-duo btn-easy"
-										on:click={() => submitGrade(1.0)}
-										disabled={isSubmitting}
-									>
-										Easy
-									</button>
-								</div>
-							</div>
-						{:else}
-							<button class="btn-duo btn-primary show-answer-btn" on:click={showAnswer}>
-								Show Answer
-							</button>
-						{/if}
+							{:else}
+								<button class="btn-duo btn-primary show-answer-btn" on:click={showAnswer}>
+									Show Answer
+								</button>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{/key}
