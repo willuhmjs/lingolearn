@@ -60,13 +60,21 @@
 		}
 	}
 
+	let showEssetPrompt = false;
+
 	function handleInput() {
 		if (currentLanguage === 'German') {
+			// Check if 'ss' was typed to show prompt
+			if (query.includes('ss')) {
+				showEssetPrompt = true;
+			} else {
+				showEssetPrompt = false;
+			}
+
 			query = query
 				.replace(/ae/g, 'ä')
 				.replace(/oe/g, 'ö')
 				.replace(/ue/g, 'ü')
-				.replace(/ss/g, 'ß')
 				.replace(/Ae/g, 'Ä')
 				.replace(/Oe/g, 'Ö')
 				.replace(/Ue/g, 'Ü');
@@ -76,6 +84,18 @@
 		debounceTimer = setTimeout(() => {
 			performSearch(query);
 		}, 300);
+	}
+
+	function convertToEsset() {
+		query = query.replace(/ss/g, 'ß');
+		showEssetPrompt = false;
+		searchInputEl?.focus();
+		performSearch(query);
+	}
+
+	function dismissEssetPrompt() {
+		showEssetPrompt = false;
+		searchInputEl?.focus();
 	}
 
 	async function handleAskAI() {
@@ -180,6 +200,15 @@
 			{#if loading}
 				<div class="loading-wrapper">
 					<div class="spinner"></div>
+				</div>
+			{/if}
+			{#if showEssetPrompt}
+				<div class="esset-prompt" transition:fade={{ duration: 150 }}>
+					<span class="esset-text">Convert 'ss' to 'ß'?</span>
+					<div class="esset-actions">
+						<button class="esset-btn esset-yes" on:click={convertToEsset}>Yes</button>
+						<button class="esset-btn esset-no" on:click={dismissEssetPrompt}>No</button>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -495,6 +524,78 @@
 		font-size: 0.875rem;
 		line-height: 1.25rem;
 		color: #111827;
+	}
+
+	.esset-prompt {
+		position: absolute;
+		right: 1rem;
+		top: calc(100% + 0.5rem);
+		background-color: #ffffff;
+		border: 1px solid #d1d5db;
+		border-radius: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+		z-index: 10;
+	}
+
+	:global(.dark) .esset-prompt {
+		background-color: #1f2937;
+		border-color: #4b5563;
+	}
+
+	.esset-text {
+		font-size: 0.875rem;
+		color: #374151;
+		font-weight: 500;
+	}
+
+	:global(.dark) .esset-text {
+		color: #e5e7eb;
+	}
+
+	.esset-actions {
+		display: flex;
+		gap: 0.375rem;
+	}
+
+	.esset-btn {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+		border: none;
+		cursor: pointer;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.esset-yes {
+		background-color: #3b82f6;
+		color: #ffffff;
+	}
+
+	.esset-yes:hover {
+		background-color: #2563eb;
+	}
+
+	.esset-no {
+		background-color: #e5e7eb;
+		color: #374151;
+	}
+
+	.esset-no:hover {
+		background-color: #d1d5db;
+	}
+
+	:global(.dark) .esset-no {
+		background-color: #374151;
+		color: #d1d5db;
+	}
+
+	:global(.dark) .esset-no:hover {
+		background-color: #4b5563;
 	}
 
 	.search-input:focus {
