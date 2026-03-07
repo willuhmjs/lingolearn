@@ -937,7 +937,7 @@ r<script lang="ts">
 			if (vocabResult) {
 				result.push(`<span class="word-hover has-info tooltip-trigger">${token}${buildTooltipHtml(vocabResult.vocab, undefined, vocabResult.inflectionNote)}</span>`);
 			} else if (stillStreaming) {
-				const loadingTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${token}</span><span class="word-tooltip-body"><span class="word-tooltip-row">Loading...</span></span></span>`;
+				const loadingTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${token}</span><span class="word-tooltip-body"><span class="word-tooltip-row ai-magic-text"><span class="sparkle">✨</span> AI analyzing...</span></span></span>`;
 				result.push(`<span class="word-hover has-info tooltip-trigger">${token}${loadingTooltip}</span>`);
 			} else {
 				result.push(`<span class="word-hover">${token}</span>`);
@@ -1577,7 +1577,10 @@ r<script lang="ts">
 				<div class="challenge-section">
 					<h3 class="dark:text-slate-400">Grammar Reference:</h3>
 					{#if isStreaming}
-						<p class="dark:text-slate-400 italic">Loading...</p>
+						<div class="ai-magic-loader">
+							<span class="sparkle">✨</span>
+							<span class="dark:text-slate-400 italic">AI is analyzing grammar & generating tooltips...</span>
+						</div>
 					{:else if challenge.targetedGrammar?.length > 0}
 						<ul class="concept-list">
 							{#each challenge.targetedGrammar as grammar}
@@ -1996,6 +1999,28 @@ r<script lang="ts">
 		border-width: 5px;
 		border-style: solid;
 		border-color: #1e293b transparent transparent transparent;
+	}
+
+	.ai-magic-loader {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	:global(.sparkle) {
+		display: inline-block;
+		animation: pulse-sparkle 1.5s ease-in-out infinite;
+	}
+
+	:global(.ai-magic-text) {
+		color: #c084fc; /* purple-400 */
+		font-weight: 500;
+	}
+
+	@keyframes pulse-sparkle {
+		0%, 100% { transform: scale(1); opacity: 0.8; }
+		50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6)); }
 	}
 
 	:global(.tooltip-trigger:hover > .word-tooltip) {

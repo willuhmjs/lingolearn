@@ -89,17 +89,97 @@
 			});
 
 			if (!res.ok) {
-				const errorData = await res.json();
+				const errorData = await res.json().catch(() => ({}));
 				throw new Error(errorData.error || 'Failed to send message');
 			}
 
-			const data = await res.json();
-			if (!sessionId) {
-				sessionId = data.sessionId;
-			}
+			const reader = res.body?.getReader();
+			if (!reader) throw new Error('No response stream');
+
+			const assistantMessage: ChatMessage = {
+				id: Date.now().toString() + '-ai',
+				role: 'assistant',
+				content: ''
+			};
+			messages = [...messages, assistantMessage];
 			
-			messages = [...messages, data.message];
-			scrollToBottom();
+			const decoder = new TextDecoder();
+			let buffer = '';
+			let fullContent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
+
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					try {
+						const event = JSON.parse(line);
+						if (event.type === 'metadata') {
+							if (!sessionId) {
+								sessionId = event.sessionId;
+							}
+						} else if (event.type === 'chunk') {
+							fullContent += event.content;
+							
+							// Try to extract just the reply part if we can see it
+							// The JSON looks like {"reply": "something", "correction": null}
+							const replyMatch = fullContent.match(/"reply"\s*:\s*"([^]*)/);
+							if (replyMatch && replyMatch[1]) {
+								// Get everything after "reply": " up to the next unescaped quote, or end of string
+								let extracted = replyMatch[1];
+								const endQuoteIdx = extracted.indexOf('",');
+								if (endQuoteIdx !== -1) {
+									extracted = extracted.substring(0, endQuoteIdx);
+								} else {
+									const endBraceIdx = extracted.lastIndexOf('"}');
+									if (endBraceIdx !== -1) {
+										extracted = extracted.substring(0, endBraceIdx);
+									}
+								}
+								// Handle basic escaped quotes
+								extracted = extracted.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n');
+								
+								messages = messages.map(m => 
+									m.id === assistantMessage.id 
+										? { ...m, content: extracted } 
+										: m
+								);
+								scrollToBottom();
+							}
+						} else if (event.type === 'done') {
+							messages = messages.map(m => 
+								m.id === assistantMessage.id 
+									? { ...m, content: event.message.content, correction: event.message.correction } 
+									: m
+							);
+							scrollToBottom();
+						}
+					} catch (err) {
+						// ignore parse errors for partial lines
+					}
+				}
+			}
+
+			// flush buffer
+			if (buffer.trim()) {
+				try {
+					const event = JSON.parse(buffer.trim());
+					if (event.type === 'done') {
+						messages = messages.map(m => 
+							m.id === assistantMessage.id 
+								? { ...m, content: event.message.content, correction: event.message.correction } 
+								: m
+						);
+						scrollToBottom();
+					}
+				} catch (err) {}
+			}
+
 		} catch (error: any) {
 			console.error(error);
 			toast.error(error.message || 'An error occurred.');

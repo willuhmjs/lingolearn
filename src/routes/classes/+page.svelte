@@ -21,6 +21,7 @@
 		const codeParam = $page.url.searchParams.get('code');
 		if (codeParam) {
 			joinCode = codeParam;
+			handleJoin();
 		}
 	});
 
@@ -109,6 +110,7 @@
 							bind:value={createName}
 							placeholder="e.g. German 101"
 							required
+							disabled={isCreating}
 						/>
 					</div>
 				</div>
@@ -120,13 +122,14 @@
 							bind:value={createDescription}
 							placeholder="What is this class about?"
 							rows="2"
+							disabled={isCreating}
 						></textarea>
 					</div>
 				</div>
 				<div class="field">
 					<label for="language">Primary Language</label>
 					<div class="input-wrapper select-wrapper">
-						<select id="language" bind:value={createLanguage}>
+						<select id="language" bind:value={createLanguage} disabled={isCreating}>
 							<option value="international">🌍 International</option>
 							<option value="de">🇩🇪 German</option>
 							<option value="es">🇪🇸 Spanish</option>
@@ -178,6 +181,7 @@
 							maxlength="6"
 							required
 							autocomplete="off"
+							disabled={isJoining}
 						/>
 						<div class="code-format-hint">6 alphanumeric characters</div>
 					</div>

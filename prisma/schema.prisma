@@ -52,6 +52,7 @@ model User {
   progress         UserProgress[]
   classMembers     ClassMember[]
   assignmentScores AssignmentScore[]
+  liveSessions     LiveSessionParticipant[]
   conversationSessions ConversationSession[]
 
   // Deprecated: Moving to UserProgress
@@ -138,6 +139,8 @@ model Vocabulary {
   updatedAt    DateTime         @updatedAt
   users        UserVocabulary[]
   progress     UserVocabularyProgress[]
+
+  @@index([lemma])
 }
 
 model GrammarRule {
@@ -194,6 +197,7 @@ model UserVocabularyProgress {
   vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, vocabularyId])
+  @@index([nextReviewDate])
 }
 
 model UserGrammarRule {
@@ -235,8 +239,35 @@ model Class {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  members     ClassMember[]
-  assignments Assignment[]
+  members      ClassMember[]
+  assignments  Assignment[]
+  liveSessions LiveSession[]
+}
+
+model LiveSession {
+  id              String   @id @default(uuid())
+  classId         String
+  status          String   @default("waiting") // waiting, active, finished
+  currentQuestion String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  class        Class                    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  participants LiveSessionParticipant[]
+}
+
+model LiveSessionParticipant {
+  id          String   @id @default(uuid())
+  sessionId   String
+  userId      String
+  score       Int      @default(0)
+  hasAnswered Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
 }
 
 model ClassMember {
@@ -306,4 +337,6 @@ model Message {
   createdAt  DateTime @default(now())
 
   session    ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
 }

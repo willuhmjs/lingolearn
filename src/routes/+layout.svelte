@@ -4,10 +4,30 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 
+	import { onMount } from 'svelte';
+
 	let { data, children } = $props();
 	let user = $derived(data.user);
 	let languages = $derived(data.languages || []);
 	let isDropdownOpen = $state(false);
+	let theme = $state('light');
+
+	onMount(() => {
+		const savedTheme = localStorage.getItem('app-theme');
+		if (savedTheme) {
+			theme = savedTheme;
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	});
+
+	function cycleTheme() {
+		if (theme === 'light') theme = 'dark';
+		else if (theme === 'dark') theme = 'bavarian';
+		else theme = 'light';
+		
+		document.documentElement.setAttribute('data-theme', theme);
+		localStorage.setItem('app-theme', theme);
+	}
 
 	function toggleDropdown() {
 		isDropdownOpen = !isDropdownOpen;
@@ -164,6 +184,29 @@
 				<svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
 				<span class="brand-text">LingoLearn</span>
 			</a>
+			{#if user}
+				<div class="gamification-stats">
+					<span class="stat streak" title="Current Streak">
+						🔥 {user.currentStreak || 0}
+					</span>
+					<span class="stat xp" title="Total XP">
+						⚡ {user.totalXp || 0} XP
+					</span>
+				</div>
+			{/if}
+		</header>
+
+		<header class="desktop-topbar">
+			<div class="spacer"></div>
+			<button class="nav-item theme-toggle-btn" onclick={cycleTheme} style="margin-right: 1rem; border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;">
+				{#if theme === 'light'}
+					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+				{:else if theme === 'dark'}
+					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+				{:else}
+					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2v20"/><path d="M20 16l-8-8-8 8"/></svg>
+				{/if}
+			</button>
 			{#if user}
 				<div class="gamification-stats">
 					<span class="stat streak" title="Current Streak">
@@ -613,6 +656,16 @@
 		min-height: 100vh;
 	}
 
+	.desktop-topbar {
+		display: flex;
+		justify-content: flex-end;
+		padding: 1rem 2rem;
+	}
+
+	.desktop-topbar .spacer {
+		flex: 1;
+	}
+
 	.mobile-header {
 		display: none;
 	}
@@ -702,6 +755,10 @@
 	@media (max-width: 768px) {
 		.app-container {
 			flex-direction: column;
+		}
+
+		.desktop-topbar {
+			display: none;
 		}
 
 		.sidebar {

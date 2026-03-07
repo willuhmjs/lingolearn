@@ -91,34 +91,115 @@ Return your response as a JSON object with the following structure:
 			userId,
 			messages: chatMessages,
 			systemPrompt,
-			jsonMode: true
+			jsonMode: true,
+			stream: true,
+			signal: event.request.signal
 		});
 
-		const responseContent = response.choices[0]?.message?.content;
-		if (!responseContent) {
-			throw new Error('No response from LLM');
-		}
+		const stream = new ReadableStream({
+			async start(controller) {
+				// Send metadata first
+				controller.enqueue(
+					new TextEncoder().encode(
+						JSON.stringify({
+							type: 'metadata',
+							sessionId: currentSessionId
+						}) + '\n'
+					)
+				);
 
-		let parsedResponse;
-		try {
-			parsedResponse = JSON.parse(responseContent);
-		} catch (error) {
-			console.error('Failed to parse LLM response as JSON:', responseContent, error);
-			parsedResponse = { reply: responseContent, correction: null };
-		}
+				const reader = response.body?.getReader();
+				if (!reader) {
+					controller.close();
+					return;
+				}
 
-		const aiMessage = await prisma.message.create({
-			data: {
-				sessionId: currentSessionId,
-				role: 'assistant',
-				content: parsedResponse.reply,
-				correction: parsedResponse.correction
+				const decoder = new TextDecoder();
+				let buffer = '';
+				let fullContent = '';
+				
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						
+						buffer += decoder.decode(value, { stream: true });
+						const lines = buffer.split('\n');
+						buffer = lines.pop() || '';
+
+						for (const line of lines) {
+							const trimmedLine = line.trim();
+							if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
+								try {
+									const data = JSON.parse(trimmedLine.slice(6));
+									const content = data.choices[0]?.delta?.content || '';
+									if (content) {
+										fullContent += content;
+										controller.enqueue(
+											new TextEncoder().encode(
+												JSON.stringify({ type: 'chunk', content }) + '\n'
+											)
+										);
+									}
+								} catch {
+									// ignore partial JSON parse errors
+								}
+							}
+						}
+					}
+					
+					if (buffer.trim().startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
+						try {
+							const data = JSON.parse(buffer.trim().slice(6));
+							const content = data.choices[0]?.delta?.content || '';
+							if (content) {
+								fullContent += content;
+								controller.enqueue(
+									new TextEncoder().encode(
+										JSON.stringify({ type: 'chunk', content }) + '\n'
+									)
+								);
+							}
+						} catch {
+							// ignore parse errors
+						}
+					}
+
+					let parsedResponse;
+					try {
+						parsedResponse = JSON.parse(fullContent);
+					} catch (error) {
+						console.error('Failed to parse LLM response as JSON:', fullContent, error);
+						parsedResponse = { reply: fullContent, correction: null };
+					}
+
+					const aiMessage = await prisma.message.create({
+						data: {
+							sessionId: currentSessionId,
+							role: 'assistant',
+							content: parsedResponse.reply,
+							correction: parsedResponse.correction
+						}
+					});
+
+					controller.enqueue(
+						new TextEncoder().encode(
+							JSON.stringify({ type: 'done', message: aiMessage }) + '\n'
+						)
+					);
+
+					controller.close();
+				} catch (e) {
+					controller.error(e);
+				}
 			}
 		});
 
-		return json({
-			sessionId: currentSessionId,
-			message: aiMessage
+		return new Response(stream, {
+			headers: {
+				'Content-Type': 'application/x-ndjson',
+				'Cache-Control': 'no-cache'
+			}
 		});
 	} catch (error) {
 		console.error('Error generating chat response:', error);

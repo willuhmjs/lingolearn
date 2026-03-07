@@ -9,12 +9,20 @@
 	let llmLoading = false;
 	let llmError: string | null = null;
 	let debounceTimer: ReturnType<typeof setTimeout>;
+	let searchInputEl: HTMLInputElement;
 
 	// Keep track of which words have been added in this session
 	let addedWords = new Set<string>();
 
 	$: currentLanguage = data.user?.activeLanguage?.name || 'German';
 	$: activeLanguageId = data.user?.activeLanguage?.id;
+
+	function handleKeydown(e: KeyboardEvent) {
+		if ((e.key === '/' || (e.ctrlKey && e.key === 'k') || (e.metaKey && e.key === 'k')) && document.activeElement !== searchInputEl) {
+			e.preventDefault();
+			searchInputEl?.focus();
+		}
+	}
 
 	async function performSearch(q: string) {
 		if (!q.trim()) {
@@ -116,6 +124,8 @@
 	}
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <svelte:head>
 	<title>Dictionary - LernenDeutsch</title>
 </svelte:head>
@@ -134,11 +144,13 @@
 				</svg>
 			</div>
 			<input
+				bind:this={searchInputEl}
 				type="search"
 				bind:value={query}
 				on:input={handleInput}
 				class="search-input"
 				placeholder="Search for words in {currentLanguage} or English..."
+				autofocus
 			/>
 			{#if loading}
 				<div class="loading-wrapper">
