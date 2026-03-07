@@ -214,6 +214,7 @@
 		</div>
 		<div class="banner-actions">
 			{#if currentUserRole === 'TEACHER'}
+				<a href="/classes/{classDetails.id}/live/teacher" class="btn-duo btn-primary live-btn">Start Live Session</a>
 				<div class="invite-box">
 					<p class="invite-label">Invite Code</p>
 					<p class="invite-code">{classDetails.inviteCode}</p>
@@ -224,6 +225,8 @@
 					</div>
 				</div>
 				<button on:click={handleDeleteClass} class="btn-duo btn-delete-class">Delete Class</button>
+			{:else}
+				<a href="/classes/{classDetails.id}/live/student" class="btn-duo btn-primary live-btn">Join Live Session</a>
 			{/if}
 			<button on:click={handleLeaveClass} class="btn-duo btn-leave">Leave Class</button>
 		</div>
@@ -592,7 +595,29 @@
 	@media (min-width: 640px) {
 		.banner-actions {
 			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: flex-end;
 		}
+	}
+
+	.live-btn {
+		background-color: #f59e0b;
+		color: white;
+		border: 1px solid #d97706;
+		box-shadow: 0 4px 0 #b45309;
+		font-size: 0.9rem;
+		text-transform: uppercase;
+		font-weight: 800;
+	}
+
+	.live-btn:hover {
+		background-color: #fbbf24;
+		transform: scale(1.02);
+	}
+
+	.live-btn:active {
+		transform: scale(0.98) translateY(2px);
+		box-shadow: 0 2px 0 #b45309;
 	}
 
 	.invite-box {

@@ -1640,7 +1640,7 @@ r<script lang="ts">
 									disabled={submitting || feedback !== null || loading || hasSubmittedMc}
 									on:click={() => { selectedChoice = choice; submitAnswer(); }}
 								>
-									{choice}
+									{choice.replace(/<vocab[^>]*>/g, '').replace(/<\/vocab>/g, '')}
 								</button>
 							{/each}
 						</div>

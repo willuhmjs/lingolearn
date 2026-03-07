@@ -59,7 +59,6 @@
 				<select id="theme" name="theme" class="theme-select dark:bg-slate-900 dark:text-white dark:border-slate-700">
 					<option value="default" selected={data.user?.theme === 'default'}>Default</option>
 					<option value="dark" selected={data.user?.theme === 'dark'}>Dark</option>
-					<option value="bavarian" selected={data.user?.theme === 'bavarian'}>Historic (Bavarian)</option>
 				</select>
 			</div>
 			<button type="submit" class="submit-btn">Update Theme</button>

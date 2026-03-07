@@ -95,7 +95,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const theme = formData.get('theme');
 
-		if (!theme || typeof theme !== 'string' || !['default', 'dark', 'bavarian'].includes(theme)) {
+		if (!theme || typeof theme !== 'string' || !['default', 'dark'].includes(theme)) {
 			return fail(400, { themeError: 'Invalid theme selected' });
 		}
 

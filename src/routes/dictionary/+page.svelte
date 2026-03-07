@@ -12,7 +12,18 @@
 	let searchInputEl: HTMLInputElement;
 
 	// Keep track of which words have been added in this session
-	let addedWords = new Set<string>();
+	let addedWords: string[] = [];
+
+	// Track selected word for modal
+	let selectedResult: any | null = null;
+
+	function openModal(result: any) {
+		selectedResult = result;
+	}
+
+	function closeModal() {
+		selectedResult = null;
+	}
 
 	$: currentLanguage = data.user?.activeLanguage?.name || 'German';
 	$: activeLanguageId = data.user?.activeLanguage?.id;
@@ -114,7 +125,7 @@
 
 			if (res.ok) {
 				// Update local state to show it was added
-				addedWords = new Set(addedWords).add(vocabularyId);
+				addedWords = [...addedWords, vocabularyId];
 			} else {
 				console.error('Failed to add word');
 			}
@@ -163,30 +174,49 @@
 	{#if results.length > 0}
 		<div class="results-container" transition:fade>
 			<ul class="results-list">
-				{#each results as result}
+				{#each results as result (result.id)}
 					<li class="result-item">
 						<div class="result-content">
 							<div class="result-details">
-								<h3 class="result-word">
-									{result.lemma}
-									{#if result.gender}
-										<span class="result-gender">
-											{result.gender.toLowerCase()}
-										</span>
-									{/if}
-								</h3>
-								<p class="result-meaning">
-									{result.meaning}
-								</p>
-								{#if result.partOfSpeech}
-									<p class="result-pos">
-										{result.partOfSpeech}
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<div 
+									class="result-clickable" 
+									on:click={() => openModal(result)}
+									on:keydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											openModal(result);
+										}
+									}}
+									tabindex="0"
+									role="button"
+								>
+									<h3 class="result-word">
+										{result.lemma}
+										{#if result.gender}
+											<span class="result-gender">
+												{result.gender.toLowerCase()}
+											</span>
+										{/if}
+									</h3>
+									<p class="result-meaning">
+										{result.meaning}
 									</p>
-								{/if}
+									{#if result.partOfSpeech}
+										<p class="result-pos">
+											{result.partOfSpeech}
+										</p>
+									{/if}
+									{#if result.metadata}
+										<div class="expand-indicator">
+											▶ Show details
+										</div>
+									{/if}
+								</div>
 							</div>
 							
 							<div class="result-action">
-								{#if addedWords.has(result.id)}
+								{#if addedWords.includes(result.id)}
 									<button disabled class="btn-added">
 										Added
 									</button>
@@ -233,6 +263,141 @@
 		</div>
 	{/if}
 </div>
+
+{#if selectedResult}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div class="modal-backdrop" on:click={closeModal} transition:fade={{duration: 200}}>
+		<div class="modal-content" on:click|stopPropagation transition:fly={{y: 20, duration: 200}}>
+			<button class="modal-close" on:click={closeModal}>&times;</button>
+			<div class="modal-header">
+				<h2 class="modal-title">
+					{selectedResult.lemma}
+					{#if selectedResult.gender}
+						<span class="result-gender">
+							{selectedResult.gender.toLowerCase()}
+						</span>
+					{/if}
+				</h2>
+				<p class="modal-pos">{selectedResult.partOfSpeech || 'Word'}</p>
+			</div>
+			
+			<div class="modal-body">
+				<div class="modal-section">
+					<h3 class="modal-section-title">Meaning</h3>
+					<p class="modal-meaning">{selectedResult.meaning}</p>
+				</div>
+				
+				{#if selectedResult.plural}
+					<div class="modal-section">
+						<h3 class="modal-section-title">Plural</h3>
+						<p class="modal-plural">{selectedResult.plural}</p>
+					</div>
+				{/if}
+
+				{#if selectedResult.metadata}
+					{#if selectedResult.metadata.conjugations}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Conjugations</h3>
+							<div class="modal-conjugations">
+								{#each Object.entries(selectedResult.metadata.conjugations) as [tense, forms]}
+									<div class="conjugation-tense">
+										<h4 class="tense-title">{tense}</h4>
+										<ul class="conjugation-list">
+											{#each Object.entries(forms) as [person, conjugation]}
+												<li><span class="person">{person}:</span> {conjugation}</li>
+											{/each}
+										</ul>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if selectedResult.metadata.declensions}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Declensions</h3>
+							<div class="modal-declensions">
+								{#each Object.entries(selectedResult.metadata.declensions) as [caseName, forms]}
+									<div class="declension-case">
+										<h4 class="case-title">{caseName}</h4>
+										<ul class="declension-list">
+											{#each Object.entries(forms) as [gender, declension]}
+												<li><span class="gender">{gender}:</span> {declension}</li>
+											{/each}
+										</ul>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if selectedResult.metadata.example}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Example</h3>
+							<p class="modal-example">"{selectedResult.metadata.example}"</p>
+							{#if selectedResult.metadata.exampleTranslation}
+								<p class="modal-example-translation">{selectedResult.metadata.exampleTranslation}</p>
+							{/if}
+						</div>
+					{/if}
+
+					{#if selectedResult.metadata.synonyms && selectedResult.metadata.synonyms.length > 0}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Synonyms</h3>
+							<div class="modal-tags">
+								{#each selectedResult.metadata.synonyms as synonym}
+									<span class="tag">{synonym}</span>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if selectedResult.metadata.antonyms && selectedResult.metadata.antonyms.length > 0}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Antonyms</h3>
+							<div class="modal-tags">
+								{#each selectedResult.metadata.antonyms as antonym}
+									<span class="tag">{antonym}</span>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					{#if selectedResult.metadata.level}
+						<div class="modal-section">
+							<h3 class="modal-section-title">CEFR Level</h3>
+							<p class="modal-level">
+								<span class="level-badge level-{selectedResult.metadata.level.toLowerCase()}">
+									{selectedResult.metadata.level}
+								</span>
+							</p>
+						</div>
+					{/if}
+					
+					{#if !selectedResult.metadata.conjugations && !selectedResult.metadata.declensions && !selectedResult.metadata.example && !selectedResult.metadata.synonyms && !selectedResult.metadata.antonyms && !selectedResult.metadata.level && Object.keys(selectedResult.metadata).length > 0}
+						<div class="modal-section">
+							<h3 class="modal-section-title">Details</h3>
+							<pre class="modal-metadata">{JSON.stringify(selectedResult.metadata, null, 2)}</pre>
+						</div>
+					{/if}
+				{/if}
+			</div>
+			
+			<div class="modal-footer">
+				{#if addedWords.includes(selectedResult.id)}
+					<button disabled class="btn-added">
+						Added to List
+					</button>
+				{:else}
+					<button on:click={() => { handleAddWord(selectedResult.id); closeModal(); }} class="btn-add">
+						Add to My List
+					</button>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.dictionary-container {
@@ -411,6 +576,22 @@
 
 	.result-details {
 		flex: 1;
+	}
+
+	.result-clickable {
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.expand-indicator {
+		font-size: 0.75rem;
+		color: #3b82f6;
+		margin-top: 0.5rem;
+		font-weight: 500;
+	}
+
+	:global(.dark) .expand-indicator {
+		color: #60a5fa;
 	}
 
 	.result-word {
@@ -664,5 +845,312 @@
 			width: 100%;
 			justify-content: center;
 		}
+	}
+
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 50;
+		padding: 1rem;
+	}
+
+	.modal-content {
+		background-color: #ffffff;
+		border-radius: 0.5rem;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+		max-width: 32rem;
+		width: 100%;
+		max-height: 90vh;
+		display: flex;
+		flex-direction: column;
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.dark) .modal-content {
+		background-color: #1f2937;
+		border: 1px solid #374151;
+	}
+
+	.modal-close {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: transparent;
+		border: none;
+		font-size: 1.5rem;
+		line-height: 1;
+		color: #9ca3af;
+		cursor: pointer;
+		padding: 0.25rem;
+		border-radius: 0.25rem;
+	}
+
+	.modal-close:hover {
+		color: #4b5563;
+		background-color: #f3f4f6;
+	}
+
+	:global(.dark) .modal-close:hover {
+		color: #d1d5db;
+		background-color: #374151;
+	}
+
+	.modal-header {
+		padding: 1.5rem 1.5rem 1rem;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	:global(.dark) .modal-header {
+		border-bottom-color: #374151;
+	}
+
+	.modal-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #111827;
+		margin: 0 0 0.5rem 0;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	:global(.dark) .modal-title {
+		color: #ffffff;
+	}
+
+	.modal-pos {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0;
+		text-transform: capitalize;
+	}
+
+	:global(.dark) .modal-pos {
+		color: #9ca3af;
+	}
+
+	.modal-body {
+		padding: 1.5rem;
+		overflow-y: auto;
+	}
+
+	.modal-section {
+		margin-bottom: 1.5rem;
+	}
+
+	.modal-section:last-child {
+		margin-bottom: 0;
+	}
+
+	.modal-section-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #4b5563;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin: 0 0 0.5rem 0;
+	}
+
+	:global(.dark) .modal-section-title {
+		color: #9ca3af;
+	}
+
+	.modal-meaning {
+		font-size: 1.125rem;
+		color: #111827;
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	:global(.dark) .modal-meaning {
+		color: #f3f4f6;
+	}
+
+	.modal-metadata {
+		font-size: 0.875rem;
+		background-color: #f3f4f6;
+		padding: 1rem;
+		border-radius: 0.375rem;
+		overflow-x: auto;
+		color: #374151;
+		margin: 0;
+	}
+
+	:global(.dark) .modal-metadata {
+		background-color: #374151;
+		color: #d1d5db;
+	}
+
+	.modal-footer {
+		padding: 1rem 1.5rem;
+		border-top: 1px solid #e5e7eb;
+		display: flex;
+		justify-content: flex-end;
+		background-color: #f9fafb;
+	}
+
+	:global(.dark) .modal-footer {
+		border-top-color: #374151;
+		background-color: #111827;
+	}
+
+	.modal-plural {
+		font-size: 1rem;
+		color: #374151;
+		margin: 0;
+	}
+
+	:global(.dark) .modal-plural {
+		color: #d1d5db;
+	}
+
+	.modal-conjugations, .modal-declensions {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 1rem;
+	}
+
+	.conjugation-tense, .declension-case {
+		background-color: #f9fafb;
+		padding: 1rem;
+		border-radius: 0.375rem;
+		border: 1px solid #e5e7eb;
+	}
+
+	:global(.dark) .conjugation-tense, :global(.dark) .declension-case {
+		background-color: #374151;
+		border-color: #4b5563;
+	}
+
+	.tense-title, .case-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #111827;
+		margin: 0 0 0.5rem 0;
+		text-transform: capitalize;
+	}
+
+	:global(.dark) .tense-title, :global(.dark) .case-title {
+		color: #ffffff;
+	}
+
+	.conjugation-list, .declension-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		font-size: 0.875rem;
+		color: #4b5563;
+	}
+
+	:global(.dark) .conjugation-list, :global(.dark) .declension-list {
+		color: #d1d5db;
+	}
+
+	.conjugation-list li, .declension-list li {
+		margin-bottom: 0.25rem;
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.conjugation-list li:last-child, .declension-list li:last-child {
+		margin-bottom: 0;
+	}
+
+	.person, .gender {
+		font-weight: 500;
+		color: #6b7280;
+		width: 3rem;
+		flex-shrink: 0;
+	}
+
+	:global(.dark) .person, :global(.dark) .gender {
+		color: #9ca3af;
+	}
+
+	.modal-example {
+		font-size: 1rem;
+		color: #111827;
+		font-style: italic;
+		margin: 0 0 0.5rem 0;
+	}
+
+	:global(.dark) .modal-example {
+		color: #e5e7eb;
+	}
+
+	.modal-example-translation {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0;
+	}
+
+	:global(.dark) .modal-example-translation {
+		color: #9ca3af;
+	}
+
+	.modal-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.tag {
+		background-color: #e5e7eb;
+		color: #374151;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		font-size: 0.875rem;
+	}
+
+	:global(.dark) .tag {
+		background-color: #4b5563;
+		color: #e5e7eb;
+	}
+
+	.level-badge {
+		display: inline-block;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.level-a1, .level-a2 {
+		background-color: #dcfce7;
+		color: #166534;
+	}
+	
+	:global(.dark) .level-a1, :global(.dark) .level-a2 {
+		background-color: #14532d;
+		color: #86efac;
+	}
+
+	.level-b1, .level-b2 {
+		background-color: #fef08a;
+		color: #854d0e;
+	}
+	
+	:global(.dark) .level-b1, :global(.dark) .level-b2 {
+		background-color: #713f12;
+		color: #fde047;
+	}
+
+	.level-c1, .level-c2 {
+		background-color: #fee2e2;
+		color: #991b1b;
+	}
+	
+	:global(.dark) .level-c1, :global(.dark) .level-c2 {
+		background-color: #7f1d1d;
+		color: #fca5a5;
 	}
 </style>

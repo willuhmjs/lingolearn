@@ -28,10 +28,10 @@ const authorization: Handle = async ({ event, resolve }) => {
 
 	if (!session || !session.user || !session.user.id) {
 		event.locals.user = null;
-		if (event.url.pathname.startsWith('/dashboard') || event.url.pathname.startsWith('/play') || event.url.pathname.startsWith('/onboarding') || event.url.pathname.startsWith('/admin')) {
+		if (event.url.pathname.startsWith('/dashboard') || event.url.pathname.startsWith('/play') || event.url.pathname.startsWith('/onboarding') || event.url.pathname.startsWith('/admin') || event.url.pathname.startsWith('/classes') || event.url.pathname.startsWith('/dictionary') || event.url.pathname.startsWith('/profile') || event.url.pathname.startsWith('/review') || event.url.pathname.startsWith('/practice')) {
 			return new Response(null, {
 				status: 303,
-				headers: { location: '/login' }
+				headers: { location: `/login?redirectTo=${encodeURIComponent(event.url.pathname + event.url.search)}` }
 			});
 		}
 		if (event.url.pathname.startsWith('/api/admin')) {

@@ -190,6 +190,118 @@
 		}
 	}
 
+	async function startAIConversation() {
+		if (isLoading) return;
+		isLoading = true;
+
+		try {
+			const res = await fetch('/api/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					sessionId: sessionId || undefined,
+					message: `Please ask me a beginner-friendly question to start the conversation in ${language}.`,
+					persona,
+					language
+				})
+			});
+
+			if (!res.ok) {
+				const errorData = await res.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Failed to send message');
+			}
+
+			const reader = res.body?.getReader();
+			if (!reader) throw new Error('No response stream');
+
+			const assistantMessage: ChatMessage = {
+				id: Date.now().toString() + '-ai',
+				role: 'assistant',
+				content: ''
+			};
+			messages = [...messages, assistantMessage];
+			
+			const decoder = new TextDecoder();
+			let buffer = '';
+			let fullContent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
+
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					try {
+						const event = JSON.parse(line);
+						if (event.type === 'metadata') {
+							if (!sessionId) {
+								sessionId = event.sessionId;
+							}
+						} else if (event.type === 'chunk') {
+							fullContent += event.content;
+							
+							// Try to extract just the reply part if we can see it
+							const replyMatch = fullContent.match(/"reply"\s*:\s*"([^]*)/);
+							if (replyMatch && replyMatch[1]) {
+								let extracted = replyMatch[1];
+								const endQuoteIdx = extracted.indexOf('",');
+								if (endQuoteIdx !== -1) {
+									extracted = extracted.substring(0, endQuoteIdx);
+								} else {
+									const endBraceIdx = extracted.lastIndexOf('"}');
+									if (endBraceIdx !== -1) {
+										extracted = extracted.substring(0, endBraceIdx);
+									}
+								}
+								extracted = extracted.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n');
+								
+								messages = messages.map(m => 
+									m.id === assistantMessage.id 
+										? { ...m, content: extracted } 
+										: m
+								);
+								scrollToBottom();
+							}
+						} else if (event.type === 'done') {
+							messages = messages.map(m => 
+								m.id === assistantMessage.id 
+									? { ...m, content: event.message.content, correction: event.message.correction } 
+									: m
+							);
+							scrollToBottom();
+						}
+					} catch (err) {
+						// ignore parse errors for partial lines
+					}
+				}
+			}
+
+			if (buffer.trim()) {
+				try {
+					const event = JSON.parse(buffer.trim());
+					if (event.type === 'done') {
+						messages = messages.map(m => 
+							m.id === assistantMessage.id 
+								? { ...m, content: event.message.content, correction: event.message.correction } 
+								: m
+						);
+						scrollToBottom();
+					}
+				} catch (err) {}
+			}
+
+		} catch (error: any) {
+			console.error(error);
+			toast.error(error.message || 'An error occurred.');
+		} finally {
+			isLoading = false;
+		}
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
@@ -254,6 +366,13 @@
 						<div class="empty-state">
 							<div class="wave">👋</div>
 							<p>Start the conversation! Introduce yourself or say hello.</p>
+							<button 
+								on:click={startAIConversation} 
+								class="ai-start-btn"
+								disabled={isLoading}
+							>
+								Make the AI ask the first question
+							</button>
 						</div>
 					{/if}
 					
@@ -502,6 +621,38 @@
 		text-align: center;
 		font-weight: 500;
 		color: #64748b;
+	}
+
+	.ai-start-btn {
+		margin-top: 1.5rem;
+		font-size: 0.9375rem;
+		padding: 0.75rem 1.25rem;
+		background-color: var(--card-bg, #ffffff);
+		color: #3b82f6;
+		border: 2px solid #3b82f6;
+		border-radius: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.ai-start-btn:hover:not(:disabled) {
+		background-color: #eff6ff;
+	}
+
+	.ai-start-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	:global(html[data-theme="dark"]) .ai-start-btn {
+		background-color: #1e293b;
+		color: #60a5fa;
+		border-color: #3b82f6;
+	}
+
+	:global(html[data-theme="dark"]) .ai-start-btn:hover:not(:disabled) {
+		background-color: #334155;
 	}
 
 	.wave {

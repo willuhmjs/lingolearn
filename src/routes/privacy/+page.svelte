@@ -47,7 +47,7 @@
 			<h3 class="dark:text-slate-200">Usage Data</h3>
 			<ul class="dark:text-slate-300">
 				<li><strong>Last active timestamp</strong> — when you last used the platform.</li>
-				<li><strong>Theme preference</strong> — your chosen visual theme (default, dark, or bavarian).</li>
+				<li><strong>Theme preference</strong> — your chosen visual theme (default or dark).</li>
 				<li><strong>Session data</strong> — session tokens used to keep you logged in.</li>
 			</ul>
 

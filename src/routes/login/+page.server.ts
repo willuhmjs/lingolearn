@@ -65,6 +65,12 @@ export const actions: Actions = {
 			expires
 		});
 
-		throw redirect(302, '/dashboard');
+		const redirectTo = event.url.searchParams.get('redirectTo');
+		let redirectPath = '/dashboard';
+		if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+			redirectPath = redirectTo;
+		}
+
+		throw redirect(302, redirectPath);
 	}
 } satisfies Actions;

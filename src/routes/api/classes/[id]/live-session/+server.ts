@@ -2,8 +2,8 @@ import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 
 export async function GET({ params, locals }) {
-	const session = await locals.auth();
-	if (!session?.user?.id) {
+	const user = locals.user;
+	if (!user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
@@ -20,15 +20,15 @@ export async function GET({ params, locals }) {
 	});
 
 	if (!liveSession) {
-		return json({ session: null });
+		return json({ session: null, userId: user.id });
 	}
 
-	return json({ session: liveSession });
+	return json({ session: liveSession, userId: user.id });
 }
 
 export async function POST({ params, request, locals }) {
-	const session = await locals.auth();
-	if (!session?.user?.id) {
+	const user = locals.user;
+	if (!user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
@@ -37,7 +37,7 @@ export async function POST({ params, request, locals }) {
 
 	// Check if user is a teacher of this class
 	const classMember = await prisma.classMember.findUnique({
-		where: { classId_userId: { classId, userId: session.user.id } }
+		where: { classId_userId: { classId, userId: user.id } }
 	});
 
 	if (!classMember || classMember.role !== 'TEACHER') {
@@ -47,6 +47,12 @@ export async function POST({ params, request, locals }) {
 	const { action, currentQuestion, status } = data;
 
 	if (action === 'start') {
+		const existingSession = await prisma.liveSession.findFirst({
+			where: { classId, status: { in: ['waiting', 'active'] } }
+		});
+		if (existingSession) {
+			return json({ session: existingSession });
+		}
 		const newSession = await prisma.liveSession.create({
 			data: {
 				classId,

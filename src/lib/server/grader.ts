@@ -1,7 +1,7 @@
 import { prisma } from './prisma';
 
 type SrsState = 'UNSEEN' | 'LEARNING' | 'KNOWN' | 'MASTERED';
-type Vocabulary = { id: string; lemma: string; meaning: string | null; partOfSpeech: string | null; gender: 'der' | 'die' | 'das' | null; plural: string | null; createdAt: Date; updatedAt: Date };
+type Vocabulary = { id: string; lemma: string; meaning: string | null; partOfSpeech: string | null; gender: 'der' | 'die' | 'das' | null; plural: string | null; metadata: import('@prisma/client').Prisma.JsonValue | null; createdAt: Date; updatedAt: Date };
 type GrammarRule = { id: string; title: string; description: string | null; level: string; createdAt: Date; updatedAt: Date };
 
 export type GameMode = 'native-to-target' | 'target-to-native' | 'fill-blank' | 'multiple-choice';

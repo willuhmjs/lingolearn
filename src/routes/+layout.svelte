@@ -22,7 +22,6 @@
 
 	function cycleTheme() {
 		if (theme === 'light') theme = 'dark';
-		else if (theme === 'dark') theme = 'bavarian';
 		else theme = 'light';
 		
 		document.documentElement.setAttribute('data-theme', theme);
@@ -201,10 +200,8 @@
 			<button class="nav-item theme-toggle-btn" onclick={cycleTheme} style="margin-right: 1rem; border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;">
 				{#if theme === 'light'}
 					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-				{:else if theme === 'dark'}
-					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 				{:else}
-					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2v20"/><path d="M20 16l-8-8-8 8"/></svg>
+					<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 				{/if}
 			</button>
 			{#if user}
@@ -354,34 +351,18 @@
 	}
 
 	:global(html[data-theme="dark"]) {
-		--bg-color: #111827;
-		--text-color: #f9fafb;
-		--header-bg: #1f2937;
-		--header-border: #374151;
-		--card-bg: #1f2937;
-		--card-border: #374151;
-		--link-color: #d1d5db;
-		--link-hover-bg: #374151;
-		--brand-color: #60a5fa;
-		--input-bg: #374151;
-		--input-border: #4b5563;
-		--input-text: #f9fafb;
-	}
-
-	:global(html[data-theme="bavarian"]) {
-		--bg-color: #f4ecd8;
-		--text-color: #3e2723;
-		--header-bg: #eaddc0;
-		--header-border: #c8b79b;
-		--card-bg: #fff8eb;
-		--card-border: #d7ccc8;
-		--link-color: #5d4037;
-		--link-hover-bg: #d7ccc8;
-		--brand-color: #8d6e63;
-		--input-bg: #fff8eb;
-		--input-border: #a1887f;
-		--input-text: #3e2723;
-		font-family: "Georgia", serif;
+		--bg-color: #121212;
+		--text-color: #e5e5e5;
+		--header-bg: #1e1e1e;
+		--header-border: #2c2c2c;
+		--card-bg: #1e1e1e;
+		--card-border: #2c2c2c;
+		--link-color: #a0a0a0;
+		--link-hover-bg: #2c2c2c;
+		--brand-color: #3b82f6;
+		--input-bg: #2c2c2c;
+		--input-border: #3f3f3f;
+		--input-text: #e5e5e5;
 	}
 
 	:global(html[data-theme="dark"] .info-card),
@@ -401,28 +382,6 @@
 
 	:global(html[data-theme="dark"] input),
 	:global(html[data-theme="dark"] select) {
-		background: var(--input-bg) !important;
-		border-color: var(--input-border) !important;
-		color: var(--input-text) !important;
-	}
-
-	:global(html[data-theme="bavarian"] .info-card),
-	:global(html[data-theme="bavarian"] .password-card),
-	:global(html[data-theme="bavarian"] .theme-card),
-	:global(html[data-theme="bavarian"] .card) {
-		background: var(--card-bg) !important;
-		border-color: var(--card-border) !important;
-	}
-
-	:global(html[data-theme="bavarian"] h1),
-	:global(html[data-theme="bavarian"] h2),
-	:global(html[data-theme="bavarian"] h3),
-	:global(html[data-theme="bavarian"] .info-value) {
-		color: var(--text-color) !important;
-	}
-
-	:global(html[data-theme="bavarian"] input),
-	:global(html[data-theme="bavarian"] select) {
 		background: var(--input-bg) !important;
 		border-color: var(--input-border) !important;
 		color: var(--input-text) !important;

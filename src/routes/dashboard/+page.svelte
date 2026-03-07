@@ -161,39 +161,59 @@
 		</section>
 
 		<section class="grammar-section">
-			<h2 class="dark:text-white dark:border-slate-700">Grammar Skill Tree</h2>
+			<h2 class="dark:text-white dark:border-slate-700">Grammar Web</h2>
 			{#if data.grammarRules.length === 0}
 				<p class="empty-state dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">No grammar data available yet. Start learning!</p>
 			{:else}
-				<div class="skill-tree">
-					{#each data.grammarRules as rule}
-						<div class="skill-node dark:bg-slate-800 dark:border-slate-700">
-							<div class="skill-info">
-								<h3 class="dark:text-white">{rule.grammarRule.title}</h3>
-								<p class="skill-desc dark:text-slate-400">{rule.grammarRule.description || ''}</p>
-								
-								<div class="debug-details dark:bg-slate-900 dark:text-slate-400">
-									<div class="debug-grid">
-										<div class="debug-item"><strong class="dark:text-slate-300">SRS State:</strong> {rule.srsState}</div>
-										<div class="debug-item"><strong class="dark:text-slate-300">Raw ELO:</strong> {Math.ceil(rule.eloRating)}</div>
+				<div class="grammar-web-container dark:bg-slate-800 dark:border-slate-700">
+					<!-- Visual web lines drawing actual connections -->
+					<svg class="web-svg-lines" width="100%" height="100%">
+						{#each data.grammarRules as rule, i}
+							{#if i < data.grammarRules.length - 1}
+								<line 
+									x1="50%" 
+									y1="{100 / data.grammarRules.length * i + (100 / data.grammarRules.length / 2)}%" 
+									x2="50%" 
+									y2="{100 / data.grammarRules.length * (i + 1) + (100 / data.grammarRules.length / 2)}%" 
+									class="web-connection-line"
+								/>
+							{/if}
+						{/each}
+					</svg>
+					
+					<div class="web-tree-layout">
+						{#each data.grammarRules as rule}
+							{@const srsColor = srsColors[rule.srsState] || srsColors.UNSEEN}
+							{@const eloPercent = Math.max(0, Math.min(100, ((rule.eloRating - 1000) / 1000) * 100))}
+							
+							<div class="web-node-pill" style="--node-color: {srsColor}">
+								<div class="node-pill-content tooltip-trigger">
+									<div class="node-icon" style="background-color: {srsColor}">
+										<span class="sr-only">{rule.srsState}</span>
+									</div>
+									<span class="node-title">{rule.grammarRule.title}</span>
+									
+									<div class="tooltip-content dark:bg-slate-700 dark:text-white">
+										<div class="tooltip-header dark:border-slate-600">
+											{rule.grammarRule.title}
+										</div>
+										<div class="tooltip-body">
+											<div class="word-tooltip-elo">
+												<div class="elo-header">
+													<span>Status: {rule.srsState}</span>
+													<span class="elo-score">ELO {Math.ceil(rule.eloRating)}</span>
+												</div>
+												<div class="elo-progress-track">
+													<div class="elo-progress-fill {rule.srsState.toLowerCase()}" style="width: {eloPercent}%; background-color: {srsColor}"></div>
+												</div>
+											</div>
+											<p class="node-desc">{rule.grammarRule.description || 'No description available.'}</p>
+										</div>
 									</div>
 								</div>
 							</div>
-							<div class="skill-progress">
-								<div class="progress-labels dark:text-slate-400">
-									<span>ELO {Math.ceil(rule.eloRating)}</span>
-									<span>{rule.srsState}</span>
-								</div>
-								<div class="progress-bar-container dark:bg-slate-700">
-									<!-- Baseline is roughly 1000, max mastery could be around 2000 -->
-									<div 
-										class="progress-bar-fill"
-										style="width: {Math.max(0, Math.min(100, ((rule.eloRating - 1000) / 1000) * 100))}%"
-									></div>
-								</div>
-							</div>
-						</div>
-					{/each}
+						{/each}
+					</div>
 				</div>
 			{/if}
 		</section>
@@ -212,33 +232,47 @@
 	.dashboard-header {
 		margin-bottom: 2rem;
 		text-align: center;
+		padding: 3rem 1rem;
+		background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+		border-radius: 1rem;
+		color: white;
+		box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 	}
 
 	.dashboard-header h1 {
 		font-size: 2.5rem;
-		color: #0f172a;
+		color: #ffffff;
 		margin-bottom: 0.5rem;
+		font-weight: 800;
+		letter-spacing: -0.025em;
 	}
 
 	.dashboard-header p {
-		color: #64748b;
+		color: #94a3b8;
 		font-size: 1.1rem;
-		margin-bottom: 1rem;
+		margin-bottom: 1.5rem;
+		max-width: 600px;
+		margin-left: auto;
+		margin-right: auto;
 	}
 
 	.re-onboard-link {
 		display: inline-block;
-		padding: 0.5rem 1rem;
-		background-color: #e2e8f0;
-		color: #334155;
+		padding: 0.75rem 1.5rem;
+		background-color: #3b82f6;
+		color: #ffffff;
 		text-decoration: none;
-		border-radius: 4px;
-		font-size: 0.9rem;
-		transition: background-color 0.2s;
+		border-radius: 9999px;
+		font-size: 0.95rem;
+		font-weight: 600;
+		transition: all 0.2s;
+		box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
 	}
 
 	.re-onboard-link:hover {
-		background-color: #cbd5e1;
+		background-color: #2563eb;
+		transform: translateY(-2px);
+		box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.6);
 	}
 
 	/* Summary Section */
@@ -260,65 +294,103 @@
 
 	.summary-card {
 		background: var(--card-bg, #ffffff);
-		border: 2px solid var(--card-border, #e5e7eb);
-		border-radius: 1.5rem;
-		padding: 1.5rem;
-		box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
-		transition: transform 0.2s;
+		border-radius: 1rem;
+		padding: 2rem;
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgba(0,0,0,0.05);
+	}
+
+	.summary-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(90deg, #3b82f6, #8b5cf6);
 	}
 
 	.summary-card:hover {
 		transform: translateY(-4px);
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 	}
 
 	.summary-card h3 {
 		margin-top: 0;
-		margin-bottom: 1rem;
+		margin-bottom: 1.5rem;
 		color: var(--text-color, #0f172a);
-		font-size: 1.25rem;
-		border-bottom: 1px solid var(--card-border, #cbd5e1);
-		padding-bottom: 0.5rem;
+		font-size: 1.5rem;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.stat-row {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.5rem;
-		font-size: 1.05rem;
+		align-items: center;
+		margin-bottom: 1rem;
+		font-size: 1.1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid rgba(0,0,0,0.05);
+	}
+
+	.stat-row:last-of-type {
+		border-bottom: none;
 	}
 
 	.stat-label {
-		color: #475569;
+		color: #64748b;
 		font-weight: 500;
 	}
 
 	.stat-value {
 		color: #0f172a;
-		font-weight: 600;
+		font-weight: 700;
+		font-size: 1.25rem;
+		background: #f1f5f9;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
 	}
 
 	.srs-breakdown {
-		margin-top: 1.5rem;
+		margin-top: 2rem;
+		background: #f8fafc;
+		padding: 1.5rem;
+		border-radius: 0.75rem;
 	}
 
 	.srs-breakdown h4 {
 		font-size: 1rem;
-		color: #334155;
-		margin-bottom: 0.75rem;
+		color: #475569;
+		margin-bottom: 1rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 600;
 	}
 
 	.breakdown-row {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.25rem;
-		font-size: 0.9rem;
+		margin-bottom: 0.75rem;
+		font-size: 0.95rem;
+	}
+
+	.breakdown-row:last-child {
+		margin-bottom: 0;
 	}
 
 	.breakdown-label {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
+		color: #334155;
+		font-weight: 500;
 	}
 
 	.dashboard-content {
@@ -334,54 +406,62 @@
 	}
 
 	h2 {
-		font-size: 1.5rem;
-		color: var(--text-color, #1e293b);
+		font-size: 1.75rem;
+		color: var(--text-color, #0f172a);
 		margin-bottom: 1.5rem;
-		border-bottom: 2px solid var(--card-border, #e2e8f0);
-		padding-bottom: 0.5rem;
+		font-weight: 800;
+		letter-spacing: -0.025em;
+		position: relative;
+		display: inline-block;
 	}
 
 	/* Vocabulary Heatmap */
 	.heatmap-legend {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
+		gap: 1.5rem;
+		margin-bottom: 2rem;
 		font-size: 0.9rem;
+		background: #f8fafc;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		justify-content: center;
 	}
 
 	.legend-item {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		font-weight: 500;
+		color: #475569;
 	}
 
 	.color-box {
-		width: 1rem;
-		height: 1rem;
-		border-radius: 2px;
+		width: 1.25rem;
+		height: 1.25rem;
+		border-radius: 4px;
 		display: inline-block;
-		border: 1px solid rgba(0,0,0,0.1);
+		box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 	}
 
 	.heatmap-grid {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 8px;
 		background: var(--card-bg, #ffffff);
-		padding: 1.5rem;
-		border-radius: 1.5rem;
-		border: 2px solid var(--card-border, #e5e7eb);
-		box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
+		padding: 2rem;
+		border-radius: 1rem;
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+		border: 1px solid rgba(0,0,0,0.05);
 	}
 
 	.heatmap-cell {
-		width: 18px;
-		height: 18px;
-		border-radius: 5px;
+		width: 24px;
+		height: 24px;
+		border-radius: 6px;
 		cursor: help;
-		transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-		border: 1px solid rgba(0,0,0,0.05);
+		transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+		box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 	}
 
 	.tooltip-trigger {
@@ -389,30 +469,34 @@
 	}
 
 	.tooltip-trigger:hover {
-		transform: scale(1.3) translateY(-2px);
+		transform: scale(1.5) translateY(-2px);
 		z-index: 10;
-		box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+		box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+		border-radius: 4px;
 	}
 
 	.tooltip-content {
 		visibility: hidden;
 		opacity: 0;
 		position: absolute;
-		bottom: 100%;
+		bottom: calc(100% + 8px);
 		left: 50%;
-		transform: translateX(-50%);
-		margin-bottom: 10px;
-		background-color: #1e293b;
+		transform: translateX(-50%) translateY(5px);
+		margin-bottom: 0;
+		background-color: #0f172a;
 		color: #f8fafc;
 		text-align: left;
-		padding: 0.75rem;
-		border-radius: 6px;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
 		width: max-content;
-		min-width: 150px;
-		box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-		transition: opacity 0.2s, visibility 0.2s;
+		min-width: 140px;
+		max-width: 200px;
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+		transition: all 0.2s ease;
 		z-index: 100;
 		pointer-events: none;
+		border: 1px solid rgba(255,255,255,0.1);
+		line-height: 1.3;
 	}
 
 	.tooltip-content::after {
@@ -423,27 +507,50 @@
 		margin-left: -5px;
 		border-width: 5px;
 		border-style: solid;
-		border-color: #1e293b transparent transparent transparent;
+		border-color: #0f172a transparent transparent transparent;
+	}
+	
+	/* Ensure tooltip stays within viewport on mobile */
+	@media (max-width: 768px) {
+		.tooltip-content {
+			left: auto;
+			right: -40px;
+			transform: translateX(0) translateY(5px);
+		}
+		
+		.tooltip-content::after {
+			left: auto;
+			right: 46px;
+		}
 	}
 
 	.tooltip-trigger:hover .tooltip-content {
 		visibility: visible;
 		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+	
+	@media (max-width: 768px) {
+		.tooltip-trigger:hover .tooltip-content {
+			transform: translateX(0) translateY(0);
+		}
 	}
 
 	.tooltip-header {
-		font-weight: bold;
-		font-size: 1.1rem;
-		margin-bottom: 0.5rem;
-		border-bottom: 1px solid #475569;
+		font-weight: 700;
+		font-size: 0.95rem;
+		margin-bottom: 0.25rem;
+		border-bottom: 1px solid rgba(255,255,255,0.1);
 		padding-bottom: 0.25rem;
+		color: #ffffff;
 	}
 
 	.tooltip-body {
-		font-size: 0.85rem;
+		font-size: 0.75rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
+		color: #cbd5e1;
 	}
 
 	.word-tooltip-elo {
@@ -452,41 +559,44 @@
 		gap: 0.25rem;
 		margin-bottom: 0.25rem;
 		padding-bottom: 0.25rem;
-		border-bottom: 1px solid #334155;
+		border-bottom: 1px solid rgba(255,255,255,0.1);
 	}
 
 	.elo-header {
 		display: flex;
 		justify-content: space-between;
-		gap: 1rem;
-		font-size: 0.75rem;
+		gap: 0.5rem;
+		font-size: 0.7rem;
 		color: #94a3b8;
-		font-weight: 600;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 
 	.elo-score {
-		color: #cbd5e1;
+		color: #3b82f6;
 	}
 
 	.elo-progress-track {
 		display: block;
 		width: 100%;
 		height: 4px;
-		background: #334155;
-		border-radius: 2px;
+		background: #1e293b;
+		border-radius: 9999px;
 		overflow: hidden;
+		box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 	}
 
 	.elo-progress-fill {
 		display: block;
 		height: 100%;
-		border-radius: 2px;
-		transition: width 0.3s ease;
+		border-radius: 9999px;
+		transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 	
-	.elo-progress-fill.learning { background: var(--color-learning, #fef08a); }
-	.elo-progress-fill.known { background: var(--color-known, #6ee7b7); }
-	.elo-progress-fill.mastered { background: var(--color-mastered, #10b981); }
+	.elo-progress-fill.learning { background: linear-gradient(90deg, #facc15, #fef08a); }
+	.elo-progress-fill.known { background: linear-gradient(90deg, #34d399, #6ee7b7); }
+	.elo-progress-fill.mastered { background: linear-gradient(90deg, #10b981, #059669); }
 
 	.sr-only {
 		position: absolute;
@@ -500,113 +610,121 @@
 		border-width: 0;
 	}
 
-	/* Grammar Skill Tree */
-	.skill-tree {
+	/* Grammar Web Redesign */
+	.grammar-web-container {
+		position: relative;
+		background: var(--card-bg, #ffffff);
+		border-radius: 1rem;
+		padding: 2rem;
+		min-height: 400px;
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+		border: 1px solid rgba(0,0,0,0.05);
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.web-svg-lines {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 0;
+		pointer-events: none;
+	}
+
+	.web-connection-line {
+		stroke: #cbd5e1;
+		stroke-width: 2px;
+		stroke-dasharray: 4 4;
+	}
+
+	.dark .web-connection-line {
+		stroke: #475569;
+	}
+
+	.web-tree-layout {
+		position: relative;
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: 3rem;
+		align-items: center;
+		width: 100%;
+		padding: 2rem 0;
 	}
 
-	.skill-node {
-		background: var(--card-bg, #ffffff);
-		border: 2px solid var(--card-border, #e5e7eb);
-		border-radius: 1.5rem;
-		padding: 1.25rem;
-		box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
-		transition: transform 0.2s, box-shadow 0.2s;
+	.web-node-pill {
+		position: relative;
+		display: flex;
+		align-items: center;
+		background: #ffffff;
+		border: 2px solid var(--node-color);
+		border-radius: 9999px;
+		padding: 0.5rem 1.25rem 0.5rem 0.5rem;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 0 10px var(--node-color)40;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		cursor: pointer;
 	}
 
-	.skill-node:hover {
-		transform: translateY(-4px);
-		box-shadow: 0 8px 0 var(--card-border, #e5e7eb);
+	.dark .web-node-pill {
+		background: #1e293b;
 	}
 
-	.skill-info h3 {
-		margin: 0 0 0.5rem 0;
-		font-size: 1.25rem;
-		color: var(--text-color, #0f172a);
+	.web-node-pill:hover {
+		transform: translateY(-2px) scale(1.05);
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 15px var(--node-color)60;
+		z-index: 10;
 	}
 
-	.skill-desc {
-		margin: 0;
-		color: #64748b;
+	.node-pill-content {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.node-icon {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+	}
+
+	.node-title {
+		font-weight: 600;
 		font-size: 0.95rem;
-		margin-bottom: 1rem;
-	}
-
-	.debug-details {
-		margin-bottom: 1rem;
-		padding: 0.75rem;
-		background-color: var(--input-bg, #e2e8f0);
-		border-radius: 6px;
-		font-size: 0.8rem;
-		color: #475569;
-	}
-
-	.debug-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-		gap: 0.5rem;
-	}
-
-	.debug-item strong {
 		color: #334155;
 	}
 
-	.progress-labels {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.875rem;
-		color: #475569;
-		margin-bottom: 0.5rem;
-		font-weight: 500;
+	.dark .node-title {
+		color: #f8fafc;
 	}
 
-	.progress-bar-container {
-		height: 1rem;
-		background-color: #e2e8f0;
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 2px solid #cbd5e1;
-		box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-	}
-
-	.progress-bar-fill {
-		height: 100%;
-		background-color: #3b82f6; /* blue-500 */
-		background-image: linear-gradient(
-			45deg,
-			rgba(255, 255, 255, 0.15) 25%,
-			transparent 25%,
-			transparent 50%,
-			rgba(255, 255, 255, 0.15) 50%,
-			rgba(255, 255, 255, 0.15) 75%,
-			transparent 75%,
-			transparent
-		);
-		background-size: 1rem 1rem;
-		border-radius: 9999px;
-		transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-		animation: progress-stripes 1s linear infinite;
-	}
-
-	@keyframes progress-stripes {
-		from { background-position: 1rem 0; }
-		to { background-position: 0 0; }
+	.node-desc {
+		margin-top: 0.5rem;
+		color: #94a3b8;
 	}
 
 	.empty-state {
 		text-align: center;
-		padding: 3rem;
-		background: var(--card-bg, #f8fafc);
-		border-radius: 8px;
-		border: 1px dashed var(--card-border, #cbd5e1);
+		padding: 4rem 2rem;
+		background: #f8fafc;
+		border-radius: 1rem;
+		border: 2px dashed #cbd5e1;
 		color: #64748b;
+		font-size: 1.1rem;
+		font-weight: 500;
 	}
 
 	@media (max-width: 768px) {
 		.dashboard-container {
 			padding: 1rem;
+		}
+
+		.dashboard-header {
+			padding: 2rem 1rem;
 		}
 
 		.dashboard-header h1 {
@@ -620,13 +738,17 @@
 
 		.heatmap-grid {
 			padding: 1rem;
-			gap: 4px;
+			gap: 6px;
 			justify-content: center;
 		}
 
 		.heatmap-cell {
-			width: 14px;
-			height: 14px;
+			width: 18px;
+			height: 18px;
+		}
+		
+		.web-node-wrapper {
+			flex: 1 1 100%;
 		}
 	}
 </style>

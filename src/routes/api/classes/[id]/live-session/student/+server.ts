@@ -2,15 +2,15 @@ import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 
 export async function POST({ params, request, locals }) {
-	const session = await locals.auth();
-	if (!session?.user?.id) {
+	const user = locals.user;
+	if (!user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
 	const classId = params.id;
-	const userId = session.user.id;
+	const userId = user.id;
 	const data = await request.json();
-	const { action, answer, isCorrect } = data;
+	const { action, isCorrect } = data;
 
 	const activeSession = await prisma.liveSession.findFirst({
 		where: { classId, status: { in: ['waiting', 'active'] } },

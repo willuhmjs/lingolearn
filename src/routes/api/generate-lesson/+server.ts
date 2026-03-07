@@ -762,6 +762,12 @@ ${jsonFormatBlock}`;
 											const aiVocabEntries = [];
 											for (const v of aiResult.vocabulary) {
 												const cleanLemma = v.lemma?.replace(/^[.,!?;:'"()[\\]{}-]+|[.,!?;:'"()[\\]{}-]+$/g, '') || '';
+												
+												// Enforce German lowercase non-noun rule
+												if (activeLangName === 'German' && cleanLemma && cleanLemma.charAt(0) === cleanLemma.charAt(0).toLowerCase() && v.partOfSpeech === 'noun') {
+													v.partOfSpeech = 'other';
+												}
+
 												const existing = await prisma.vocabulary.findFirst({
 													where: { lemma: { equals: cleanLemma, mode: 'insensitive' }, languageId: activeLanguageId }
 												});
@@ -824,6 +830,12 @@ ${jsonFormatBlock}`;
 											const ctxEntries = [];
 											for (const v of ctxResult.vocabulary) {
 												const cleanLemma = v.lemma?.replace(/^[.,!?;:'"()[\\]{}-]+|[.,!?;:'"()[\\]{}-]+$/g, '') || '';
+												
+												// Enforce German lowercase non-noun rule
+												if (activeLangName === 'German' && cleanLemma && cleanLemma.charAt(0) === cleanLemma.charAt(0).toLowerCase() && v.partOfSpeech === 'noun') {
+													v.partOfSpeech = 'other';
+												}
+
 												const existing = await prisma.vocabulary.findFirst({
 													where: { lemma: { equals: cleanLemma, mode: 'insensitive' }, languageId: activeLanguageId }
 												});
