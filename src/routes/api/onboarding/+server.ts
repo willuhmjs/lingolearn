@@ -149,7 +149,7 @@ export async function POST({ request, locals }: RequestEvent) {
 					if (!word) continue;
 					// Case-insensitive lookup so e.g. "österreich" matches "Österreich"
 					const vocabulary = await prisma.vocabulary.findFirst({
-						where: { lemma: { equals: word, mode: 'insensitive' } }
+						where: { languageId: activeLangId, lemma: { equals: word, mode: 'insensitive' } }
 					});
 
 					// Skip words that aren't in our seeded dictionary (no meaning).
