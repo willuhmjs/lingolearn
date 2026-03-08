@@ -1086,13 +1086,25 @@
 	}
 
 	$: parsedChallengeText = (() => {
+		console.log('challengeText is:', challenge?.challengeText);
 		if (!challenge?.challengeText) return '';
-		return parseTextWithTooltips(challenge.challengeText, true, isStreaming);
+		try {
+			return parseTextWithTooltips(challenge.challengeText, true, isStreaming);
+		} catch (e) {
+			console.error('Error in parseTextWithTooltips for challengeText:', e);
+			return challenge.challengeText;
+		}
 	})();
 
 	$: parsedTargetSentence = (() => {
+		console.log('targetSentence is:', challenge?.targetSentence);
 		if (!challenge?.targetSentence) return '';
-		return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);
+		try {
+			return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);
+		} catch (e) {
+			console.error('Error in parseTextWithTooltips for targetSentence:', e);
+			return challenge.targetSentence;
+		}
 	})();
 
 	let showAfterElo = false;
@@ -1446,6 +1458,11 @@
 				}
 			} catch (e) {
 				console.error('Failed to parse final JSON', e);
+				throw new Error('Incomplete response from AI.');
+			}
+			
+			if (!challenge.challengeText || !challenge.targetSentence) {
+				throw new Error('AI failed to generate a complete challenge.');
 			}
 		} catch (error) {
 			if (error instanceof DOMException && error.name === 'AbortError') {
@@ -1456,6 +1473,7 @@
 			toast.error(
 				`Failed to generate challenge: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+			challenge = null;
 		} finally {
 			generateController = null;
 			// Complete progress bar then clean up

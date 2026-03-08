@@ -341,9 +341,9 @@ CRITICAL STYLE & TONE CONSTRAINT:
 				properties: {
 					challengeText: {
 						type: 'string',
-						description: '${activeLangName} sentence with ___ blanks'
+						description: `${activeLangName} sentence with ___ blanks`
 					},
-					targetSentence: { type: 'string', description: 'Complete ${activeLangName} sentence' },
+					targetSentence: { type: 'string', description: `Complete ${activeLangName} sentence` },
 					hints: {
 						type: 'array',
 						items: {
@@ -383,7 +383,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 			jsonSchemaObj = {
 				type: 'object',
 				properties: {
-					challengeText: { type: 'string', description: '${activeLangName} sentence to translate' },
+					challengeText: { type: 'string', description: `${activeLangName} sentence to translate` },
 					targetSentence: { type: 'string', description: 'Correct English translation' },
 					distractors: {
 						type: 'array',
@@ -415,7 +415,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 			jsonSchemaObj = {
 				type: 'object',
 				properties: {
-					challengeText: { type: 'string', description: 'The ${activeLangName} text to translate' },
+					challengeText: { type: 'string', description: `The ${activeLangName} text to translate` },
 					targetSentence: { type: 'string', description: 'The English translation' },
 					targetedVocabularyIds: { type: 'array', items: { type: 'string' } },
 					targetedGrammarIds: { type: 'array', items: { type: 'string' } }
@@ -444,7 +444,7 @@ MULTI-WORD MEANINGS: If a ${activeLangName} word's English meaning contains mult
 				type: 'object',
 				properties: {
 					challengeText: { type: 'string', description: 'The English text to translate' },
-					targetSentence: { type: 'string', description: 'The ${activeLangName} translation' },
+					targetSentence: { type: 'string', description: `The ${activeLangName} translation` },
 					targetedVocabularyIds: { type: 'array', items: { type: 'string' } },
 					targetedGrammarIds: { type: 'array', items: { type: 'string' } }
 				},
