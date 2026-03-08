@@ -316,7 +316,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 			: '';
 		const grammarConstraint =
 			assignmentTargetGrammar.length > 0
-				? `\nCRITICAL GRAMMAR CONSTRAINT: The sentence(s) MUST incorporate the following grammar rule(s): ${assignmentTargetGrammar.join(', ')}. This is a mandatory requirement.`
+				? `\nCRITICAL GRAMMAR CONSTRAINT: The sentence(s) MUST incorporate the following grammar rule(s): ${assignmentTargetGrammar.join(', ')}. This is a mandatory requirement. You MUST also return these rules in the 'targetedGrammarIds' array if used.`
 				: '';
 
 		// Build mode-specific prompt parts
