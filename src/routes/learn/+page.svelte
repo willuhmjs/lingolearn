@@ -1276,9 +1276,9 @@
 
 							// Progressive extraction of other fields to allow early submission
 							const targetMatch = accumulatedJson.match(
-								/"targetSentence"\s*:\s*"((?:[^"\\]|\\.)*)/
+								/"targetSentence"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/
 							);
-							if (targetMatch && targetMatch[1]) {
+							if (targetMatch && targetMatch[1] !== undefined) {
 								challenge.targetSentence = targetMatch[1]
 									.replace(/\\n/g, '\n')
 									.replace(/\\"/g, '"')

@@ -216,7 +216,26 @@ export function parseEvaluationResponse(content: string): EvaluationPayload {
 		.replace(/^```json\s*/i, '')
 		.replace(/```\s*$/i, '')
 		.trim();
-	const payload = JSON.parse(cleanedContent);
+		
+	let payload;
+	try {
+		payload = JSON.parse(cleanedContent);
+	} catch (e) {
+		// Attempt to recover truncated JSON from streaming
+		try {
+			payload = JSON.parse(cleanedContent + '}');
+		} catch (e2) {
+			try {
+				payload = JSON.parse(cleanedContent + '"}');
+			} catch (e3) {
+				try {
+					payload = JSON.parse(cleanedContent + '"]]}');
+				} catch (e4) {
+					throw e; // throw original error if recovery fails
+				}
+			}
+		}
+	}
 
 	// Ensure backwards compatibility if LLM returns "success" (boolean) instead of "score"
 	const mapItem = (item: { id: string; score?: number; success?: boolean }) => ({
