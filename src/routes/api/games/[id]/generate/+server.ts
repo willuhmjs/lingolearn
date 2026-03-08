@@ -37,14 +37,14 @@ Return ONLY a valid JSON array of objects.
 Each object must have these exact keys:
 - "question" (the question text)
 - "answer" (the correct answer)
-- "options" (an array of 4 string options, including the correct answer)
+- "options" (an array of 3 incorrect options/distractors, EXCLUDING the correct answer)
 
 Example:
 [
   {
     "question": "What is the capital of France?",
     "answer": "Paris",
-    "options": ["Paris", "London", "Berlin", "Madrid"]
+    "options": ["London", "Berlin", "Madrid"]
   }
 ]`;
 
@@ -83,12 +83,15 @@ Example:
 		for (let i = 0; i < questionsData.length; i++) {
 			const q = questionsData[i];
 			if (q.question && q.answer && Array.isArray(q.options)) {
+				// Filter out the correct answer from options if it somehow got included
+				const filteredOptions = q.options.filter((opt: string) => opt.toLowerCase() !== q.answer.toLowerCase());
+				
 				const created = await prisma.gameQuestion.create({
 					data: {
 						gameId: params.id,
 						question: q.question,
 						answer: q.answer,
-						options: q.options,
+						options: filteredOptions,
 						order: currentQuestionsCount + i
 					}
 				});

@@ -8,8 +8,32 @@
 	let loading = true;
 	let joined = false;
 	let currentUserId = '';
+	let shuffledOptions = [];
+	let lastQuestionId = '';
 
 	$: currentQuestionData = session?.game?.questions?.[session?.currentQuestionIndex || 0] || null;
+
+	$: if (currentQuestionData && currentQuestionData.id !== lastQuestionId) {
+		lastQuestionId = currentQuestionData.id;
+		const rawOptions = Array.isArray(currentQuestionData.options) 
+			? currentQuestionData.options 
+			: (typeof currentQuestionData.options === 'string' 
+				? JSON.parse(currentQuestionData.options) 
+				: []);
+		const opts = [...rawOptions].filter(o => o !== currentQuestionData.answer);
+		opts.push(currentQuestionData.answer);
+		
+		// Fisher-Yates shuffle
+		for (let i = opts.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[opts[i], opts[j]] = [opts[j], opts[i]];
+		}
+		
+		shuffledOptions = opts.map(text => ({
+			text,
+			isCorrect: text === currentQuestionData.answer
+		}));
+	}
 
 	const classId = $page.params.id;
 
@@ -120,9 +144,9 @@
 						<p>Waiting for the next question...</p>
 						<div class="spinner"></div>
 					</div>
-				{:else if currentQuestionData?.options && currentQuestionData.options.length > 0}
+				{:else if currentQuestionData}
 					<div class="options-grid">
-						{#each currentQuestionData.options as opt, i}
+						{#each shuffledOptions as opt, i}
 							{@const optionColors = ['a', 'b', 'c', 'd', 'a', 'b']}
 							<button
 								class={`option-btn option-${optionColors[i % optionColors.length]}`}

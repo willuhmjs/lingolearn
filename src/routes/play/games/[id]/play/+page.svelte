@@ -14,26 +14,28 @@
 	let game = $derived(data.game);
 	let questions = $derived(game.questions || []);
 	let currentQuestion = $derived(questions[currentQuestionIndex]);
-	let options = $derived.by(() => {
-		const rawOptions = Array.isArray(currentQuestion?.options) 
-			? currentQuestion.options 
-			: (typeof currentQuestion?.options === 'string' 
-				? JSON.parse(currentQuestion.options) 
-				: []);
-				
-		if (!currentQuestion) return [];
-		
-		// Ensure answer is in options, but not duplicated
-		const opts = [...rawOptions].filter(opt => opt !== currentQuestion.answer);
-		opts.push(currentQuestion.answer);
-		
-		// Shuffle options
-		for (let i = opts.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[opts[i], opts[j]] = [opts[j], opts[i]];
+	
+	let options = $state<string[]>([]);
+
+	$effect(() => {
+		if (currentQuestion) {
+			const rawOptions = Array.isArray(currentQuestion.options) 
+				? currentQuestion.options 
+				: (typeof currentQuestion.options === 'string' 
+					? JSON.parse(currentQuestion.options) 
+					: []);
+					
+			// Ensure answer is in options, but not duplicated
+			const opts = [...rawOptions].filter(opt => opt !== currentQuestion.answer);
+			opts.push(currentQuestion.answer);
+			
+			// Shuffle options
+			for (let i = opts.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[opts[i], opts[j]] = [opts[j], opts[i]];
+			}
+			options = opts;
 		}
-		
-		return opts;
 	});
 
 	function selectOption(option: string) {
