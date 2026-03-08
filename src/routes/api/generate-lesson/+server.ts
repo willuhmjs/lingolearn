@@ -370,7 +370,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 				additionalProperties: false
 			};
 		} else if (gameMode === 'multiple-choice') {
-			modeInstruction = `This is a MULTIPLE CHOICE exercise. Generate a ${activeLangName} sentence as "challengeText". Provide the correct English translation as "targetSentence". Also provide exactly 3 plausible but INCORRECT English translations as "distractors". The distractors should be similar enough to be challenging but clearly wrong. CRUCIAL: If the primary goal is to test a grammar rule, the distractors MUST be grammatically incorrect variations of the *target language* sentence instead of English translations, and the "targetSentence" should just be the correct ${activeLangName} sentence. If you do this, set "challengeText" to the English translation.`;
+			modeInstruction = `This is a MULTIPLE CHOICE exercise. Generate a direct ${activeLangName} sentence as "challengeText" (NEVER write instructions like "Translate this:"). Provide the correct English translation as "targetSentence". Also provide exactly 3 plausible but INCORRECT English translations as "distractors". The distractors should be similar enough to be challenging but clearly wrong. CRUCIAL: If the primary goal is to test a grammar rule, the distractors MUST be grammatically incorrect variations of the *target language* sentence instead of English translations, and the "targetSentence" should just be the correct ${activeLangName} sentence. If you do this, set "challengeText" to the direct English translation ONLY.`;
 			vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName} unless testing grammar), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
 			jsonFormatBlock = `JSON format:
 {
@@ -403,7 +403,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 				additionalProperties: false
 			};
 		} else if (gameMode === 'target-to-native') {
-			modeInstruction = `User translates FROM ${activeLangName} TO English ("challengeText"=${activeLangName}, "targetSentence"=English).`;
+			modeInstruction = `You must generate a single, direct ${activeLangName} sentence for the user to translate into English. "challengeText" MUST be the ${activeLangName} sentence itself, NOT instructions like "Translate this sentence:". "targetSentence" MUST be the correct English translation.`;
 			vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName}), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
 			jsonFormatBlock = `JSON format:
 {
@@ -430,7 +430,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 			};
 		} else {
 			// native-to-target (default)
-			modeInstruction = `User translates FROM English TO ${activeLangName} ("challengeText"=English, "targetSentence"=${activeLangName}).`;
+			modeInstruction = `You must generate a direct English sentence for the user to translate into ${activeLangName}. "challengeText" MUST be ONLY the English sentence itself (e.g. "I have a dog."), NEVER write instructions like "Translate this sentence:" or "Write a sentence describing...". "targetSentence" MUST be the correct ${activeLangName} translation.`;
 			vocabTagInstruction = `CRITICAL: In the "challengeText" (which is English), you MUST use the ENGLISH meaning of the targeted vocabulary word and wrap it in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund" and meaning "dog", write: "The <vocab id="123">dog</vocab> is barking." Do NOT put ${activeLangName} words in the English challengeText.
 MULTI-WORD MEANINGS: If a ${activeLangName} word's English meaning contains multiple words (e.g., "Fernsehprogramm" = "television program"), you MUST wrap ALL the words together as a single unit inside ONE <vocab> tag. For example: "I watched the <vocab id="v0">television program</vocab> last night." — NOT "<vocab id="v0">television</vocab> program" or "television <vocab id="v0">program</vocab>". The entire multi-word phrase must be inside a single <vocab> tag.`;
 			jsonFormatBlock = `JSON format:
