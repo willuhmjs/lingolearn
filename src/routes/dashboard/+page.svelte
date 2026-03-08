@@ -137,13 +137,12 @@
 						{@const levelText = isUnseen ? 'Unseen' : level.charAt(0) + level.slice(1).toLowerCase()}
 						{@const cellColor = srsColors[level]}
 						{@const progressPct = Math.max(0, Math.min(100, level === 'LEARNING' ? ((elo - 1000) / 50) * 100 : level === 'KNOWN' ? ((elo - 1050) / 100) * 100 : 100))}
-						<div 
+						<button 
 							class="heatmap-cell tooltip-trigger" 
 							style="background-color: {cellColor}"
-							role="button"
-							tabindex="0"
 							on:click={() => openVocabModal(vocab, cellColor, progressPct)}
 							on:keydown={(e) => e.key === 'Enter' && openVocabModal(vocab, cellColor, progressPct)}
+							aria-label="View details for {vocab.vocabulary.lemma}"
 						>
 							<span class="sr-only">{vocab.vocabulary.lemma}</span>
 							<div class="tooltip-content dark:bg-slate-700 dark:text-white">
@@ -179,7 +178,7 @@
 									{/if}
 								</div>
 							</div>
-						</div>
+						</button>
 					{/each}
 				</div>
 			{/if}
@@ -211,13 +210,12 @@
 							{@const srsColor = srsColors[rule.srsState] || srsColors.UNSEEN}
 							{@const eloPercent = Math.max(0, Math.min(100, rule.srsState === 'LEARNING' ? ((rule.eloRating - 1000) / 50) * 100 : rule.srsState === 'KNOWN' ? ((rule.eloRating - 1050) / 100) * 100 : 100))}
 							
-							<div 
+							<button 
 								class="web-node-pill" 
 								style="--node-color: {srsColor}"
-								role="button"
-								tabindex="0"
 								on:click={() => openGrammarModal(rule, srsColor, eloPercent)}
 								on:keydown={(e) => e.key === 'Enter' && openGrammarModal(rule, srsColor, eloPercent)}
+								aria-label="View grammar rule: {rule.grammarRule.title}"
 							>
 								<div class="node-pill-content tooltip-trigger">
 									<div class="node-icon" style="background-color: {srsColor}">
@@ -243,7 +241,7 @@
 										</div>
 									</div>
 								</div>
-							</div>
+							</button>
 						{/each}
 					</div>
 				</div>
