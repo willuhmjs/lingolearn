@@ -159,7 +159,7 @@ JSON format:
 
 	const grammarNote = isNativeToTarget
 		? ''
-		: `Note: Since this is a ${activeLanguageName}-to-${nativeLanguage} translation, do NOT evaluate grammar rules. Always return an empty array for "grammarUpdates".`;
+		: `Note: Since this is a ${activeLanguageName}-to-${nativeLanguage} translation, evaluate whether the user's ${nativeLanguage} translation accurately reflects an understanding of the targeted grammar rules (e.g. if the target grammar is "Past Tense", did they translate it into the past tense?). Score each targeted grammar rule in "grammarUpdates".`;
 
 	const vocabScoringNote = isNativeToTarget
 		? ''
@@ -300,7 +300,7 @@ function calculateNewElo(
 	const expectedScore = 1 / (1 + Math.pow(10, (baseDifficulty - currentElo) / 400));
 
 	let kMultiplier = 1.0;
-	if (gameMode === 'multiple-choice') kMultiplier = 0.5; // easier, less reward/penalty
+	if (gameMode === 'multiple-choice' || gameMode === 'target-to-native') kMultiplier = 0.5; // easier, less reward/penalty
 	if (gameMode === 'native-to-target') kMultiplier = 1.2; // harder, more reward/penalty
 
 	const effectiveK = K_FACTOR * kMultiplier;
@@ -438,8 +438,8 @@ export async function updateEloRatings(
 		}
 	}
 
-	// Skip grammar updates for target-to-native and multiple-choice — only award grammar credit for native-to-target and fill-blank
-	if (gameMode === 'target-to-native' || gameMode === 'multiple-choice') {
+	// Skip grammar updates for multiple-choice — only award grammar credit for native-to-target, target-to-native, and fill-blank
+	if (gameMode === 'multiple-choice') {
 		console.log(`Skipping grammar updates for ${gameMode} mode`);
 	} else {
 		for (const grammarUpdate of payload.grammarUpdates || []) {

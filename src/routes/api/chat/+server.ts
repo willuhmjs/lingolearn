@@ -82,6 +82,10 @@ export async function POST(event) {
 	let userVocabList = '';
 	const vocabIdMap: Record<string, string> = {};
 	const vocabLemmaMap: Record<string, string> = {};
+	
+	let userGrammarList = '';
+	const grammarIdMap: Record<string, string> = {};
+
 	if (activeLanguage) {
 		const userVocabs = await prisma.userVocabulary.findMany({
 			where: {
@@ -97,6 +101,21 @@ export async function POST(event) {
 			vocabIdMap[`v${i}`] = uv.vocabulary.id;
 			vocabLemmaMap[`v${i}`] = uv.vocabulary.lemma;
 			userVocabList += `- ${uv.vocabulary.lemma} (ID: v${i})\n`;
+		});
+
+		const userGrammars = await prisma.userGrammarRule.findMany({
+			where: {
+				userId,
+				grammarRule: { languageId: activeLanguage.id }
+			},
+			include: { grammarRule: true },
+			take: 5, // get some recent/active grammar
+			orderBy: { nextReviewDate: 'asc' }
+		});
+
+		userGrammars.forEach((ug, i) => {
+			grammarIdMap[`g${i}`] = ug.grammarRule.id;
+			userGrammarList += `- ${ug.grammarRule.title} (ID: g${i})\n`;
 		});
 	}
 
@@ -138,17 +157,22 @@ Keep your responses relatively short, realistic, and conversational, suitable fo
 In addition to your reply, you must act as a grader. Evaluate the user's last message.
 Provide brief feedback in English ("feedbackEnglish") on their grammar and vocabulary usage.
 If the user correctly used any of their targeted vocabulary, or if you can evaluate words they used, provide a score (0.0 to 1.0) for them in "vocabularyUpdates".
+If they correctly used any of their targeted grammar rules, provide a score (0.0 to 1.0) for them in "grammarUpdates".
 If they used OTHER ${currentSession.language} words correctly by coincidence, list their base forms (lemmas) in lowercase in "extraVocabLemmas".
 ${assignmentPrompt}
 
 Targeted Vocabulary the user is learning:
 ${userVocabList || '(None currently active)'}
 
+Targeted Grammar Rules the user is learning:
+${userGrammarList || '(None currently active)'}
+
 Return your response as a JSON object with the following structure:
 {
   "message": "Your response as the persona in ${currentSession.language}",
   "feedbackEnglish": "Brief English feedback on the user's grammar/vocabulary usage in their last message",
   "vocabularyUpdates": [ { "id": "<vocabulary ID from the list>", "score": <number (0.0 to 1.0)> } ],
+  "grammarUpdates": [ { "id": "<grammar ID from the list>", "score": <number (0.0 to 1.0)> } ],
   "extraVocabLemmas": ["<lemma1>", "<lemma2>"]${('assignmentId' in currentSession && currentSession.assignmentId) ? ',\n  "assignmentCompleted": <boolean>' : ''}
 }`;
 
@@ -215,19 +239,26 @@ Return your response as a JSON object with the following structure:
 						lemma: vocabLemmaMap[u.id] || u.id
 					}));
 
+					// Map grammar IDs back
+					const mappedGrammarUpdates = (parsedResponse.grammarUpdates || []).map((u: { id: string, score: number }) => ({
+						id: grammarIdMap[u.id] || u.id,
+						score: u.score
+					}));
+
 					// Update parsedResponse for the frontend
 					parsedResponse.vocabularyUpdates = mappedVocabUpdates;
+					parsedResponse.grammarUpdates = mappedGrammarUpdates;
 
 					const evaluationPayload = {
 						globalScore: 1.0,
 						vocabularyUpdates: mappedVocabUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
-						grammarUpdates: [],
+						grammarUpdates: mappedGrammarUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						extraVocabLemmas: parsedResponse.extraVocabLemmas || [],
 						feedback: '',
 						feedbackEnglish: parsedResponse.feedbackEnglish || ''
 					};
 
-					if (mappedVocabUpdates.length > 0 || evaluationPayload.extraVocabLemmas.length > 0) {
+					if (mappedVocabUpdates.length > 0 || mappedGrammarUpdates.length > 0 || evaluationPayload.extraVocabLemmas.length > 0) {
 						await updateEloRatings(userId, evaluationPayload, 'native-to-target');
 					}
 
