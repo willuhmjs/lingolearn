@@ -316,7 +316,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 			: '';
 		const grammarConstraint =
 			assignmentTargetGrammar.length > 0
-				? `\nCRITICAL GRAMMAR CONSTRAINT: The sentence(s) MUST incorporate the following grammar rule(s): ${assignmentTargetGrammar.join(', ')}. This is a mandatory requirement. You MUST also return these rules in the 'targetedGrammarIds' array if used.`
+				? `\nCRITICAL GRAMMAR CONSTRAINT: The sentence(s) MUST incorporate the following grammar rule(s): ${assignmentTargetGrammar.join(', ')}. This is a mandatory requirement.`
 				: '';
 
 		// Build mode-specific prompt parts
@@ -478,7 +478,7 @@ ${qualityConstraint}
 ${topicConstraint}${grammarConstraint}
 Compose the ${activeLangName} text focusing on the "Mastered" and "Learning" concepts provided below. You are ALLOWED to use other natural ${activeLangName} vocabulary appropriate for a ${userLevel} student, even if it is not in the provided lists. However, you MUST ABSOLUTELY AVOID using any custom or user-provided words that are not explicitly present in the provided vocabulary lists below. If you think the user might have learned a specific obscure word elsewhere but it is not in these lists, do not use it.
 CRITICAL THEMATIC INJECTION: The "Learning Vocabulary" list below is a POOL of words. You MUST choose ONE word from it to establish a central theme. Then, try to incorporate other words from the Learning Vocabulary list ONLY if they fit naturally within that theme.
-CRITICAL GRAMMAR INJECTION: The "Learning Grammar" section is NOT a pool. You MUST structurally incorporate the active grammar rule (e.g., ID: g0) into the sentence. This is mandatory.
+CRITICAL GRAMMAR INJECTION: You MUST structurally incorporate the requested grammar rule(s) (either from the critical grammar constraint above, or from the Learning Grammar section) into the sentence. This is mandatory. Ensure the grammar rule is naturally applied. If an ID is provided (e.g., ID: g0), return it in the targetedGrammarIds array.
 CRITICAL QUALITY INSTRUCTION: Prioritize sentence quality, natural flow, and logic over using every single word provided in the lists. Do NOT try to force or jam words together if they don't make sense. You DO NOT have to use all the words provided, just pick the ones that fit naturally and make logical sense.
 ${modeInstruction}
 

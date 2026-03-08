@@ -75,7 +75,7 @@
 			});
 			if (res.ok) {
 				toast.success('Live session started! Students can now join.');
-				window.location.href = `/classes/${targetClassId}`;
+				window.location.href = `/classes/${targetClassId}/live/teacher`;
 			} else {
 				const err = await res.json();
 				toast.error(err.error || 'Failed to start live session');
@@ -86,14 +86,14 @@
 	}
 
 	function handlePlayLive(gameId: string) {
-		if (teacherClasses.length === 0) {
-			toast.error('You need to create a class first.');
-			return;
-		}
-		
 		const urlClassId = $page.url.searchParams.get('classId');
 		if (urlClassId) {
 			startLiveSession(gameId, urlClassId);
+			return;
+		}
+
+		if (teacherClasses.length === 0) {
+			toast.error('You need to create a class first.');
 			return;
 		}
 
@@ -2528,10 +2528,10 @@ r<svelte:head>
 				<button class="close-btn" on:click={() => showClassModal = false}>×</button>
 			</div>
 			<div class="modal-body">
-				<p class="dark:text-slate-400">Which class do you want to start this live session for?</p>
+				<p class="modal-desc">Which class do you want to start this live session for?</p>
 				<div class="class-list">
 					{#each teacherClasses as c}
-						<button class="class-btn dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200" on:click={() => {
+						<button class="class-btn" on:click={() => {
 							showClassModal = false;
 							if (selectedGameIdForLive) startLiveSession(selectedGameIdForLive, c.id);
 						}}>
@@ -2596,6 +2596,17 @@ r<svelte:head>
 		color: #64748b;
 	}
 
+	.modal-desc {
+		color: #475569;
+		margin-top: 0;
+		margin-bottom: 1rem;
+		font-size: 0.95rem;
+	}
+
+	:global(html[data-theme='dark']) .modal-desc {
+		color: #94a3b8;
+	}
+
 	.class-list {
 		display: flex;
 		flex-direction: column;
@@ -2608,6 +2619,7 @@ r<svelte:head>
 		border-radius: 8px;
 		border: 1px solid #e2e8f0;
 		background: #f8fafc;
+		color: #1e293b;
 		text-align: left;
 		cursor: pointer;
 		font-weight: 500;
@@ -2617,6 +2629,12 @@ r<svelte:head>
 	.class-btn:hover {
 		border-color: #3b82f6;
 		background: #eff6ff;
+	}
+
+	:global(html[data-theme='dark']) .class-btn {
+		background: #1e293b;
+		border-color: #334155;
+		color: #e2e8f0;
 	}
 
 	:global(html[data-theme='dark']) .class-btn:hover {
