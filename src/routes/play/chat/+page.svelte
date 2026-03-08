@@ -4,6 +4,7 @@
 	import toast from 'svelte-french-toast';
 	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
+	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 
 	export let data;
 
@@ -29,6 +30,7 @@
 	let message = '';
 	let isLoading = false;
 	let chatContainer: HTMLElement;
+	let chatInputRef: HTMLTextAreaElement;
 
 	const TOPICS = [
 		'A friendly waiter at a café',
@@ -539,9 +541,15 @@
 
 			<!-- Input Area -->
 			<div class="input-area">
+				<SpecialCharKeyboard
+					bind:value={message}
+					inputElement={chatInputRef}
+					language={language}
+				/>
 				<div class="input-wrapper">
 					<div class="textarea-container">
 						<textarea
+							bind:this={chatInputRef}
 							bind:value={message}
 							on:keydown={handleKeydown}
 							placeholder="Type your message... (Enter to send)"

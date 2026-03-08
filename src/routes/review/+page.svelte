@@ -1,11 +1,16 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { fly, fade } from 'svelte/transition';
+	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
+	import { requiresSpecialKeyboard } from '$lib/utils/keyboard';
+	import { page } from '$app/stores';
 	export let data: PageData;
 
 	let currentReviewIndex = 0;
 	let showingAnswer = false;
 	let isSubmitting = false;
+	let typedAnswer = '';
+	let reviewInputRef: HTMLInputElement;
 
 	$: dueReviews = data.dueReviews || [];
 	$: currentReview = dueReviews[currentReviewIndex];
@@ -32,6 +37,7 @@
 			if (res.ok) {
 				currentReviewIndex++;
 				showingAnswer = false;
+				typedAnswer = '';
 			}
 		} catch (e) {
 			console.error('Failed to submit review', e);
@@ -102,6 +108,12 @@
 
 									<!-- Answer Info -->
 									<div class="answer-info">
+										{#if typedAnswer}
+											<div class="typed-answer-display">
+												<span class="typed-label">You typed:</span>
+												<span class="typed-text">{typedAnswer}</span>
+											</div>
+										{/if}
 										<p class="meaning-text">
 											{(currentReview.vocabulary as any).meanings?.[0]?.value || 'No meaning provided'}
 										</p>
@@ -152,6 +164,26 @@
 									</div>
 								</div>
 							{:else}
+								<div class="typing-section mb-6">
+									<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+										Type your answer (optional)
+									</label>
+									{#if requiresSpecialKeyboard(currentReview.vocabulary.lemma, $page.data.user?.activeLanguage?.name || 'en')}
+										<SpecialCharKeyboard
+											bind:value={typedAnswer}
+											inputElement={reviewInputRef}
+											language={$page.data.user?.activeLanguage?.name || 'en'}
+										/>
+									{/if}
+									<input
+										bind:this={reviewInputRef}
+										bind:value={typedAnswer}
+										type="text"
+										class="w-full p-3 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 focus:outline-none dark:bg-slate-800 dark:text-white"
+										placeholder="Type translation here..."
+										on:keydown={(e) => e.key === 'Enter' && showAnswer()}
+									/>
+								</div>
 								<button class="btn-duo btn-primary show-answer-btn" on:click={showAnswer}>
 									Show Answer
 								</button>

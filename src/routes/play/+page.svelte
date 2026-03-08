@@ -856,6 +856,25 @@
 		return stems;
 	}
 
+	function levenshteinDistance(a: string, b: string): number {
+		if (a.length === 0) return b.length;
+		if (b.length === 0) return a.length;
+		const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+		for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
+		for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
+		for (let j = 1; j <= b.length; j += 1) {
+			for (let i = 1; i <= a.length; i += 1) {
+				const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+				matrix[j][i] = Math.min(
+					matrix[j][i - 1] + 1, // insertion
+					matrix[j - 1][i] + 1, // deletion
+					matrix[j - 1][i - 1] + indicator // substitution
+				);
+			}
+		}
+		return matrix[b.length][a.length];
+	}
+
 	function buildVocabMap(): Map<string, any[]> {
 		const map = new Map<string, any[]>();
 		const isEnToDe = challenge?.gameMode === 'native-to-target';
@@ -984,6 +1003,29 @@
 				vocab = pickBest(vocabMap.get(stem));
 				if (vocab) return { vocab };
 			}
+
+			// Fallback: Fuzzy search over all keys in vocabMap
+			if (cleanWord.length > 3) {
+				const maxDistance = cleanWord.length <= 5 ? 1 : 2;
+				let bestMatch: { vocab: any; distance: number } | null = null;
+				
+				for (const [key, vList] of vocabMap.entries()) {
+					// Quick length filter to avoid calculating Levenshtein on vastly different strings
+					if (Math.abs(key.length - cleanWord.length) > maxDistance) continue;
+					
+					const distance = levenshteinDistance(cleanWord, key);
+					if (distance <= maxDistance) {
+						if (!bestMatch || distance < bestMatch.distance) {
+							bestMatch = { vocab: pickBest(vList), distance };
+						}
+					}
+				}
+				
+				if (bestMatch && bestMatch.vocab) {
+					return { vocab: bestMatch.vocab };
+				}
+			}
+
 			return null;
 		}
 

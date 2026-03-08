@@ -49,6 +49,7 @@
 	}
 
 	import { invalidateAll } from '$app/navigation';
+	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 
 	$: currentLang = data.languages?.find((l: any) => l.code === editLanguage);
 	$: availableRules = currentLang ? currentLang.grammarRules : [];
@@ -66,6 +67,7 @@
 	let selectedGrammarRules: string[] = [];
 	let targetVocabList: string[] = [];
 	let vocabInput = '';
+	let vocabInputRef: HTMLInputElement;
 	let grammarSearchQuery = '';
 	let isSaving = false;
 	let assignmentError = '';
@@ -294,6 +296,11 @@
 					</div>
 					<div class="field">
 						<label for="vocab">Target Vocabulary (optional)</label>
+						<SpecialCharKeyboard
+							bind:value={vocabInput}
+							inputElement={vocabInputRef}
+							language={editLanguage}
+						/>
 						<div class="vocab-input-container">
 							<div class="vocab-tags">
 								{#each targetVocabList as word}
@@ -305,6 +312,7 @@
 								<input
 									type="text"
 									id="vocab"
+									bind:this={vocabInputRef}
 									bind:value={vocabInput}
 									on:keydown={handleVocabKeydown}
 									placeholder={targetVocabList.length === 0 ? "Type a word and press Enter" : ""}

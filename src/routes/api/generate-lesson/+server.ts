@@ -72,7 +72,7 @@ export async function POST(event) {
 						OR: [{ nextReviewDate: null }, { nextReviewDate: { lte: now } }],
 						vocabulary: { meanings: { some: {} }, languageId: activeLanguageId } as any
 					},
-					include: { vocabulary: true },
+					include: { vocabulary: { include: { meanings: true } } },
 					take: 100
 				}),
 				prisma.userVocabulary.findMany({
@@ -82,7 +82,7 @@ export async function POST(event) {
 						OR: [{ nextReviewDate: null }, { nextReviewDate: { lte: now } }],
 						vocabulary: { meanings: { some: {} }, languageId: activeLanguageId } as any
 					},
-					include: { vocabulary: true },
+					include: { vocabulary: { include: { meanings: true } } },
 					take: 100
 				}),
 				prisma.userGrammarRule.findMany({
