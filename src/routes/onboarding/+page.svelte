@@ -378,8 +378,8 @@
 								<button class="btn btn-success" on:click={() => (window.location.href = '/')}>
 									Go to Dashboard
 								</button>
-								<button class="btn btn-primary" on:click={() => (window.location.href = '/play')}>
-									Start Playing
+								<button class="btn btn-primary" on:click={() => (window.location.href = '/learn')}>
+									Start Learning
 								</button>
 								<button class="btn btn-secondary" on:click={restartOnboarding}>
 									Restart Onboarding

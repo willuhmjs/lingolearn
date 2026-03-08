@@ -564,10 +564,11 @@ ${jsonFormatBlock}`;
 
 						for (const line of lines) {
 							const trimmedLine = line.trim();
-							if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
+							if (trimmedLine.startsWith('data:') && !trimmedLine.includes('[DONE]')) {
 								try {
-									const data = JSON.parse(trimmedLine.slice(6));
-									const content = data.choices[0]?.delta?.content || '';
+									const dataStr = trimmedLine.slice(5).trim();
+									const data = JSON.parse(dataStr);
+									const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content || '';
 									if (content) {
 										fullContent += content;
 										controller.enqueue(
@@ -581,9 +582,11 @@ ${jsonFormatBlock}`;
 						}
 					}
 
-					if (buffer.trim().startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
+					const finalBufferTrimmed = buffer.trim();
+					if (finalBufferTrimmed.startsWith('data:') && !finalBufferTrimmed.includes('[DONE]')) {
 						try {
-							const data = JSON.parse(buffer.trim().slice(6));
+							const dataStr = finalBufferTrimmed.slice(5).trim();
+							const data = JSON.parse(dataStr);
 							const content = data.choices[0]?.delta?.content || '';
 							if (content) {
 								fullContent += content;
@@ -604,6 +607,11 @@ ${jsonFormatBlock}`;
 						if (firstBrace !== -1 && lastBrace !== -1) {
 							cleaned = cleaned.slice(firstBrace, lastBrace + 1);
 						}
+						
+						if (!cleaned) {
+							throw new SyntaxError('Empty JSON content after stream completion.');
+						}
+						
 						const parsedResponse = JSON.parse(cleaned);
 
 						// Extract all text that may contain ${activeLangName} words
@@ -1270,7 +1278,11 @@ ${jsonFormatBlock}`;
 							await Promise.allSettled(aiTasks);
 						}
 					} catch (enrichErr) {
-						console.error('Vocab enrichment failed:', enrichErr);
+						if (enrichErr instanceof SyntaxError) {
+							console.error('Vocab enrichment skipped: Incomplete or missing JSON from LLM.');
+						} else {
+							console.error('Vocab enrichment failed:', enrichErr);
+						}
 					}
 
 					controller.close();

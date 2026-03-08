@@ -125,7 +125,7 @@
 							>
 							<span class="nav-text">Dashboard</span>
 						</a>
-						<a href="/play" class="nav-item {$page.url.pathname.startsWith('/play') ? 'active' : ''}">
+						<a href="/learn" class="nav-item {$page.url.pathname.startsWith('/learn') ? 'active' : ''}">
 							<svg
 								viewBox="0 0 24 24"
 								fill="none"
@@ -134,7 +134,7 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg
 							>
-							<span class="nav-text">Play</span>
+							<span class="nav-text">Learn</span>
 						</a>
 						<a
 							href="/classes"

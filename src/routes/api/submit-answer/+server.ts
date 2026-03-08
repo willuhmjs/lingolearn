@@ -175,12 +175,12 @@ export async function POST(event) {
 
 						for (const line of lines) {
 							if (line.trim() === '' || line.startsWith(':')) continue;
-							if (line.startsWith('data: ')) {
-								const dataStr = line.slice(6);
-								if (dataStr.trim() === '[DONE]') continue;
+							if (line.startsWith('data:')) {
+								const dataStr = line.slice(5).trim();
+								if (dataStr === '[DONE]') continue;
 								try {
 									const data = JSON.parse(dataStr);
-									const content = data.choices[0]?.delta?.content;
+									const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content;
 									if (content) {
 										fullContent += content;
 										controller.enqueue(new TextEncoder().encode(content));
@@ -195,12 +195,12 @@ export async function POST(event) {
 					if (buffer) {
 						const lines = buffer.split('\n');
 						for (const line of lines) {
-							if (line.startsWith('data: ')) {
-								const dataStr = line.slice(6);
-								if (dataStr.trim() !== '[DONE]') {
+							if (line.startsWith('data:')) {
+								const dataStr = line.slice(5).trim();
+								if (dataStr !== '[DONE]') {
 									try {
 										const data = JSON.parse(dataStr);
-										const content = data.choices[0]?.delta?.content;
+										const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content;
 										if (content) {
 											fullContent += content;
 											controller.enqueue(new TextEncoder().encode(content));

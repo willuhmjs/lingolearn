@@ -22,7 +22,7 @@
 	let copied = false;
 
 	async function copyLink() {
-		const url = `${window.location.origin}/play?assignmentId=${assignment.id}`;
+		const url = `${window.location.origin}/learn?assignmentId=${assignment.id}`;
 		await navigator.clipboard.writeText(url);
 		copied = true;
 		setTimeout(() => {

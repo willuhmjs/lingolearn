@@ -30,7 +30,7 @@ const authorization: Handle = async ({ event, resolve }) => {
 		event.locals.user = null;
 		if (
 			event.url.pathname.startsWith('/dashboard') ||
-			event.url.pathname.startsWith('/play') ||
+			event.url.pathname.startsWith('/learn') ||
 			event.url.pathname.startsWith('/onboarding') ||
 			event.url.pathname.startsWith('/admin') ||
 			event.url.pathname.startsWith('/classes') ||
@@ -132,7 +132,7 @@ const authorization: Handle = async ({ event, resolve }) => {
 	}
 
 	if (
-		(event.url.pathname.startsWith('/dashboard') || event.url.pathname.startsWith('/play')) &&
+		(event.url.pathname.startsWith('/dashboard') || event.url.pathname.startsWith('/learn')) &&
 		event.locals.user &&
 		!event.locals.user.hasOnboarded
 	) {

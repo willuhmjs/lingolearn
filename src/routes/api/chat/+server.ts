@@ -132,10 +132,11 @@ Return your response as a JSON object with the following structure:
 
 						for (const line of lines) {
 							const trimmedLine = line.trim();
-							if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
+							if (trimmedLine.startsWith('data:') && !trimmedLine.includes('[DONE]')) {
 								try {
-									const data = JSON.parse(trimmedLine.slice(6));
-									const content = data.choices[0]?.delta?.content || '';
+									const dataStr = trimmedLine.slice(5).trim();
+									const data = JSON.parse(dataStr);
+									const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content || '';
 									if (content) {
 										fullContent += content;
 										controller.enqueue(
@@ -149,9 +150,11 @@ Return your response as a JSON object with the following structure:
 						}
 					}
 
-					if (buffer.trim().startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
+					const finalBufferTrimmed = buffer.trim();
+					if (finalBufferTrimmed.startsWith('data:') && !finalBufferTrimmed.includes('[DONE]')) {
 						try {
-							const data = JSON.parse(buffer.trim().slice(6));
+							const dataStr = finalBufferTrimmed.slice(5).trim();
+							const data = JSON.parse(dataStr);
 							const content = data.choices[0]?.delta?.content || '';
 							if (content) {
 								fullContent += content;

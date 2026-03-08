@@ -135,7 +135,7 @@
 	let copiedAssignmentId: string | null = null;
 
 	async function copyAssignmentLink(assignmentId: string) {
-		const url = `${window.location.origin}/play?assignmentId=${assignmentId}`;
+		const url = `${window.location.origin}/learn?assignmentId=${assignmentId}`;
 		await navigator.clipboard.writeText(url);
 		copiedAssignmentId = assignmentId;
 		setTimeout(() => {
@@ -299,12 +299,12 @@
 								</div>
 								<div class="assignment-actions-row">
 									<a
-										href="/play?assignmentId={assignment.id}"
+										href="/learn?assignmentId={assignment.id}"
 										class="btn-duo {passed
 											? 'btn-secondary'
 											: 'btn-primary'} assignment-play-btn text-center"
 									>
-										{passed ? 'Play Again' : myScore ? 'Keep Playing' : 'Start'}
+										{passed ? 'Learn Again' : myScore ? 'Keep Learning' : 'Start'}
 									</a>
 									{#if currentUserRole === 'TEACHER'}
 										<a
