@@ -66,8 +66,12 @@ export async function POST({ request, locals }: RequestEvent) {
 			return json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const activeLangId = user.activeLanguage!.id;
-		const activeLangName = user.activeLanguage?.name || 'German';
+		if (!user.activeLanguage) {
+			return json({ error: 'Active language is required' }, { status: 400 });
+		}
+
+		const activeLangId = user.activeLanguage.id;
+		const activeLangName = user.activeLanguage.name || 'German';
 
 		if (messages.length === 0) {
 			let greeting = 'Hallo';
@@ -97,11 +101,11 @@ export async function POST({ request, locals }: RequestEvent) {
 			try {
 				await prisma.userProgress.upsert({
 					where: {
-						userId_languageId: { userId, languageId: locals.user.activeLanguage!.id }
+						userId_languageId: { userId, languageId: user.activeLanguage.id }
 					},
 					create: {
 						userId,
-						languageId: locals.user.activeLanguage!.id,
+						languageId: user.activeLanguage.id,
 						hasOnboarded: true,
 						cefrLevel: level
 					},
@@ -161,13 +165,14 @@ export async function POST({ request, locals }: RequestEvent) {
 					if (!word) continue;
 					// Case-insensitive lookup so e.g. "österreich" matches "Österreich"
 					const vocabulary = await prisma.vocabulary.findFirst({
-						where: { languageId: activeLangId, lemma: { equals: word, mode: 'insensitive' } }
+						where: { languageId: activeLangId, lemma: { equals: word, mode: 'insensitive' } },
+						include: { meanings: true }
 					});
 
 					// Skip words that aren't in our seeded dictionary (no meaning).
 					// Creating bare entries for unknown words would clog the LEARNING queue
 					// since they can never appear in lessons and thus never advance.
-					if (!vocabulary || !vocabulary.meaning) {
+					if (!vocabulary || (vocabulary as any).meanings?.length === 0) {
 						skippedCount++;
 						continue;
 					}
@@ -255,59 +260,14 @@ export async function POST({ request, locals }: RequestEvent) {
 
 		const stream = new ReadableStream({
 			async start(controller) {
-				if (!llmResponse.body) {
-					controller.close();
-					return;
-				}
-				const reader = llmResponse.body.getReader();
-				const decoder = new TextDecoder();
 				let fullContent = '';
-				let buffer = '';
 
 				try {
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-
-						buffer += decoder.decode(value, { stream: true });
-						const lines = buffer.split('\n');
-						buffer = lines.pop() || '';
-
-						for (const line of lines) {
-							if (line.trim() === '' || line.startsWith(':')) continue;
-							if (line.startsWith('data:')) {
-								const dataStr = line.slice(5).trim();
-								if (dataStr === '[DONE]') continue;
-								try {
-									const data = JSON.parse(dataStr);
-									const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content;
-									if (content) {
-										fullContent += content;
-										controller.enqueue(new TextEncoder().encode(content));
-									}
-								} catch (e) {
-									// partial or malformed JSON in SSE event, should be rare now since we split correctly
-								}
-							}
-						}
-					}
-					// Process remaining buffer if it has data
-					if (buffer) {
-						const lines = buffer.split('\n');
-						for (const line of lines) {
-							if (line.startsWith('data:')) {
-								const dataStr = line.slice(5).trim();
-								if (dataStr !== '[DONE]') {
-									try {
-										const data = JSON.parse(dataStr);
-										const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content;
-										if (content) {
-											fullContent += content;
-											controller.enqueue(new TextEncoder().encode(content));
-										}
-									} catch (e) {}
-								}
-							}
+					for await (const chunk of llmResponse) {
+						const content = chunk.choices[0]?.delta?.content || '';
+						if (content) {
+							fullContent += content;
+							controller.enqueue(new TextEncoder().encode(content));
 						}
 					}
 				} catch (err) {

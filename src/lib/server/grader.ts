@@ -4,7 +4,7 @@ type SrsState = 'UNSEEN' | 'LEARNING' | 'KNOWN' | 'MASTERED';
 type Vocabulary = {
 	id: string;
 	lemma: string;
-	meaning: string | null;
+	meanings?: any[];
 	partOfSpeech: string | null;
 	gender: 'der' | 'die' | 'das' | null;
 	plural: string | null;

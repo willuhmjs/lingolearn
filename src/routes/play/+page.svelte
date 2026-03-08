@@ -21,7 +21,43 @@
 	}
 	let myGames = data.myGames;
 	let communityGames = data.communityGames;
+	let totalCommunityGames = data.totalCommunityGames || 0;
 	let teacherClasses = data.teacherClasses;
+
+	let currentCategory = 'All';
+	const categories = ['All', 'Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
+	let currentPage = 1;
+	let loadingMore = false;
+
+	async function loadGames(page = 1, append = false) {
+		loadingMore = true;
+		try {
+			const res = await fetch(`/api/games?page=${page}&limit=10&category=${currentCategory}`);
+			if (res.ok) {
+				const json = await res.json();
+				if (append) {
+					communityGames = [...communityGames, ...json.games];
+				} else {
+					communityGames = json.games;
+				}
+				totalCommunityGames = json.pagination.total;
+				currentPage = page;
+			}
+		} catch (error) {
+			console.error("Failed to load games", error);
+		} finally {
+			loadingMore = false;
+		}
+	}
+
+	function handleCategoryChange(category: string) {
+		currentCategory = category;
+		loadGames(1, false);
+	}
+
+	function loadMore() {
+		loadGames(currentPage + 1, true);
+	}
 
 	// Modal state for selecting a class
 	let showClassModal = false;
@@ -2352,6 +2388,19 @@ r<svelte:head>
 						Community Games
 					</h2>
 
+					<div class="category-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
+						{#each categories as category}
+							<button
+								class="tab-btn"
+								class:active={currentCategory === category}
+								on:click={() => handleCategoryChange(category)}
+								style="padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; white-space: nowrap;"
+							>
+								{category}
+							</button>
+						{/each}
+					</div>
+
 					{#if communityGames.length === 0}
 						<div class="empty-state">
 							<p>No community games available right now.</p>
@@ -2371,7 +2420,7 @@ r<svelte:head>
 										<p class="game-description">
 											{game.description || 'No description provided.'}
 										</p>
-										<div class="game-meta">
+										<div class="game-meta" style="justify-content: space-between; align-items: center;">
 											<span>
 												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 													><path
@@ -2381,8 +2430,11 @@ r<svelte:head>
 														d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 													/></svg
 												>
-												{game._count.questions} questions
+												{game._count?.questions || 0} questions
 											</span>
+											{#if game.category && game.category !== 'General'}
+												<span class="meta-badge">{game.category}</span>
+											{/if}
 										</div>
 									</div>
 									<div class="game-actions">
@@ -2400,6 +2452,14 @@ r<svelte:head>
 								</div>
 							{/each}
 						</div>
+						
+						{#if communityGames.length < totalCommunityGames}
+							<div class="load-more-container" style="text-align: center; margin-top: 2rem;">
+								<button class="btn-primary create-btn" on:click={loadMore} disabled={loadingMore}>
+									{loadingMore ? 'Loading...' : 'Load More'}
+								</button>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

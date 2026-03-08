@@ -37,8 +37,8 @@ It has ${game.questions.length} questions.
 Here are the questions and answers:
 ${game.questions.map((q: {question: string, answer: string}, i: number) => `${i + 1}. Q: ${q.question} | A: ${q.answer}`).join('\n')}
 
-Is this game appropriate to be published to a public community? Respond in JSON format:
-{ "approved": boolean, "reason": "short explanation" }`;
+Is this game appropriate to be published to a public community? Also, suggest a category for the game from the following list: Vocabulary, Grammar, Culture, Conversation, General. Respond in JSON format:
+{ "approved": boolean, "reason": "short explanation", "category": "Vocabulary" | "Grammar" | "Culture" | "Conversation" | "General" }`;
 
 	try {
 		const llmResponse = await generateChatCompletion({
@@ -55,9 +55,15 @@ Is this game appropriate to be published to a public community? Respond in JSON 
 			return json({ error: `Game review failed: ${result.reason}` }, { status: 400 });
 		}
 
+		const validCategories = ['Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
+		const category = validCategories.includes(result.category) ? result.category : 'General';
+
 		const updatedGame = await prisma.game.update({
 			where: { id: gameId },
-			data: { isPublished: true }
+			data: { 
+				isPublished: true,
+				category 
+			}
 		});
 
 		return json(updatedGame);

@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import type { RequestHandler } from './$types';
 
-export const PUT: RequestHandler = async ({ params, request, locals }) => {
+export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const session = await locals.auth();
 	if (!session?.user?.id) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,7 +19,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			return json({ error: 'Game not found' }, { status: 404 });
 		}
 
-		if (game.creatorId !== session.user.id) {
+		if (game.creatorId !== session.user.id && locals.user?.role !== 'ADMIN') {
 			return json({ error: 'Forbidden' }, { status: 403 });
 		}
 
@@ -36,5 +36,35 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	} catch (error) {
 		console.error('Failed to update game:', error);
 		return json({ error: 'Failed to update game' }, { status: 500 });
+	}
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	const session = await locals.auth();
+	if (!session?.user?.id) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
+	try {
+		const game = await prisma.game.findUnique({
+			where: { id: params.id }
+		});
+
+		if (!game) {
+			return json({ error: 'Game not found' }, { status: 404 });
+		}
+
+		if (game.creatorId !== session.user.id && locals.user?.role !== 'ADMIN') {
+			return json({ error: 'Forbidden' }, { status: 403 });
+		}
+
+		await prisma.game.delete({
+			where: { id: params.id }
+		});
+
+		return json({ success: true });
+	} catch (error) {
+		console.error('Failed to delete game:', error);
+		return json({ error: 'Failed to delete game' }, { status: 500 });
 	}
 };

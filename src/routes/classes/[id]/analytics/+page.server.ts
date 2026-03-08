@@ -55,7 +55,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			}
 		},
 		include: {
-			vocabulary: true
+			// @ts-ignore
+			vocabulary: { include: { meanings: true } }
 		}
 	});
 
@@ -77,8 +78,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		if (!aggregationMap.has(vocabId)) {
 			aggregationMap.set(vocabId, {
 				vocabularyId: vocabId,
-				lemma: record.vocabulary.lemma,
-				meaning: record.vocabulary.meaning,
+				lemma: (record as any).vocabulary.lemma,
+				meaning: (record as any).vocabulary.meanings?.[0]?.value || null,
 				totalEaseFactor: 0,
 				count: 0,
 				strugglingCount: 0

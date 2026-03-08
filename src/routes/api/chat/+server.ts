@@ -63,9 +63,9 @@ export async function POST(event) {
 
 	let assignmentTopic = null;
 	let assignmentGoalTurns = null;
-	if (currentSession.assignmentId) {
+	if ('assignmentId' in currentSession && currentSession.assignmentId) {
 		const assignment = await prisma.assignment.findUnique({
-			where: { id: currentSession.assignmentId }
+			where: { id: currentSession.assignmentId as string }
 		});
 		if (assignment) {
 			assignmentTopic = assignment.topic;
@@ -81,6 +81,7 @@ export async function POST(event) {
 
 	let userVocabList = '';
 	const vocabIdMap: Record<string, string> = {};
+	const vocabLemmaMap: Record<string, string> = {};
 	if (activeLanguage) {
 		const userVocabs = await prisma.userVocabulary.findMany({
 			where: {
@@ -94,6 +95,7 @@ export async function POST(event) {
 
 		userVocabs.forEach((uv, i) => {
 			vocabIdMap[`v${i}`] = uv.vocabulary.id;
+			vocabLemmaMap[`v${i}`] = uv.vocabulary.lemma;
 			userVocabList += `- ${uv.vocabulary.lemma} (ID: v${i})\n`;
 		});
 	}
@@ -121,7 +123,7 @@ export async function POST(event) {
 	const userMessageCount = history.filter(m => m.role === 'user').length;
 	
 	let assignmentPrompt = '';
-	if (currentSession.assignmentId && assignmentTopic) {
+	if ('assignmentId' in currentSession && currentSession.assignmentId && assignmentTopic) {
 		assignmentPrompt = `\nIMPORTANT ASSIGNMENT INSTRUCTIONS:
 The user is completing an assignment. The required topic of conversation is: "${assignmentTopic}".
 You must steer the conversation towards this topic naturally.
@@ -147,10 +149,11 @@ Return your response as a JSON object with the following structure:
   "message": "Your response as the persona in ${currentSession.language}",
   "feedbackEnglish": "Brief English feedback on the user's grammar/vocabulary usage in their last message",
   "vocabularyUpdates": [ { "id": "<vocabulary ID from the list>", "score": <number (0.0 to 1.0)> } ],
-  "extraVocabLemmas": ["<lemma1>", "<lemma2>"]${currentSession.assignmentId ? ',\n  "assignmentCompleted": <boolean>' : ''}
+  "extraVocabLemmas": ["<lemma1>", "<lemma2>"]${('assignmentId' in currentSession && currentSession.assignmentId) ? ',\n  "assignmentCompleted": <boolean>' : ''}
 }`;
 
 	try {
+		console.log('Sending message to OpenAI...', { messages: chatMessages.length, systemPrompt });
 		const response = await generateChatCompletion({
 			userId,
 			messages: chatMessages,
@@ -159,6 +162,7 @@ Return your response as a JSON object with the following structure:
 			stream: true,
 			signal: event.request.signal
 		});
+		console.log('OpenAI response started streaming');
 
 		const stream = new ReadableStream({
 			async start(controller) {
@@ -172,59 +176,16 @@ Return your response as a JSON object with the following structure:
 					)
 				);
 
-				const reader = response.body?.getReader();
-				if (!reader) {
-					controller.close();
-					return;
-				}
-
-				const decoder = new TextDecoder();
-				let buffer = '';
 				let fullContent = '';
 
 				try {
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-
-						buffer += decoder.decode(value, { stream: true });
-						const lines = buffer.split('\n');
-						buffer = lines.pop() || '';
-
-						for (const line of lines) {
-							const trimmedLine = line.trim();
-							if (trimmedLine.startsWith('data:') && !trimmedLine.includes('[DONE]')) {
-								try {
-									const dataStr = trimmedLine.slice(5).trim();
-									const data = JSON.parse(dataStr);
-									const content = data.choices[0]?.delta?.content || data.choices[0]?.message?.content || '';
-									if (content) {
-										fullContent += content;
-										controller.enqueue(
-											new TextEncoder().encode(JSON.stringify({ type: 'chunk', content }) + '\n')
-										);
-									}
-								} catch {
-									// ignore partial JSON parse errors
-								}
-							}
-						}
-					}
-
-					const finalBufferTrimmed = buffer.trim();
-					if (finalBufferTrimmed.startsWith('data:') && !finalBufferTrimmed.includes('[DONE]')) {
-						try {
-							const dataStr = finalBufferTrimmed.slice(5).trim();
-							const data = JSON.parse(dataStr);
-							const content = data.choices[0]?.delta?.content || '';
-							if (content) {
-								fullContent += content;
-								controller.enqueue(
-									new TextEncoder().encode(JSON.stringify({ type: 'chunk', content }) + '\n')
-								);
-							}
-						} catch {
-							// ignore parse errors
+					for await (const chunk of response) {
+						const content = chunk.choices[0]?.delta?.content || '';
+						if (content) {
+							fullContent += content;
+							controller.enqueue(
+								new TextEncoder().encode(JSON.stringify({ type: 'chunk', content }) + '\n')
+							);
 						}
 					}
 
@@ -250,12 +211,16 @@ Return your response as a JSON object with the following structure:
 					// Map vocabulary IDs back
 					const mappedVocabUpdates = (parsedResponse.vocabularyUpdates || []).map((u: { id: string, score: number }) => ({
 						id: vocabIdMap[u.id] || u.id,
-						score: u.score
+						score: u.score,
+						lemma: vocabLemmaMap[u.id] || u.id
 					}));
+
+					// Update parsedResponse for the frontend
+					parsedResponse.vocabularyUpdates = mappedVocabUpdates;
 
 					const evaluationPayload = {
 						globalScore: 1.0,
-						vocabularyUpdates: mappedVocabUpdates,
+						vocabularyUpdates: mappedVocabUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						grammarUpdates: [],
 						extraVocabLemmas: parsedResponse.extraVocabLemmas || [],
 						feedback: '',
@@ -266,16 +231,16 @@ Return your response as a JSON object with the following structure:
 						await updateEloRatings(userId, evaluationPayload, 'native-to-target');
 					}
 
-					if (currentSession.assignmentId && parsedResponse.assignmentCompleted) {
+					if ('assignmentId' in currentSession && currentSession.assignmentId && parsedResponse.assignmentCompleted) {
 						await prisma.assignmentScore.upsert({
 							where: {
 								assignmentId_userId: {
-									assignmentId: currentSession.assignmentId,
+									assignmentId: currentSession.assignmentId as string,
 									userId
 								}
 							},
 							create: {
-								assignmentId: currentSession.assignmentId,
+								assignmentId: currentSession.assignmentId as string,
 								userId,
 								score: 100,
 								passed: true

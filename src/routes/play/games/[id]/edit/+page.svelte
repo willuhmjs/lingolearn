@@ -22,6 +22,68 @@
 	let newOptions = $state(['', '', '']);
 	let isAddingQuestion = $state(false);
 
+	let editingQuestionId: string | null = $state(null);
+	let editQuestionText = $state('');
+	let editAnswer = $state('');
+	let editOptions = $state(['', '', '']);
+	
+	function startEditQuestion(question: any) {
+		editingQuestionId = question.id;
+		editQuestionText = question.question;
+		editAnswer = question.answer;
+		
+		const optionsArray = Array.isArray(question.options) 
+			? question.options 
+			: (typeof question.options === 'string' ? JSON.parse(question.options) : []);
+			
+		// Pad to 3 options
+		editOptions = [
+			optionsArray[0] || '',
+			optionsArray[1] || '',
+			optionsArray[2] || ''
+		];
+	}
+
+	function cancelEditQuestion() {
+		editingQuestionId = null;
+		editQuestionText = '';
+		editAnswer = '';
+		editOptions = ['', '', ''];
+	}
+
+	async function saveEditQuestion() {
+		if (!editingQuestionId) return;
+		if (!editQuestionText || !editAnswer) {
+			toast.error('Question and Answer are required');
+			return;
+		}
+		
+		const options = editOptions.filter(o => o.trim() !== '');
+		
+		try {
+			const res = await fetch(`/api/games/${game.id}/questions/${editingQuestionId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					question: editQuestionText,
+					answer: editAnswer,
+					options: options
+				})
+			});
+
+			if (res.ok) {
+				isPublished = false;
+				toast.success('Question updated! Game set to Draft status.');
+				cancelEditQuestion();
+				await invalidateAll();
+			} else {
+				toast.error('Failed to update question');
+			}
+		} catch (error) {
+			toast.error('Error updating question');
+		}
+	}
+
 	// Form Submission Functions
 	async function saveGameDetails() {
 		try {
@@ -325,33 +387,70 @@
 
 		{#each game.questions as question, i}
 			<div class="card-duo question-card">
-				<button onclick={() => deleteQuestion(question.id)} class="delete-q-btn" title="Delete Question">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-				</button>
-				
-				<div class="q-number">
-					{i + 1}
-				</div>
-				
-				<div class="q-content">
-					<h4>{question.question}</h4>
-					
-					<div class="q-answers-grid">
-						<div class="q-answer correct">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-							<span>{question.answer}</span>
+				{#if editingQuestionId === question.id}
+					<div class="edit-form" style="width: 100%;">
+						<div class="field">
+							<label>Question prompt <span class="required">*</span></label>
+							<input type="text" bind:value={editQuestionText} class="form-input" />
 						</div>
-						
-						{#if question.options && Array.isArray(question.options)}
-							{#each question.options as opt}
-								<div class="q-answer incorrect">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-									<span>{opt}</span>
-								</div>
-							{/each}
-						{/if}
+						<div class="field">
+							<label>Correct Answer <span class="required">*</span></label>
+							<input type="text" bind:value={editAnswer} class="form-input answer-input" />
+						</div>
+						<div class="field">
+							<label>Incorrect Options (Optional)</label>
+							<div class="options-grid">
+								<input type="text" bind:value={editOptions[0]} class="form-input" />
+								<input type="text" bind:value={editOptions[1]} class="form-input" />
+								<input type="text" bind:value={editOptions[2]} class="form-input" />
+							</div>
+						</div>
+						<div class="edit-actions" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+							<button onclick={saveEditQuestion} class="btn-primary save-btn">Save</button>
+							<button onclick={cancelEditQuestion} class="btn-toggle draft">Cancel</button>
+						</div>
 					</div>
-				</div>
+				{:else}
+					<div class="question-actions">
+						<button onclick={() => startEditQuestion(question)} class="edit-q-btn" title="Edit Question">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+						</button>
+						<button onclick={() => deleteQuestion(question.id)} class="delete-q-btn" title="Delete Question">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+						</button>
+					</div>
+					
+					<div class="q-number">
+						{i + 1}
+					</div>
+					
+					<div class="q-content">
+						<h4>{question.question}</h4>
+						
+						<div class="q-answers-grid">
+							<div class="q-answer correct">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+								<span>{question.answer}</span>
+							</div>
+							
+							{#if question.options && Array.isArray(question.options)}
+								{#each question.options as opt}
+									<div class="q-answer incorrect">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+										<span>{opt}</span>
+									</div>
+								{/each}
+							{:else if typeof question.options === 'string'}
+								{#each JSON.parse(question.options) as opt}
+									<div class="q-answer incorrect">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+										<span>{opt}</span>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/each}
 	</div>
@@ -706,10 +805,15 @@
 		}
 	}
 
-	.delete-q-btn {
+	.question-actions {
 		position: absolute;
 		top: 1rem;
 		right: 1rem;
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.delete-q-btn, .edit-q-btn {
 		background: none;
 		border: none;
 		color: #94a3b8;
@@ -722,7 +826,11 @@
 		color: #ef4444;
 	}
 
-	.delete-q-btn svg {
+	.edit-q-btn:hover {
+		color: #3b82f6;
+	}
+
+	.delete-q-btn svg, .edit-q-btn svg {
 		width: 1.25rem;
 		height: 1.25rem;
 	}

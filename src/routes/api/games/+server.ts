@@ -2,6 +2,52 @@ import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import type { RequestHandler } from './$types';
 
+export const GET: RequestHandler = async ({ url }) => {
+	try {
+		const page = parseInt(url.searchParams.get('page') || '1');
+		const limit = parseInt(url.searchParams.get('limit') || '10');
+		const category = url.searchParams.get('category') || 'All';
+		
+		const skip = (page - 1) * limit;
+
+		const where = { 
+			isPublished: true,
+			...(category && category !== 'All' ? { category } : {})
+		};
+
+		const [games, total] = await Promise.all([
+			prisma.game.findMany({
+				where,
+				include: {
+					creator: {
+						select: { name: true, image: true, username: true }
+					},
+					_count: {
+						select: { questions: true }
+					}
+				},
+				orderBy: { createdAt: 'desc' },
+				skip,
+				take: limit
+			}),
+			prisma.game.count({ where })
+		]);
+
+		return json({
+			games,
+			pagination: {
+				total,
+				page,
+				limit,
+				totalPages: Math.ceil(total / limit)
+			}
+		});
+	} catch (error) {
+		console.error('Failed to fetch games:', error);
+		return json({ error: 'Failed to fetch games' }, { status: 500 });
+	}
+};
+
 export const POST: RequestHandler = async ({ request, locals }) => {
 	const session = await locals.auth();
 	if (!session?.user?.id) {

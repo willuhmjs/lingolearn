@@ -21,11 +21,15 @@ export const GET = async ({ url, locals }: RequestEvent) => {
 				}
 			},
 			{
-				meaning: {
-					contains: query,
-					mode: 'insensitive'
+				meanings: {
+					some: {
+						value: {
+							contains: query,
+							mode: 'insensitive'
+						}
+					}
 				}
-			}
+			} as any
 		]
 	};
 

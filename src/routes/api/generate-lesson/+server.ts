@@ -70,7 +70,7 @@ export async function POST(event) {
 						userId,
 						srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
 						OR: [{ nextReviewDate: null }, { nextReviewDate: { lte: now } }],
-						vocabulary: { meaning: { not: null }, languageId: activeLanguageId }
+						vocabulary: { meanings: { some: {} }, languageId: activeLanguageId } as any
 					},
 					include: { vocabulary: true },
 					take: 100
@@ -80,7 +80,7 @@ export async function POST(event) {
 						userId,
 						srsState: { in: [SrsState.UNSEEN, SrsState.LEARNING] },
 						OR: [{ nextReviewDate: null }, { nextReviewDate: { lte: now } }],
-						vocabulary: { meaning: { not: null }, languageId: activeLanguageId }
+						vocabulary: { meanings: { some: {} }, languageId: activeLanguageId } as any
 					},
 					include: { vocabulary: true },
 					take: 100
@@ -142,7 +142,7 @@ export async function POST(event) {
 		// To get random unseen words, we can't easily order by random in standard Prisma findMany without fetching all.
 		// A fast approximation is getting a random offset using count.
 		const unseenCount = await prisma.vocabulary.count({
-			where: { id: { notIn: knownIdsArray }, meaning: { not: null }, languageId: activeLanguageId }
+			where: { id: { notIn: knownIdsArray }, meanings: { some: {} }, languageId: activeLanguageId } as any
 		});
 
 		if (unseenCount > 0 && learningVocabDb.length < targetLearningCount) {
@@ -151,7 +151,7 @@ export async function POST(event) {
 			const unseenVocabs = await prisma.vocabulary.findMany({
 				where: {
 					id: { notIn: knownIdsArray },
-					meaning: { not: null },
+					meanings: { some: {} },
 					languageId: activeLanguageId
 				},
 				skip: randomSkip,
@@ -168,7 +168,7 @@ export async function POST(event) {
 		// Fallback for new users: if no UserVocabulary exists, pick random Vocabulary
 		if (masteredVocabDb.length === 0 && learningVocabDb.length === 0) {
 			const allVocabs = await prisma.vocabulary.findMany({
-				where: { meaning: { not: null }, languageId: activeLanguageId },
+				where: { meanings: { some: {} }, languageId: activeLanguageId } as any,
 				take: 22
 			});
 			// @ts-expect-error type inference
@@ -186,7 +186,7 @@ export async function POST(event) {
 			const unseenVocabs = await prisma.vocabulary.findMany({
 				where: {
 					id: { notIn: knownVocabIds.map((v) => v.vocabularyId) },
-					meaning: { not: null },
+					meanings: { some: {} },
 					languageId: activeLanguageId
 				},
 				take: 2
@@ -273,11 +273,11 @@ export async function POST(event) {
 		// Format for prompt
 		const formatVocab = (v: {
 			lemma: string;
-			meaning: string | null;
+			meanings: any[];
 			gender?: string | null;
 			plural?: string | null;
 		}) =>
-			`- ${v.gender ? v.gender + ' ' : ''}${v.lemma}${v.plural ? ' (pl: ' + v.plural + ')' : ''} (${v.meaning})`;
+			`- ${v.gender ? v.gender + ' ' : ''}${v.lemma}${v.plural ? ' (pl: ' + v.plural + ')' : ''} (${v.meanings?.[0]?.value || ''})`;
 		const masteredVocabList = masteredVocab
 			.map((v) => formatVocab(v as unknown as Parameters<typeof formatVocab>[0]))
 			.join('\n');
@@ -574,11 +574,28 @@ ${jsonFormatBlock}`;
 						
 						const parsedResponse = JSON.parse(cleaned);
 
-						// Extract all text that may contain ${activeLangName} words
-						const allText = [
-							parsedResponse.challengeText || '',
-							parsedResponse.targetSentence || ''
-						].join(' ');
+						// Extract only the text that is in the target language
+						let targetLanguageText = '';
+						if (gameMode === 'native-to-target') {
+							// For native-to-target, the challengeText is English, targetSentence is target language
+							targetLanguageText = parsedResponse.targetSentence || '';
+						} else if (gameMode === 'target-to-native') {
+							// For target-to-native, the challengeText is target language, targetSentence is English
+							targetLanguageText = parsedResponse.challengeText || '';
+						} else if (gameMode === 'multiple-choice') {
+							// For multiple-choice, challengeText is target language (unless testing grammar, but usually target)
+							// We can use challengeText since distractors are English
+							if (parsedResponse.targetedGrammarIds && parsedResponse.targetedGrammarIds.length > 0) {
+								targetLanguageText = parsedResponse.targetSentence || '';
+							} else {
+								targetLanguageText = parsedResponse.challengeText || '';
+							}
+						} else {
+							// For fill-blank, both are target language
+							targetLanguageText = parsedResponse.targetSentence || '';
+						}
+
+						const allText = targetLanguageText;
 
 						const rawWords = allText
 							.replace(/<[^>]+>/g, '')
@@ -1043,11 +1060,7 @@ ${jsonFormatBlock}`;
 							ambiguousForLang.length > 0
 								? [...new Set(sentenceWordsLower.filter((w: string) => ambiguousSet.has(w)))]
 								: [];
-						const fullSentence = [
-							parsedResponse.challengeText || '',
-							parsedResponse.targetSentence || ''
-						]
-							.join(' ')
+						const fullSentence = targetLanguageText
 							.replace(/<[^>]+>/g, '')
 							.trim();
 
@@ -1099,17 +1112,19 @@ ${jsonFormatBlock}`;
 														where: {
 															lemma: { equals: cleanLemma, mode: 'insensitive' },
 															languageId: activeLanguageId
-														}
+														},
+														include: { meanings: true }
 													});
 													if (existing) {
-														if (!existing.meaning && v.meaning) {
+														if (existing.meanings.length === 0 && v.meaning) {
 															aiVocabEntries.push(
 																await prisma.vocabulary.update({
 																	where: { id: existing.id },
 																	data: {
-																		meaning: v.meaning,
+																		meanings: { create: [{ value: v.meaning, partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech }] },
 																		partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech
-																	}
+																	},
+																	include: { meanings: true }
 																})
 															);
 														} else {
@@ -1120,13 +1135,14 @@ ${jsonFormatBlock}`;
 															await prisma.vocabulary.create({
 																data: {
 																	lemma: cleanLemma,
-																	meaning: v.meaning,
+																	meanings: { create: [{ value: v.meaning, partOfSpeech: v.partOfSpeech }] },
 																	partOfSpeech: v.partOfSpeech,
 																	gender: v.gender ?? null,
 																	plural: v.plural ?? null,
 																	languageId: activeLanguageId,
 																	isAutoGenerated: true
-																}
+																},
+																include: { meanings: true }
 															})
 														);
 													}
@@ -1189,17 +1205,19 @@ ${jsonFormatBlock}`;
 														where: {
 															lemma: { equals: cleanLemma, mode: 'insensitive' },
 															languageId: activeLanguageId
-														}
+														},
+														include: { meanings: true }
 													});
 													if (existing) {
-														if (!existing.meaning && v.meaning) {
+														if (existing.meanings.length === 0 && v.meaning) {
 															ctxEntries.push(
 																await prisma.vocabulary.update({
 																	where: { id: existing.id },
 																	data: {
-																		meaning: v.meaning,
+																		meanings: { create: [{ value: v.meaning, partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech }] },
 																		partOfSpeech: v.partOfSpeech ?? existing.partOfSpeech
-																	}
+																	},
+																	include: { meanings: true }
 																})
 															);
 														} else {
@@ -1210,13 +1228,14 @@ ${jsonFormatBlock}`;
 															await prisma.vocabulary.create({
 																data: {
 																	lemma: cleanLemma,
-																	meaning: v.meaning,
+																	meanings: { create: [{ value: v.meaning, partOfSpeech: v.partOfSpeech ?? 'pronoun' }] },
 																	partOfSpeech: v.partOfSpeech ?? 'pronoun',
 																	gender: null,
 																	plural: null,
 																	languageId: activeLanguageId,
 																	isAutoGenerated: true
-																}
+																},
+																include: { meanings: true }
 															})
 														);
 													}

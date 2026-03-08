@@ -131,7 +131,7 @@ model Vocabulary {
   languageId      String?
   language        Language?                @relation(fields: [languageId], references: [id])
   lemma           String
-  meaning         String?
+  meanings        Meaning[]
   partOfSpeech    String?
   gender          Gender?
   plural          String?
@@ -144,6 +144,17 @@ model Vocabulary {
   progress        UserVocabularyProgress[]
 
   @@index([lemma])
+}
+
+model Meaning {
+  id           String     @id @default(uuid())
+  vocabularyId String
+  vocabulary   Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+  value        String
+  partOfSpeech String?
+  context      String?
+
+  @@index([value])
 }
 
 model GrammarRule {
@@ -268,6 +279,7 @@ model Game {
   language    String
   creatorId   String
   isPublished Boolean  @default(false)
+  category    String   @default("General")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

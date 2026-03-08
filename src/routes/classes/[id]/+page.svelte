@@ -247,9 +247,6 @@
 		</div>
 		<div class="banner-actions">
 			{#if currentUserRole === 'TEACHER'}
-				<a href="/play?tab=games&classId={classDetails.id}" class="btn-duo btn-primary live-btn"
-					>Start Live Session</a
-				>
 				<div class="invite-box">
 					<p class="invite-label">Invite Code</p>
 					<p class="invite-code">{classDetails.inviteCode}</p>
@@ -259,6 +256,9 @@
 						<button on:click={handleResetCode} class="invite-btn">Reset</button>
 					</div>
 				</div>
+				<a href="/play?tab=games&classId={classDetails.id}" class="btn-duo btn-primary live-btn"
+					>Start Live Session</a
+				>
 				<button on:click={handleLeaveClass} class="btn-duo btn-leave">Leave Class</button>
 				<button on:click={handleDeleteClass} class="btn-duo btn-delete-class">Delete Class</button>
 			{:else}

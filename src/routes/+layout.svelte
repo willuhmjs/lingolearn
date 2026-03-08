@@ -675,10 +675,9 @@
 		border-right: 2px solid var(--header-border, #e5e7eb);
 		display: flex;
 		flex-direction: column;
-		/* position: fixed; */
-		/* top: 0; */
-		/* left: 0; */
-		/* height: 100vh; */
+		position: sticky;
+		top: 0;
+		max-height: 100vh;
 		z-index: 50;
 		padding: 1.5rem 1rem;
 		box-sizing: border-box;

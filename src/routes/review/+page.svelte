@@ -103,7 +103,7 @@
 									<!-- Answer Info -->
 									<div class="answer-info">
 										<p class="meaning-text">
-											{currentReview.vocabulary.meaning || 'No meaning provided'}
+											{(currentReview.vocabulary as any).meanings?.[0]?.value || 'No meaning provided'}
 										</p>
 										<div class="meta-tags">
 											{#if currentReview.vocabulary.gender}

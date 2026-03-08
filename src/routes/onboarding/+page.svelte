@@ -20,9 +20,27 @@
 	};
 	let lastLevelGuess = data?.user?.cefrLevel || 'A1';
 
-	// Path selection: 'choose' | 'beginner' | 'test'
-	let selectedPath: 'choose' | 'beginner' | 'test' = completed ? 'test' : 'choose';
+	// Path selection: 'language' | 'choose' | 'beginner' | 'test'
+	let selectedPath: 'language' | 'choose' | 'beginner' | 'test' = data?.user?.activeLanguage ? (completed ? 'test' : 'choose') : 'language';
 	let isSubmittingBeginner = false;
+
+	const selectLanguage = async (languageId: string) => {
+		try {
+			const res = await fetch('/api/user/active-language', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ languageId })
+			});
+			if (res.ok) {
+				// We need to refresh data to get the active language, but for simplicity, we can just proceed
+				selectedPath = 'choose';
+				// Force a page reload to update layouts and data correctly
+				window.location.reload();
+			}
+		} catch (e) {
+			error = 'Failed to select language';
+		}
+	};
 
 	const startPlacementTest = () => {
 		selectedPath = 'test';
@@ -232,7 +250,20 @@
 	class="onboarding-container"
 	class:chat-active={messages.length > 0 || (selectedPath === 'test' && !completed)}
 >
-	{#if selectedPath === 'choose' && !completed}
+	{#if selectedPath === 'language' && !completed}
+		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
+			<h1 class="dark:text-white">Choose Your Language</h1>
+			<p class="dark:text-slate-400">Which language would you like to start learning?</p>
+		</header>
+		<div class="path-selection" in:fly={{ y: 20, duration: 400, delay: 100 }}>
+			{#each data.languages || [] as lang}
+				<button class="path-card dark:bg-slate-900 dark:border-slate-700" on:click={() => selectLanguage(lang.id)}>
+					<span class="path-icon">{lang.flag || '🌐'}</span>
+					<h2 class="dark:text-white">{lang.name}</h2>
+				</button>
+			{/each}
+		</div>
+	{:else if selectedPath === 'choose' && !completed}
 		<!-- Path Selection Screen -->
 		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
 			<h1 class="dark:text-white">Welcome to LingoLearn!</h1>

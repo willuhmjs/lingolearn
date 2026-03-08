@@ -59,6 +59,8 @@
 		correction?: string | null;
 		feedbackEnglish?: string;
 		eloUpdates?: boolean;
+		vocabularyUpdates?: any[];
+		extraVocabLemmas?: string[];
 	}
 
 	let messages: ChatMessage[] = [];
@@ -140,6 +142,7 @@
 					if (!line.trim()) continue;
 					try {
 						const event = JSON.parse(line);
+						console.log("Parsed event:", event);
 						if (event.type === 'metadata') {
 							if (!sessionId) {
 								sessionId = event.sessionId;
@@ -173,8 +176,9 @@
 								scrollToBottom();
 							}
 						} else if (event.type === 'done') {
-							const hasEloUpdates = (event.message.vocabularyUpdates && event.message.vocabularyUpdates.length > 0) || 
-												(event.message.extraVocabLemmas && event.message.extraVocabLemmas.length > 0);
+							const grading = event.grading || {};
+							const hasEloUpdates = (grading.vocabularyUpdates && grading.vocabularyUpdates.length > 0) || 
+												(grading.extraVocabLemmas && grading.extraVocabLemmas.length > 0);
 							
 							messages = messages.map((m) =>
 								m.id === assistantMessage.id
@@ -182,13 +186,14 @@
 											...m, 
 											content: event.message.message || event.message.content || m.content, 
 											correction: event.message.correction,
-											feedbackEnglish: event.message.feedbackEnglish,
-											eloUpdates: hasEloUpdates
+											eloUpdates: hasEloUpdates,
+											vocabularyUpdates: grading.vocabularyUpdates,
+											extraVocabLemmas: grading.extraVocabLemmas
 										}
 									: m
 							);
 							
-							if (event.message.assignmentCompleted) {
+							if (grading.assignmentCompleted) {
 								isPassed = true;
 							}
 							if (isAssignment) {
@@ -204,23 +209,26 @@
 
 			// flush buffer
 			if (buffer.trim()) {
+				console.log("Flushing buffer:", buffer);
 				try {
 					const event = JSON.parse(buffer.trim());
 					if (event.type === 'done') {
-						const hasEloUpdates = (event.message.vocabularyUpdates && event.message.vocabularyUpdates.length > 0) || 
-											(event.message.extraVocabLemmas && event.message.extraVocabLemmas.length > 0);
+						const grading = event.grading || {};
+						const hasEloUpdates = (grading.vocabularyUpdates && grading.vocabularyUpdates.length > 0) || 
+											(grading.extraVocabLemmas && grading.extraVocabLemmas.length > 0);
 						messages = messages.map((m) =>
 							m.id === assistantMessage.id
 								? { 
 										...m, 
 										content: event.message.message || event.message.content || m.content, 
 										correction: event.message.correction,
-										feedbackEnglish: event.message.feedbackEnglish,
-										eloUpdates: hasEloUpdates
+										eloUpdates: hasEloUpdates,
+										vocabularyUpdates: grading.vocabularyUpdates,
+										extraVocabLemmas: grading.extraVocabLemmas
 									}
 								: m
 						);
-						if (event.message.assignmentCompleted) {
+						if (grading.assignmentCompleted) {
 							isPassed = true;
 						}
 						if (isAssignment) {
@@ -287,6 +295,7 @@
 					if (!line.trim()) continue;
 					try {
 						const event = JSON.parse(line);
+						console.log("Parsed event:", event);
 						if (event.type === 'metadata') {
 							if (!sessionId) {
 								sessionId = event.sessionId;
@@ -332,6 +341,7 @@
 			}
 
 			if (buffer.trim()) {
+				console.log("Flushing buffer (AI):", buffer);
 				try {
 					const event = JSON.parse(buffer.trim());
 					if (event.type === 'done') {
@@ -478,7 +488,17 @@
 								</div>
 							{/if}
 							{#if msg.eloUpdates}
-								<div class="elo-badge">+ ELO Updated</div>
+								<div class="elo-badge">
+									+ ELO Updated
+									{#if (msg.vocabularyUpdates && msg.vocabularyUpdates.length > 0) || (msg.extraVocabLemmas && msg.extraVocabLemmas.length > 0)}
+										<span class="elo-details">
+											({[
+												...(msg.vocabularyUpdates || []).map(u => u.lemma || 'Vocab'),
+												...(msg.extraVocabLemmas || [])
+											].join(', ')})
+										</span>
+									{/if}
+								</div>
 							{/if}
 							{#if msg.correction}
 									<div class="correction-box">
@@ -1099,6 +1119,11 @@
 		background: #d1fae5;
 		padding: 0.25rem 0.5rem;
 		border-radius: 1rem;
+	}
+	.elo-details {
+		font-weight: 500;
+		opacity: 0.9;
+		margin-left: 0.25rem;
 	}
 	:global(html[data-theme='dark']) .elo-badge {
 		background: rgba(5, 150, 105, 0.2);

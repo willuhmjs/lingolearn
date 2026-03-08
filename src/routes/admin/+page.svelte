@@ -744,7 +744,7 @@
 							<tr>
 								<td>{vocab.language?.flag} {vocab.language?.name}</td>
 								<td>{vocab.lemma}</td>
-								<td>{vocab.meaning || '—'}</td>
+								<td>{(vocab as any).meanings?.[0]?.value || '—'}</td>
 								<td>{vocab.partOfSpeech || '—'}</td>
 								<td>{new Date(vocab.createdAt).toLocaleDateString()}</td>
 								<td>

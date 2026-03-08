@@ -1188,14 +1188,32 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		const existing = await client.vocabulary.findFirst({
 			where: { lemma: vocab.lemma, languageId: german.id }
 		});
+
+		const { meaning, partOfSpeech, ...vocabData } = vocab as any;
+
 		if (existing) {
 			await client.vocabulary.update({
 				where: { id: existing.id },
-				data: { ...vocab, gender }
+				data: { 
+					...vocabData, 
+					gender,
+					partOfSpeech,
+					meanings: {
+						create: meaning ? [{ value: meaning, partOfSpeech }] : []
+					}
+				}
 			});
 		} else {
 			await client.vocabulary.create({
-				data: { ...vocab, gender, languageId: german.id }
+				data: { 
+					...vocabData, 
+					gender, 
+					partOfSpeech,
+					languageId: german.id,
+					meanings: {
+						create: meaning ? [{ value: meaning, partOfSpeech }] : []
+					}
+				}
 			});
 		}
 	}
@@ -1208,14 +1226,32 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		const existing = await client.vocabulary.findFirst({
 			where: { lemma: vocab.lemma, languageId: spanish.id }
 		});
+
+		const { meaning, partOfSpeech, ...vocabData } = vocab as any;
+
 		if (existing) {
 			await client.vocabulary.update({
 				where: { id: existing.id },
-				data: { ...vocab, gender }
+				data: { 
+					...vocabData, 
+					gender,
+					partOfSpeech,
+					meanings: {
+						create: meaning ? [{ value: meaning, partOfSpeech }] : []
+					}
+				}
 			});
 		} else {
 			await client.vocabulary.create({
-				data: { ...vocab, gender, languageId: spanish.id }
+				data: { 
+					...vocabData, 
+					gender, 
+					partOfSpeech,
+					languageId: spanish.id,
+					meanings: {
+						create: meaning ? [{ value: meaning, partOfSpeech }] : []
+					}
+				}
 			});
 		}
 	}
@@ -1233,19 +1269,23 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 				where: { id: existing.id },
 				data: {
 					lemma: (vocab as any).word,
-					meaning: (vocab as any).translation,
 					isBeginner: (vocab as any).isBeginner,
-					gender
+					gender,
+					meanings: {
+						create: (vocab as any).translation ? [{ value: (vocab as any).translation }] : []
+					}
 				}
 			});
 		} else {
 			await client.vocabulary.create({
 				data: {
 					lemma: (vocab as any).word,
-					meaning: (vocab as any).translation,
 					isBeginner: (vocab as any).isBeginner,
 					gender,
-					languageId: french.id
+					languageId: french.id,
+					meanings: {
+						create: (vocab as any).translation ? [{ value: (vocab as any).translation }] : []
+					}
 				}
 			});
 		}

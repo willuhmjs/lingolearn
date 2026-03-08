@@ -136,6 +136,41 @@
 		}
 	}
 
+	async function handleAskAIForExisting(vocabularyId: string, lemma: string) {
+		if (!lemma.trim() || !activeLanguageId) return;
+
+		llmLoading = true;
+		llmError = null;
+
+		try {
+			const res = await fetch('/api/vocabulary/llm-lookup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					word: lemma.trim(),
+					languageId: activeLanguageId,
+					existingId: vocabularyId
+				})
+			});
+
+			if (res.ok) {
+				const responseData = await res.json();
+				// Update the result in the list
+				results = results.map(r => r.id === vocabularyId ? responseData.data : r);
+			} else {
+				console.error('Failed to look up meaning');
+				llmError = 'Failed to fetch meaning from AI.';
+			}
+		} catch (error) {
+			console.error('LLM lookup failed:', error);
+			llmError = 'An error occurred while connecting to the AI.';
+		} finally {
+			llmLoading = false;
+		}
+	}
+
 	async function handleAddWord(vocabularyId: string) {
 		try {
 			const res = await fetch('/api/user/vocabulary', {
@@ -243,7 +278,11 @@
 										{/if}
 									</h3>
 									<p class="result-meaning">
-										{result.meaning}
+										{#if result.meanings?.[0]?.value}
+											{result.meanings[0].value}
+										{:else}
+											<span class="text-gray-500 italic">No meaning provided. </span>
+										{/if}
 									</p>
 									{#if result.partOfSpeech}
 										<p class="result-pos">
@@ -257,6 +296,15 @@
 							</div>
 
 							<div class="result-action">
+								{#if !result.meanings?.[0]?.value}
+									<button
+										class="btn-ask-ai-inline"
+										on:click|stopPropagation={() => handleAskAIForExisting(result.id, result.lemma)}
+										disabled={llmLoading}
+									>
+										Look up with AI
+									</button>
+								{/if}
 								{#if addedWords.includes(result.id)}
 									<button disabled class="btn-added"> Added </button>
 								{:else}
@@ -333,7 +381,7 @@
 			<div class="modal-body">
 				<div class="modal-section">
 					<h3 class="modal-section-title">Meaning</h3>
-					<p class="modal-meaning">{selectedResult.meaning}</p>
+					<p class="modal-meaning">{selectedResult.meanings?.[0]?.value || 'No meaning provided'}</p>
 				</div>
 
 				{#if selectedResult.plural}
@@ -777,6 +825,44 @@
 
 	.result-action {
 		margin-left: 1rem;
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.btn-ask-ai-inline {
+		display: inline-flex;
+		align-items: center;
+		border-radius: 0.375rem;
+		border: 1px solid #d8b4fe;
+		background-color: transparent;
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		font-weight: 500;
+		color: #9333ea;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-ask-ai-inline:hover:not(:disabled) {
+		background-color: #faf5ff;
+		border-color: #c084fc;
+	}
+
+	.btn-ask-ai-inline:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	:global(.dark) .btn-ask-ai-inline {
+		border-color: #7e22ce;
+		color: #c084fc;
+	}
+
+	:global(.dark) .btn-ask-ai-inline:hover:not(:disabled) {
+		background-color: #3b0764;
+		border-color: #9333ea;
 	}
 
 	.btn-added {

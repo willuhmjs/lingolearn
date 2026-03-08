@@ -95,14 +95,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}
 	});
 
-	const communityGames = await prisma.game.findMany({
-		where: { isPublished: true },
-		orderBy: { createdAt: 'desc' },
-		include: {
-			_count: { select: { questions: true } },
-			creator: { select: { username: true } }
-		}
-	});
+	const [communityGames, totalCommunityGames] = await Promise.all([
+		prisma.game.findMany({
+			where: { isPublished: true },
+			orderBy: { createdAt: 'desc' },
+			take: 10,
+			include: {
+				_count: { select: { questions: true } },
+				creator: { select: { username: true, name: true, image: true } }
+			}
+		}),
+		prisma.game.count({ where: { isPublished: true } })
+	]);
 
 	const teacherClasses = await prisma.class.findMany({
 		where: {
@@ -126,6 +130,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		assignmentScore,
 		myGames,
 		communityGames,
+		totalCommunityGames,
 		teacherClasses,
 		userRole: locals.user.role
 	};
