@@ -1914,7 +1914,7 @@ r<svelte:head>
 
 			{#if !challenge && !loading}
 				<div
-					class="card card-duo empty-state dark:bg-slate-800 dark:border-slate-700"
+					class="card card-duo empty-state dark:bg-slate-800 dark:border-slate-700 shadow-none"
 					in:fly={{ y: 20, duration: 400 }}
 				>
 					<h2 class="dark:text-white">Ready to test your skills?</h2>
@@ -3003,7 +3003,8 @@ r<svelte:head>
 		text-align: center;
 		padding: 4rem 2rem;
 		background: #f8fafc;
-		border: 1px dashed #cbd5e1;
+		border: 2px solid var(--card-border, #e2e8f0);
+		border-radius: 12px;
 	}
 
 	.empty-state h2 {
