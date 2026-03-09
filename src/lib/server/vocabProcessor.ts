@@ -414,8 +414,6 @@ export async function processVocabEnrichment(
 			.map((w) => w.replace(/[.,!?;:'"|()/[\]{}\-\u2014\u2013]/g, '').trim())
 			.filter((w) => w.length > 0);
 
-		const existingIds = new Set([...masteredVocab, ...learningVocab].map((v) => v.id));
-
 		const candidates = new Set<string>();
 		for (const word of rawWords) {
 			const stems = stemWord(word, activeLangName);
@@ -429,8 +427,7 @@ export async function processVocabEnrichment(
 			enrichmentVocab = await prisma.vocabulary.findMany({
 				where: {
 					languageId: activeLanguageId,
-					lemma: { in: Array.from(candidates) },
-					id: { notIn: Array.from(existingIds) }
+					lemma: { in: Array.from(candidates) }
 				},
 				include: { meanings: true }
 			});

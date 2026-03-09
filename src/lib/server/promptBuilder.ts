@@ -99,7 +99,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 		};
 	} else if (gameMode === 'multiple-choice') {
 		modeInstruction = `This is a MULTIPLE CHOICE exercise. Generate a direct ${activeLangName} sentence as "challengeText" (NEVER write instructions like "Translate this:"). Provide the correct English translation as "targetSentence". Also provide exactly 3 plausible but INCORRECT English translations as "distractors". The distractors should be similar enough to be challenging but clearly wrong. CRUCIAL: If the primary goal is to test a grammar rule, the distractors MUST be grammatically incorrect variations of the *target language* sentence instead of English translations, and the "targetSentence" should just be the correct ${activeLangName} sentence. If you do this, set "challengeText" to the direct English translation ONLY.`;
-		vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName} unless testing grammar), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
+		vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName} unless testing grammar), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "v0" with lemma "Hund", write: "Der <vocab id="v0">Hund</vocab> bellt."`;
 		jsonFormatBlock = `JSON format:
 {
   "challengeText": "<${activeLangName} sentence with vocab tags>",
@@ -132,7 +132,7 @@ CRITICAL STYLE & TONE CONSTRAINT:
 		};
 	} else if (gameMode === 'target-to-native') {
 		modeInstruction = `You must generate a single, direct ${activeLangName} sentence for the user to translate into English. "challengeText" MUST be the ${activeLangName} sentence itself, NOT instructions like "Translate this sentence:". "targetSentence" MUST be the correct English translation.`;
-		vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName}), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund", write: "Der <vocab id="123">Hund</vocab> bellt."`;
+		vocabTagInstruction = `CRITICAL: In the "challengeText" (which is ${activeLangName}), you MUST wrap the ${activeLangName} lemma form of targeted vocabulary words in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "v0" with lemma "Hund", write: "Der <vocab id="v0">Hund</vocab> bellt."`;
 		jsonFormatBlock = `JSON format:
 {
   "challengeText": "<${activeLangName} text>",
@@ -158,9 +158,12 @@ CRITICAL STYLE & TONE CONSTRAINT:
 		};
 	} else {
 		// native-to-target (default)
-		modeInstruction = `You must generate a direct English sentence for the user to translate into ${activeLangName}. "challengeText" MUST be ONLY the English sentence itself (e.g. "I have a dog."), NEVER write instructions like "Translate this sentence:" or "Write a sentence describing...". "targetSentence" MUST be the correct ${activeLangName} translation.`;
-		vocabTagInstruction = `CRITICAL: In the "challengeText" (which is English), you MUST use the ENGLISH meaning of the targeted vocabulary word and wrap it in a <vocab id="VOCAB_ID">...</vocab> tag. For example, if targeting vocabulary ID "123" with lemma "Hund" and meaning "dog", write: "The <vocab id="123">dog</vocab> is barking." Do NOT put ${activeLangName} words in the English challengeText.
-MULTI-WORD MEANINGS: If a ${activeLangName} word's English meaning contains multiple words (e.g., "Fernsehprogramm" = "television program"), you MUST wrap ALL the words together as a single unit inside ONE <vocab> tag. For example: "I watched the <vocab id="v0">television program</vocab> last night." — NOT "<vocab id="v0">television</vocab> program" or "television <vocab id="v0">program</vocab>". The entire multi-word phrase must be inside a single <vocab> tag.`;
+		modeInstruction = `You must generate a direct English sentence for the user to translate into ${activeLangName}. The "challengeText" MUST be exclusively in English (e.g. "I have a dog."). NEVER include ${activeLangName} words or instructions like "Translate this sentence:". The "targetSentence" MUST be the accurate ${activeLangName} translation.`;
+		vocabTagInstruction = `CRITICAL TAGGING INSTRUCTION (English): In the "challengeText", identify the English equivalents of the targeted ${activeLangName} vocabulary and wrap them in <vocab id="VOCAB_ID">...</vocab> tags. 
+- You MUST tag the English words that carry the meaning of the target word, even if the grammatical form changes (e.g., if targeting "laufen" [to run], you might tag "running" or "runs" in the English sentence).
+- Example: targeting ID "v0" ("Hund" -> "dog"): "The <vocab id="v0">dog</vocab> is barking."
+- MULTI-WORD MEANINGS: If an English equivalent consists of multiple words, wrap them ALL in a single tag. Example: "I watched the <vocab id="v1">television program</vocab> last night."
+- DO NOT put ${activeLangName} words inside the English challengeText.`;
 		jsonFormatBlock = `JSON format:
 {
   "challengeText": "<English text>",
@@ -203,8 +206,8 @@ ${beginnerGuidance}
 ${sentenceConstraint}
 ${qualityConstraint}
 ${topicConstraint}${grammarConstraint}
-Compose the ${activeLangName} text focusing on the "Mastered" and "Learning" concepts provided below. You are ALLOWED to use other natural ${activeLangName} vocabulary appropriate for a ${userLevel} student, even if it is not in the provided lists. However, you MUST ABSOLUTELY AVOID using any custom or user-provided words that are not explicitly present in the provided vocabulary lists below. If you think the user might have learned a specific obscure word elsewhere but it is not in these lists, do not use it.
-CRITICAL THEMATIC INJECTION: The "Learning Vocabulary" list below is a POOL of words. You MUST choose ONE word from it to establish a central theme. Then, try to incorporate other words from the Learning Vocabulary list ONLY if they fit naturally within that theme.
+Compose the ${activeLangName} text by prioritizing the "Mastered" and "Learning" vocabulary provided below. You should focus on creating a natural, realistic sentence first. While you should prioritize the provided vocabulary, you ARE encouraged to use other natural ${activeLangName} words appropriate for a ${userLevel} student to ensure the sentence flows naturally and makes sense. Avoid using highly obscure words that are neither in the lists nor common at the ${userLevel} level.
+CRITICAL THEMATIC INJECTION: Use words from the "Learning Vocabulary" list below to establish a central theme. You are encouraged to use multiple words from this list if they fit together naturally, but prioritize creating a high-quality, authentic sentence over maximizing word count.
 CRITICAL GRAMMAR INJECTION: You MUST structurally incorporate the requested grammar rule(s) (either from the critical grammar constraint above, or from the Learning Grammar section) into the sentence. This is mandatory. Ensure the grammar rule is naturally applied. You MUST identify the rule used and return its ID (e.g., "g0") in the "targetedGrammarIds" array. If the sentence uses multiple grammar rules from the list, include all relevant IDs.
 CRITICAL QUALITY INSTRUCTION: Prioritize sentence quality, natural flow, and logic over using every single word provided in the lists. Do NOT try to force or jam words together if they don't make sense. You DO NOT have to use all the words provided, just pick the ones that fit naturally and make logical sense.
 ${modeInstruction}
