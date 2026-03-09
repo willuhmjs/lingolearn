@@ -418,10 +418,10 @@ export async function updateEloRatings(
 			await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score);
 
 			await prisma.userVocabulary.upsert({
-				where: { userId_vocabularyId: { userId, vocabularyId: vocabUpdate.id } },
+				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
 				create: {
 					userId,
-					vocabularyId: vocabUpdate.id,
+					vocabularyId: vocab.id,
 					eloRating: newElo,
 					srsState: newState,
 					nextReviewDate

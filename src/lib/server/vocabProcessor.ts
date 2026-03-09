@@ -483,10 +483,10 @@ export async function processVocabEnrichment(
 								messages: [
 									{
 										role: 'user',
-										content: `Provide vocabulary dictionary entries for these ${activeLangName} words or inflected forms: ${JSON.stringify(unknownContentWords)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"...","meaning":"...","partOfSpeech":"noun|verb|adjective|adverb|preposition|conjunction|pronoun|article|particle|interjection|other","gender":"MASCULINE|FEMININE|NEUTER or null for non-nouns","plural":"plural form or null"}]}`
+										content: `Provide vocabulary dictionary entries for these ${activeLangName} words or inflected forms: ${JSON.stringify(unknownContentWords)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"... (in ${activeLangName})","meaning":"... (in English)","partOfSpeech":"noun|verb|adjective|adverb|preposition|conjunction|pronoun|article|particle|interjection|other","gender":"MASCULINE|FEMININE|NEUTER or null for non-nouns","plural":"plural form or null"}]}`
 									}
 								],
-								systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given (which may be an inflected form), output its base-form (lemma) dictionary entry with an English meaning. Output ONLY valid JSON matching the requested schema, no markdown or extra text.`,
+								systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given (which may be an inflected form), output its base-form (lemma) dictionary entry in ${activeLangName} with an English meaning. Output ONLY valid JSON matching the requested schema, no markdown or extra text.`,
 								jsonMode: true,
 								temperature: 0.1
 							});
@@ -571,7 +571,7 @@ export async function processVocabEnrichment(
 								messages: [
 									{
 										role: 'user',
-										content: `Sentence: "${fullSentence}"\nWords to explain: ${JSON.stringify(ambiguousInSentence)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"the word as it appears","meaning":"precise contextual meaning/role in this sentence","partOfSpeech":"verb|pronoun|particle|other"}]}`
+										content: `Sentence: "${fullSentence}"\nWords to explain: ${JSON.stringify(ambiguousInSentence)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"the word as it appears (in ${activeLangName})","meaning":"precise contextual English meaning/role in this sentence","partOfSpeech":"verb|pronoun|particle|other"}]}`
 									}
 								],
 								systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given, provide a generic, dictionary-style definition and its grammatical role. DO NOT provide a definition that is tied to a specific context or sentence. Output ONLY valid JSON, no markdown.`,
