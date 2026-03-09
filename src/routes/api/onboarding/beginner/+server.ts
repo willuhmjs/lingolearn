@@ -53,51 +53,46 @@ export async function POST({ locals }: any) {
 			}
 		});
 
-		for (const vocabulary of beginnerVocabularies) {
-			await prisma.userVocabulary.upsert({
-				where: {
-					userId_vocabularyId: {
-						userId,
-						vocabularyId: vocabulary.id
-					}
-				},
-				update: {}, // Don't overwrite if already exists
-				create: {
-					userId,
-					vocabularyId: vocabulary.id,
-					srsState: 'LEARNING',
-					eloRating: startingElo
-				}
+		if (beginnerVocabularies.length > 0) {
+			const vocabData = beginnerVocabularies.map((v) => ({
+				userId,
+				vocabularyId: v.id,
+				srsState: 'LEARNING' as const,
+				eloRating: startingElo
+			}));
+
+			const result = await prisma.userVocabulary.createMany({
+				data: vocabData,
+				skipDuplicates: true
 			});
-			vocabSeeded++;
+			vocabSeeded = result.count;
 		}
 
 		// 3. Seed starter grammar as LEARNING
 		let grammarSeeded = 0;
 
-		for (const title of BEGINNER_GRAMMAR_TITLES) {
-			const grammarRule = await prisma.grammarRule.findFirst({
-				where: { title, languageId }
-			});
-
-			if (!grammarRule) continue;
-
-			await prisma.userGrammarRule.upsert({
-				where: {
-					userId_grammarRuleId: {
-						userId,
-						grammarRuleId: grammarRule.id
-					}
-				},
-				update: {}, // Don't overwrite if already exists
-				create: {
-					userId,
-					grammarRuleId: grammarRule.id,
-					srsState: 'LEARNING',
-					eloRating: startingElo
+		const grammarRules = await prisma.grammarRule.findMany({
+			where: {
+				languageId,
+				title: {
+					in: BEGINNER_GRAMMAR_TITLES
 				}
+			}
+		});
+
+		if (grammarRules.length > 0) {
+			const grammarData = grammarRules.map((g) => ({
+				userId,
+				grammarRuleId: g.id,
+				srsState: 'LEARNING' as const,
+				eloRating: startingElo
+			}));
+
+			const result = await prisma.userGrammarRule.createMany({
+				data: grammarData,
+				skipDuplicates: true
 			});
-			grammarSeeded++;
+			grammarSeeded = result.count;
 		}
 
 		console.log(

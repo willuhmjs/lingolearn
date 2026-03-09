@@ -67,9 +67,8 @@ const authorization: Handle = async ({ event, resolve }) => {
 
 	let activeLanguage = dbUser.activeLanguage;
 	if (!activeLanguage) {
-		activeLanguage = await prisma.language.findUnique({
-			where: { code: 'de' }
-		});
+		const { getCachedLanguageByCode } = await import('$lib/server/cache');
+		activeLanguage = await getCachedLanguageByCode('de');
 	}
 
 	let cefrLevel = 'A1';

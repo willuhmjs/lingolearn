@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { requireClassRole } from '$lib/server/classAuth';
 
 export const POST: RequestHandler = async ({ request, params, locals }) => {
 	if (!locals.user) {
@@ -31,17 +32,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 		}
 
 		// Verify the user is a TEACHER in this class
-		const member = await prisma.classMember.findUnique({
-			where: {
-				classId_userId: {
-					classId,
-					userId: locals.user.id
-				}
-			}
-		});
-
-		if ((!member || member.role !== 'TEACHER') && locals.user.role !== 'ADMIN') {
-			return json({ error: 'Forbidden' }, { status: 403 });
+		if (locals.user.role !== 'ADMIN') {
+			await requireClassRole(classId, locals.user.id, 'TEACHER');
 		}
 
 		// Enforce assignment limit (30)
@@ -77,6 +69,10 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 		return json({ success: true, assignment });
 	} catch (error) {
 		console.error('Failed to create assignment:', error);
+		if (typeof error === 'object' && error !== null && 'status' in error && 'body' in error) {
+			const e = error as { status: number; body: { message: string } };
+			return json({ error: e.body.message }, { status: e.status });
+		}
 		return json({ error: 'Failed to create assignment' }, { status: 500 });
 	}
 };

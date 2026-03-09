@@ -75,9 +75,8 @@ export async function POST(event) {
 
 	// Fetch user's vocabulary that needs review
 	const activeLanguageName = language || currentSession.language;
-	const activeLanguage = await prisma.language.findFirst({
-		where: { name: { equals: activeLanguageName, mode: 'insensitive' } }
-	});
+	const { getCachedLanguageByName } = await import('$lib/server/cache');
+	const activeLanguage = await getCachedLanguageByName(activeLanguageName);
 
 	let userVocabList = '';
 	const vocabIdMap: Record<string, string> = {};

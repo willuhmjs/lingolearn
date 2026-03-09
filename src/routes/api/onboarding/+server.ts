@@ -166,9 +166,11 @@ export async function POST({ request, locals }: RequestEvent) {
 				return;
 			}
 			try {
-				const normalizedWords = (await normalizeWords(userId, words)).map((w: string) =>
-					w.replace(/^[.,!?;:'"()[\\]{}-]+|[.,!?;:'"()[\\]{}-]+$/g, '')
-				);
+				const normalizedWords = (await normalizeWords(userId, words))
+					.map((w: string) => w.replace(/^[.,!?;:'"()[\\]{}-]+|[.,!?;:'"()[\\]{}-]+$/g, ''))
+					.filter(Boolean);
+
+				if (normalizedWords.length === 0) return;
 
 				// Map the level to base Elo
 				const levels: Record<string, number> = {
@@ -181,23 +183,19 @@ export async function POST({ request, locals }: RequestEvent) {
 				};
 				const startingElo = levels[userLevel.toUpperCase()] || 1000;
 
-				let skippedCount = 0;
-				for (const word of normalizedWords) {
-					if (!word) continue;
-					// Case-insensitive lookup so e.g. "österreich" matches "Österreich"
-					const vocabulary = await prisma.vocabulary.findFirst({
-						where: { languageId: activeLangId, lemma: { equals: word, mode: 'insensitive' } },
-						include: { meanings: true }
-					});
+				const vocabularies = await prisma.vocabulary.findMany({
+					where: { languageId: activeLangId, lemma: { in: normalizedWords, mode: 'insensitive' } },
+					include: { meanings: true }
+				});
 
-					// Skip words that aren't in our seeded dictionary (no meaning).
-					// Creating bare entries for unknown words would clog the LEARNING queue
-					// since they can never appear in lessons and thus never advance.
-					if (!vocabulary || (vocabulary as any).meanings?.length === 0) {
-						skippedCount++;
-						continue;
-					}
+				const validVocabs = vocabularies.filter(v => v.meanings && v.meanings.length > 0);
+				
+				// Calculate skipped count by checking which normalized words were not found
+				// Note: one normalized word could match multiple or zero vocabs depending on db state
+				const foundLemmas = new Set(validVocabs.map(v => v.lemma.toLowerCase()));
+				const skippedCount = normalizedWords.filter(w => !foundLemmas.has(w.toLowerCase())).length;
 
+				for (const vocabulary of validVocabs) {
 					await prisma.userVocabulary.upsert({
 						where: {
 							userId_vocabularyId: {
@@ -216,7 +214,7 @@ export async function POST({ request, locals }: RequestEvent) {
 						}
 					});
 				}
-				const addedCount = normalizedWords.length - skippedCount;
+				const addedCount = validVocabs.length;
 				console.log(
 					`[Onboarding] Added ${addedCount} ${state} words for user ${userId} at Elo ${startingElo}${skippedCount > 0 ? ` (skipped ${skippedCount} not in dictionary)` : ''}`
 				);
@@ -246,17 +244,25 @@ export async function POST({ request, locals }: RequestEvent) {
 				};
 				const startingElo = levels[userLevel.toUpperCase()] || 1000;
 
-				for (const rule of rules) {
-					let grammarRule = await prisma.grammarRule.findFirst({
-						where: { title: rule, languageId: activeLangId }
+				const existingRules = await prisma.grammarRule.findMany({
+					where: { languageId: activeLangId, title: { in: rules } }
+				});
+
+				const existingTitles = existingRules.map(r => r.title);
+				const missingTitles = rules.filter(r => !existingTitles.includes(r));
+
+				if (missingTitles.length > 0) {
+					await prisma.grammarRule.createMany({
+						data: missingTitles.map(title => ({ title, languageId: activeLangId })),
+						skipDuplicates: true
 					});
+				}
 
-					if (!grammarRule) {
-						grammarRule = await prisma.grammarRule.create({
-							data: { title: rule, languageId: activeLangId }
-						});
-					}
+				const allRules = await prisma.grammarRule.findMany({
+					where: { languageId: activeLangId, title: { in: rules } }
+				});
 
+				for (const grammarRule of allRules) {
 					await prisma.userGrammarRule.upsert({
 						where: {
 							userId_grammarRuleId: {
@@ -276,7 +282,7 @@ export async function POST({ request, locals }: RequestEvent) {
 					});
 				}
 				console.log(
-					`[Onboarding] Added ${rules.length} ${state} grammar rules for user ${userId} at Elo ${startingElo}`
+					`[Onboarding] Added ${allRules.length} ${state} grammar rules for user ${userId} at Elo ${startingElo}`
 				);
 			} catch (ruleError) {
 				console.error(`Error processing ${state} grammar rules:`, ruleError);

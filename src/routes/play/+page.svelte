@@ -5,6 +5,10 @@
 	import { marked } from 'marked';
 	import type { PageData } from './$types';
 
+	import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
+	import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
+	import TranslationView from '$lib/components/play/TranslationView.svelte';
+
 	export let data: PageData;
 
 	import { page } from '$app/stores';
@@ -2103,63 +2107,35 @@ r<svelte:head>
 
 					<form on:submit|preventDefault={submitAnswer} class="answer-form">
 						{#if challenge.gameMode === 'fill-blank'}
-							<div class="fill-blank-inputs">
-								{#each fillBlankAnswers as _, i}
-									<div class="form-group">
-										<label for="blank-{i}" class="dark:text-slate-300"
-											>Blank {i + 1}{challenge.hints?.[i]
-												? ` (${challenge.hints[i].hint})`
-												: ''}</label
-										>
-										<input
-											id="blank-{i}"
-											type="text"
-											bind:value={fillBlankAnswers[i]}
-											disabled={submitting || feedback !== null || loading}
-											placeholder="Type the missing {lessonLanguage?.name || 'Target'} word..."
-											class="blank-input dark:bg-slate-900 dark:text-white dark:border-slate-700"
-										/>
-									</div>
-								{/each}
-							</div>
+							<FillInBlankView
+								{challenge}
+								{submitting}
+								{feedback}
+								{loading}
+								bind:fillBlankAnswers
+								{lessonLanguage}
+								{submitAnswer}
+							/>
 						{:else if challenge.gameMode === 'multiple-choice'}
-							<div class="mc-choices">
-								{#each shuffledChoices as choice}
-									<button
-										type="button"
-										class="mc-choice-btn dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700"
-										class:selected={selectedChoice === choice}
-										class:correct={(feedback || hasSubmittedMc) &&
-											choice === challenge.targetSentence}
-										class:incorrect={(feedback || hasSubmittedMc) &&
-											selectedChoice === choice &&
-											choice !== challenge.targetSentence}
-										disabled={submitting || feedback !== null || loading || hasSubmittedMc}
-										on:click={() => {
-											selectedChoice = choice;
-											submitAnswer();
-										}}
-									>
-										{choice.replace(/<vocab[^>]*>/g, '').replace(/<\/vocab>/g, '')}
-									</button>
-								{/each}
-							</div>
+							<MultipleChoiceView
+								{challenge}
+								{submitting}
+								{feedback}
+								{loading}
+								{shuffledChoices}
+								bind:selectedChoice
+								{hasSubmittedMc}
+								{submitAnswer}
+							/>
 						{:else}
-							<div class="form-group">
-								<label for="answer" class="dark:text-slate-300">Your Translation</label>
-								<textarea
-									id="answer"
-									bind:value={userInput}
-									disabled={submitting || feedback || loading}
-									rows="3"
-									placeholder={loading
-										? 'Generating challenge...'
-										: challenge?.gameMode === 'target-to-native'
-											? 'Type your English translation here...'
-											: `Type your ${lessonLanguage?.name || 'Target'} translation here... (Or ask for help / translation in English)`}
-									class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
-								></textarea>
-							</div>
+							<TranslationView
+								{challenge}
+								{submitting}
+								{feedback}
+								{loading}
+								bind:userInput
+								{lessonLanguage}
+							/>
 						{/if}
 
 						{#if !feedback}

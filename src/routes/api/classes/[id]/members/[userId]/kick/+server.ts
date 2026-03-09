@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { requireClassRole } from '$lib/server/classAuth';
 
 export const POST: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) {
@@ -17,35 +18,12 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Verify the current user is a TEACHER in this class
-		const currentUserMember = await prisma.classMember.findUnique({
-			where: {
-				classId_userId: {
-					classId,
-					userId: locals.user.id
-				}
-			}
-		});
-
-		if (
-			(!currentUserMember || currentUserMember.role !== 'TEACHER') &&
-			locals.user.role !== 'ADMIN'
-		) {
-			return json({ error: 'Forbidden' }, { status: 403 });
+		if (locals.user.role !== 'ADMIN') {
+			await requireClassRole(classId, locals.user.id, 'TEACHER');
 		}
 
 		// Verify the target user is a member of the class
-		const targetUserMember = await prisma.classMember.findUnique({
-			where: {
-				classId_userId: {
-					classId,
-					userId: targetUserId
-				}
-			}
-		});
-
-		if (!targetUserMember) {
-			return json({ error: 'User is not a member of this class' }, { status: 404 });
-		}
+		await requireClassRole(classId, targetUserId);
 
 		// Remove the member
 		await prisma.classMember.delete({
@@ -71,6 +49,10 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		return json({ success: true });
 	} catch (error) {
 		console.error('Failed to kick member:', error);
+		if (typeof error === 'object' && error !== null && 'status' in error && 'body' in error) {
+			const e = error as { status: number; body: { message: string } };
+			return json({ error: e.body.message }, { status: e.status });
+		}
 		return json({ error: 'Failed to kick member' }, { status: 500 });
 	}
 };

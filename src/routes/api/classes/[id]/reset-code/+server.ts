@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { requireClassRole } from '$lib/server/classAuth';
 
 function generateInviteCode(length = 6) {
 	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -20,17 +21,8 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		const classId = params.id;
 
 		// Verify the user is a TEACHER in this class
-		const member = await prisma.classMember.findUnique({
-			where: {
-				classId_userId: { classId, userId: locals.user.id }
-			}
-		});
-
-		if ((!member || member.role !== 'TEACHER') && locals.user.role !== 'ADMIN') {
-			return json(
-				{ error: 'Forbidden: Only teachers or admins can reset the invite code' },
-				{ status: 403 }
-			);
+		if (locals.user.role !== 'ADMIN') {
+			await requireClassRole(classId, locals.user.id, 'TEACHER');
 		}
 
 		// Generate a new unique code

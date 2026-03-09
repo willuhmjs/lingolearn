@@ -83,6 +83,7 @@ model UserProgress {
   language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
 
   @@unique([userId, languageId])
+  @@index([userId])
 }
 
 model Account {
@@ -194,6 +195,7 @@ model UserVocabulary {
   vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, vocabularyId])
+  @@index([userId, srsState, nextReviewDate])
 }
 
 model UserVocabularyProgress {
@@ -228,6 +230,7 @@ model UserGrammarRule {
   grammarRule GrammarRule @relation(fields: [grammarRuleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, grammarRuleId])
+  @@index([userId, srsState, nextReviewDate])
 }
 
 model SiteSettings {
@@ -270,6 +273,9 @@ model LiveSession {
   class        Class                    @relation(fields: [classId], references: [id], onDelete: Cascade)
   game         Game                     @relation(fields: [gameId], references: [id], onDelete: Cascade)
   participants LiveSessionParticipant[]
+
+  @@index([classId])
+  @@index([gameId])
 }
 
 model Game {
@@ -299,6 +305,8 @@ model GameQuestion {
   updatedAt DateTime @updatedAt
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
 }
 
 model LiveSessionParticipant {
@@ -313,6 +321,8 @@ model LiveSessionParticipant {
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
 }
 
 model ClassMember {
@@ -326,6 +336,8 @@ model ClassMember {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([classId, userId])
+  @@index([classId])
+  @@index([userId])
 }
 
 model Assignment {
@@ -361,6 +373,8 @@ model AssignmentScore {
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, userId])
+  @@index([assignmentId])
+  @@index([userId])
 }
 
 model ConversationSession {

@@ -1,6 +1,7 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { requireClassRole } from '$lib/server/classAuth';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const session = await locals.auth();
@@ -11,17 +12,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const classId = params.id;
 
 	// Verify user is a teacher in this class
-	const classMember = await prisma.classMember.findUnique({
-		where: {
-			classId_userId: {
-				classId,
-				userId: session.user.id
-			}
-		}
-	});
-
-	if (!classMember || classMember.role !== 'TEACHER') {
-		throw error(403, 'You must be a teacher of this class to view analytics');
+	if (!locals.user || locals.user.role !== 'ADMIN') {
+		await requireClassRole(classId, session.user.id, 'TEACHER');
 	}
 
 	// Get class details

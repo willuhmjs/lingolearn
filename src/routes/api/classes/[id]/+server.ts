@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { requireClassRole } from '$lib/server/classAuth';
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	if (!locals.user) {
@@ -11,17 +12,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		const classId = params.id;
 		const userId = locals.user.id;
 
-		const member = await prisma.classMember.findUnique({
-			where: {
-				classId_userId: { classId, userId }
-			}
-		});
-
-		if ((!member || member.role !== 'TEACHER') && locals.user.role !== 'ADMIN') {
-			return json(
-				{ error: 'Unauthorized: Only teachers or admins can delete a class' },
-				{ status: 403 }
-			);
+		if (locals.user.role !== 'ADMIN') {
+			await requireClassRole(classId, userId, 'TEACHER');
 		}
 
 		await prisma.class.delete({
