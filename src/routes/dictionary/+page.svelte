@@ -1115,4 +1115,160 @@
 	:global(.dark) .modal-section-title {
 		color: #9ca3af;
 	}
+
+	/* No Results & Empty State */
+	.no-results {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 4rem 2rem;
+		text-align: center;
+		background-color: #f9fafb;
+		border-radius: 1rem;
+		border: 2px dashed #e5e7eb;
+		margin-top: 2rem;
+	}
+
+	:global(.dark) .no-results {
+		background-color: #111827;
+		border-color: #374151;
+	}
+
+	.no-results-icon {
+		width: 4rem;
+		height: 4rem;
+		color: #9ca3af;
+		margin-bottom: 1.5rem;
+	}
+
+	.no-results-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #111827;
+		margin: 0 0 0.5rem 0;
+	}
+
+	:global(.dark) .no-results-title {
+		color: #f9fafb;
+	}
+
+	.no-results-text {
+		color: #6b7280;
+		font-size: 1.125rem;
+		margin: 0 0 2rem 0;
+	}
+
+	:global(.dark) .no-results-text {
+		color: #9ca3af;
+	}
+
+	.ask-ai-section {
+		width: 100%;
+		max-width: 20rem;
+		margin: 0 auto;
+	}
+
+	.btn-ask-ai {
+		width: 100%;
+		background-color: #3b82f6;
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 0.5rem;
+		font-weight: 700;
+		font-size: 1rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		transition:
+			background-color 0.2s,
+			transform 0.1s;
+	}
+
+	.btn-ask-ai:hover:not(:disabled) {
+		background-color: #2563eb;
+		transform: translateY(-1px);
+	}
+
+	.btn-ask-ai:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	.btn-ask-ai:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 5rem 2rem;
+		text-align: center;
+		color: #6b7280;
+	}
+
+	:global(.dark) .empty-state {
+		color: #9ca3af;
+	}
+
+	.empty-icon {
+		font-size: 3rem;
+		margin-bottom: 1rem;
+		opacity: 0.5;
+	}
+
+	.empty-hint {
+		margin-top: 1rem;
+		font-size: 0.875rem;
+	}
+
+	.empty-hint kbd {
+		background-color: #f3f4f6;
+		border: 1px solid #d1d5db;
+		border-radius: 0.25rem;
+		padding: 0.125rem 0.25rem;
+		font-family: inherit;
+		font-size: 0.75rem;
+		color: #374151;
+	}
+
+	:global(.dark) .empty-hint kbd {
+		background-color: #374151;
+		border-color: #4b5563;
+		color: #e5e7eb;
+	}
+
+	.error-message {
+		background-color: #fef2f2;
+		color: #dc2626;
+		padding: 0.75rem;
+		border-radius: 0.5rem;
+		margin-bottom: 1rem;
+		font-size: 0.875rem;
+		border: 1px solid #fee2e2;
+	}
+
+	:global(.dark) .error-message {
+		background-color: rgba(220, 38, 38, 0.1);
+		border-color: rgba(220, 38, 38, 0.2);
+	}
+
+	.no-language-text {
+		color: #ef4444;
+		font-weight: 600;
+	}
+
+	.spinner-small {
+		height: 1rem;
+		width: 1rem;
+		border-radius: 9999px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-bottom-color: white;
+		animation: spin 1s linear infinite;
+	}
 </style>
