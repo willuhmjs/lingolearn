@@ -77,7 +77,7 @@ export async function POST(event) {
 			.map((id: string) => targetedGrammarRaw.find((g) => g.id === id))
 			.filter(Boolean);
 
-		// Fast-path for multiple choice: no LLM needed
+			// Fast-path for multiple choice: no LLM needed
 		if (gameMode === 'multiple-choice') {
 			const isCorrect = userInput.trim() === targetSentence.trim();
 			const score = isCorrect ? 1.0 : 0.0;
@@ -116,7 +116,7 @@ export async function POST(event) {
 				levelUp = await CefrService.evaluateLevelUp(userId, locals.user.activeLanguage.id);
 			}
 
-			return json({ ...evaluation, assignmentProgress, levelUp });
+			return json({ ...remappedEvaluation, assignmentProgress, levelUp });
 		}
 
 		let userLevel = locals.user.cefrLevel || 'A1';
@@ -221,10 +221,10 @@ export async function POST(event) {
 					}
 
 					// Send the final evaluation payload before closing the stream
-					// We return the ORIGINAL evaluation with short IDs to the client
+					// We return the remapped evaluation so the client gets real UUIDs back with eloAfter
 					controller.enqueue(
 						new TextEncoder().encode(
-							`\n\nJSON_PAYLOAD:${JSON.stringify({ ...evaluation, assignmentProgress, levelUp })}`
+							`\n\nJSON_PAYLOAD:${JSON.stringify({ ...remappedEvaluation, assignmentProgress, levelUp })}`
 						)
 					);
 				} catch (e) {
