@@ -6,15 +6,19 @@
 </script>
 
 {#if modalState}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="modal-backdrop"
 		transition:fade={{ duration: 200 }}
-		on:click={() => modalState?.type === 'alert' || modalState?.type === 'confirm' ? null : modal.close(false)}
+		onclick={() => modalState?.type === 'alert' || modalState?.type === 'confirm' ? null : modal.close(false)}
 	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="modal-container"
 			transition:scale={{ duration: 200, start: 0.95 }}
-			on:click|stopPropagation
+			onclick={(e) => e.stopPropagation()}
 		>
 			<div class="modal-content">
 				{#if modalState.title}
@@ -32,7 +36,7 @@
 					<button
 						type="button"
 						class="modal-btn-cancel"
-						on:click={() => modal.close(false)}
+						onclick={() => modal.close(false)}
 					>
 						{modalState.cancelText || 'Cancel'}
 					</button>
@@ -41,7 +45,7 @@
 				<button
 					type="button"
 					class="modal-btn-confirm"
-					on:click={() => modal.close(true)}
+					onclick={() => modal.close(true)}
 				>
 					{modalState.confirmText || 'OK'}
 				</button>

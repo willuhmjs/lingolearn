@@ -898,15 +898,9 @@
 	}
 
 	.content-wrapper {
-		/* flex: 1; */
-		/* margin-left: 250px; */
 		display: flex;
 		flex-direction: column;
 		min-height: 100vh;
-	}
-
-	.no-sidebar .content-wrapper {
-		/* margin-left: 0; */
 	}
 
 	.desktop-topbar {
@@ -1064,10 +1058,6 @@
 			margin-bottom: 70px; /* Space for bottom nav */
 		}
 
-		.no-sidebar .content-wrapper {
-			margin-bottom: 0;
-		}
-
 		.mobile-header {
 			display: flex;
 			justify-content: flex-end;
@@ -1133,14 +1123,6 @@
 
 		.nav-item svg {
 			margin: 0;
-		}
-
-		.content-wrapper {
-			/* margin-left: 80px; */
-		}
-
-		.no-sidebar .content-wrapper {
-			margin-left: 0;
 		}
 
 		.dropdown-menu {

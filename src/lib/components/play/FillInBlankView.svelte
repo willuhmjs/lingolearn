@@ -5,7 +5,7 @@
 	export let loading: boolean;
 	export let fillBlankAnswers: string[];
 	export let lessonLanguage: { name: string } | null | undefined;
-	export let submitAnswer: () => void;
+	export const submitAnswer = () => {};
 </script>
 
 <div class="fill-blank-inputs">

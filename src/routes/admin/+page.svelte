@@ -1306,14 +1306,7 @@
 		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 	}
 
-	.form-row {
-		display: flex;
-		gap: 1rem;
-	}
-
-	.form-row .form-group {
-		flex: 1;
-	}
+	/* removed unused css selector */
 
 	.modal-actions {
 		display: flex;
