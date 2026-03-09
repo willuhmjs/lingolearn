@@ -164,8 +164,8 @@
 									</div>
 								</div>
 							{:else}
-								<div class="typing-section mb-6">
-									<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+								<div class="typing-section">
+									<label class="typing-label">
 										Type your answer (optional)
 									</label>
 									{#if requiresSpecialKeyboard(currentReview.vocabulary.lemma, $page.data.user?.activeLanguage?.name || 'en')}
@@ -179,7 +179,7 @@
 										bind:this={reviewInputRef}
 										bind:value={typedAnswer}
 										type="text"
-										class="w-full p-3 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 focus:outline-none dark:bg-slate-800 dark:text-white"
+										class="review-input"
 										placeholder="Type translation here..."
 										on:keydown={(e) => e.key === 'Enter' && showAnswer()}
 									/>
@@ -223,17 +223,19 @@
 	}
 
 	.review-counter {
-		background-color: #dbeafe;
+		background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
 		color: #1e40af;
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
+		padding: 0.5rem 1rem;
+		border-radius: 1rem;
 		font-size: 0.875rem;
-		font-weight: 700;
+		font-weight: 800;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 	}
 
 	:global(html[data-theme='dark']) .review-counter {
-		background-color: rgba(30, 58, 138, 0.5);
+		background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(30, 58, 138, 0.5) 100%);
 		color: #bfdbfe;
+		box-shadow: none;
 	}
 
 	.finished-card {
@@ -241,39 +243,54 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 3rem;
+		padding: 4rem 2rem;
 		text-align: center;
+		background-color: var(--card-bg, #ffffff);
+		border-color: var(--card-border, #e2e8f0);
+		box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
+	}
+
+	:global(html[data-theme='dark']) .finished-card {
+		box-shadow: 0 4px 0 var(--card-border, #374151);
 	}
 
 	.success-icon {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 6rem;
-		height: 6rem;
-		background-color: #dcfce7;
-		color: #22c55e;
+		width: 7rem;
+		height: 7rem;
+		background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+		color: #16a34a;
 		border-radius: 50%;
-		margin-bottom: 1.5rem;
+		margin-bottom: 2rem;
+		box-shadow: 0 4px 0 #16a34a33;
+		animation: bounce-subtle 2s infinite ease-in-out;
 	}
 
 	.success-icon svg {
-		width: 3rem;
-		height: 3rem;
+		width: 3.5rem;
+		height: 3.5rem;
 	}
 
 	:global(html[data-theme='dark']) .success-icon {
-		background-color: rgba(20, 83, 45, 0.3);
+		background: linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(21, 128, 61, 0.4) 100%);
+		color: #4ade80;
+		box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
 	}
 
 	.finished-card h2 {
-		font-size: 1.5rem;
-		margin: 0 0 0.75rem 0;
+		font-size: 2rem;
+		margin: 0 0 1rem 0;
+		color: var(--text-color, #0f172a);
 	}
 
 	.finished-card p {
+		font-size: 1.125rem;
 		color: #64748b;
-		margin: 0 0 2rem 0;
+		margin: 0 0 2.5rem 0;
+		max-width: 400px;
+		line-height: 1.5;
 	}
 
 	.back-btn {
@@ -285,6 +302,13 @@
 		position: relative;
 		overflow: hidden;
 		padding: 0;
+		background-color: var(--card-bg, #ffffff);
+		border-color: var(--card-border, #e2e8f0);
+		box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
+	}
+
+	:global(html[data-theme='dark']) .review-card {
+		box-shadow: 0 4px 0 var(--card-border, #374151);
 	}
 
 	.progress-track {
@@ -292,8 +316,9 @@
 		top: 0;
 		left: 0;
 		width: 100%;
-		height: 6px;
+		height: 8px;
 		background-color: #f1f5f9;
+		z-index: 10;
 	}
 
 	:global(html[data-theme='dark']) .progress-track {
@@ -302,20 +327,21 @@
 
 	.progress-fill {
 		height: 100%;
-		background-color: #3b82f6;
-		transition: width 0.3s ease-out;
+		background: linear-gradient(90deg, #3b82f6, #60a5fa);
+		transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+		border-radius: 0 4px 4px 0;
 	}
 
 	.review-content {
 		display: flex;
 		flex-direction: column;
-		min-height: 400px;
-		padding: 2.5rem 1.5rem;
+		min-height: 450px;
+		padding: 3rem 1.5rem 2rem;
 	}
 
 	@media (min-width: 640px) {
 		.review-content {
-			padding: 2.5rem;
+			padding: 3.5rem 2.5rem 2.5rem;
 		}
 	}
 
@@ -326,12 +352,15 @@
 		align-items: center;
 		justify-content: center;
 		text-align: center;
+		padding: 1rem 0;
 	}
 
 	.lemma-text {
 		font-size: 3rem;
 		font-weight: 800;
 		margin: 0 0 1rem 0;
+		color: var(--text-color, #0f172a);
+		letter-spacing: -0.02em;
 	}
 
 	@media (min-width: 640px) {
@@ -409,13 +438,93 @@
 	.answer-info {
 		text-align: center;
 		margin-bottom: 2.5rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.typed-answer-display {
+		background-color: #f1f5f9;
+		padding: 0.75rem 1.25rem;
+		border-radius: 1rem;
+		border: 1px solid #e2e8f0;
+		max-width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	:global(html[data-theme='dark']) .typed-answer-display {
+		background-color: #1e293b;
+		border-color: #334155;
+	}
+
+	.typed-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		color: #64748b;
+		letter-spacing: 0.05em;
+	}
+
+	.typed-text {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: var(--text-color, #0f172a);
 	}
 
 	.meaning-text {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin: 0 0 1rem 0;
+		font-size: 1.75rem;
+		font-weight: 800;
+		margin: 0.5rem 0;
 		color: var(--text-color, #1e293b);
+	}
+
+	.typing-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.typing-label {
+		font-size: 0.875rem;
+		font-weight: 700;
+		color: #64748b;
+	}
+
+	:global(html[data-theme='dark']) .typing-label {
+		color: #94a3b8;
+	}
+
+	.review-input {
+		width: 100%;
+		padding: 1rem;
+		font-size: 1.125rem;
+		font-weight: 600;
+		border: 2px solid #e2e8f0;
+		border-radius: 1rem;
+		background-color: white;
+		color: #0f172a;
+		transition: all 0.2s;
+		box-sizing: border-box;
+	}
+
+	.review-input:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+	}
+
+	:global(html[data-theme='dark']) .review-input {
+		background-color: #1e293b;
+		border-color: #334155;
+		color: white;
+	}
+
+	:global(html[data-theme='dark']) .review-input:focus {
+		border-color: #3b82f6;
 	}
 
 	.meta-tags {
@@ -423,23 +532,28 @@
 		flex-wrap: wrap;
 		justify-content: center;
 		gap: 0.75rem;
+		margin-top: 0.5rem;
 	}
 
 	.meta-tag {
-		background-color: #f1f5f9;
+		background-color: #f8fafc;
 		color: #475569;
-		padding: 0.25rem 0.75rem;
-		border-radius: 0.25rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.75rem;
 		font-size: 0.875rem;
+		font-weight: 600;
+		border: 1px solid #e2e8f0;
 	}
 
 	:global(html[data-theme='dark']) .meta-tag {
 		background-color: #1e293b;
-		color: #94a3b8;
+		color: #cbd5e1;
+		border-color: #334155;
 	}
 
 	.meta-tag strong {
 		color: var(--text-color, #0f172a);
+		margin-left: 0.25rem;
 	}
 
 	.grading-buttons {
