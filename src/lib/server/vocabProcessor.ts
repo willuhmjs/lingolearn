@@ -281,7 +281,7 @@ export function stemWord(word: string, language: string): Set<string> {
 			's'
 		];
 		for (const suffix of suffixes) {
-			if (lower.length > suffix.length + 2 && lower.endsWith(suffix)) {
+			if (lower.length >= suffix.length + 2 && lower.endsWith(suffix)) {
 				const stem = lower.slice(0, -suffix.length);
 				candidates.add(stem);
 				candidates.add(stem.charAt(0).toUpperCase() + stem.slice(1));
@@ -454,8 +454,7 @@ export async function processVocabEnrichment(
 				rawWords
 					.filter(
 						(w) =>
-							w.length >= 3 &&
-							!FUNCTION_WORDS.has(w.toLowerCase()) &&
+							w.length >= 2 &&
 							!foundLemmas.has(w.toLowerCase())
 					)
 			)

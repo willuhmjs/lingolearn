@@ -789,7 +789,7 @@
 			's'
 		];
 		for (const suffix of suffixes) {
-			if (word.length > suffix.length + 2 && word.endsWith(suffix)) {
+			if (word.length >= suffix.length + 2 && word.endsWith(suffix)) {
 				const stem = word.slice(0, -suffix.length);
 				stems.push(stem);
 				if (suffix !== 'en') {
