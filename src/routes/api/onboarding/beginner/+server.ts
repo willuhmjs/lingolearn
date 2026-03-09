@@ -7,38 +7,24 @@ import { prisma } from '$lib/server/prisma';
  * so the lesson generator immediately has material to teach them from scratch.
  */
 
-// Core A1 grammar concepts to seed as LEARNING
-const BEGINNER_GRAMMAR_TITLES: Record<string, string[]> = {
-	de: [
-		'Present Tense (Präsens) - Regular Verbs',
-		'Sein, Haben, Werden - Conjugation',
-		'Definite Articles (Nominative)',
-		'Personal Pronouns (Nominative)',
-		'Word Order - Main Clause (Hauptsatz)'
-	],
-	es: [
-		'Subject Pronouns (Pronombres Personales)',
-		'Noun Gender and Plurals',
-		'Definite and Indefinite Articles',
-		'Present Tense Regular Verbs (-ar, -er, -ir)',
-		'Ser vs Estar'
-	],
-	fr: [
-		'Gender of Nouns',
-		'Plural of Nouns',
-		'Present Tense (-er verbs)',
-		'Adjective Agreement'
-	]
-};
+import type { RequestEvent } from './$types';
 
-export async function POST({ locals }: any) {
+/**
+ * Absolute beginner onboarding endpoint.
+ * Seeds the user's account with essential A1 starter vocabulary and grammar as LEARNING,
+ * so the lesson generator immediately has material to teach them from scratch.
+ */
+
+export async function POST({ locals }: RequestEvent) {
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
 	const userId = locals.user.id;
-	const languageId = locals.user.activeLanguage!.id;
-	const languageCode = locals.user.activeLanguage!.code;
+	if (!locals.user.activeLanguage) {
+		return json({ error: 'Active language is required' }, { status: 400 });
+	}
+	const languageId = locals.user.activeLanguage.id;
 
 	try {
 		// 1. Set user level to A1
@@ -86,14 +72,11 @@ export async function POST({ locals }: any) {
 
 		// 3. Seed starter grammar as LEARNING
 		let grammarSeeded = 0;
-		const titles = BEGINNER_GRAMMAR_TITLES[languageCode] || BEGINNER_GRAMMAR_TITLES['de'];
 
 		const grammarRules = await prisma.grammarRule.findMany({
 			where: {
 				languageId,
-				title: {
-					in: titles
-				}
+				level: 'A1'
 			}
 		});
 
@@ -124,8 +107,9 @@ export async function POST({ locals }: any) {
 			message:
 				"Welcome! We've set you up as a complete beginner. Your lessons will start with the very basics — greetings, pronouns, and simple sentences. Let's begin your language journey!"
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error('Error in beginner onboarding API:', error);
-		return json({ error: error.message }, { status: 500 });
+		const message = error instanceof Error ? error.message : 'Unknown error';
+		return json({ error: message }, { status: 500 });
 	}
 }

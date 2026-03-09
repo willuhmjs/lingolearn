@@ -41,13 +41,13 @@ If "completed" is true, you MUST also include:
 - "feedback": a short summary of their skills in English.
 
 Example 1 (User says a basic greeting - A1):
-{ "message": "Schön, dich kennenzulernen! Woher kommst du?", "completed": false, "currentLevelGuess": "A1", "masteredWords": [], "knownWords": ["hallo", "ich", "heißen"], "learningWords": [], "masteredGrammar": [], "knownGrammar": ["Present Tense (Präsens) - Regular Verbs", "Personal Pronouns (Nominative)"], "learningGrammar": [] }
+{ "message": "¡Hola! ¿Cómo estás?", "completed": false, "currentLevelGuess": "A1", "masteredWords": [], "knownWords": ["hola", "estar"], "learningWords": [], "masteredGrammar": [], "knownGrammar": ["Present Tense - Regular Verbs"], "learningGrammar": [] }
 
-Example 2 (User writes a complex paragraph about their life/travels - B1/B2):
-{ "message": "Das klingt nach vielen spannenden Erlebnissen! Was hat dir in München am meisten gefallen?", "completed": false, "currentLevelGuess": "B1", "masteredWords": ["studieren", "informatik", "arbeiten"], "knownWords": ["ich", "heißen", "fliegen", "europa", "schweiz"], "learningWords": ["amerikanische"], "masteredGrammar": ["Present Perfect (Perfekt)"], "knownGrammar": ["Word Order - Main Clause (Hauptsatz)", "Definite Articles (Nominative)"], "learningGrammar": ["Adjective Endings"] }
+Example 2 (User writes a complex paragraph):
+{ "message": "That's very interesting! Can you tell me more about your experience?", "completed": false, "currentLevelGuess": "B1", "masteredWords": ["experience", "interesting"], "knownWords": ["tell", "more"], "learningWords": [], "masteredGrammar": ["Present Perfect"], "knownGrammar": ["Word Order"], "learningGrammar": [] }
 
 Example 3 (Chat complete - A2):
-{ "message": "Great job! Based on our chat, I have determined your level.", "completed": true, "currentLevelGuess": "A2", "level": "A2", "feedback": "Good basic vocabulary but struggles with case endings.", "masteredWords": ["kommen"], "knownWords": ["aus", "deutschland"], "learningWords": ["der"], "masteredGrammar": [], "knownGrammar": ["Present Tense (Präsens) - Regular Verbs"], "learningGrammar": ["Dative Case (Dativ)"] }
+{ "message": "Great job! Based on our chat, I have determined your level.", "completed": true, "currentLevelGuess": "A2", "level": "A2", "feedback": "Good basic vocabulary but struggles with some complex structures.", "masteredWords": [], "knownWords": [], "learningWords": [], "masteredGrammar": [], "knownGrammar": ["Present Tense"], "learningGrammar": [] }
 `;
 
 export async function POST({ request, locals }: RequestEvent) {
@@ -75,7 +75,11 @@ export async function POST({ request, locals }: RequestEvent) {
 		}
 
 		const activeLangId = user.activeLanguage.id;
-		const activeLangName = user.activeLanguage.name || 'German';
+		const activeLangName = user.activeLanguage.name;
+
+		if (!activeLangName) {
+			return json({ error: 'Language name is missing' }, { status: 400 });
+		}
 
 		// Check if user is refining an existing placement
 		const existingProgress = await prisma.userProgress.findUnique({
@@ -84,19 +88,24 @@ export async function POST({ request, locals }: RequestEvent) {
 		const isRefining = existingProgress?.hasOnboarded === true;
 
 		if (messages.length === 0) {
-			let greeting = 'Hallo';
-			let question = 'Wie heißt du?';
+			const prompt = `You are a friendly ${activeLangName} language teacher. 
+Generate a warm, professional first greeting and an initial simple question to start a placement assessment for a new student.
+The greeting should be mostly in ${activeLangName}, but include English translations for key parts or a full translation in parentheses so the student feels comfortable.
+Encourage them that it's okay if they are just starting.
+Example: "¡Hola! (Hello!) I'm excited to find out where you are with your Spanish. ¿Cómo te llamas? (What is your name?)"
+Return ONLY the final greeting message.`;
 
-			if (activeLangName === 'Spanish') {
-				greeting = 'Hola';
-				question = '¿Cómo te llamas?';
-			} else if (activeLangName === 'French') {
-				greeting = 'Bonjour';
-				question = "Comment t'appelles-tu ?";
-			}
+			const response = await generateChatCompletion({
+				userId,
+				messages: [{ role: 'user', content: prompt }],
+				systemPrompt: `You are a helpful assistant. Return only the requested greeting text for a ${activeLangName} teacher.`,
+				stream: false
+			});
+
+			const greetingMessage = response.choices[0]?.message?.content || `Hello! Welcome! I'm excited to find out where you are with your ${activeLangName}. Don't worry if you're just starting out — I'll adjust to your level.\n\nLet's begin: What is your name? Feel free to answer in ${activeLangName} or English!`;
 
 			return json({
-				message: `${greeting}! Welcome! I'm excited to find out where you are with your ${activeLangName}. Don't worry if you're just starting out — I'll adjust to your level.\n\nLet's begin: ${question} (What is your name?) Feel free to answer in ${activeLangName} or English!`,
+				message: greetingMessage,
 				completed: false,
 				currentLevelGuess: 'A1'
 			});

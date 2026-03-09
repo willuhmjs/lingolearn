@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { invalidateAll } from '$app/navigation';
+
 	export let data: any;
 
 	let messages: { role: string; content: string }[] = [];
@@ -21,7 +25,7 @@
 	let lastLevelGuess = data?.user?.cefrLevel || 'A1';
 
 	// Path selection: 'language' | 'choose' | 'beginner' | 'test'
-	let selectedPath: 'language' | 'choose' | 'beginner' | 'test' = data?.user?.activeLanguage ? (completed ? 'test' : 'choose') : 'language';
+	let selectedPath: 'language' | 'choose' | 'beginner' | 'test' = 'language';
 	let isSubmittingBeginner = false;
 
 	const selectLanguage = async (languageId: string) => {
@@ -32,10 +36,8 @@
 				body: JSON.stringify({ languageId })
 			});
 			if (res.ok) {
-				// We need to refresh data to get the active language, but for simplicity, we can just proceed
+				await invalidateAll();
 				selectedPath = 'choose';
-				// Force a page reload to update layouts and data correctly
-				window.location.reload();
 			}
 		} catch (e) {
 			error = 'Failed to select language';
@@ -237,9 +239,6 @@
 			loading = false;
 		}
 	};
-
-	import { onMount } from 'svelte';
-	import { fly } from 'svelte/transition';
 </script>
 
 <svelte:head>
