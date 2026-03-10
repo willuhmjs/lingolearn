@@ -7,7 +7,13 @@ import { generateLessonStream } from '$lib/server/lessonLlmService';
 
 export async function POST(event) {
 	const { request, locals } = event;
-	if (await generateLessonRateLimiter.isLimited(event)) {
+	
+	const user = locals.user ? await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { useLocalLlm: true }
+	}) : null;
+
+	if (!user?.useLocalLlm && await generateLessonRateLimiter.isLimited(event)) {
 		return json({ error: 'Too many requests. Limit is 10/min, 200/day.' }, { status: 429 });
 	}
 

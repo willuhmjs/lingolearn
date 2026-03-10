@@ -98,6 +98,9 @@ const authorization: Handle = async ({ event, resolve }) => {
 		theme: dbUser.theme || 'default',
 		totalXp: (dbUser as { totalXp?: number }).totalXp || 0,
 		currentStreak: (dbUser as { currentStreak?: number }).currentStreak || 0,
+		useLocalLlm: (dbUser as { useLocalLlm?: boolean }).useLocalLlm,
+		llmBaseUrl: (dbUser as { llmBaseUrl?: string | null }).llmBaseUrl,
+		llmApiKey: (dbUser as { llmApiKey?: string | null }).llmApiKey,
 		activeLanguage: activeLanguage
 			? {
 					id: activeLanguage.id,

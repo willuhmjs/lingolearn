@@ -109,6 +109,33 @@ export const actions: Actions = {
 		return { themeSuccess: 'Theme updated successfully' };
 	},
 
+	updateLlmSettings: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
+
+		const formData = await request.formData();
+		const useLocalLlm = formData.get('useLocalLlm') === 'on';
+		const llmBaseUrl = formData.get('llmBaseUrl')?.toString() || null;
+		const llmApiKey = formData.get('llmApiKey')?.toString() || null;
+
+		try {
+			await prisma.user.update({
+				where: { id: locals.user.id },
+				data: {
+					useLocalLlm,
+					llmBaseUrl,
+					llmApiKey
+				}
+			});
+
+			return { llmSuccess: 'LLM settings updated successfully' };
+		} catch (error) {
+			console.error('Error updating LLM settings:', error);
+			return fail(500, { llmError: 'Failed to update LLM settings' });
+		}
+	},
+
 	deleteAccount: async ({ locals, cookies }) => {
 		if (!locals.user) {
 			throw redirect(303, '/login');

@@ -36,7 +36,13 @@ async function updateAssignmentScore(assignmentId: string, userId: string, isCor
 
 export async function POST(event) {
 	const { request, locals } = event;
-	if (await submitAnswerRateLimiter.isLimited(event)) {
+
+	const user = locals.user ? await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { useLocalLlm: true }
+	}) : null;
+
+	if (!user?.useLocalLlm && await submitAnswerRateLimiter.isLimited(event)) {
 		return json({ error: 'Too many requests. Limit is 15/min, 300/day.' }, { status: 429 });
 	}
 

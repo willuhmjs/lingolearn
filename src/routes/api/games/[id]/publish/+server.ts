@@ -13,7 +13,12 @@ export async function POST(event: RequestEvent) {
 
 	const gameId = params.id;
 
-	if (await publishGameRateLimiter.isLimited(event)) {
+	const user = await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { useLocalLlm: true }
+	});
+
+	if (!user?.useLocalLlm && await publishGameRateLimiter.isLimited(event)) {
 		return json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 });
 	}
 

@@ -40,20 +40,25 @@ export async function generateChatCompletion({
 	const [user, settings] = await Promise.all([
 		prisma.user.findUnique({
 			where: { id: userId },
-			select: { llmBaseUrl: true, llmApiKey: true, activeLanguage: true }
+			select: { useLocalLlm: true, llmBaseUrl: true, llmApiKey: true, activeLanguage: true }
 		}),
 		getSiteSettings()
 	]);
 
 	// 2. Resolve Base URL and API Key (User custom OR Site Settings OR fallback to environment variables)
 	const rawBaseUrl = (
-		user?.llmBaseUrl ||
+		(user?.useLocalLlm && user?.llmBaseUrl) ? user.llmBaseUrl :
 		settings.llmEndpoint ||
 		env.DEFAULT_LLM_BASE_URL ||
 		''
 	).replace(/^["']|["']$/g, '');
 	
-	const apiKey = (user?.llmApiKey || settings.llmApiKey || env.DEFAULT_LLM_API_KEY || '').replace(
+	const apiKey = (
+		(user?.useLocalLlm && user?.llmApiKey) ? user.llmApiKey :
+		settings.llmApiKey || 
+		env.DEFAULT_LLM_API_KEY || 
+		''
+	).replace(
 		/^["']|["']$/g,
 		''
 	);

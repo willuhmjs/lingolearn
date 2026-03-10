@@ -10,8 +10,13 @@ export async function POST(event: RequestEvent) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
+	const user = await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { useLocalLlm: true }
+	});
+
 	// Apply Rate Limiting
-	if (await llmDictionaryRateLimiter.isLimited(event)) {
+	if (!user?.useLocalLlm && await llmDictionaryRateLimiter.isLimited(event)) {
 		return json({ error: 'Too many requests' }, { status: 429 });
 	}
 

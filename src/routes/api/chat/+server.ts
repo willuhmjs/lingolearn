@@ -5,12 +5,18 @@ import { chatPracticeRateLimiter } from '$lib/server/ratelimit';
 import { updateEloRatings } from '$lib/server/grader';
 
 export async function POST(event) {
+	const { locals } = event;
+	const user = locals.user ? await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { useLocalLlm: true }
+	}) : null;
+
 	// Apply rate limiting
-	if (await chatPracticeRateLimiter.isLimited(event)) {
+	if (!user?.useLocalLlm && await chatPracticeRateLimiter.isLimited(event)) {
 		return json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
 	}
 
-	const session = await event.locals.auth();
+	const session = await locals.auth();
 	if (!session?.user?.id) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}

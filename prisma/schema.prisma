@@ -38,6 +38,7 @@ model User {
   passwordHash         String?
   name                 String?
   role                 Role                     @default(USER)
+  useLocalLlm          Boolean                  @default(false)
   llmBaseUrl           String?
   llmApiKey            String?
   createdAt            DateTime                 @default(now())

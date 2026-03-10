@@ -79,6 +79,64 @@
 		</form>
 	</section>
 
+	<section
+		class="llm-card dark:bg-slate-800 dark:border-slate-700"
+		in:fly={{ y: 20, duration: 400, delay: 175 }}
+	>
+		<h2 class="dark:text-white">Local LLM Settings</h2>
+		<p class="dark:text-slate-400 text-sm mb-4">
+			Use your own local or remote LLM server (e.g. Ollama, LM Studio). Using your own server removes rate limits!
+		</p>
+
+		{#if form && 'llmSuccess' in form && form.llmSuccess}
+			<div class="alert alert-success">{form.llmSuccess}</div>
+		{/if}
+		{#if form && 'llmError' in form && form.llmError}
+			<div class="alert alert-error">{form.llmError}</div>
+		{/if}
+
+		<form method="POST" action="?/updateLlmSettings" use:enhance>
+			<div class="form-group flex items-center gap-2 mb-4">
+				<input
+					type="checkbox"
+					id="useLocalLlm"
+					name="useLocalLlm"
+					checked={data.user?.useLocalLlm}
+					class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+				/>
+				<label for="useLocalLlm" class="dark:text-slate-300 mb-0 cursor-pointer">
+					Enable Custom LLM Server
+				</label>
+			</div>
+
+			<div class="form-group">
+				<label for="llmBaseUrl" class="dark:text-slate-300">API Endpoint (OpenAI compatible)</label>
+				<input
+					type="text"
+					id="llmBaseUrl"
+					name="llmBaseUrl"
+					placeholder="http://localhost:11434/v1"
+					value={data.user?.llmBaseUrl || ''}
+					class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+				/>
+			</div>
+
+			<div class="form-group">
+				<label for="llmApiKey" class="dark:text-slate-300">API Key (if required)</label>
+				<input
+					type="password"
+					id="llmApiKey"
+					name="llmApiKey"
+					placeholder="sk-..."
+					value={data.user?.llmApiKey || ''}
+					class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+				/>
+			</div>
+
+			<button type="submit" class="submit-btn">Save LLM Settings</button>
+		</form>
+	</section>
+
 	{#if data.localLoginEnabled}
 		<section
 			class="password-card dark:bg-slate-800 dark:border-slate-700"
@@ -182,7 +240,8 @@
 
 	.info-card,
 	.password-card,
-	.theme-card {
+	.theme-card,
+	.llm-card {
 		background: var(--card-bg, #ffffff);
 		border: 1px solid #e5e7eb;
 		border-radius: 0.75rem;
@@ -192,7 +251,8 @@
 
 	.info-card h2,
 	.password-card h2,
-	.theme-card h2 {
+	.theme-card h2,
+	.llm-card h2 {
 		font-size: 1.125rem;
 		font-weight: 600;
 		color: #111827;
