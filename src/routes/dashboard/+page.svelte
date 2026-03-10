@@ -14,8 +14,38 @@
 		MASTERED: 'var(--color-mastered, #10b981)' // emerald-500
 	};
 
+	// Topologically sort grammar rules to ensure prerequisites come first
+	$: sortedRules = (() => {
+		const rules = data.allGrammarRules || [];
+		const sorted: any[] = [];
+		const visited = new Set<string>();
+		const visiting = new Set<string>();
+
+		function visit(rule: any) {
+			if (visited.has(rule.id)) return;
+			if (visiting.has(rule.id)) return; // Break cycle
+			visiting.add(rule.id);
+
+			for (const dep of rule.dependencies || []) {
+				const depRule = rules.find((r: any) => r.id === dep.id);
+				if (depRule) {
+					visit(depRule);
+				}
+			}
+
+			visiting.delete(rule.id);
+			visited.add(rule.id);
+			sorted.push(rule);
+		}
+
+		for (const rule of rules) {
+			visit(rule);
+		}
+		return sorted;
+	})();
+
 	// Merge user progress with all possible rules for the grammar web
-	const grammarWebNodes = (data.allGrammarRules || []).map((rule: any) => {
+	$: grammarWebNodes = sortedRules.map((rule: any) => {
 		const userProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === rule.id);
 		return {
 			...userProgress,
