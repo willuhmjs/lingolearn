@@ -33,16 +33,109 @@
 	let chatInputRef: HTMLTextAreaElement;
 
 	const TOPICS = [
+		// Food & Dining
 		'A friendly waiter at a café',
+		'A barista who takes coffee very seriously',
+		'A street food vendor recommending their best dish',
+		'A sommelier at a fancy restaurant',
+		'A bakery owner proud of their sourdough',
+		'A chef who wants your honest opinion on their new recipe',
+		'A fast food cashier dealing with a long line',
+
+		// Travel & Transport
 		'A strict border control officer',
 		'A talkative taxi driver',
-		'A helpful librarian',
-		'A neighbor who lost their dog',
-		'A language teacher evaluating your skills',
 		'A confused tourist asking for directions',
+		'A train conductor checking tickets on a delayed train',
+		'A hotel receptionist during a fully booked weekend',
+		'A flight attendant on a turbulent flight',
+		'A tour guide at a historic castle',
+		'A fellow backpacker at a hostel',
+		'A bus driver who knows every stop by heart',
+		'A cruise ship activity coordinator',
+
+		// Shopping & Services
 		'A seller at a local market',
+		'A pushy salesperson at an electronics store',
+		'A tailor adjusting your suit for a wedding',
+		'A florist helping you pick flowers for an apology',
+		'A pharmacist recommending cold remedies',
+		'A used car salesperson with a suspiciously good deal',
+		'A bookshop owner who has read everything',
+		'A cashier at a busy supermarket',
+
+		// Work & Professional
 		'A coworker discussing a project',
-		"An old friend you haven't seen in years"
+		'A job interviewer asking tough questions',
+		'A new boss on your first day at work',
+		'An IT support person walking you through a fix',
+		'A freelance client with impossible deadlines',
+		'A coworker organizing the office holiday party',
+		'A real estate agent showing you an apartment',
+		'A bank teller helping you open an account',
+
+		// Social & Personal
+		"An old friend you haven't seen in years",
+		'A neighbor who lost their dog',
+		'A roommate who wants to set house rules',
+		'A stranger sitting next to you on a long train ride',
+		'A chatty hairdresser during a haircut',
+		'A parent at a school pickup making small talk',
+		'A gym buddy suggesting a new workout routine',
+		'Someone at a party who only speaks your target language',
+
+		// Education & Culture
+		'A language teacher evaluating your skills',
+		'A helpful librarian',
+		'A museum guide explaining a controversial artwork',
+		'A university professor during office hours',
+		'A classmate studying for the same exam',
+		'A music teacher who only communicates through metaphors',
+		'A film buff debating the best movies of all time',
+
+		// Health & Wellness
+		'A doctor during a routine checkup',
+		'A dentist making conversation while you can barely talk',
+		'A yoga instructor who is extremely calm',
+		'A personal trainer pushing you to your limits',
+		'A therapist asking how your week went',
+
+		// Daily Life & Errands
+		'A postal worker helping with an international package',
+		'A mechanic explaining what is wrong with your car',
+		'A landlord discussing a leaky faucet',
+		'A dog walker in the park chatting about breeds',
+		'A locksmith after you locked yourself out',
+		'A neighbor complaining about noise',
+		'A plumber who showed up three hours late',
+
+		// Entertainment & Hobbies
+		'A passionate football fan during a big match',
+		'A board game enthusiast explaining complex rules',
+		'A hiking guide on a mountain trail',
+		'A cooking class instructor demonstrating a recipe',
+		'A DJ taking music requests at a club',
+		'A theater usher before a sold-out show',
+		'A fellow gardener at a community garden',
+
+		// Emergencies & Unusual Situations
+		'A police officer who pulled you over',
+		'A firefighter doing a safety inspection',
+		'A lost child looking for their parents at a mall',
+		'A park ranger warning about wildlife',
+		'A lifeguard at a crowded beach',
+
+		// Quirky & Fun
+		'A conspiracy theorist at a bus stop',
+		'A fortune teller at a carnival',
+		'A very dramatic weather reporter',
+		'A pet shop owner who talks to the animals',
+		'An overly enthusiastic fitness influencer',
+		'A grumpy old man feeding pigeons in the park',
+		'A wedding planner in full crisis mode',
+		'A detective asking you about something you witnessed',
+		'An alien who just landed and is learning human customs',
+		'A time traveler confused by modern technology'
 	];
 
 	function randomizeTopic() {
