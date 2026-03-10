@@ -1495,20 +1495,22 @@
 									.split(',')
 									.map((s) => s.trim().replace(/^"|"$/g, ''))
 									.filter(Boolean);
-								challenge.targetedVocabularyIds = rawIds.map((id) => idMap[id] || id);
+								if (rawIds.length > 0) {
+									challenge.targetedVocabularyIds = rawIds.map((id) => idMap[id] || id);
 
-								// Immediate filtering of vocabulary
-								if (
-									challenge.targetedVocabularyIds.length > 0 &&
-									challenge.targetedVocabulary?.length > 0
-								) {
-									const usedIds = new Set(challenge.targetedVocabularyIds);
-									// Store the original metadata-sourced list if we haven't yet, so we can re-filter if needed
-									if (!challenge._allMetadataVocab)
-										challenge._allMetadataVocab = [...challenge.targetedVocabulary];
-									challenge.targetedVocabulary = challenge._allMetadataVocab.filter((v: any) =>
-										usedIds.has(v.id)
-									);
+									// Immediate filtering of vocabulary
+									if (
+										challenge.targetedVocabularyIds.length > 0 &&
+										challenge.targetedVocabulary?.length > 0
+									) {
+										const usedIds = new Set(challenge.targetedVocabularyIds);
+										// Store the original metadata-sourced list if we haven't yet, so we can re-filter if needed
+										if (!challenge._allMetadataVocab)
+											challenge._allMetadataVocab = [...challenge.targetedVocabulary];
+										challenge.targetedVocabulary = challenge._allMetadataVocab.filter((v: any) =>
+											usedIds.has(v.id)
+										);
+									}
 								}
 							}
 
@@ -1520,20 +1522,22 @@
 									.split(',')
 									.map((s) => s.trim().replace(/^"|"$/g, ''))
 									.filter(Boolean);
-								challenge.targetedGrammarIds = rawIds.map((id) => idMap[id] || id);
+								if (rawIds.length > 0) {
+									challenge.targetedGrammarIds = rawIds.map((id) => idMap[id] || id);
 
-								// Immediate filtering of grammar
-								if (
-									challenge.targetedGrammarIds.length > 0 &&
-									challenge.targetedGrammar?.length > 0
-								) {
-									const usedIds = new Set(challenge.targetedGrammarIds);
-									// Store original
-									if (!challenge._allMetadataGrammar)
-										challenge._allMetadataGrammar = [...challenge.targetedGrammar];
-									challenge.targetedGrammar = challenge._allMetadataGrammar.filter((g: any) =>
-										usedIds.has(g.id)
-									);
+									// Immediate filtering of grammar
+									if (
+										challenge.targetedGrammarIds.length > 0 &&
+										challenge.targetedGrammar?.length > 0
+									) {
+										const usedIds = new Set(challenge.targetedGrammarIds);
+										// Store original
+										if (!challenge._allMetadataGrammar)
+											challenge._allMetadataGrammar = [...challenge.targetedGrammar];
+										challenge.targetedGrammar = challenge._allMetadataGrammar.filter((g: any) =>
+											usedIds.has(g.id)
+										);
+									}
 								}
 							}
 
@@ -1634,13 +1638,13 @@
 				// Filter targeted vocab/grammar to only IDs the LLM actually used in the sentence.
 				// The LLM returns targetedVocabularyIds/targetedGrammarIds listing only what it used.
 				// Discard any vocab/grammar the LLM didn't use so they aren't graded or shown.
-				if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds)) {
+				if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds) && parsed.targetedVocabularyIds.length > 0) {
 					const usedVocabIds = new Set(parsed.targetedVocabularyIds);
 					challenge.targetedVocabulary = (challenge.targetedVocabulary || []).filter((v: any) =>
 						usedVocabIds.has(v.id)
 					);
 				}
-				if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds)) {
+				if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds) && parsed.targetedGrammarIds.length > 0) {
 					const usedGrammarIds = new Set(parsed.targetedGrammarIds);
 					challenge.targetedGrammar = (challenge.targetedGrammar || []).filter((g: any) =>
 						usedGrammarIds.has(g.id)
