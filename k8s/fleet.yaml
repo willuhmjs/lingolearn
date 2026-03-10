@@ -1,5 +1,8 @@
 defaultNamespace: lingolearn
 
+helm:
+  takeOwnership: true
+
 imageScans:
   - image: ghcr.io/willuhmjs/lingolearn
     tagName: lingolearn-image
