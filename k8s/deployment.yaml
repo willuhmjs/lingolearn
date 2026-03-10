@@ -60,19 +60,16 @@ spec:
                 secretKeyRef:
                   name: lingolearn-secrets
                   key: DEFAULT_LLM_BASE_URL
-                  optional: true
             - name: DEFAULT_LLM_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: lingolearn-secrets
                   key: DEFAULT_LLM_API_KEY
-                  optional: true
             - name: DEFAULT_LLM_MODEL
               valueFrom:
                 secretKeyRef:
                   name: lingolearn-secrets
                   key: DEFAULT_LLM_MODEL
-                  optional: true
           resources:
             requests:
               memory: "256Mi"

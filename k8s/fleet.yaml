@@ -3,6 +3,16 @@ defaultNamespace: lingolearn
 helm:
   takeOwnership: true
 
+diff:
+  comparePatches:
+    - apiVersion: v1
+      kind: Secret
+      name: lingolearn-secrets
+      namespace: lingolearn
+      operations:
+        - op: remove
+          path: /data
+
 imageScans:
   - image: ghcr.io/willuhmjs/lingolearn
     tagName: lingolearn-image
