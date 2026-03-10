@@ -13,7 +13,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [user, settings, userProgress] = await Promise.all([
 		prisma.user.findUnique({
 			where: { id: locals.user.id },
-			select: { passwordHash: true }
+			select: {
+				passwordHash: true,
+				useLocalLlm: true,
+				llmBaseUrl: true,
+				llmApiKey: true,
+				llmModel: true,
+				theme: true
+			}
 		}),
 		getSiteSettings(),
 		prisma.userProgress.findMany({
@@ -27,7 +34,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	);
 
 	return {
-		user: locals.user,
+		user: { ...locals.user, ...user },
 		hasPassword: !!user?.passwordHash,
 		localLoginEnabled: settings.localLoginEnabled,
 		activeProgress,
@@ -118,6 +125,7 @@ export const actions: Actions = {
 		const useLocalLlm = formData.get('useLocalLlm') === 'on';
 		const llmBaseUrl = formData.get('llmBaseUrl')?.toString() || null;
 		const llmApiKey = formData.get('llmApiKey')?.toString() || null;
+		const llmModel = formData.get('llmModel')?.toString() || null;
 
 		try {
 			await prisma.user.update({
@@ -125,7 +133,8 @@ export const actions: Actions = {
 				data: {
 					useLocalLlm,
 					llmBaseUrl,
-					llmApiKey
+					llmApiKey,
+					llmModel
 				}
 			});
 

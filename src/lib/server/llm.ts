@@ -40,7 +40,7 @@ export async function generateChatCompletion({
 	const [user, settings] = await Promise.all([
 		prisma.user.findUnique({
 			where: { id: userId },
-			select: { useLocalLlm: true, llmBaseUrl: true, llmApiKey: true, activeLanguage: true }
+			select: { useLocalLlm: true, llmBaseUrl: true, llmApiKey: true, llmModel: true, activeLanguage: true }
 		}),
 		getSiteSettings()
 	]);
@@ -64,6 +64,7 @@ export async function generateChatCompletion({
 	);
 	const resolvedModel = (
 		model ||
+		(user?.useLocalLlm && user?.llmModel) ||
 		settings.llmModel ||
 		env.DEFAULT_LLM_MODEL ||
 		'gpt-3.5-turbo'

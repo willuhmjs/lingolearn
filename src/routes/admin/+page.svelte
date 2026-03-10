@@ -509,17 +509,6 @@
 			</p>
 		</div>
 
-		{#if llmMsg}
-			<div
-				class="alert"
-				class:alert-success={!llmError}
-				class:alert-error={llmError}
-				style="margin: 0;"
-			>
-				{llmMsg}
-			</div>
-		{/if}
-
 		<form
 			method="POST"
 			action="?/updateLLMSettings"
@@ -596,14 +585,25 @@
 				<button type="submit" class="save-btn">Save LLM Settings</button>
 			</div>
 		</form>
+
+		{#if llmMsg}
+			<div
+				class="alert"
+				class:alert-success={!llmError}
+				class:alert-error={llmError}
+				style="margin-top: 1rem; margin-bottom: 0;"
+			>
+				{llmMsg}
+			</div>
+		{/if}
 	</section>
 
-	{#if form?.success}
+	{#if form?.success && !form.message?.includes('LLM')}
 		<div class="alert alert-success">
 			<span>{form.message}</span>
 		</div>
 	{/if}
-	{#if form?.message && !form.success}
+	{#if form?.message && !form.success && !form.message?.includes('LLM')}
 		<div class="alert alert-error">
 			<span>{form.message}</span>
 		</div>

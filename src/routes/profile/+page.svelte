@@ -2,9 +2,61 @@
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import { fly } from 'svelte/transition';
+	import { onMount } from 'svelte';
 
 	export let data: PageData;
 	export let form;
+
+	// LLM settings state
+	let llmBaseUrl = data.user?.llmBaseUrl || '';
+	let llmApiKey = data.user?.llmApiKey || '';
+	let llmModel = data.user?.llmModel || '';
+	let availableModels: string[] = [];
+	let isFetchingModels = false;
+
+	// Fetch models from the LLM endpoint
+	async function fetchModels() {
+		if (!llmBaseUrl) {
+			availableModels = [];
+			return;
+		}
+
+		isFetchingModels = true;
+		try {
+			let fetchUrl = llmBaseUrl;
+			if (!fetchUrl.endsWith('/v1/models') && !fetchUrl.endsWith('/v1/models/')) {
+				fetchUrl = fetchUrl.replace(/\/+$/, '') + '/v1/models';
+			}
+
+			const headers: Record<string, string> = {};
+			if (llmApiKey) {
+				headers['Authorization'] = `Bearer ${llmApiKey}`;
+			}
+
+			const res = await fetch(fetchUrl, { headers });
+			if (res.ok) {
+				const data = await res.json();
+				if (data && data.data && Array.isArray(data.data)) {
+					availableModels = data.data.map((m: any) => m.id);
+				} else if (Array.isArray(data)) {
+					availableModels = data.map((m: any) => m.id || m);
+				} else {
+					availableModels = [];
+				}
+			} else {
+				availableModels = [];
+			}
+		} catch (error) {
+			console.error('Failed to fetch models', error);
+			availableModels = [];
+		} finally {
+			isFetchingModels = false;
+		}
+	}
+
+	onMount(() => {
+		if (llmBaseUrl) fetchModels();
+	});
 </script>
 
 <div class="profile-container">
@@ -96,29 +148,40 @@
 		{/if}
 
 		<form method="POST" action="?/updateLlmSettings" use:enhance>
-			<div class="form-group flex items-center gap-2 mb-4">
+			<div class="checkbox-wrapper">
 				<input
 					type="checkbox"
 					id="useLocalLlm"
 					name="useLocalLlm"
 					checked={data.user?.useLocalLlm}
-					class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+					class="llm-checkbox"
 				/>
-				<label for="useLocalLlm" class="dark:text-slate-300 mb-0 cursor-pointer">
+				<label for="useLocalLlm" class="llm-checkbox-label dark:text-slate-300">
 					Enable Custom LLM Server
 				</label>
 			</div>
 
 			<div class="form-group">
 				<label for="llmBaseUrl" class="dark:text-slate-300">API Endpoint (OpenAI compatible)</label>
-				<input
-					type="text"
-					id="llmBaseUrl"
-					name="llmBaseUrl"
-					placeholder="http://localhost:11434/v1"
-					value={data.user?.llmBaseUrl || ''}
-					class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
-				/>
+				<div style="display: flex; gap: 0.5rem;">
+					<input
+						type="text"
+						id="llmBaseUrl"
+						name="llmBaseUrl"
+						bind:value={llmBaseUrl}
+						placeholder="http://localhost:11434/v1"
+						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+						style="flex: 1;"
+					/>
+					<button
+						type="button"
+						class="fetch-models-btn"
+						on:click={fetchModels}
+						disabled={isFetchingModels || !llmBaseUrl}
+					>
+						{isFetchingModels ? 'Fetching...' : 'Fetch Models'}
+					</button>
+				</div>
 			</div>
 
 			<div class="form-group">
@@ -127,10 +190,36 @@
 					type="password"
 					id="llmApiKey"
 					name="llmApiKey"
+					bind:value={llmApiKey}
 					placeholder="sk-..."
-					value={data.user?.llmApiKey || ''}
 					class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 				/>
+			</div>
+
+			<div class="form-group">
+				<label for="llmModel" class="dark:text-slate-300">Model Name</label>
+				{#if availableModels.length > 0}
+					<select
+						id="llmModel"
+						name="llmModel"
+						bind:value={llmModel}
+						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+					>
+						<option value="" disabled>Select a model</option>
+						{#each availableModels as model}
+							<option value={model}>{model}</option>
+						{/each}
+					</select>
+				{:else}
+					<input
+						type="text"
+						id="llmModel"
+						name="llmModel"
+						bind:value={llmModel}
+						placeholder="e.g., llama3.2, gpt-4o-mini"
+						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+					/>
+				{/if}
 			</div>
 
 			<button type="submit" class="submit-btn">Save LLM Settings</button>
@@ -329,6 +418,7 @@
 	}
 
 	.form-group input,
+	.form-group select,
 	.theme-select {
 		width: 100%;
 		padding: 0.625rem 0.75rem;
@@ -344,10 +434,79 @@
 	}
 
 	.form-group input:focus,
+	.form-group select:focus,
 	.theme-select:focus {
 		outline: none;
 		border-color: #22c55e;
 		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+	}
+
+	.fetch-models-btn {
+		background: none;
+		border: 1px solid var(--input-border, #d1d5db);
+		padding: 0.625rem 1rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--input-text, #4b5563);
+		cursor: pointer;
+		transition: all 0.15s;
+		white-space: nowrap;
+	}
+
+	.fetch-models-btn:hover:not(:disabled) {
+		background-color: var(--link-hover-bg, #f9fafb);
+		border-color: #9ca3af;
+	}
+
+	.fetch-models-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.checkbox-wrapper {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1.25rem;
+		padding: 0.75rem;
+		background: var(--card-bg, #f9fafb);
+		border: 1px solid var(--input-border, #e5e7eb);
+		border-radius: 0.5rem;
+		transition: background-color 0.15s;
+	}
+
+	.checkbox-wrapper:hover {
+		background: var(--link-hover-bg, #f3f4f6);
+	}
+
+	.llm-checkbox {
+		width: 1.125rem;
+		height: 1.125rem;
+		border-radius: 0.25rem;
+		border: 2px solid var(--input-border, #d1d5db);
+		cursor: pointer;
+		transition: all 0.15s;
+		flex-shrink: 0;
+	}
+
+	.llm-checkbox:checked {
+		background-color: #22c55e;
+		border-color: #22c55e;
+	}
+
+	.llm-checkbox:focus {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+	}
+
+	.llm-checkbox-label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--input-text, #374151);
+		cursor: pointer;
+		margin: 0;
+		user-select: none;
 	}
 
 	.submit-btn {

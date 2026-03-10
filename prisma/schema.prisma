@@ -41,6 +41,7 @@ model User {
   useLocalLlm          Boolean                  @default(false)
   llmBaseUrl           String?
   llmApiKey            String?
+  llmModel             String?
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
   vocabularies         UserVocabulary[]
