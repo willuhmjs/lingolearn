@@ -14,6 +14,8 @@
 		MASTERED: 'var(--color-mastered, #10b981)' // emerald-500
 	};
 
+	let grammarSortOrder: 'easiest' | 'hardest' = 'easiest';
+
 	// Topologically sort grammar rules to ensure prerequisites come first
 	$: sortedRules = (() => {
 		const rules = data.allGrammarRules || [];
@@ -41,6 +43,11 @@
 		for (const rule of rules) {
 			visit(rule);
 		}
+		
+		if (grammarSortOrder === 'hardest') {
+			return sorted.reverse();
+		}
+		
 		return sorted;
 	})();
 
@@ -244,27 +251,37 @@
 		</section>
 
 		<section class="grammar-section">
-			<h2 class="dark:text-white dark:border-slate-700">Grammar Web</h2>
+			<div class="grammar-header-row">
+				<h2 class="dark:text-white dark:border-slate-700">Grammar Web</h2>
+				<div class="sort-control">
+					<label for="grammar-sort" class="dark:text-slate-400">Sort by:</label>
+					<select id="grammar-sort" bind:value={grammarSortOrder} class="dark:bg-slate-800 dark:border-slate-700 dark:text-white">
+						<option value="easiest">Easiest to Hardest</option>
+						<option value="hardest">Hardest to Easiest</option>
+					</select>
+				</div>
+			</div>
 			{#if grammarWebNodes.length === 0}
 				<p class="empty-state dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">No grammar rules available for this language.</p>
 			{:else}
 				<div class="grammar-web-container dark:bg-slate-800 dark:border-slate-700">
-					<!-- Visual web lines drawing actual connections -->
-					<svg class="web-svg-lines" width="100%" height="100%">
-						{#each grammarWebNodes as rule, i}
-							{#if i < grammarWebNodes.length - 1}
-								<line 
-									x1="50%" 
-									y1="{100 / grammarWebNodes.length * i + (100 / grammarWebNodes.length / 2)}%" 
-									x2="50%" 
-									y2="{100 / grammarWebNodes.length * (i + 1) + (100 / grammarWebNodes.length / 2)}%" 
-									class="web-connection-line"
-								/>
-							{/if}
-						{/each}
-					</svg>
-					
-					<div class="web-tree-layout">
+					<div class="grammar-web-scroll-content">
+						<!-- Visual web lines drawing actual connections -->
+						<svg class="web-svg-lines" width="100%" height="100%">
+							{#each grammarWebNodes as rule, i}
+								{#if i < grammarWebNodes.length - 1}
+									<line 
+										x1="50%" 
+										y1="{100 / grammarWebNodes.length * i + (100 / grammarWebNodes.length / 2)}%" 
+										x2="50%" 
+										y2="{100 / grammarWebNodes.length * (i + 1) + (100 / grammarWebNodes.length / 2)}%" 
+										class="web-connection-line"
+									/>
+								{/if}
+							{/each}
+						</svg>
+						
+						<div class="web-tree-layout">
 						{#each grammarWebNodes as rule}
 							{@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
 							{@const eloPercent = rule.isLocked ? 0 : Math.max(0, Math.min(100, rule.srsState === 'LEARNING' ? ((rule.eloRating - 1000) / 50) * 100 : rule.srsState === 'KNOWN' ? ((rule.eloRating - 1050) / 100) * 100 : 100))}
@@ -307,6 +324,7 @@
 								</div>
 							</button>
 						{/each}
+					</div>
 					</div>
 				</div>
 			{/if}
@@ -860,18 +878,53 @@
 	.elo-progress-fill.mastered { background: linear-gradient(90deg, #10b981, #059669); }
 
 	/* Grammar Web Redesign */
+	.grammar-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.grammar-header-row h2 {
+		margin-bottom: 0;
+	}
+
+	.sort-control {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.sort-control select {
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.375rem;
+		border: 1px solid #cbd5e1;
+		background-color: #ffffff;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
 	.grammar-web-container {
 		position: relative;
 		background: var(--card-bg, #ffffff);
 		border-radius: 1rem;
-		padding: 2rem;
-		min-height: 400px;
+		height: 500px;
 		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
 		border: 1px solid rgba(0,0,0,0.05);
-		overflow: hidden;
+		overflow-y: auto;
+		overflow-x: hidden;
+		display: block;
+	}
+
+	.grammar-web-scroll-content {
+		position: relative;
+		padding: 2rem;
+		min-height: 100%;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
 	}
 
 	.web-svg-lines {
@@ -980,6 +1033,12 @@
 	@media (max-width: 768px) {
 		.dashboard-container {
 			padding: 1rem;
+		}
+
+		.grammar-header-row {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 1rem;
 		}
 
 		.dashboard-header {
