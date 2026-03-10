@@ -1,6 +1,19 @@
 export const particles = [
-	{ word: 'ne', translation: 'not (part 1)', isBeginner: true },
-	{ word: 'pas', translation: 'not (part 2)', isBeginner: true },
+	{ word: 'ne', translation: 'not (part 1 of negation)', isBeginner: true },
+	{ word: 'pas', translation: 'not (part 2 of negation)', isBeginner: true },
 	{ word: 'y', translation: 'there/to it', isBeginner: true },
-	{ word: 'en', translation: 'of it/some', isBeginner: true }
+	{ word: 'en', translation: 'of it/from there/some', isBeginner: true },
+	{ word: 'bien', translation: 'well/indeed/really', isBeginner: true },
+	{ word: 'aussi', translation: 'also/too/as well', isBeginner: true },
+	{ word: 'non', translation: 'no/not', isBeginner: true },
+	{ word: 'donc', translation: 'so/therefore/then', isBeginner: true },
+	{ word: 'même', translation: 'even/same/itself', isBeginner: true },
+	{ word: 'plus', translation: 'no more/no longer (in negation)', isBeginner: false },
+	{ word: 'jamais', translation: 'never/ever', isBeginner: false },
+	{ word: 'rien', translation: 'nothing', isBeginner: false },
+	{ word: 'que', translation: 'only (restrictive particle)', isBeginner: false },
+	{ word: 'point', translation: 'not at all (literary negation)', isBeginner: false },
+	{ word: 'guère', translation: 'hardly/scarcely', isBeginner: false },
+	{ word: 'ci', translation: 'here (in compounds: ci-joint, ci-dessus)', isBeginner: false },
+	{ word: 'là', translation: 'there (emphatic/in compounds)', isBeginner: false },
 ];

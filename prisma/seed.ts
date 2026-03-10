@@ -1153,6 +1153,38 @@ const spanishGrammarRules = [
 			'# Si Clauses (If Clauses)\n\n"Si" means "if". Different tense combinations are used depending on the likelihood of the condition.\n\n### 1. Likely Situations (Present + Present/Future)\n*   Si **tengo** tiempo, **iré** al cine. (If I have time, I will go to the movies.)\n\n### 2. Unlikely/Unreal Present Situations (Imperfect Subjunctive + Conditional)\n*   Si **tuviera** dinero, **compraría** un coche. (If I had money, I would buy a car.)\n\n### 3. Impossible Past Situations (Past Perfect Subjunctive + Conditional Perfect)\n*   Si **hubiera estudiado**, **habría aprobado**. (If I had studied, I would have passed.)',
 		level: 'C1',
 		dependencies: ['Conditional Tense', 'Imperfect Subjunctive']
+	},
+	{
+		title: 'Passive Voice (Voz Pasiva)',
+		description: 'Forming passive constructions with ser + past participle and using passive se.',
+		guide:
+			'# Passive Voice (Voz Pasiva)\n\nSpanish has two main ways to express passive meaning: the **ser passive** (pasiva con ser) and the **passive se** (pasiva refleja).\n\n### 1. Ser + Past Participle\nFormed with a conjugated form of **ser** + **past participle**. The participle agrees in gender and number with the subject.\n*   *El libro **fue escrito** por Cervantes.* (The book was written by Cervantes.)\n*   *Las cartas **fueron enviadas** ayer.* (The letters were sent yesterday.)\n*   *La casa **ser\u00e1 construida** el pr\u00f3ximo a\u00f1o.* (The house will be built next year.)\n\nThe agent (doer) is introduced with **por**.\n\n### 2. Passive Se (Pasiva Refleja)\nFormed with **se** + verb in third person (singular or plural). No agent is mentioned.\n*   *Se **habla** espa\u00f1ol aqu\u00ed.* (Spanish is spoken here.)\n*   *Se **venden** coches usados.* (Used cars are sold.)\n\n### When to Use Each\n*   **Ser passive:** More formal, used in written language, news, and when the agent is mentioned.\n*   **Passive se:** Far more common in everyday Spanish, used when the agent is unknown or unimportant.\n*   The ser passive is less frequent in spoken Spanish than in English \u2014 prefer passive se or active constructions in conversation.',
+		level: 'C1',
+		dependencies: ['Present Perfect (Pret\u00e9rito Perfecto)', 'Preterite Tense - Regular Verbs']
+	},
+	{
+		title: 'Past Subjunctive Perfect (Pluscuamperfecto de Subjuntivo)',
+		description: 'Expressing hypothetical past situations using hubiera/hubiese + past participle.',
+		guide:
+			'# Past Subjunctive Perfect (Pluscuamperfecto de Subjuntivo)\n\nThe past subjunctive perfect expresses actions that **did not happen** in the past, often used in hypothetical or contrary-to-fact situations.\n\n### Formation\n**Imperfect subjunctive of haber** + **past participle**\n\n| Person | hubiera form | hubiese form |\n|---|---|---|\n| yo | hubiera | hubiese |\n| t\u00fa | hubieras | hubieses |\n| \u00e9l/ella/usted | hubiera | hubiese |\n| nosotros | hubi\u00e9ramos | hubi\u00e9semos |\n| vosotros | hubierais | hubieseis |\n| ellos/ustedes | hubieran | hubiesen |\n\nBoth forms (hubiera/hubiese) are interchangeable.\n\n### Uses\n\n#### 1. Si-clauses for Impossible Past Conditions\n*   *Si **hubiera sabido**, te habr\u00eda llamado.* (If I had known, I would have called you.)\n\n#### 2. After Past-tense Triggers Requiring Subjunctive\n*   *Dudaba que **hubieran llegado** a tiempo.* (I doubted they had arrived on time.)\n*   *No cre\u00eda que **hubieras dicho** eso.* (I didn\'t believe you had said that.)\n\n#### 3. Expressing Wishes About the Past\n*   *Ojal\u00e1 **hubi\u00e9ramos viajado** juntos.* (I wish we had traveled together.)',
+		level: 'C1',
+		dependencies: ['Imperfect Subjunctive', 'Past Perfect (Pluscuamperfecto)']
+	},
+	{
+		title: 'Future Subjunctive',
+		description: 'The rarely used future subjunctive, found mainly in legal texts and proverbs.',
+		guide:
+			'# Future Subjunctive (Futuro de Subjuntivo)\n\nThe future subjunctive is **archaic** in modern Spanish and has been almost entirely replaced by the present subjunctive or present indicative. However, it survives in **legal language**, **proverbs**, and **set phrases**.\n\n### Formation\nTake the **ellos** form of the preterite, drop the **-ron** ending, and add the future subjunctive endings:\n\n| Person | Ending | hablar \u2192 | tener \u2192 |\n|---|---|---|---|\n| yo | -re | hablare | tuviere |\n| t\u00fa | -res | hablares | tuvieres |\n| \u00e9l/ella/usted | -re | hablare | tuviere |\n| nosotros | -remos | habl\u00e1remos | tuvi\u00e9remos |\n| vosotros | -reis | hablareis | tuviereis |\n| ellos/ustedes | -ren | hablaren | tuvieren |\n\n### Examples in Legal Language\n*   *El que **infringiere** esta ley ser\u00e1 sancionado.* (Whoever violates this law shall be penalized.)\n*   *Si el acusado **no compareciere**, se dictar\u00e1 sentencia en rebeld\u00eda.* (If the accused does not appear, judgment shall be rendered in absentia.)\n\n### Set Phrases and Proverbs\n*   *Sea lo que **fuere**.* (Be that as it may.)\n*   *Donde **fueres**, haz lo que **vieres**.* (When in Rome, do as the Romans do.)\n*   *Venga lo que **viniere**.* (Come what may.)\n\n### Note\nIn contemporary spoken and written Spanish, use the **present subjunctive** instead. The future subjunctive appears only in formal legal documents and traditional expressions.',
+		level: 'C1',
+		dependencies: ['Present Subjunctive Mood', 'Preterite Tense - Irregular Verbs']
+	},
+	{
+		title: 'Nominalization (Lo + Adjective)',
+		description: 'Using the neuter article "lo" with adjectives and clauses to create abstract noun phrases.',
+		guide:
+			'# Nominalization with Lo\n\nThe neuter article **lo** does not refer to a specific noun \u2014 it creates **abstract noun phrases** from adjectives, clauses, and other elements.\n\n### 1. Lo + Adjective (Abstract Concepts)\nTurns an adjective into an abstract noun meaning "the ... thing/part".\n*   *Lo **importante** es estudiar.* (The important thing is to study.)\n*   *Lo **bueno** de vivir aqu\u00ed es el clima.* (The good thing about living here is the weather.)\n*   *Lo **malo** fue el precio.* (The bad part was the price.)\n\n### 2. Lo que + Clause (What / That which)\nIntroduces noun clauses meaning "what" or "that which".\n*   *Lo que **quiero** es descansar.* (What I want is to rest.)\n*   *No entiendo lo que **dices**.* (I don\'t understand what you\'re saying.)\n\n### 3. Lo de + Noun/Pronoun (The matter of)\nRefers to a situation or topic.\n*   *Lo de **ayer** fue incre\u00edble.* (What happened yesterday was incredible.)\n*   *\u00bfQu\u00e9 pas\u00f3 con lo de **tu trabajo**?* (What happened with the matter of your job?)\n\n### 4. Lo + Adjective + que (Emphasis)\nExpresses emphasis, similar to "how ... something is".\n*   *No sabes lo **dif\u00edcil** que es.* (You don\'t know how difficult it is.)\n*   *Me sorprende lo **r\u00e1pido** que aprendes.* (It surprises me how fast you learn.)\n\n### Note\n**Lo** is neuter and never changes form \u2014 it does not agree in gender or number with anything. Do not confuse it with **el** (masculine definite article).',
+		level: 'C1',
+		dependencies: ['Adjective Agreement', 'Definite and Indefinite Articles']
 	}
 ];
 

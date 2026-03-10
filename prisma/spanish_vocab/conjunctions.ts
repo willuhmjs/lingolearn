@@ -108,5 +108,70 @@ export const conjunctions = [
 		lemma: 'sino que',
 		meaning: 'but rather that',
 		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'a fin de que',
+		meaning: 'in order that / so that',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'a menos que',
+		meaning: 'unless',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'a no ser que',
+		meaning: 'unless',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'antes de que',
+		meaning: 'before',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'dado que',
+		meaning: 'given that / since',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'después de que',
+		meaning: 'after',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'en cuanto',
+		meaning: 'as soon as',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'luego que',
+		meaning: 'as soon as / after',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'mientras que',
+		meaning: 'whereas / while',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'por más que',
+		meaning: 'no matter how much',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'siempre que',
+		meaning: 'as long as / provided that',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'una vez que',
+		meaning: 'once / as soon as',
+		partOfSpeech: 'conjunction'
+	},
+	{
+		lemma: 'salvo que',
+		meaning: 'unless / except that',
+		partOfSpeech: 'conjunction'
 	}
 ];

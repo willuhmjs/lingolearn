@@ -148,5 +148,85 @@ export const prepositions = [
 		lemma: 'encima de',
 		meaning: 'on top of',
 		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'al lado de',
+		meaning: 'next to / beside',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'a lo largo de',
+		meaning: 'along / throughout',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'alrededor de',
+		meaning: 'around / about',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'aparte de',
+		meaning: 'apart from / besides',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'a pesar de',
+		meaning: 'despite / in spite of',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'dentro de',
+		meaning: 'inside / within',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'en lugar de',
+		meaning: 'instead of',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'en medio de',
+		meaning: 'in the middle of',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'en vez de',
+		meaning: 'instead of',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'frente a',
+		meaning: 'in front of / facing',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'fuera de',
+		meaning: 'outside of',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'junto a',
+		meaning: 'next to / together with',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'lejos de',
+		meaning: 'far from',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'más allá de',
+		meaning: 'beyond',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'respecto a',
+		meaning: 'with regard to / regarding',
+		partOfSpeech: 'preposition'
+	},
+	{
+		lemma: 'cerca de',
+		meaning: 'near / close to',
+		partOfSpeech: 'preposition'
 	}
 ];

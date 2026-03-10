@@ -1,7 +1,53 @@
 export const conjunctions = [
+	// Coordinating conjunctions
 	{ word: 'et', translation: 'and', isBeginner: true },
 	{ word: 'ou', translation: 'or', isBeginner: true },
 	{ word: 'mais', translation: 'but', isBeginner: true },
+	{ word: 'donc', translation: 'so / therefore' },
+	{ word: 'or', translation: 'now / yet' },
+	{ word: 'ni', translation: 'neither / nor' },
+	{ word: 'car', translation: 'for / because' },
+
+	// Subordinating conjunctions
+	{ word: 'que', translation: 'that' },
+	{ word: 'quand', translation: 'when' },
+	{ word: 'lorsque', translation: 'when' },
+	{ word: 'comme', translation: 'as / like' },
+	{ word: 'si', translation: 'if', isBeginner: true },
+	{ word: 'puisque', translation: 'since / given that' },
 	{ word: 'parce que', translation: 'because', isBeginner: true },
-	{ word: 'si', translation: 'if', isBeginner: true }
+	{ word: 'bien que', translation: 'although / even though' },
+	{ word: 'quoique', translation: 'although / even though' },
+	{ word: 'afin que', translation: 'so that / in order that' },
+	{ word: 'pour que', translation: 'so that / in order that' },
+	{ word: 'avant que', translation: 'before' },
+	{ word: 'après que', translation: 'after' },
+	{ word: 'dès que', translation: 'as soon as' },
+	{ word: 'aussitôt que', translation: 'as soon as' },
+	{ word: 'pendant que', translation: 'while / during' },
+	{ word: 'tandis que', translation: 'while / whereas' },
+	{ word: 'alors que', translation: 'while / whereas' },
+	{ word: 'depuis que', translation: 'since' },
+	{ word: "jusqu'à ce que", translation: 'until' },
+	{ word: 'à moins que', translation: 'unless' },
+	{ word: 'pourvu que', translation: 'provided that' },
+	{ word: 'à condition que', translation: 'on the condition that' },
+	{ word: 'de sorte que', translation: 'so that / in such a way that' },
+	{ word: 'de manière que', translation: 'so that / in such a way that' },
+	{ word: 'sans que', translation: 'without' },
+
+	// Correlative conjunctions
+	{ word: 'soit...soit', translation: 'either...or' },
+	{ word: 'ni...ni', translation: 'neither...nor' },
+	{ word: 'non seulement...mais aussi', translation: 'not only...but also' },
+	{ word: 'tantôt...tantôt', translation: 'sometimes...sometimes' },
+
+	// Adversative and transitional conjunctions
+	{ word: 'cependant', translation: 'however' },
+	{ word: 'néanmoins', translation: 'nevertheless' },
+	{ word: 'pourtant', translation: 'yet / however' },
+	{ word: 'toutefois', translation: 'however / nevertheless' },
+	{ word: 'en revanche', translation: 'on the other hand' },
+	{ word: 'par contre', translation: 'on the other hand' },
+	{ word: "d'ailleurs", translation: 'moreover / besides' },
 ];

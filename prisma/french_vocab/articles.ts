@@ -1,8 +1,18 @@
 export const articles = [
 	{ word: 'le', translation: 'the (masculine singular)', isBeginner: true },
 	{ word: 'la', translation: 'the (feminine singular)', isBeginner: true },
+	{ word: "l'", translation: 'the (before vowel or silent h)', isBeginner: true },
 	{ word: 'les', translation: 'the (plural)', isBeginner: true },
-	{ word: 'un', translation: 'a/an (masculine singular)', isBeginner: true },
-	{ word: 'une', translation: 'a/an (feminine singular)', isBeginner: true },
-	{ word: 'des', translation: 'some (plural)', isBeginner: true }
+	{ word: 'un', translation: 'a/an (masculine)', isBeginner: true },
+	{ word: 'une', translation: 'a/an (feminine)', isBeginner: true },
+	{ word: 'des', translation: 'some (indefinite plural)', isBeginner: true },
+	{ word: 'du', translation: 'some (partitive masculine)', isBeginner: true },
+	{ word: 'de la', translation: 'some (partitive feminine)', isBeginner: true },
+	{ word: "de l'", translation: 'some (partitive before vowel)', isBeginner: true },
+	{ word: 'au', translation: 'to the/at the (masculine singular contraction)', isBeginner: true },
+	{ word: 'aux', translation: 'to the/at the (plural contraction)', isBeginner: true },
+	{ word: 'ce', translation: 'this/that (masculine singular demonstrative)', isBeginner: false },
+	{ word: 'cet', translation: 'this/that (masculine before vowel demonstrative)', isBeginner: false },
+	{ word: 'cette', translation: 'this/that (feminine singular demonstrative)', isBeginner: false },
+	{ word: 'ces', translation: 'these/those (plural demonstrative)', isBeginner: false },
 ];

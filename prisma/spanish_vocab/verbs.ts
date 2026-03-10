@@ -700,5 +700,1256 @@ export const verbs = [
 		lemma: 'llorar',
 		meaning: 'to cry',
 		partOfSpeech: 'verb'
-	}
+	},
+	// Communication
+	{
+		lemma: 'susurrar',
+		meaning: 'to whisper',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'gritar',
+		meaning: 'to shout',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'murmurar',
+		meaning: 'to murmur',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'anunciar',
+		meaning: 'to announce',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'advertir',
+		meaning: 'to warn',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sugerir',
+		meaning: 'to suggest',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'proponer',
+		meaning: 'to propose',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'negociar',
+		meaning: 'to negotiate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'debatir',
+		meaning: 'to debate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'discutir',
+		meaning: 'to discuss/argue',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'comunicar',
+		meaning: 'to communicate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'expresar',
+		meaning: 'to express',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'mencionar',
+		meaning: 'to mention',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'comentar',
+		meaning: 'to comment',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'opinar',
+		meaning: 'to give an opinion',
+		partOfSpeech: 'verb'
+	},
+	// Movement
+	{
+		lemma: 'arrastrarse',
+		meaning: 'to crawl/drag oneself',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'deslizarse',
+		meaning: 'to slide/glide',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'escalar',
+		meaning: 'to climb/scale',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'rodar',
+		meaning: 'to roll',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'nadar',
+		meaning: 'to swim',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'flotar',
+		meaning: 'to float',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'hundirse',
+		meaning: 'to sink',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'aterrizar',
+		meaning: 'to land',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'despegar',
+		meaning: 'to take off',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'tropezar',
+		meaning: 'to stumble/trip',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'trepar',
+		meaning: 'to climb',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'retroceder',
+		meaning: 'to go back/retreat',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'avanzar',
+		meaning: 'to advance',
+		partOfSpeech: 'verb'
+	},
+	// Daily routines
+	{
+		lemma: 'despertarse',
+		meaning: 'to wake oneself up',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'afeitarse',
+		meaning: 'to shave',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'peinarse',
+		meaning: 'to comb one\'s hair',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'maquillarse',
+		meaning: 'to put on makeup',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'vestirse',
+		meaning: 'to get dressed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'desayunar',
+		meaning: 'to have breakfast',
+		partOfSpeech: 'verb',
+		isBeginner: true
+	},
+	{
+		lemma: 'cenar',
+		meaning: 'to have dinner',
+		partOfSpeech: 'verb',
+		isBeginner: true
+	},
+	{
+		lemma: 'merendar',
+		meaning: 'to have a snack',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'ducharse',
+		meaning: 'to shower',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'bañarse',
+		meaning: 'to bathe',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'acostarse',
+		meaning: 'to go to bed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'cepillarse',
+		meaning: 'to brush (teeth/hair)',
+		partOfSpeech: 'verb'
+	},
+	// Cooking
+	{
+		lemma: 'hornear',
+		meaning: 'to bake',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'freír',
+		meaning: 'to fry',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'hervir',
+		meaning: 'to boil',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'mezclar',
+		meaning: 'to mix',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'cortar',
+		meaning: 'to cut',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'pelar',
+		meaning: 'to peel',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'probar',
+		meaning: 'to taste/try',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'asar',
+		meaning: 'to roast/grill',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'condimentar',
+		meaning: 'to season',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'picar',
+		meaning: 'to chop/mince',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'batir',
+		meaning: 'to beat/whisk',
+		partOfSpeech: 'verb'
+	},
+	// Work/Business
+	{
+		lemma: 'contratar',
+		meaning: 'to hire',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'despedir',
+		meaning: 'to fire/dismiss',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'renunciar',
+		meaning: 'to resign/quit',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'invertir',
+		meaning: 'to invest',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'facturar',
+		meaning: 'to invoice/bill',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'exportar',
+		meaning: 'to export',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'importar',
+		meaning: 'to import/matter',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'administrar',
+		meaning: 'to manage/administer',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'supervisar',
+		meaning: 'to supervise',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'capacitar',
+		meaning: 'to train/qualify',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'promover',
+		meaning: 'to promote',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'presupuestar',
+		meaning: 'to budget',
+		partOfSpeech: 'verb'
+	},
+	// Emotions
+	{
+		lemma: 'emocionarse',
+		meaning: 'to get excited/moved',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'asombrarse',
+		meaning: 'to be amazed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'enfadarse',
+		meaning: 'to get angry',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'calmarse',
+		meaning: 'to calm down',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'alegrarse',
+		meaning: 'to be glad/rejoice',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'preocuparse',
+		meaning: 'to worry',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sorprenderse',
+		meaning: 'to be surprised',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'avergonzarse',
+		meaning: 'to be ashamed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'frustrarse',
+		meaning: 'to get frustrated',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'entusiasmarse',
+		meaning: 'to get enthusiastic',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'deprimirse',
+		meaning: 'to get depressed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'extrañar',
+		meaning: 'to miss (someone)',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'enojarse',
+		meaning: 'to get angry',
+		partOfSpeech: 'verb'
+	},
+	// Cognition
+	{
+		lemma: 'analizar',
+		meaning: 'to analyze',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'evaluar',
+		meaning: 'to evaluate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'investigar',
+		meaning: 'to investigate/research',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'calcular',
+		meaning: 'to calculate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'deducir',
+		meaning: 'to deduce',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'razonar',
+		meaning: 'to reason',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'memorizar',
+		meaning: 'to memorize',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'imaginar',
+		meaning: 'to imagine',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'concentrarse',
+		meaning: 'to concentrate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'reflexionar',
+		meaning: 'to reflect/ponder',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'interpretar',
+		meaning: 'to interpret',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'comparar',
+		meaning: 'to compare',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'distinguir',
+		meaning: 'to distinguish',
+		partOfSpeech: 'verb'
+	},
+	// Creation
+	{
+		lemma: 'diseñar',
+		meaning: 'to design',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'fabricar',
+		meaning: 'to manufacture',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'elaborar',
+		meaning: 'to elaborate/produce',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'componer',
+		meaning: 'to compose',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'grabar',
+		meaning: 'to record',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'filmar',
+		meaning: 'to film',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'publicar',
+		meaning: 'to publish',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'imprimir',
+		meaning: 'to print',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'esculpir',
+		meaning: 'to sculpt',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'inventar',
+		meaning: 'to invent',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'moldear',
+		meaning: 'to mold/shape',
+		partOfSpeech: 'verb'
+	},
+	// Technology
+	{
+		lemma: 'programar',
+		meaning: 'to program',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'descargar',
+		meaning: 'to download',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'subir',
+		meaning: 'to upload/go up',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'conectar',
+		meaning: 'to connect',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'actualizar',
+		meaning: 'to update',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'instalar',
+		meaning: 'to install',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'configurar',
+		meaning: 'to configure/set up',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'navegar',
+		meaning: 'to browse/navigate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'reiniciar',
+		meaning: 'to restart/reboot',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'escanear',
+		meaning: 'to scan',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'hackear',
+		meaning: 'to hack',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'teclear',
+		meaning: 'to type/key in',
+		partOfSpeech: 'verb'
+	},
+	// Health
+	{
+		lemma: 'curar',
+		meaning: 'to cure/heal',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sanar',
+		meaning: 'to heal/recover',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'operar',
+		meaning: 'to operate (surgery)',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'diagnosticar',
+		meaning: 'to diagnose',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'recetar',
+		meaning: 'to prescribe',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'vacunar',
+		meaning: 'to vaccinate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'recuperarse',
+		meaning: 'to recover',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'enfermar',
+		meaning: 'to get sick',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'respirar',
+		meaning: 'to breathe',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sangrar',
+		meaning: 'to bleed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'doler',
+		meaning: 'to hurt/ache',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'adelgazar',
+		meaning: 'to lose weight',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'engordar',
+		meaning: 'to gain weight',
+		partOfSpeech: 'verb'
+	},
+	// Social
+	{
+		lemma: 'celebrar',
+		meaning: 'to celebrate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'felicitar',
+		meaning: 'to congratulate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'agradecer',
+		meaning: 'to thank',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'disculparse',
+		meaning: 'to apologize',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'quejarse',
+		meaning: 'to complain',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'colaborar',
+		meaning: 'to collaborate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'cooperar',
+		meaning: 'to cooperate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'saludar',
+		meaning: 'to greet',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'despedirse',
+		meaning: 'to say goodbye',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'invitar',
+		meaning: 'to invite',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'abrazar',
+		meaning: 'to hug',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'besar',
+		meaning: 'to kiss',
+		partOfSpeech: 'verb'
+	},
+	// Nature
+	{
+		lemma: 'plantar',
+		meaning: 'to plant',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'regar',
+		meaning: 'to water (plants)',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'florecer',
+		meaning: 'to bloom/flourish',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'crecer',
+		meaning: 'to grow',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'cosechar',
+		meaning: 'to harvest',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'contaminar',
+		meaning: 'to pollute/contaminate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'reciclar',
+		meaning: 'to recycle',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sembrar',
+		meaning: 'to sow/plant seeds',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'podar',
+		meaning: 'to prune/trim',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'marchitarse',
+		meaning: 'to wilt/wither',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'germinar',
+		meaning: 'to germinate',
+		partOfSpeech: 'verb'
+	},
+	// Legal/Formal
+	{
+		lemma: 'juzgar',
+		meaning: 'to judge',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'condenar',
+		meaning: 'to condemn/convict',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'absolver',
+		meaning: 'to acquit/absolve',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'legislar',
+		meaning: 'to legislate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'gobernar',
+		meaning: 'to govern',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'votar',
+		meaning: 'to vote',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'elegir',
+		meaning: 'to choose/elect',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'demandar',
+		meaning: 'to sue/demand',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'testificar',
+		meaning: 'to testify',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'arrestar',
+		meaning: 'to arrest',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'prohibir',
+		meaning: 'to prohibit/forbid',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'regular',
+		meaning: 'to regulate',
+		partOfSpeech: 'verb'
+	},
+	// Miscellaneous common verbs
+	{
+		lemma: 'merecer',
+		meaning: 'to deserve',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'pertenecer',
+		meaning: 'to belong',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'obedecer',
+		meaning: 'to obey',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'exigir',
+		meaning: 'to demand/require',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'garantizar',
+		meaning: 'to guarantee',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sostener',
+		meaning: 'to hold/sustain',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'destacar',
+		meaning: 'to stand out/highlight',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'aprovechar',
+		meaning: 'to take advantage of',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'fracasar',
+		meaning: 'to fail',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'triunfar',
+		meaning: 'to triumph/succeed',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'dudar',
+		meaning: 'to doubt',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'negar',
+		meaning: 'to deny',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'confirmar',
+		meaning: 'to confirm',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'compartir',
+		meaning: 'to share',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'decidir',
+		meaning: 'to decide',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'preferir',
+		meaning: 'to prefer',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'insistir',
+		meaning: 'to insist',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'depender',
+		meaning: 'to depend',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'protestar',
+		meaning: 'to protest',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'defender',
+		meaning: 'to defend',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'atacar',
+		meaning: 'to attack',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'proteger',
+		meaning: 'to protect',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'escapar',
+		meaning: 'to escape',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'sobrevivir',
+		meaning: 'to survive',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'rescatar',
+		meaning: 'to rescue',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'organizar',
+		meaning: 'to organize',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'planificar',
+		meaning: 'to plan',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'desarrollar',
+		meaning: 'to develop',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'mejorar',
+		meaning: 'to improve',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'empeorar',
+		meaning: 'to worsen',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'aumentar',
+		meaning: 'to increase',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'disminuir',
+		meaning: 'to decrease',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'reparar',
+		meaning: 'to repair',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'romper',
+		meaning: 'to break',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'arreglar',
+		meaning: 'to fix/arrange',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'resolver',
+		meaning: 'to solve/resolve',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'evitar',
+		meaning: 'to avoid',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'enfrentar',
+		meaning: 'to face/confront',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'resistir',
+		meaning: 'to resist',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'rendirse',
+		meaning: 'to give up/surrender',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'luchar',
+		meaning: 'to fight/struggle',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'competir',
+		meaning: 'to compete',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'entrenar',
+		meaning: 'to train/practice',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'ejercitar',
+		meaning: 'to exercise',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'estacionar',
+		meaning: 'to park',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'cargar',
+		meaning: 'to load/charge',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'señalar',
+		meaning: 'to point out/signal',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'indicar',
+		meaning: 'to indicate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'demostrar',
+		meaning: 'to demonstrate/prove',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'representar',
+		meaning: 'to represent',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'significar',
+		meaning: 'to mean/signify',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'establecer',
+		meaning: 'to establish',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'determinar',
+		meaning: 'to determine',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'asegurar',
+		meaning: 'to assure/ensure',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'obligar',
+		meaning: 'to force/oblige',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'corresponder',
+		meaning: 'to correspond/belong',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'disponer',
+		meaning: 'to arrange/have available',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'reducir',
+		meaning: 'to reduce',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'aplicar',
+		meaning: 'to apply',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'generar',
+		meaning: 'to generate',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'ocupar',
+		meaning: 'to occupy',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'surgir',
+		meaning: 'to arise/emerge',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'superar',
+		meaning: 'to overcome/surpass',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'completar',
+		meaning: 'to complete',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'obtener',
+		meaning: 'to obtain',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'incluir',
+		meaning: 'to include',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'excluir',
+		meaning: 'to exclude',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'añadir',
+		meaning: 'to add',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'eliminar',
+		meaning: 'to eliminate/delete',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'seleccionar',
+		meaning: 'to select',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'recoger',
+		meaning: 'to pick up/collect',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'entregar',
+		meaning: 'to deliver/hand over',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'devolver',
+		meaning: 'to return (something)',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'enviar',
+		meaning: 'to send',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'recomendar',
+		meaning: 'to recommend',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'prometer',
+		meaning: 'to promise',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'amenazar',
+		meaning: 'to threaten',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'robar',
+		meaning: 'to steal/rob',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'mentir',
+		meaning: 'to lie',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'confiar',
+		meaning: 'to trust',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'soñar',
+		meaning: 'to dream',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'desperdiciar',
+		meaning: 'to waste',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'perseguir',
+		meaning: 'to pursue/chase',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'huir',
+		meaning: 'to flee',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'esconder',
+		meaning: 'to hide',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'revelar',
+		meaning: 'to reveal',
+		partOfSpeech: 'verb'
+	},
+	{
+		lemma: 'mostrar',
+		meaning: 'to show',
+		partOfSpeech: 'verb'
+	},
 ];
