@@ -1,31 +1,3 @@
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: lingolearn-postgresql
-  namespace: lingolearn
-spec:
-  instances: 3
-  storage:
-    size: 50Gi
-  bootstrap:
-    initdb:
-      database: lingolearn
-      owner: lingolearn
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: lingolearn-secrets
-  namespace: lingolearn
-type: Opaque
-stringData:
-  AUTH_SECRET: ''
-  AUTH_GOOGLE_ID: ''
-  AUTH_GOOGLE_SECRET: ''
-  DEFAULT_LLM_BASE_URL: ''
-  DEFAULT_LLM_API_KEY: ''
-  DEFAULT_LLM_MODEL: ''
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,10 +17,21 @@ spec:
     spec:
       containers:
         - name: lingolearn
-          # {"$imagescan": "lingolearn-image"}
-          image: ghcr.io/willuhmjs/lingolearn:latest
+          image: ghcr.io/willuhmjs/lingolearn:latest # {"$image": "lingolearn-image"}
           ports:
             - containerPort: 3000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -92,51 +75,8 @@ spec:
                   optional: true
           resources:
             requests:
-              memory: '256Mi'
-              cpu: '250m'
+              memory: "256Mi"
+              cpu: "250m"
             limits:
-              memory: '512Mi'
-              cpu: '500m'
----
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    traefik.ingress.kubernetes.io/service.sticky.cookie: 'true'
-    traefik.ingress.kubernetes.io/service.sticky.cookie.name: 'sticky-session'
-    traefik.ingress.kubernetes.io/service.sticky.cookie.secure: 'true'
-  labels:
-    app: lingolearn
-  name: lingolearn
-  namespace: lingolearn
-spec:
-  ports:
-    - name: website
-      port: 3000
-  selector:
-    app: lingolearn
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    cert-manager.io/cluster-issuer: cs-dns-cluster
-  name: lingolearn
-  namespace: lingolearn
-spec:
-  ingressClassName: traefik
-  rules:
-    - host: german.will.net
-      http:
-        paths:
-          - backend:
-              service:
-                name: lingolearn
-                port:
-                  number: 3000
-            path: /
-            pathType: Prefix
-  tls:
-    - hosts:
-        - german.will.net
-      secretName: lingolearn-tls
+              memory: "512Mi"
+              cpu: "500m"

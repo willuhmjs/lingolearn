@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lingolearn
+  namespace: lingolearn
+  annotations:
+    cert-manager.io/cluster-issuer: cs-dns-cluster
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: german.will.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: lingolearn
+                port:
+                  number: 3000
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - german.will.net
+      secretName: lingolearn-tls

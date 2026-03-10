@@ -1,0 +1,13 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: lingolearn-postgresql
+  namespace: lingolearn
+spec:
+  instances: 3
+  storage:
+    size: 50Gi
+  bootstrap:
+    initdb:
+      database: lingolearn
+      owner: lingolearn

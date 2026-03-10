@@ -1,9 +1,9 @@
 defaultNamespace: lingolearn
 
 imageScans:
-  - name: lingolearn-scan
-    image: "ghcr.io/willuhmjs/lingolearn"
-    policy:
-      alphabetical:
-        order: desc
+  - image: ghcr.io/willuhmjs/lingolearn
     tagName: lingolearn-image
+    policy:
+      semver:
+        range: ">=0.0.0"
+    interval: 5m0s
