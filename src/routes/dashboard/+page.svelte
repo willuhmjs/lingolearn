@@ -188,7 +188,8 @@
 
 	function nextTestQuestion() {
 		if (!testOutQuestions) return;
-		if (testOutCurrentIndex >= testOutQuestions.length - 1) {
+		const wrongCount = testOutScores.filter((s) => !s).length;
+		if (testOutCurrentIndex >= testOutQuestions.length - 1 || wrongCount >= 2) {
 			grammarModalPhase = 'results';
 		} else {
 			testOutCurrentIndex++;
@@ -746,19 +747,21 @@
 										<p class="feedback-explanation dark:text-slate-400">{q.explanation}</p>
 									</div>
 								</div>
+								{@const wrongSoFar = testOutScores.filter((s) => \!s).length}
 								<button class="test-next-btn" on:click={nextTestQuestion}>
-									{testOutCurrentIndex >= testOutTotalQuestions - 1 ? 'See Results →' : 'Next Question →'}
+									{testOutCurrentIndex >= testOutTotalQuestions - 1 || wrongSoFar >= 2 ? 'See Results →' : 'Next Question →'}
 								</button>
 							{/if}
 						{/if}
 					</div>
 
 				{:else if grammarModalPhase === 'results'}
+					{@const endedEarly = testOutScores.filter((s) => !s).length >= 2 && testOutScores.length < testOutTotalQuestions}
 					<h3 class="modal-title dark:text-white">Results: {rule.grammarRule.title}</h3>
 
 					<div class="modal-body dark:text-slate-300">
 						<div class="results-score-display" class:results-pass={testOutPassed} class:results-fail={!testOutPassed}>
-							<span class="results-number">{testOutPassedCount}/{testOutTotalQuestions}</span>
+							<span class="results-number">{testOutPassedCount}/{testOutScores.length}</span>
 							<span class="results-label">correct</span>
 						</div>
 
@@ -789,7 +792,11 @@
 							{/if}
 						{:else}
 							<p class="results-message results-fail-msg dark:text-slate-400">
-								You need at least 9/10 correct to test out. Keep practicing and try again!
+								{#if endedEarly}
+									Test ended early — 2 wrong answers means passing is no longer possible. Keep practicing and try again!
+								{:else}
+									You need at least 9/10 correct to test out. Keep practicing and try again!
+								{/if}
 							</p>
 							<div class="results-actions">
 								<button class="results-retry-btn" on:click={() => startTestOut(rule.grammarRule.id)}>
