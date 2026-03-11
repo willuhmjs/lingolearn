@@ -497,12 +497,12 @@ export async function updateEloRatings(
 	for (const lemma of payload.extraVocabLemmas || []) {
 		if (!lemma) continue;
 		try {
-			// Look up the word in the global vocabulary
+			// Look up the word in the global vocabulary — only process if it has meanings
 			const vocab = await prisma.vocabulary.findFirst({
-				where: { lemma: lemma }
-			}) || await prisma.vocabulary.create({
-				data: { lemma: lemma }
+				where: { lemma: lemma, meanings: { some: {} } }
 			});
+			// Skip words not in the vocabulary with meanings (avoids adding meaningless review cards)
+			if (!vocab) continue;
 
 			const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
 

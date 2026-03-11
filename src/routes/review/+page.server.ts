@@ -13,6 +13,9 @@ export async function load({ locals }) {
 			userId,
 			nextReviewDate: {
 				lte: new Date()
+			},
+			vocabulary: {
+				meanings: { some: {} }
 			}
 		},
 		include: {
