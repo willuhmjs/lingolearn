@@ -34,3 +34,9 @@ export const publishGameRateLimiter = new RateLimiter({
 	IP: [5, 'm'],
 	IPUA: [20, 'h']
 });
+
+// Test-out generates 10 questions in one LLM call — stricter limit
+export const testOutRateLimiter = new RateLimiter({
+	IP: [3, 'm'],   // 3 attempts per minute per IP
+	IPUA: [20, 'd'] // 20 attempts per day per IP+UA
+});

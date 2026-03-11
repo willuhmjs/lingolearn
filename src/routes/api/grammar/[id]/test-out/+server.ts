@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { generateChatCompletion } from '$lib/server/llm';
-import { generateLessonRateLimiter } from '$lib/server/ratelimit';
+import { testOutRateLimiter } from '$lib/server/ratelimit';
 
 export async function POST(event) {
 	const { params, locals, request } = event;
@@ -15,7 +15,7 @@ export async function POST(event) {
 		select: { useLocalLlm: true }
 	});
 
-	if (!user?.useLocalLlm && (await generateLessonRateLimiter.isLimited(event))) {
+	if (!user?.useLocalLlm && (await testOutRateLimiter.isLimited(event))) {
 		return json({ error: 'Too many requests. Please wait before generating more questions.' }, { status: 429 });
 	}
 
