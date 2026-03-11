@@ -288,7 +288,7 @@
 	}
 
 	.back-link a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
 		font-weight: 600;
 		font-size: 0.95rem;
@@ -296,7 +296,7 @@
 	}
 
 	.back-link a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 

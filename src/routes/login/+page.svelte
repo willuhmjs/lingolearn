@@ -24,8 +24,8 @@
 <div class="page-container">
 	<div class="auth-card" in:fly={{ y: 20, duration: 400 }}>
 		<div class="auth-header">
-			<h2 class="dark:text-white">Log in to your account</h2>
-			<p class="dark:text-slate-400">Welcome back! Please enter your details.</p>
+			<h2>Log in to your account</h2>
+			<p>Welcome back! Please enter your details.</p>
 		</div>
 
 		{#if errorMsg}
@@ -37,7 +37,7 @@
 
 		<div class="google-auth">
 			<button
-				class="google-btn dark:bg-slate-800 dark:text-white dark:border-slate-700"
+				class="google-btn"
 				on:click={() => signIn('google', { callbackUrl: validRedirect })}
 			>
 				<svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -64,31 +64,29 @@
 
 		{#if data.localLoginEnabled}
 			<div class="divider">
-				<span class="dark:text-slate-400">or continue with email</span>
+				<span>or continue with email</span>
 			</div>
 
 			<form method="POST" use:enhance class="auth-form">
 				<div class="form-group">
-					<label for="identifier" class="dark:text-slate-300">Username or Email</label>
+					<label for="identifier">Username or Email</label>
 					<input
 						id="identifier"
 						name="identifier"
 						type="text"
 						required
 						placeholder="Enter your username or email"
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 					/>
 				</div>
 
 				<div class="form-group">
-					<label for="password" class="dark:text-slate-300">Password</label>
+					<label for="password">Password</label>
 					<input
 						id="password"
 						name="password"
 						type="password"
 						required
 						placeholder="Enter your password"
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 					/>
 				</div>
 
@@ -157,6 +155,10 @@
 		font-size: 0.95rem;
 	}
 
+	:global(html[data-theme='dark']) .auth-header p {
+		color: #94a3b8;
+	}
+
 	.error-message {
 		background-color: #fef2f2;
 		border-left: 4px solid #ef4444;
@@ -193,7 +195,7 @@
 	}
 
 	.google-btn:hover {
-		background-color: #f9fafb;
+		background-color: var(--link-hover-bg, #f9fafb);
 	}
 
 	.divider {
@@ -207,13 +209,17 @@
 	.divider::after {
 		content: '';
 		flex: 1;
-		border-bottom: 1px solid #d1d5db;
+		border-bottom: 1px solid var(--card-border, #d1d5db);
 	}
 
 	.divider span {
 		padding: 0 10px;
 		color: #6b7280;
 		font-size: 0.875rem;
+	}
+
+	:global(html[data-theme='dark']) .divider span {
+		color: #94a3b8;
 	}
 
 	.auth-form {
@@ -234,6 +240,10 @@
 		color: #374151;
 	}
 
+	:global(html[data-theme='dark']) .form-group label {
+		color: #cbd5e1;
+	}
+
 	.form-group input {
 		width: 100%;
 		padding: 0.75rem;
@@ -250,8 +260,8 @@
 
 	.form-group input:focus {
 		outline: none;
-		border-color: #4f46e5;
-		box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+		border-color: #2563eb;
+		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 	}
 
 	.form-group input::placeholder {
@@ -261,19 +271,31 @@
 	.submit-btn {
 		width: 100%;
 		padding: 0.75rem 1rem;
-		background-color: #4f46e5;
+		background-color: #22c55e;
 		color: #ffffff;
 		border: none;
-		border-radius: 6px;
+		border-radius: 0.75rem;
 		font-size: 1rem;
-		font-weight: 600;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 		cursor: pointer;
-		transition: background-color 0.15s ease-in-out;
+		box-shadow: 0 4px 0 #16a34a;
+		transition:
+			background-color 0.15s,
+			transform 0.1s,
+			box-shadow 0.1s;
 		margin-top: 0.5rem;
 	}
 
 	.submit-btn:hover:not(:disabled) {
-		background-color: #4338ca;
+		background-color: #4ade80;
+		transform: scale(1.02);
+	}
+
+	.submit-btn:active:not(:disabled) {
+		transform: scale(0.98) translateY(2px);
+		box-shadow: 0 2px 0 #16a34a;
 	}
 
 	.submit-btn:disabled {
@@ -289,14 +311,14 @@
 	}
 
 	.auth-footer a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
-		font-weight: 500;
+		font-weight: 600;
 		transition: color 0.15s ease-in-out;
 	}
 
 	.auth-footer a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 </style>

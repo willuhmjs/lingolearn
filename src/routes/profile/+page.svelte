@@ -61,40 +61,40 @@
 
 <div class="profile-container">
 	<header class="profile-header" in:fly={{ y: 20, duration: 400 }}>
-		<h1 class="dark:text-white">Profile</h1>
-		<p class="dark:text-slate-400">Manage your account settings.</p>
+		<h1>Profile</h1>
+		<p>Manage your account settings.</p>
 	</header>
 
 	<section
-		class="info-card dark:bg-slate-800 dark:border-slate-700"
+		class="info-card"
 		in:fly={{ y: 20, duration: 400, delay: 100 }}
 	>
-		<h2 class="dark:text-white">Your Information</h2>
+		<h2>Your Information</h2>
 		<div class="info-grid">
 			<div class="info-item">
-				<span class="info-label dark:text-slate-400">Username</span>
-				<span class="info-value dark:text-white">{data.user?.username}</span>
+				<span class="info-label">Username</span>
+				<span class="info-value">{data.user?.username}</span>
 			</div>
 			<div class="info-item">
-				<span class="info-label dark:text-slate-400">Active Language</span>
-				<span class="info-value dark:text-white">{data.user?.activeLanguage?.name || 'None'}</span>
+				<span class="info-label">Active Language</span>
+				<span class="info-value">{data.user?.activeLanguage?.name || 'None'}</span>
 			</div>
 			<div class="info-item">
-				<span class="info-label dark:text-slate-400">CEFR Level (Active)</span>
+				<span class="info-label">CEFR Level (Active)</span>
 				<span class="info-value level-badge">{data.activeProgress?.cefrLevel || 'A1'}</span>
 			</div>
 			<div class="info-item">
-				<span class="info-label dark:text-slate-400">Role</span>
-				<span class="info-value dark:text-white">{data.user?.role}</span>
+				<span class="info-label">Role</span>
+				<span class="info-value">{data.user?.role}</span>
 			</div>
 		</div>
 	</section>
 
 	<section
-		class="theme-card dark:bg-slate-800 dark:border-slate-700"
+		class="theme-card"
 		in:fly={{ y: 20, duration: 400, delay: 150 }}
 	>
-		<h2 class="dark:text-white">Theme Settings</h2>
+		<h2>Theme Settings</h2>
 
 		{#if form?.themeSuccess}
 			<div class="alert alert-success">{form.themeSuccess}</div>
@@ -117,11 +117,11 @@
 			}}
 		>
 			<div class="form-group">
-				<label for="theme" class="dark:text-slate-300">Select Theme</label>
+				<label for="theme">Select Theme</label>
 				<select
 					id="theme"
 					name="theme"
-					class="theme-select dark:bg-slate-900 dark:text-white dark:border-slate-700"
+					class="theme-select"
 				>
 					<option value="default" selected={data.user?.theme === 'default'}>Default</option>
 					<option value="dark" selected={data.user?.theme === 'dark'}>Dark</option>
@@ -132,11 +132,11 @@
 	</section>
 
 	<section
-		class="llm-card dark:bg-slate-800 dark:border-slate-700"
+		class="llm-card"
 		in:fly={{ y: 20, duration: 400, delay: 175 }}
 	>
-		<h2 class="dark:text-white">Local LLM Settings</h2>
-		<p class="dark:text-slate-400 text-sm mb-4">
+		<h2>Local LLM Settings</h2>
+		<p class="llm-desc">
 			Use your own local or remote LLM server (e.g. Ollama, LM Studio). Using your own server removes rate limits!
 		</p>
 
@@ -156,13 +156,13 @@
 					checked={data.user?.useLocalLlm}
 					class="llm-checkbox"
 				/>
-				<label for="useLocalLlm" class="llm-checkbox-label dark:text-slate-300">
+				<label for="useLocalLlm" class="llm-checkbox-label">
 					Enable Custom LLM Server
 				</label>
 			</div>
 
 			<div class="form-group">
-				<label for="llmBaseUrl" class="dark:text-slate-300">API Endpoint (OpenAI compatible)</label>
+				<label for="llmBaseUrl">API Endpoint (OpenAI compatible)</label>
 				<div style="display: flex; gap: 0.5rem;">
 					<input
 						type="text"
@@ -170,7 +170,6 @@
 						name="llmBaseUrl"
 						bind:value={llmBaseUrl}
 						placeholder="http://localhost:11434/v1"
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 						style="flex: 1;"
 					/>
 					<button
@@ -185,25 +184,23 @@
 			</div>
 
 			<div class="form-group">
-				<label for="llmApiKey" class="dark:text-slate-300">API Key (if required)</label>
+				<label for="llmApiKey">API Key (if required)</label>
 				<input
 					type="password"
 					id="llmApiKey"
 					name="llmApiKey"
 					bind:value={llmApiKey}
 					placeholder="sk-..."
-					class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 				/>
 			</div>
 
 			<div class="form-group">
-				<label for="llmModel" class="dark:text-slate-300">Model Name</label>
+				<label for="llmModel">Model Name</label>
 				{#if availableModels.length > 0}
 					<select
 						id="llmModel"
 						name="llmModel"
 						bind:value={llmModel}
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 					>
 						<option value="" disabled>Select a model</option>
 						{#each availableModels as model}
@@ -217,7 +214,6 @@
 						name="llmModel"
 						bind:value={llmModel}
 						placeholder="e.g., llama3.2, gpt-4o-mini"
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 					/>
 				{/if}
 			</div>
@@ -228,10 +224,10 @@
 
 	{#if data.localLoginEnabled}
 		<section
-			class="password-card dark:bg-slate-800 dark:border-slate-700"
+			class="password-card"
 			in:fly={{ y: 20, duration: 400, delay: 200 }}
 		>
-			<h2 class="dark:text-white">Update Password</h2>
+			<h2>Update Password</h2>
 
 			{#if form?.error}
 				<div class="alert alert-error">{form.error}</div>
@@ -243,26 +239,24 @@
 			<form method="POST" action="?/updatePassword">
 				{#if data.hasPassword}
 					<div class="form-group">
-						<label for="currentPassword" class="dark:text-slate-300">Current Password</label>
+						<label for="currentPassword">Current Password</label>
 						<input
 							type="password"
 							id="currentPassword"
 							name="currentPassword"
 							required
-							class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 						/>
 					</div>
 				{/if}
 
 				<div class="form-group">
-					<label for="newPassword" class="dark:text-slate-300">New Password</label>
+					<label for="newPassword">New Password</label>
 					<input
 						type="password"
 						id="newPassword"
 						name="newPassword"
 						required
 						minlength="8"
-						class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
 					/>
 				</div>
 
@@ -308,7 +302,7 @@
 	.profile-container {
 		max-width: 640px;
 		margin: 0 auto;
-		color: #334155;
+		color: var(--text-color, #334155);
 	}
 
 	.profile-header {
@@ -318,7 +312,7 @@
 	.profile-header h1 {
 		font-size: 2rem;
 		font-weight: 700;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin: 0 0 0.5rem 0;
 	}
 
@@ -327,12 +321,16 @@
 		margin: 0;
 	}
 
+	:global(html[data-theme='dark']) .profile-header p {
+		color: #94a3b8;
+	}
+
 	.info-card,
 	.password-card,
 	.theme-card,
 	.llm-card {
 		background: var(--card-bg, #ffffff);
-		border: 1px solid #e5e7eb;
+		border: 1px solid var(--card-border, #e5e7eb);
 		border-radius: 0.75rem;
 		padding: 1.5rem;
 		margin-bottom: 1.5rem;
@@ -344,7 +342,7 @@
 	.llm-card h2 {
 		font-size: 1.125rem;
 		font-weight: 600;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin: 0 0 1.25rem 0;
 	}
 
@@ -371,7 +369,7 @@
 	.info-value {
 		font-size: 1rem;
 		font-weight: 500;
-		color: #111827;
+		color: var(--text-color, #111827);
 	}
 
 	.level-badge {
@@ -405,6 +403,17 @@
 		border: 1px solid #fecaca;
 	}
 
+	.llm-desc {
+		color: #64748b;
+		font-size: 0.9rem;
+		margin: -0.5rem 0 1.25rem;
+		line-height: 1.5;
+	}
+
+	:global(html[data-theme='dark']) .llm-desc {
+		color: #94a3b8;
+	}
+
 	.form-group {
 		margin-bottom: 1rem;
 	}
@@ -415,6 +424,10 @@
 		font-weight: 500;
 		color: #374151;
 		margin-bottom: 0.375rem;
+	}
+
+	:global(html[data-theme='dark']) .form-group label {
+		color: #cbd5e1;
 	}
 
 	.form-group input,

@@ -36,9 +36,9 @@
 	/>
 </svelte:head>
 
-<section class="hero dark:text-slate-200">
+<section class="hero">
 	<div class="animated-title">
-		<h1 class="dark:text-white">
+		<h1>
 			<span class="title-static">Ready to</span>
 			<span class="title-word" class:slide-out={isAnimating}>
 				<span class="word-flag">{translations[currentIndex].flag}</span>
@@ -50,17 +50,14 @@
 			{translations[currentIndex].lang}
 		</p>
 	</div>
-	<p class="subtitle dark:text-slate-400">
+	<p class="subtitle">
 		Your AI-powered platform to master new languages. Start with
 		<strong>German</strong>, <strong>Spanish</strong>, or <strong>French</strong> — personalized lessons,
 		instant feedback, and progress tracking.
 	</p>
 	<div class="actions">
 		<a href="/signup" class="btn btn-primary">Start Learning</a>
-		<a
-			href="/login"
-			class="btn btn-secondary dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">Login</a
-		>
+		<a href="/login" class="btn btn-secondary">Login</a>
 	</div>
 
 	<div class="supported-languages">
@@ -74,40 +71,32 @@
 </section>
 
 <section class="features">
-	<div class="feature-card dark:bg-slate-800 dark:border-slate-700">
-		<h3 class="dark:text-white">🤖 AI-Powered Lessons</h3>
-		<p class="dark:text-slate-400">
-			Dynamically generated lessons tailored to your skill level and learning pace.
-		</p>
+	<div class="feature-card">
+		<h3>🤖 AI-Powered Lessons</h3>
+		<p>Dynamically generated lessons tailored to your skill level and learning pace.</p>
 	</div>
-	<div class="feature-card dark:bg-slate-800 dark:border-slate-700">
-		<h3 class="dark:text-white">🌍 Multiple Languages</h3>
-		<p class="dark:text-slate-400">
-			Learn German, Spanish, and French with dedicated vocabulary, grammar, and exercises for each.
-		</p>
+	<div class="feature-card">
+		<h3>🌍 Multiple Languages</h3>
+		<p>Learn German, Spanish, and French with dedicated vocabulary, grammar, and exercises for each.</p>
 	</div>
-	<div class="feature-card dark:bg-slate-800 dark:border-slate-700">
-		<h3 class="dark:text-white">⚡ Instant Feedback</h3>
-		<p class="dark:text-slate-400">
-			Get real-time corrections and explanations from our intelligent grader.
-		</p>
+	<div class="feature-card">
+		<h3>⚡ Instant Feedback</h3>
+		<p>Get real-time corrections and explanations from our intelligent grader.</p>
 	</div>
-	<div class="feature-card dark:bg-slate-800 dark:border-slate-700">
-		<h3 class="dark:text-white">📈 Track Progress</h3>
-		<p class="dark:text-slate-400">
-			Monitor your vocabulary and grammar improvements over time across all languages.
-		</p>
+	<div class="feature-card">
+		<h3>📈 Track Progress</h3>
+		<p>Monitor your vocabulary and grammar improvements over time across all languages.</p>
 	</div>
 </section>
 
 <section class="how-it-works">
-	<h2 class="section-title dark:text-white">How LingoLearn Works</h2>
+	<h2 class="section-title">How LingoLearn Works</h2>
 	<div class="steps-container">
 		<div class="step-item">
 			<div class="step-number">1</div>
 			<div class="step-content">
-				<h4 class="dark:text-white">Choose Your Language</h4>
-				<p class="dark:text-slate-400">
+				<h4>Choose Your Language</h4>
+				<p>
 					Select German, Spanish, or French to start your journey. We'll assess your current level
 					to personalize your path.
 				</p>
@@ -116,8 +105,8 @@
 		<div class="step-item">
 			<div class="step-number">2</div>
 			<div class="step-content">
-				<h4 class="dark:text-white">Practice Daily</h4>
-				<p class="dark:text-slate-400">
+				<h4>Practice Daily</h4>
+				<p>
 					Engage in short, bite-sized lessons that fit your schedule, covering grammar, vocabulary,
 					and reading.
 				</p>
@@ -126,8 +115,8 @@
 		<div class="step-item">
 			<div class="step-number">3</div>
 			<div class="step-content">
-				<h4 class="dark:text-white">AI-Powered Feedback</h4>
-				<p class="dark:text-slate-400">
+				<h4>AI-Powered Feedback</h4>
+				<p>
 					Our advanced AI grades your answers instantly and provides detailed explanations to help
 					you improve faster.
 				</p>
@@ -136,8 +125,8 @@
 		<div class="step-item">
 			<div class="step-number">4</div>
 			<div class="step-content">
-				<h4 class="dark:text-white">Achieve Fluency</h4>
-				<p class="dark:text-slate-400">
+				<h4>Achieve Fluency</h4>
+				<p>
 					Watch your skills grow as you unlock new achievements and tackle more complex
 					conversations.
 				</p>
@@ -146,12 +135,10 @@
 	</div>
 </section>
 
-<section class="cta-section dark:bg-slate-800 dark:border-t dark:border-slate-700">
+<section class="cta-section">
 	<div class="cta-content">
-		<h2 class="dark:text-white">Ready to start your language journey?</h2>
-		<p class="dark:text-slate-400">
-			Join LingoLearn today and master your next language with AI-guided lessons.
-		</p>
+		<h2>Ready to start your language journey?</h2>
+		<p>Join LingoLearn today and master your next language with AI-guided lessons.</p>
 		<a href="/signup" class="btn btn-primary cta-btn">Create Free Account</a>
 	</div>
 </section>
@@ -227,6 +214,10 @@
 		max-width: 600px;
 		margin-left: auto;
 		margin-right: auto;
+	}
+
+	:global(html[data-theme='dark']) .subtitle {
+		color: #94a3b8;
 	}
 
 	.subtitle strong {
@@ -314,10 +305,10 @@
 		border: 1px solid #bfdbfe;
 	}
 
-	:global(.dark) .lang-badge {
-		background: #1e293b;
+	:global(html[data-theme='dark']) .lang-badge {
+		background: #1e3a5f;
 		color: #93c5fd;
-		border-color: #334155;
+		border-color: #1e40af;
 	}
 
 	.features {
@@ -333,6 +324,7 @@
 
 	.feature-card {
 		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e5e7eb);
 		padding: 2rem;
 		border-radius: 0.75rem;
 		box-shadow:
@@ -353,7 +345,7 @@
 
 	.feature-card h3 {
 		font-size: 1.2rem;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin-bottom: 0.75rem;
 	}
 
@@ -361,6 +353,10 @@
 		color: #6b7280;
 		line-height: 1.5;
 		font-size: 0.95rem;
+	}
+
+	:global(html[data-theme='dark']) .feature-card p {
+		color: #94a3b8;
 	}
 
 	.how-it-works {
@@ -373,7 +369,7 @@
 	.section-title {
 		font-size: 2rem;
 		font-weight: 700;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin-bottom: 2.5rem;
 	}
 
@@ -389,14 +385,15 @@
 		gap: 1.5rem;
 		text-align: left;
 		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e5e7eb);
 		padding: 1.5rem;
 		border-radius: 0.75rem;
 		box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
 	}
 
-	:global(.dark) .step-item {
-		background: #1e293b;
-		border: 1px solid #334155;
+	:global(html[data-theme='dark']) .step-item {
+		background: var(--card-bg, #1e293b);
+		border-color: var(--card-border, #334155);
 	}
 
 	.step-number {
@@ -415,7 +412,7 @@
 
 	.step-content h4 {
 		font-size: 1.25rem;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin-bottom: 0.5rem;
 		margin-top: 0;
 	}
@@ -426,8 +423,13 @@
 		margin: 0;
 	}
 
+	:global(html[data-theme='dark']) .step-content p {
+		color: #94a3b8;
+	}
+
 	.cta-section {
-		background-color: #f3f4f6;
+		background-color: var(--card-bg, #f3f4f6);
+		border-top: 2px solid var(--card-border, #e5e7eb);
 		padding: 5rem 1rem;
 		text-align: center;
 		margin-top: 4rem;
@@ -441,7 +443,7 @@
 	.cta-content h2 {
 		font-size: 2.25rem;
 		font-weight: 800;
-		color: #111827;
+		color: var(--text-color, #111827);
 		margin-bottom: 1rem;
 	}
 
@@ -449,6 +451,10 @@
 		font-size: 1.15rem;
 		color: #4b5563;
 		margin-bottom: 2rem;
+	}
+
+	:global(html[data-theme='dark']) .cta-content p {
+		color: #94a3b8;
 	}
 
 	.cta-btn {

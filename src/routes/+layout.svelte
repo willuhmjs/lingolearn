@@ -625,11 +625,11 @@
 	}
 
 	:global(.card-duo) {
-		background-color: white;
-		border: 2px solid #e5e7eb;
+		background-color: var(--card-bg, #ffffff);
+		border: 2px solid var(--card-border, #e5e7eb);
 		border-radius: 1.5rem;
 		padding: 1.5rem;
-		box-shadow: 0 4px 0 #e5e7eb;
+		box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
@@ -638,7 +638,7 @@
 
 	:global(.card-duo:hover) {
 		transform: translateY(-2px);
-		box-shadow: 0 6px 0 #e5e7eb;
+		box-shadow: 0 6px 0 var(--card-border, #e5e7eb);
 	}
 
 	@keyframes float {
@@ -1054,7 +1054,7 @@
 	}
 
 	.footer-links a:hover {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: underline;
 	}
 

@@ -257,8 +257,8 @@
 
 	.form-group input:focus {
 		outline: none;
-		border-color: #4f46e5;
-		box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+		border-color: #2563eb;
+		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 	}
 
 	.form-group input::placeholder {
@@ -274,13 +274,13 @@
 	}
 
 	.legal-notice-google a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
 		font-weight: 500;
 	}
 
 	.legal-notice-google a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 
@@ -293,36 +293,48 @@
 	}
 
 	.legal-notice a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
 		font-weight: 500;
 	}
 
 	.legal-notice a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 
 	.submit-btn {
 		width: 100%;
 		padding: 0.75rem 1rem;
-		background-color: #4f46e5;
+		background-color: #22c55e;
 		color: #ffffff;
 		border: none;
-		border-radius: 6px;
+		border-radius: 0.75rem;
 		font-size: 1rem;
-		font-weight: 600;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 		cursor: pointer;
-		transition: background-color 0.15s ease-in-out;
+		box-shadow: 0 4px 0 #16a34a;
+		transition:
+			background-color 0.15s,
+			transform 0.1s,
+			box-shadow 0.1s;
 		margin-top: 0.5rem;
 	}
 
 	.submit-btn:hover {
-		background-color: #4338ca;
+		background-color: #4ade80;
+		transform: scale(1.02);
+	}
+
+	.submit-btn:active {
+		transform: scale(0.98) translateY(2px);
+		box-shadow: 0 2px 0 #16a34a;
 	}
 
 	.submit-btn:focus-visible {
-		outline: 2px solid #4f46e5;
+		outline: 2px solid #22c55e;
 		outline-offset: 2px;
 	}
 
@@ -334,14 +346,14 @@
 	}
 
 	.auth-footer a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
-		font-weight: 500;
+		font-weight: 600;
 		transition: color 0.15s ease-in-out;
 	}
 
 	.auth-footer a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 </style>

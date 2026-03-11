@@ -255,14 +255,14 @@
 	}
 
 	a {
-		color: #4f46e5;
+		color: #2563eb;
 		text-decoration: none;
 		font-weight: 600;
 		transition: color 0.15s;
 	}
 
 	a:hover {
-		color: #4338ca;
+		color: #1d4ed8;
 		text-decoration: underline;
 	}
 
