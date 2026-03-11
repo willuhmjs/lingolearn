@@ -747,7 +747,7 @@
 										<p class="feedback-explanation dark:text-slate-400">{q.explanation}</p>
 									</div>
 								</div>
-								{@const wrongSoFar = testOutScores.filter((s) => \!s).length}
+								{@const wrongSoFar = testOutScores.filter((s) => !s).length}
 								<button class="test-next-btn" on:click={nextTestQuestion}>
 									{testOutCurrentIndex >= testOutTotalQuestions - 1 || wrongSoFar >= 2 ? 'See Results →' : 'Next Question →'}
 								</button>
