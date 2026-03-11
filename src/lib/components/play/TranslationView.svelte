@@ -1,18 +1,71 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
+	import VoiceDictation from '$lib/components/VoiceDictation.svelte';
+	import { charSets } from '$lib/utils/keyboard';
+
 	export let challenge: any;
 	export let submitting: boolean;
 	export let feedback: any;
 	export let loading: boolean;
 	export let userInput: string;
 	export let lessonLanguage: { name: string } | null | undefined;
+
+	let inputEl: HTMLTextAreaElement | null = null;
+
+	// Only show special keyboard when typing in the target language and chars are available
+	$: isTargetToNative = challenge?.gameMode === 'target-to-native';
+	$: langKey = lessonLanguage?.name?.toLowerCase() || '';
+	$: showSpecialKeyboard = !isTargetToNative && langKey in charSets;
+
+	// Speech recognition language: English for target-to-native, target lang otherwise
+	$: speechLang = isTargetToNative ? 'en-US' : getLangCode(lessonLanguage?.name);
+
+	function getLangCode(name: string | undefined): string {
+		const map: Record<string, string> = {
+			german: 'de-DE',
+			french: 'fr-FR',
+			spanish: 'es-ES',
+			italian: 'it-IT',
+			portuguese: 'pt-PT',
+			russian: 'ru-RU',
+			japanese: 'ja-JP',
+			korean: 'ko-KR',
+			chinese: 'zh-CN'
+		};
+		return map[(name || '').toLowerCase()] || 'en-US';
+	}
+
+	// Auto-focus when the component mounts (challenge is ready since parent only renders this when !loading)
+	onMount(() => {
+		inputEl?.focus();
+	});
 </script>
 
 <div class="form-group">
-	<label for="answer" class="dark:text-slate-300">Your Translation</label>
+	<div class="input-label-row">
+		<label for="answer" class="dark:text-slate-300">Your Translation</label>
+		<VoiceDictation
+			lang={speechLang}
+			bind:value={userInput}
+			inputElement={inputEl}
+			disabled={!!(submitting || feedback || loading)}
+		/>
+	</div>
+
+	{#if showSpecialKeyboard}
+		<SpecialCharKeyboard
+			bind:value={userInput}
+			inputElement={inputEl}
+			language={langKey}
+		/>
+	{/if}
+
 	<textarea
 		id="answer"
+		bind:this={inputEl}
 		bind:value={userInput}
-		disabled={submitting || feedback || loading}
+		disabled={submitting || !!feedback || loading}
 		rows="3"
 		placeholder={loading
 			? 'Generating challenge...'
@@ -26,19 +79,28 @@
 <style>
 	.form-group {
 		margin-bottom: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
-	.form-group label {
-		display: block;
+	.input-label-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.input-label-row label {
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: #334155;
-		margin-bottom: 0.5rem;
+		flex: 1;
 	}
 
 	.form-group textarea {
 		width: 100%;
-		padding: 0.75rem;
+		padding: 0.875rem;
 		border: 1px solid var(--input-border, #cbd5e1);
 		border-radius: 8px;
 		font-family: inherit;
@@ -50,6 +112,8 @@
 		transition:
 			border-color 0.15s,
 			box-shadow 0.15s;
+		/* Larger minimum on mobile for comfortable typing */
+		min-height: 5rem;
 	}
 
 	.form-group textarea:focus {
@@ -62,5 +126,14 @@
 		background-color: #f1f5f9;
 		color: #94a3b8;
 		cursor: not-allowed;
+	}
+
+	/* Mobile optimizations */
+	@media (max-width: 640px) {
+		.form-group textarea {
+			font-size: 1rem; /* Prevent iOS zoom on focus (must be >= 16px) */
+			padding: 0.875rem;
+			min-height: 6rem;
+		}
 	}
 </style>

@@ -328,7 +328,7 @@
 											{#if result.meanings?.[0]?.value}
 												{result.meanings[0].value}
 											{:else}
-												<span class="text-gray-500 italic">No meaning provided. </span>
+												<span class="no-meaning-text">No meaning provided.</span>
 											{/if}
 										</p>
 										{#if result.partOfSpeech}
@@ -359,6 +359,22 @@
 						</li>
 					{/each}
 				</ul>
+
+				{#if query.trim().length > 1 && activeLanguageId}
+					<div class="ask-ai-results-section">
+						<p class="ask-ai-results-text">Not finding the exact word you searched for?</p>
+						{#if llmError}
+							<div class="error-message">{llmError}</div>
+						{/if}
+						<button on:click={handleAskAI} class="btn-ask-ai-results" disabled={llmLoading}>
+							{#if llmLoading}
+								<span class="spinner-small"></span> Asking AI...
+							{:else}
+								Ask AI about "{query}"
+							{/if}
+						</button>
+					</div>
+				{/if}
 			{:else if query.trim().length > 1 && !loading}
 				<div class="no-results" transition:fade>
 					<svg
@@ -1104,6 +1120,34 @@
 		overflow-y: auto;
 	}
 
+	.modal-header {
+		padding: 1.5rem 1.5rem 0;
+	}
+
+	.modal-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.modal-pos {
+		color: #6b7280;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+		margin-bottom: 0;
+	}
+
+	.modal-section {
+		margin-bottom: 1.5rem;
+	}
+
+	.modal-section:last-child {
+		margin-bottom: 0;
+	}
+
 	.modal-section-title {
 		font-size: 0.875rem;
 		font-weight: 600;
@@ -1114,6 +1158,29 @@
 
 	:global(.dark) .modal-section-title {
 		color: #9ca3af;
+	}
+
+	.modal-meaning, .modal-plural, .modal-example, .modal-example-translation {
+		margin: 0;
+		color: #111827;
+	}
+
+	:global(.dark) .modal-meaning,
+	:global(.dark) .modal-plural,
+	:global(.dark) .modal-example,
+	:global(.dark) .modal-example-translation {
+		color: #f9fafb;
+	}
+
+	.modal-footer {
+		padding: 1.5rem;
+		border-top: 1px solid #e5e7eb;
+		display: flex;
+		justify-content: flex-start;
+	}
+
+	:global(.dark) .modal-footer {
+		border-top-color: #374151;
 	}
 
 	/* No Results & Empty State */
@@ -1198,6 +1265,68 @@
 	}
 
 	.btn-ask-ai:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.no-meaning-text {
+		color: #9ca3af;
+		font-style: italic;
+	}
+
+	:global(.dark) .no-meaning-text {
+		color: #6b7280;
+	}
+
+	.ask-ai-results-section {
+		margin-top: 1.5rem;
+		padding: 1.25rem;
+		border: 1px dashed #d1d5db;
+		border-radius: 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		background-color: #f9fafb;
+		flex-wrap: wrap;
+	}
+
+	:global(.dark) .ask-ai-results-section {
+		border-color: #374151;
+		background-color: #111827;
+	}
+
+	.ask-ai-results-text {
+		flex: 1;
+		margin: 0;
+		color: #6b7280;
+		font-size: 0.9rem;
+	}
+
+	:global(.dark) .ask-ai-results-text {
+		color: #9ca3af;
+	}
+
+	.btn-ask-ai-results {
+		background-color: #3b82f6;
+		color: white;
+		border: none;
+		padding: 0.5rem 1.25rem;
+		border-radius: 0.5rem;
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		white-space: nowrap;
+		transition: background-color 0.2s;
+	}
+
+	.btn-ask-ai-results:hover:not(:disabled) {
+		background-color: #2563eb;
+	}
+
+	.btn-ask-ai-results:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
 	}

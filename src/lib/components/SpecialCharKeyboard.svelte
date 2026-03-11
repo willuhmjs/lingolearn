@@ -112,7 +112,9 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		padding: 0;
+		padding: 0.25rem 0;
+		min-height: 2.75rem; /* touch target */
+		touch-action: manipulation;
 		transition: color 0.2s;
 	}
 
@@ -200,19 +202,33 @@
 
 	.char-key {
 		flex-shrink: 0;
-		width: 2rem;
-		height: 2rem;
+		width: 2.25rem;
+		height: 2.25rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.875rem;
+		font-size: 0.9rem;
 		background-color: white;
 		color: var(--color-gray-800, #1f2937);
 		border: 1px solid var(--color-gray-300, #d1d5db);
 		border-radius: 0.25rem;
 		cursor: pointer;
+		touch-action: manipulation;
 		transition: all 0.15s ease;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	}
+
+	@media (max-width: 640px) {
+		.char-key {
+			width: 2.75rem;
+			height: 2.75rem;
+			font-size: 1rem;
+		}
+
+		.shift-button {
+			height: 2.75rem;
+			padding: 0 0.75rem;
+		}
 	}
 
 	.char-key:hover {

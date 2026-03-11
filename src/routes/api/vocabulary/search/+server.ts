@@ -40,7 +40,10 @@ export const GET = async ({ url, locals }: RequestEvent) => {
 	// Very simple search implementation
 	const results = await prisma.vocabulary.findMany({
 		where: whereClause,
-		take: 20
+		take: 20,
+		include: {
+			meanings: true
+		}
 	});
 
 	return json({ results });

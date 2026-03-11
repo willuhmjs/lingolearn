@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { fly, fade } from 'svelte/transition';
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
+	import VoiceDictation from '$lib/components/VoiceDictation.svelte';
 	import { requiresSpecialKeyboard } from '$lib/utils/keyboard';
 	import { page } from '$app/stores';
 	export let data: PageData;
@@ -11,6 +12,8 @@
 	let isSubmitting = false;
 	let typedAnswer = '';
 	let reviewInputRef: HTMLInputElement;
+
+	$: activeLangName = $page.data.user?.activeLanguage?.name || 'en';
 
 	$: dueReviews = data.dueReviews || [];
 	$: currentReview = dueReviews[currentReviewIndex];
@@ -165,14 +168,21 @@
 								</div>
 							{:else}
 								<div class="typing-section">
-									<label class="typing-label" for="review-input">
-										Type your answer (optional)
-									</label>
-									{#if requiresSpecialKeyboard(currentReview.vocabulary.lemma, $page.data.user?.activeLanguage?.name || 'en')}
+									<div class="typing-label-row">
+										<label class="typing-label" for="review-input">
+											Type your answer (optional)
+										</label>
+										<VoiceDictation
+											lang="en-US"
+											bind:value={typedAnswer}
+											inputElement={reviewInputRef}
+										/>
+									</div>
+									{#if requiresSpecialKeyboard(currentReview.vocabulary.lemma, activeLangName)}
 										<SpecialCharKeyboard
 											bind:value={typedAnswer}
 											inputElement={reviewInputRef}
-											language={$page.data.user?.activeLanguage?.name || 'en'}
+											language={activeLangName}
 										/>
 									{/if}
 									<input
@@ -182,6 +192,7 @@
 										type="text"
 										class="review-input"
 										placeholder="Type translation here..."
+										autofocus
 										on:keydown={(e) => e.key === 'Enter' && showAnswer()}
 									/>
 								</div>
@@ -480,6 +491,18 @@
 		font-weight: 800;
 		margin: 0.5rem 0;
 		color: var(--text-color, #1e293b);
+	}
+
+	.typing-label-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.typing-label-row .typing-label {
+		margin-bottom: 0;
 	}
 
 	.typing-section {
