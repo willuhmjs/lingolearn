@@ -766,6 +766,11 @@
 		border-top: 1px solid #bbf7d0;
 	}
 
+	:global(html[data-theme='dark']) .completion-card {
+		background-color: #0d1f14;
+		border-top-color: #166534;
+	}
+
 	.completion-card.no-messages {
 		display: flex;
 		flex-direction: column;
@@ -815,6 +820,31 @@
 		font-style: italic;
 		font-size: 0.95rem;
 		margin: 0;
+	}
+
+	:global(html[data-theme='dark']) .completion-card h2 {
+		color: #4ade80;
+	}
+
+	:global(html[data-theme='dark']) .level-result {
+		color: #86efac;
+	}
+
+	:global(html[data-theme='dark']) .level-badge {
+		background-color: #166534;
+		color: #bbf7d0;
+	}
+
+	:global(html[data-theme='dark']) .feedback-text {
+		color: #86efac;
+	}
+
+	:global(html[data-theme='dark']) .completion-actions {
+		border-top-color: #166534;
+	}
+
+	:global(html[data-theme='dark']) .action-note {
+		color: #86efac;
 	}
 
 	/* Path Selection Styles */

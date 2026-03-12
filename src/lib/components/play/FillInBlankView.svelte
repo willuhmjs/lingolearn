@@ -106,6 +106,10 @@
 		flex: 1;
 	}
 
+	:global(html[data-theme='dark']) .input-label-row label {
+		color: #cbd5e1;
+	}
+
 	.blank-input {
 		width: 100%;
 		padding: 0.875rem;
@@ -114,10 +118,16 @@
 		font-family: inherit;
 		font-size: 1rem;
 		color: #0f172a;
+		background: var(--input-bg, #ffffff);
 		box-sizing: border-box;
 		transition:
 			border-color 0.15s,
 			box-shadow 0.15s;
+	}
+
+	:global(html[data-theme='dark']) .blank-input {
+		border-color: #4b5563;
+		color: #f9fafb;
 	}
 
 	.blank-input:focus {
@@ -130,6 +140,11 @@
 		background-color: #f1f5f9;
 		color: #94a3b8;
 		cursor: not-allowed;
+	}
+
+	:global(html[data-theme='dark']) .blank-input:disabled {
+		background-color: #1e293b;
+		color: #64748b;
 	}
 
 	/* Mobile: prevent iOS zoom (font-size must be >= 16px) */

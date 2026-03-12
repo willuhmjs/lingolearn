@@ -60,12 +60,24 @@
 		box-shadow: 0 6px 0 #93c5fd;
 	}
 
+	:global(html[data-theme='dark']) .mc-choice-btn:hover:not(:disabled) {
+		background: #1e293b;
+		border-color: #3b82f6;
+		box-shadow: 0 6px 0 #1e3a5f;
+	}
+
 	.mc-choice-btn.selected {
 		border-color: #1cb0f6;
 		background: #ddf4ff;
 		color: #1cb0f6;
 		transform: translateY(2px);
 		box-shadow: 0 2px 0 #1899d6;
+	}
+
+	:global(html[data-theme='dark']) .mc-choice-btn.selected {
+		background: #0c2340;
+		color: #38bdf8;
+		box-shadow: 0 2px 0 #0e4166;
 	}
 
 	.mc-choice-btn.correct {
@@ -75,11 +87,23 @@
 		box-shadow: 0 2px 0 #15803d;
 	}
 
+	:global(html[data-theme='dark']) .mc-choice-btn.correct {
+		background: #052e16;
+		color: #86efac;
+		box-shadow: 0 2px 0 #14532d;
+	}
+
 	.mc-choice-btn.incorrect {
 		border-color: #dc2626;
 		background: #fef2f2;
 		color: #991b1b;
 		box-shadow: 0 2px 0 #b91c1c;
+	}
+
+	:global(html[data-theme='dark']) .mc-choice-btn.incorrect {
+		background: #450a0a;
+		color: #fca5a5;
+		box-shadow: 0 2px 0 #7f1d1d;
 	}
 
 	.mc-choice-btn:disabled {

@@ -128,6 +128,15 @@
 		cursor: not-allowed;
 	}
 
+	:global(html[data-theme='dark']) .form-group textarea:disabled {
+		background-color: #1e293b;
+		color: #64748b;
+	}
+
+	:global(html[data-theme='dark']) .input-label-row label {
+		color: #cbd5e1;
+	}
+
 	/* Mobile optimizations */
 	@media (max-width: 640px) {
 		.form-group textarea {

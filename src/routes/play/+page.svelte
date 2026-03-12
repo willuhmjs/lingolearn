@@ -3052,11 +3052,19 @@ r<svelte:head>
 		border-radius: 12px;
 	}
 
+	:global(html[data-theme='dark']) .empty-state {
+		background: #1e293b;
+	}
+
 	.empty-state h2 {
 		margin-top: 0;
 		margin-bottom: 1.5rem;
 		color: #1e293b;
 		font-size: 1.5rem;
+	}
+
+	:global(html[data-theme='dark']) .empty-state h2 {
+		color: #f1f5f9;
 	}
 
 	.loading-state {
@@ -3316,6 +3324,11 @@ r<svelte:head>
 		margin: 0;
 	}
 
+	:global(html[data-theme='dark']) .help-text p {
+		background: #1e293b;
+		color: #94a3b8;
+	}
+
 	.concept-list {
 		list-style: none;
 		padding: 0;
@@ -3363,7 +3376,7 @@ r<svelte:head>
 		box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 	}
 
-	:global(.dark) .grammar-guide {
+	:global(html[data-theme='dark']) .grammar-guide {
 		background: #0f172a;
 		border-color: #1e293b;
 		color: #cbd5e1;
@@ -3380,10 +3393,10 @@ r<svelte:head>
 		line-height: 1.3;
 	}
 
-	:global(.dark) .grammar-guide :global(h1),
-	:global(.dark) .grammar-guide :global(h2),
-	:global(.dark) .grammar-guide :global(h3),
-	:global(.dark) .grammar-guide :global(h4) {
+	:global(html[data-theme='dark']) .grammar-guide :global(h1),
+	:global(html[data-theme='dark']) .grammar-guide :global(h2),
+	:global(html[data-theme='dark']) .grammar-guide :global(h3),
+	:global(html[data-theme='dark']) .grammar-guide :global(h4) {
 		color: #f8fafc;
 	}
 
@@ -3407,8 +3420,8 @@ r<svelte:head>
 		font-size: 1.1rem;
 	}
 
-	:global(.dark) .grammar-guide :global(h1),
-	:global(.dark) .grammar-guide :global(h2) {
+	:global(html[data-theme='dark']) .grammar-guide :global(h1),
+	:global(html[data-theme='dark']) .grammar-guide :global(h2) {
 		border-color: #1e293b;
 	}
 
@@ -3438,8 +3451,8 @@ r<svelte:head>
 		color: #0f172a;
 	}
 
-	:global(.dark) .grammar-guide :global(strong),
-	:global(.dark) .grammar-guide :global(b) {
+	:global(html[data-theme='dark']) .grammar-guide :global(strong),
+	:global(html[data-theme='dark']) .grammar-guide :global(b) {
 		color: #f8fafc;
 	}
 
@@ -3448,8 +3461,8 @@ r<svelte:head>
 		color: #475569;
 	}
 
-	:global(.dark) .grammar-guide :global(em),
-	:global(.dark) .grammar-guide :global(i) {
+	:global(html[data-theme='dark']) .grammar-guide :global(em),
+	:global(html[data-theme='dark']) .grammar-guide :global(i) {
 		color: #94a3b8;
 	}
 
@@ -3462,7 +3475,7 @@ r<svelte:head>
 		color: #db2777;
 	}
 
-	:global(.dark) .grammar-guide :global(code) {
+	:global(html[data-theme='dark']) .grammar-guide :global(code) {
 		background: #1e293b;
 		color: #f472b6;
 	}
@@ -3494,7 +3507,7 @@ r<svelte:head>
 		font-style: italic;
 	}
 
-	:global(.dark) .grammar-guide :global(blockquote) {
+	:global(html[data-theme='dark']) .grammar-guide :global(blockquote) {
 		background: #1e293b;
 		border-left-color: #60a5fa;
 	}
@@ -3512,8 +3525,8 @@ r<svelte:head>
 		text-align: left;
 	}
 
-	:global(.dark) .grammar-guide :global(th),
-	:global(.dark) .grammar-guide :global(td) {
+	:global(html[data-theme='dark']) .grammar-guide :global(th),
+	:global(html[data-theme='dark']) .grammar-guide :global(td) {
 		border-color: #334155;
 	}
 
@@ -3522,7 +3535,7 @@ r<svelte:head>
 		font-weight: 600;
 	}
 
-	:global(.dark) .grammar-guide :global(th) {
+	:global(html[data-theme='dark']) .grammar-guide :global(th) {
 		background: #1e293b;
 	}
 
@@ -3533,6 +3546,11 @@ r<svelte:head>
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: #475569;
+	}
+
+	:global(html[data-theme='dark']) .concept-type {
+		background: #334155;
+		color: #cbd5e1;
 	}
 
 	.answer-form {
@@ -3620,6 +3638,10 @@ r<svelte:head>
 		color: #0f172a;
 	}
 
+	:global(html[data-theme='dark']) .feedback-header h2 {
+		color: #f1f5f9;
+	}
+
 	.score-display {
 		display: flex;
 		align-items: center;
@@ -3673,6 +3695,11 @@ r<svelte:head>
 		line-height: 1.5;
 	}
 
+	:global(html[data-theme='dark']) .feedback-message {
+		background-color: #0c1a3a;
+		color: #93c5fd;
+	}
+
 	.feedback-message p {
 		margin: 0;
 	}
@@ -3685,11 +3712,20 @@ r<svelte:head>
 		margin-bottom: 1.5rem;
 	}
 
+	:global(html[data-theme='dark']) .expected-answer {
+		background-color: #0d1f14;
+		border-color: #166534;
+	}
+
 	.expected-answer p {
 		margin: 0;
 		font-size: 1.1rem;
 		font-weight: 500;
 		color: #166534;
+	}
+
+	:global(html[data-theme='dark']) .expected-answer p {
+		color: #86efac;
 	}
 
 	.feedback-grid {
@@ -3744,6 +3780,11 @@ r<svelte:head>
 		white-space: nowrap;
 	}
 
+	:global(html[data-theme='dark']) .elo-display {
+		background: #1e293b;
+		color: #94a3b8;
+	}
+
 	.elo-delta {
 		font-size: 0.75rem;
 		font-weight: 800;
@@ -3766,6 +3807,11 @@ r<svelte:head>
 		box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 		margin-top: 0.25rem;
 		width: 100%;
+	}
+
+	:global(html[data-theme='dark']) .progress-bar-container {
+		background-color: #1e293b;
+		border-color: #334155;
 	}
 
 	.progress-bar-fill {
@@ -3874,12 +3920,25 @@ r<svelte:head>
 		box-shadow: 0 6px 0 #93c5fd;
 	}
 
+	:global(html[data-theme='dark']) .mode-btn:hover {
+		border-color: #3b82f6;
+		background: #1e293b;
+		box-shadow: 0 6px 0 #1e3a5f;
+	}
+
 	.mode-btn.active {
 		border-color: #1cb0f6;
 		background: #ddf4ff;
 		color: #1cb0f6;
 		transform: translateY(2px);
 		box-shadow: 0 2px 0 #1899d6;
+	}
+
+	:global(html[data-theme='dark']) .mode-btn.active {
+		border-color: #38bdf8;
+		background: #0c2340;
+		color: #38bdf8;
+		box-shadow: 0 2px 0 #0e4166;
 	}
 
 	/* Fill in the Blank styles */
@@ -4015,6 +4074,12 @@ r<svelte:head>
 		color: #166534;
 	}
 
+	:global(html[data-theme='dark']) .beginner-tip {
+		background: linear-gradient(135deg, #0d1f14 0%, #0d2218 100%);
+		border-color: #166534;
+		color: #86efac;
+	}
+
 	.tip-icon {
 		font-size: 1.5rem;
 		flex-shrink: 0;
@@ -4043,6 +4108,21 @@ r<svelte:head>
 	.mode-difficulty.hard {
 		background-color: #fee2e2;
 		color: #991b1b;
+	}
+
+	:global(html[data-theme='dark']) .mode-difficulty.easy {
+		background-color: rgba(22, 101, 52, 0.3);
+		color: #86efac;
+	}
+
+	:global(html[data-theme='dark']) .mode-difficulty.medium {
+		background-color: rgba(133, 77, 14, 0.3);
+		color: #fde68a;
+	}
+
+	:global(html[data-theme='dark']) .mode-difficulty.hard {
+		background-color: rgba(153, 27, 27, 0.3);
+		color: #fca5a5;
 	}
 
 	/* Assignment Banner Styles */
@@ -4204,47 +4284,47 @@ r<svelte:head>
 	}
 
 	/* Dark mode support for assignment banner if implemented */
-	:global(.dark) .assignment-banner.passed {
+	:global(html[data-theme='dark']) .assignment-banner.passed {
 		background-color: rgba(6, 78, 59, 0.2);
 		border-color: rgba(6, 95, 70, 0.5);
 	}
 
-	:global(.dark) .assignment-banner.active {
+	:global(html[data-theme='dark']) .assignment-banner.active {
 		background-color: rgba(30, 58, 138, 0.2);
 		border-color: rgba(30, 64, 175, 0.5);
 	}
 
-	:global(.dark) .assignment-banner.passed .assignment-icon {
+	:global(html[data-theme='dark']) .assignment-banner.passed .assignment-icon {
 		background-color: rgba(6, 78, 59, 0.5);
 	}
 
-	:global(.dark) .assignment-banner.active .assignment-icon {
+	:global(html[data-theme='dark']) .assignment-banner.active .assignment-icon {
 		background-color: rgba(30, 58, 138, 0.5);
 	}
 
-	:global(.dark) .assignment-title {
+	:global(html[data-theme='dark']) .assignment-title {
 		color: #f1f5f9;
 	}
 
-	:global(.dark) .meta-badge {
+	:global(html[data-theme='dark']) .meta-badge {
 		background-color: rgba(30, 41, 59, 0.6);
 		color: #94a3b8;
 	}
 
-	:global(.dark) .progress-box {
+	:global(html[data-theme='dark']) .progress-box {
 		background-color: rgba(30, 41, 59, 0.5);
 	}
 
 	@media (min-width: 640px) {
-		:global(.dark) .progress-box {
+		:global(html[data-theme='dark']) .progress-box {
 			background-color: transparent;
 		}
 	}
 
-	:global(.dark) .progress-value.passed {
+	:global(html[data-theme='dark']) .progress-value.passed {
 		color: #34d399;
 	}
-	:global(.dark) .progress-value.active {
+	:global(html[data-theme='dark']) .progress-value.active {
 		color: #60a5fa;
 	}
 

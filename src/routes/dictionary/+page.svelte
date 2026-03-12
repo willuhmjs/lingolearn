@@ -640,7 +640,7 @@
 		color: var(--text-color, #111827);
 	}
 
-	:global(.dark) .title {
+	:global(html[data-theme='dark']) .title {
 		color: #ffffff;
 	}
 
@@ -648,7 +648,7 @@
 		color: var(--text-muted, #4b5563);
 	}
 
-	:global(.dark) .subtitle {
+	:global(html[data-theme='dark']) .subtitle {
 		color: #9ca3af;
 	}
 
@@ -661,7 +661,7 @@
 		padding-bottom: 0.5rem;
 	}
 
-	:global(.dark) .tabs-container {
+	:global(html[data-theme='dark']) .tabs-container {
 		border-bottom-color: #374151;
 	}
 
@@ -695,16 +695,16 @@
 		background-color: #3b82f6;
 	}
 
-	:global(.dark) .tab-btn {
+	:global(html[data-theme='dark']) .tab-btn {
 		color: #9ca3af;
 	}
 
-	:global(.dark) .tab-btn:hover,
-	:global(.dark) .tab-btn.active {
+	:global(html[data-theme='dark']) .tab-btn:hover,
+	:global(html[data-theme='dark']) .tab-btn.active {
 		color: #60a5fa;
 	}
 
-	:global(.dark) .tab-btn.active::after {
+	:global(html[data-theme='dark']) .tab-btn.active::after {
 		background-color: #60a5fa;
 	}
 
@@ -746,7 +746,7 @@
 		color: #111827;
 	}
 
-	:global(.dark) .search-input {
+	:global(html[data-theme='dark']) .search-input {
 		border-color: #4b5563;
 		background-color: #374151;
 		color: #ffffff;
@@ -771,7 +771,7 @@
 		z-index: 10;
 	}
 
-	:global(.dark) .esset-prompt {
+	:global(html[data-theme='dark']) .esset-prompt {
 		background-color: #1f2937;
 		border-color: #4b5563;
 	}
@@ -840,7 +840,7 @@
 		transition: transform 0.2s, box-shadow 0.2s;
 	}
 
-	:global(.dark) .result-item {
+	:global(html[data-theme='dark']) .result-item {
 		background-color: #1f2937;
 		border-color: #374151;
 	}
@@ -884,7 +884,7 @@
 		color: #4b5563;
 	}
 
-	:global(.dark) .result-meaning {
+	:global(html[data-theme='dark']) .result-meaning {
 		color: #d1d5db;
 	}
 
@@ -950,7 +950,7 @@
 		background-color: #f9fafb;
 	}
 
-	:global(.dark) .grammar-rule-header:hover {
+	:global(html[data-theme='dark']) .grammar-rule-header:hover {
 		background-color: #2d3748;
 	}
 
@@ -984,7 +984,7 @@
 		border-top: 1px solid #f3f4f6;
 	}
 
-	:global(.dark) .grammar-rule-content {
+	:global(html[data-theme='dark']) .grammar-rule-content {
 		border-top-color: #374151;
 	}
 
@@ -1006,10 +1006,10 @@
 		color: #1a202c;
 	}
 
-	:global(.dark) .grammar-guide :global(h1),
-	:global(.dark) .grammar-guide :global(h2),
-	:global(.dark) .grammar-guide :global(h3),
-	:global(.dark) .grammar-guide :global(h4) {
+	:global(html[data-theme='dark']) .grammar-guide :global(h1),
+	:global(html[data-theme='dark']) .grammar-guide :global(h2),
+	:global(html[data-theme='dark']) .grammar-guide :global(h3),
+	:global(html[data-theme='dark']) .grammar-guide :global(h4) {
 		color: #f7fafc;
 	}
 
@@ -1031,7 +1031,7 @@
 		color: #2b6cb0;
 	}
 
-	:global(.dark) .grammar-guide :global(strong) {
+	:global(html[data-theme='dark']) .grammar-guide :global(strong) {
 		color: #63b3ed;
 	}
 
@@ -1049,8 +1049,8 @@
 		text-align: left;
 	}
 
-	:global(.dark) .grammar-guide :global(th),
-	:global(.dark) .grammar-guide :global(td) {
+	:global(html[data-theme='dark']) .grammar-guide :global(th),
+	:global(html[data-theme='dark']) .grammar-guide :global(td) {
 		border-color: #4a5568;
 	}
 
@@ -1059,7 +1059,7 @@
 		font-weight: 700;
 	}
 
-	:global(.dark) .grammar-guide :global(th) {
+	:global(html[data-theme='dark']) .grammar-guide :global(th) {
 		background-color: #2d3748;
 	}
 
@@ -1071,7 +1071,7 @@
 		margin: 1.5rem 0;
 	}
 
-	:global(.dark) .grammar-guide :global(blockquote) {
+	:global(html[data-theme='dark']) .grammar-guide :global(blockquote) {
 		color: #a0aec0;
 	}
 
@@ -1103,7 +1103,7 @@
 		overflow: hidden;
 	}
 
-	:global(.dark) .modal-content {
+	:global(html[data-theme='dark']) .modal-content {
 		background-color: #1f2937;
 		border: 1px solid #374151;
 	}
@@ -1160,7 +1160,7 @@
 		margin-bottom: 0.5rem;
 	}
 
-	:global(.dark) .modal-section-title {
+	:global(html[data-theme='dark']) .modal-section-title {
 		color: #9ca3af;
 	}
 
@@ -1169,10 +1169,10 @@
 		color: #111827;
 	}
 
-	:global(.dark) .modal-meaning,
-	:global(.dark) .modal-plural,
-	:global(.dark) .modal-example,
-	:global(.dark) .modal-example-translation {
+	:global(html[data-theme='dark']) .modal-meaning,
+	:global(html[data-theme='dark']) .modal-plural,
+	:global(html[data-theme='dark']) .modal-example,
+	:global(html[data-theme='dark']) .modal-example-translation {
 		color: #f9fafb;
 	}
 
@@ -1183,7 +1183,7 @@
 		justify-content: flex-start;
 	}
 
-	:global(.dark) .modal-footer {
+	:global(html[data-theme='dark']) .modal-footer {
 		border-top-color: #374151;
 	}
 
@@ -1201,7 +1201,7 @@
 		margin-top: 2rem;
 	}
 
-	:global(.dark) .no-results {
+	:global(html[data-theme='dark']) .no-results {
 		background-color: #111827;
 		border-color: #374151;
 	}
@@ -1220,7 +1220,7 @@
 		margin: 0 0 0.5rem 0;
 	}
 
-	:global(.dark) .no-results-title {
+	:global(html[data-theme='dark']) .no-results-title {
 		color: #f9fafb;
 	}
 
@@ -1230,7 +1230,7 @@
 		margin: 0 0 2rem 0;
 	}
 
-	:global(.dark) .no-results-text {
+	:global(html[data-theme='dark']) .no-results-text {
 		color: #9ca3af;
 	}
 
@@ -1278,7 +1278,7 @@
 		font-style: italic;
 	}
 
-	:global(.dark) .no-meaning-text {
+	:global(html[data-theme='dark']) .no-meaning-text {
 		color: #6b7280;
 	}
 
@@ -1294,7 +1294,7 @@
 		flex-wrap: wrap;
 	}
 
-	:global(.dark) .ask-ai-results-section {
+	:global(html[data-theme='dark']) .ask-ai-results-section {
 		border-color: #374151;
 		background-color: #111827;
 	}
@@ -1306,7 +1306,7 @@
 		font-size: 0.9rem;
 	}
 
-	:global(.dark) .ask-ai-results-text {
+	:global(html[data-theme='dark']) .ask-ai-results-text {
 		color: #9ca3af;
 	}
 
@@ -1345,7 +1345,7 @@
 		color: #6b7280;
 	}
 
-	:global(.dark) .empty-state {
+	:global(html[data-theme='dark']) .empty-state {
 		color: #9ca3af;
 	}
 
@@ -1370,7 +1370,7 @@
 		color: #374151;
 	}
 
-	:global(.dark) .empty-hint kbd {
+	:global(html[data-theme='dark']) .empty-hint kbd {
 		background-color: #374151;
 		border-color: #4b5563;
 		color: #e5e7eb;
@@ -1386,7 +1386,7 @@
 		border: 1px solid #fee2e2;
 	}
 
-	:global(.dark) .error-message {
+	:global(html[data-theme='dark']) .error-message {
 		background-color: rgba(220, 38, 38, 0.1);
 		border-color: rgba(220, 38, 38, 0.2);
 	}

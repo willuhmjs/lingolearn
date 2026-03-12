@@ -1424,6 +1424,10 @@
 		background: #ddf4ff;
 	}
 
+	:global(html[data-theme='dark']) .mcq-option.selected {
+		background: #0c2340;
+	}
+
 	.mcq-option.correct {
 		border-color: #16a34a;
 		background: #f0fdf4;
