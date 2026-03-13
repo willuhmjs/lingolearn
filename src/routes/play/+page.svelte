@@ -2049,7 +2049,7 @@ r<svelte:head>
 					</div>
 					<button
 						on:click={() => gameMode === 'chat' ? goto('/play/chat') : generateChallenge()}
-						class="btn-duo btn-primary"
+						class="btn-duo btn-ai"
 						style="margin-top: 1.5rem; width: 100%;"
 					>
 						{gameMode === 'chat' ? 'Start Chat Session' : 'Generate Next Challenge'}
@@ -2386,7 +2386,7 @@ r<svelte:head>
 
 					<button
 						on:click={generateChallenge}
-						class="btn-duo btn-primary next-btn"
+						class="btn-duo btn-ai next-btn"
 						style="margin-top: 1.5rem; width: 100%;"
 					>
 						Next Challenge

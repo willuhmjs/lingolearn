@@ -710,7 +710,7 @@
 				class="seed-btn"
 				on:click={runAICheckAll}
 				disabled={isCheckingAI || data.pendingVocab.length === 0}
-				style="background-color: #3b82f6;"
+				style="background-color: #8b5cf6;"
 			>
 				{isCheckingAI ? aiCheckProgress || 'Checking...' : 'AI Check All'}
 			</button>

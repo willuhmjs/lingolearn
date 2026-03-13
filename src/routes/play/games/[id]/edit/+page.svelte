@@ -348,7 +348,7 @@
 				<button 
 					onclick={generateQuestions} 
 					disabled={isGenerating || !generateTopic || isPublishing}
-					class="btn-primary generate-btn {isGenerating ? 'submitting' : ''}"
+					class="btn-ai generate-btn {isGenerating ? 'submitting' : ''}"
 				>
 					{isGenerating ? 'Generating...' : 'Generate AI'}
 				</button>
@@ -610,7 +610,7 @@
 	}
 
 	.card-header-flex h2 svg { color: #a855f7; width: 1.25rem; height: 1.25rem; }
-	.ai-card h2 svg { color: #3b82f6; width: 1.25rem; height: 1.25rem; }
+	.ai-card h2 svg { color: #a855f7; width: 1.25rem; height: 1.25rem; }
 	.questions-header h2 svg { color: #eab308; width: 1.5rem; height: 1.5rem; }
 
 	.link-btn {
@@ -708,8 +708,8 @@
 	}
 
 	.ai-card {
-		background-color: #eff6ff;
-		border-color: #bfdbfe;
+		background-color: #faf5ff;
+		border-color: #e9d5ff;
 	}
 
 	.ai-desc {
@@ -735,7 +735,7 @@
 		flex: 1;
 		padding: 0.75rem 1rem;
 		border-radius: 0.75rem;
-		border-color: #bfdbfe;
+		border-color: #e9d5ff;
 		background-color: white;
 	}
 
@@ -748,7 +748,7 @@
 		width: 6rem;
 		padding: 0.75rem;
 		border-radius: 0.75rem;
-		border-color: #bfdbfe;
+		border-color: #e9d5ff;
 		background-color: white;
 		text-align: center;
 	}

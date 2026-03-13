@@ -693,6 +693,21 @@
 		box-shadow: 0 2px 0 #475569;
 	}
 
+	:global(.btn-ai) {
+		background-color: #8b5cf6;
+		color: white;
+		border-color: transparent;
+		box-shadow: 0 4px 0 #7c3aed;
+	}
+	:global(.btn-ai:hover) {
+		background-color: #a78bfa;
+		transform: scale(1.02);
+	}
+	:global(.btn-ai:active) {
+		transform: scale(0.98) translateY(2px);
+		box-shadow: 0 2px 0 #7c3aed;
+	}
+
 	:global(.btn-danger) {
 		background-color: #ef4444;
 		color: white;
