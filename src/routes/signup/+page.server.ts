@@ -37,28 +37,28 @@ export const actions = {
 		// Hash password
 		const passwordHash = await bcrypt.hash(password, 10);
 
-		// Create user — rely on DB unique constraints for race-condition safety
-		// Role assignment is done atomically after creation to avoid race conditions
+		// Create user — rely on DB unique constraints for race-condition safety.
+		// Role assignment runs in the same transaction to eliminate TOCTOU.
 		let createdUser;
 		try {
-			createdUser = await prisma.user.create({
-				data: {
-					username,
-					email,
-					passwordHash,
-					role: 'USER' // Default to USER, upgrade to ADMIN if first user
-				}
-			});
-
-			// Atomically check and upgrade to ADMIN if this is the first user
-			// This happens after creation to avoid race condition
-			const isFirstUser = await prisma.user.count() === 1;
-			if (isFirstUser) {
-				await prisma.user.update({
-					where: { id: createdUser.id },
-					data: { role: 'ADMIN' }
+			createdUser = await prisma.$transaction(async (tx) => {
+				const user = await tx.user.create({
+					data: {
+						username,
+						email,
+						passwordHash,
+						role: 'USER'
+					}
 				});
-			}
+				const count = await tx.user.count();
+				if (count === 1) {
+					return tx.user.update({
+						where: { id: user.id },
+						data: { role: 'ADMIN' }
+					});
+				}
+				return user;
+			});
 		} catch (error) {
 			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
 				const target = (error.meta?.target as string[]) ?? [];

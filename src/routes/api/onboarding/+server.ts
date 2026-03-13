@@ -384,7 +384,6 @@ export async function POST({ request, locals }: RequestEvent) {
 		});
 	} catch (error: unknown) {
 		console.error('Error in onboarding API:', error);
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		return json({ error: errorMessage }, { status: 500 });
+		return json({ error: 'Failed to process onboarding request' }, { status: 500 });
 	}
 }

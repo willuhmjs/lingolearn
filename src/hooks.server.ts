@@ -14,6 +14,21 @@ initLoadTimeStat();
 const lastActiveUpdateCache = new Map<string, number>();
 
 const authorization: Handle = async ({ event, resolve }) => {
+	// Enforce Content-Type: application/json on mutating API requests to prevent CSRF
+	// via form submissions or other non-JSON content types.
+	const { method, pathname } = { method: event.request.method, pathname: event.url.pathname };
+	if (
+		pathname.startsWith('/api') &&
+		(method === 'POST' || method === 'PUT' || method === 'PATCH') &&
+		event.request.headers.get('content-type') !== null &&
+		!event.request.headers.get('content-type')?.includes('application/json')
+	) {
+		return new Response(JSON.stringify({ error: 'Content-Type must be application/json' }), {
+			status: 415,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
+
 	// Rate limiting logic
 	if (event.url.pathname.startsWith('/api')) {
 		if (await apiRateLimiter.isLimited(event)) {
@@ -104,8 +119,8 @@ const authorization: Handle = async ({ event, resolve }) => {
 		totalXp: (dbUser as { totalXp?: number }).totalXp || 0,
 		currentStreak: (dbUser as { currentStreak?: number }).currentStreak || 0,
 		useLocalLlm: (dbUser as { useLocalLlm?: boolean }).useLocalLlm,
-		llmBaseUrl: (dbUser as { llmBaseUrl?: string | null }).llmBaseUrl,
-		llmApiKey: (dbUser as { llmApiKey?: string | null }).llmApiKey,
+		// llmBaseUrl and llmApiKey are intentionally excluded — they must never
+		// be serialized into page data and sent to the client.
 		activeLanguage: activeLanguage
 			? {
 					id: activeLanguage.id,

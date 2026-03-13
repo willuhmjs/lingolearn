@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { randomBytes } from 'crypto';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -26,12 +27,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Maximum class ownership limit reached (20)' }, { status: 403 });
 		}
 
-		// Generate a 6-character alphanumeric invite code
+		// Generate a cryptographically secure 6-character alphanumeric invite code
 		const generateInviteCode = () => {
 			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+			const bytes = randomBytes(6);
 			let code = '';
 			for (let i = 0; i < 6; i++) {
-				code += chars.charAt(Math.floor(Math.random() * chars.length));
+				code += chars[bytes[i] % chars.length];
 			}
 			return code;
 		};

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { generateChatCompletion } from '$lib/server/llm';
+import { sanitizeForPrompt } from '$lib/server/sanitize';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
@@ -16,7 +17,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			return json({ error: 'Topic is required' }, { status: 400 });
 		}
 
-		const numQuestions = count || 5;
+		const numQuestions = Math.min(Math.max(1, parseInt(count) || 5), 20);
 
 		const game = await prisma.game.findUnique({
 			where: { id: params.id }
@@ -30,9 +31,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			return json({ error: 'Forbidden' }, { status: 403 });
 		}
 
+		const safeTopic = sanitizeForPrompt(topic, 300);
 		const prompt = `Generate ${numQuestions} multiple choice questions for a language learning game.
-The language is ${game.language}.
-The topic is: ${topic}.
+The language is ${sanitizeForPrompt(game.language, 50)}.
+The topic is: ${safeTopic}.
 Return ONLY a valid JSON array of objects.
 Each object must have these exact keys:
 - "question" (the question text)

@@ -410,11 +410,13 @@
 				try {
 					const event = JSON.parse(buffer.trim());
 					if (event.type === 'done') {
-						messages = messages.map((m) =>
-							m.id === assistantMessage.id
-								? { ...m, content: event.message.content, correction: event.message.correction }
-								: m
-						);
+						isTyping = false;
+						messages = [...messages, {
+							id: Date.now().toString() + '-ai',
+							role: 'assistant',
+							content: event.message.content || '',
+							correction: null
+						}];
 						scrollToBottom();
 					}
 				} catch (err) {}

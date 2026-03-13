@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { publishGameRateLimiter } from '$lib/server/ratelimit';
 import { generateChatCompletion } from '$lib/server/llm';
+import { sanitizeForPrompt } from '$lib/server/sanitize';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export async function POST(event: RequestEvent) {
@@ -36,11 +37,13 @@ export async function POST(event: RequestEvent) {
 	}
 
 	// LLM Review
+	const safeTitle = sanitizeForPrompt(game.title ?? '', 200);
+	const safeDescription = sanitizeForPrompt(game.description ?? '', 500);
 	const systemPrompt = `You are a helpful assistant reviewing a language learning game for safety, appropriateness, and quality.
-The game is titled "${game.title}" with description "${game.description}".
+The game is titled "${safeTitle}" with description "${safeDescription}".
 It has ${game.questions.length} questions.
 Here are the questions and answers:
-${game.questions.map((q: {question: string, answer: string}, i: number) => `${i + 1}. Q: ${q.question} | A: ${q.answer}`).join('\n')}
+${game.questions.map((q: {question: string, answer: string}, i: number) => `${i + 1}. Q: ${sanitizeForPrompt(q.question, 300)} | A: ${sanitizeForPrompt(q.answer, 200)}`).join('\n')}
 
 Is this game appropriate to be published to a public community? Also, suggest a category for the game from the following list: Vocabulary, Grammar, Culture, Conversation, General. Respond in JSON format:
 { "approved": boolean, "reason": "short explanation", "category": "Vocabulary" | "Grammar" | "Culture" | "Conversation" | "General" }`;

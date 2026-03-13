@@ -10,11 +10,18 @@ export async function POST({ params, request, locals }) {
 	const classId = params.id;
 	const userId = user.id;
 	const data = await request.json();
-	const { action, isCorrect } = data;
+	const { action, selectedAnswer } = data;
 
 	const activeSession = await prisma.liveSession.findFirst({
 		where: { classId, status: { in: ['waiting', 'active', 'showing_answer'] } },
-		orderBy: { createdAt: 'desc' }
+		orderBy: { createdAt: 'desc' },
+		include: {
+			game: {
+				include: {
+					questions: { orderBy: { order: 'asc' } }
+				}
+			}
+		}
 	});
 
 	if (!activeSession) {
@@ -40,6 +47,18 @@ export async function POST({ params, request, locals }) {
 			return json({ error: 'Cannot answer right now' }, { status: 400 });
 		}
 
+		if (typeof selectedAnswer !== 'string' || !selectedAnswer.trim()) {
+			return json({ error: 'selectedAnswer is required' }, { status: 400 });
+		}
+
+		// Server-side correctness check — never trust the client's isCorrect flag
+		const currentQuestion = activeSession.game?.questions?.[activeSession.currentQuestionIndex];
+		if (!currentQuestion) {
+			return json({ error: 'Question not found' }, { status: 400 });
+		}
+		const isCorrect =
+			selectedAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+
 		const participant = await prisma.liveSessionParticipant.findUnique({
 			where: { sessionId_userId: { sessionId: activeSession.id, userId } }
 		});
@@ -60,7 +79,7 @@ export async function POST({ params, request, locals }) {
 			}
 		});
 
-		return json({ success: true });
+		return json({ success: true, isCorrect });
 	}
 
 	return json({ error: 'Invalid action' }, { status: 400 });

@@ -2,12 +2,14 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { requireClassRole } from '$lib/server/classAuth';
+import { randomBytes } from 'crypto';
 
 function generateInviteCode(length = 6) {
 	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	const bytes = randomBytes(length);
 	let result = '';
 	for (let i = 0; i < length; i++) {
-		result += chars.charAt(Math.floor(Math.random() * chars.length));
+		result += chars[bytes[i] % chars.length];
 	}
 	return result;
 }

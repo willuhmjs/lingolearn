@@ -33,10 +33,7 @@
 			[opts[i], opts[j]] = [opts[j], opts[i]];
 		}
 		
-		shuffledOptions = opts.map(text => ({
-			text,
-			isCorrect: text === currentQuestionData.answer
-		}));
+		shuffledOptions = opts.map(text => ({ text }));
 	}
 
 	const classId = $page.params.id;
@@ -81,19 +78,20 @@
 		}
 	}
 
-	async function submitAnswer(isCorrect: boolean) {
+	async function submitAnswer(selectedText: string) {
 		if (hasAnswered) return;
 		try {
-			lastAnswerCorrect = isCorrect;
 			const res = await fetch(`/api/classes/${classId}/live-session/student`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'answer', isCorrect })
+				body: JSON.stringify({ action: 'answer', selectedAnswer: selectedText })
 			});
 			if (!res.ok) throw new Error('Failed to submit answer');
+			const result = await res.json();
+			lastAnswerCorrect = result.isCorrect ?? false;
 
 			fetchSession();
-			toast.success(isCorrect ? 'Correct!' : 'Incorrect!');
+			toast.success(result.isCorrect ? 'Correct!' : 'Incorrect!');
 		} catch (error: any) {
 			toast.error(error.message);
 		}
@@ -160,7 +158,7 @@
 							<button
 								type="button"
 								class={`option-btn option-${optionColors[i % optionColors.length]}`}
-								on:click={() => submitAnswer(opt.isCorrect)}
+								on:click={() => submitAnswer(opt.text)}
 								disabled={hasAnswered}
 								aria-label="Answer option: {opt.text}"
 							>

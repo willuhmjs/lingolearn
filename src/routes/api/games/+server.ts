@@ -4,10 +4,10 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '10');
+		const page = Math.max(1, parseInt(url.searchParams.get('page') || '1') || 1);
+		const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '10') || 10), 50);
 		const category = url.searchParams.get('category') || 'All';
-		
+
 		const skip = (page - 1) * limit;
 
 		const where = { 

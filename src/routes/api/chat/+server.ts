@@ -3,6 +3,7 @@ import { prisma } from '$lib/server/prisma';
 import { generateChatCompletion, type ChatMessage } from '$lib/server/llm';
 import { chatPracticeRateLimiter } from '$lib/server/ratelimit';
 import { updateEloRatings } from '$lib/server/grader';
+import { sanitizeForPrompt } from '$lib/server/sanitize';
 
 export async function POST(event) {
 	const { locals } = event;
@@ -26,6 +27,10 @@ export async function POST(event) {
 
 	if (!message) {
 		return json({ error: 'Message is required' }, { status: 400 });
+	}
+
+	if (typeof message !== 'string' || message.length > 2000) {
+		return json({ error: 'Message must be a string of at most 2000 characters' }, { status: 400 });
 	}
 
 	const normalizedMessage = message
@@ -148,8 +153,9 @@ export async function POST(event) {
 	
 	let assignmentPrompt = '';
 	if ('assignmentId' in currentSession && currentSession.assignmentId && assignmentTopic) {
+		const safeAssignmentTopic = sanitizeForPrompt(assignmentTopic, 300);
 		assignmentPrompt = `\nIMPORTANT ASSIGNMENT INSTRUCTIONS:
-The user is completing an assignment. The required topic of conversation is: "${assignmentTopic}".
+The user is completing an assignment. The required topic of conversation is: "${safeAssignmentTopic}".
 You must steer the conversation towards this topic naturally.
 The user has completed ${userMessageCount} out of ${assignmentGoalTurns} required turns.
 Set "assignmentCompleted" to true if the user has reached at least ${assignmentGoalTurns} turns and has successfully discussed the topic. Otherwise set it to false.\n`;

@@ -11,18 +11,21 @@ const originalCreateUser = adapter.createUser!;
 adapter.createUser = async (user) => {
 	const baseUsername = user.email?.split('@')[0] || 'user';
 	const username = `${baseUsername}-${Math.floor(Math.random() * 10000)}`;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const createdUser = await originalCreateUser({ ...user, username, role: 'USER' } as any);
 
-	// Atomically check and upgrade to ADMIN if this is the first user
-	const isFirstUser = await prisma.user.count() === 1;
-	if (isFirstUser && createdUser.id) {
-		await prisma.user.update({
-			where: { id: createdUser.id as string },
-			data: { role: 'ADMIN' }
-		});
-		return { ...createdUser, role: 'ADMIN' };
-	}
+	// Run create + first-user check in one transaction to eliminate TOCTOU race.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const createdUser = await prisma.$transaction(async (tx) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const newUser = await originalCreateUser({ ...user, username, role: 'USER' } as any);
+		const count = await tx.user.count();
+		if (count === 1 && newUser.id) {
+			return tx.user.update({
+				where: { id: newUser.id as string },
+				data: { role: 'ADMIN' }
+			});
+		}
+		return newUser;
+	});
 
 	return createdUser;
 };

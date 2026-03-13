@@ -3,6 +3,45 @@ import { prisma } from '$lib/server/prisma';
 import { getSiteSettings } from '$lib/server/settings';
 import OpenAI from 'openai';
 
+/**
+ * Rejects URLs that resolve to private/loopback/link-local ranges to prevent SSRF.
+ * Only enforced for user-supplied custom LLM endpoints.
+ */
+function assertSafeUrl(rawUrl: string): void {
+	let parsed: URL;
+	try {
+		parsed = new URL(rawUrl);
+	} catch {
+		throw new Error('Invalid LLM base URL');
+	}
+
+	const hostname = parsed.hostname.toLowerCase();
+
+	// Block plaintext metadata endpoints, loopback, and link-local
+	const blocked = [
+		/^localhost$/,
+		/^127\./,
+		/^0\.0\.0\.0$/,
+		/^::1$/,
+		/^10\./,
+		/^172\.(1[6-9]|2\d|3[01])\./,
+		/^192\.168\./,
+		/^169\.254\./,       // AWS/GCP/Azure metadata
+		/^fd[0-9a-f]{2}:/i,  // IPv6 ULA
+		/^fe80:/i,           // IPv6 link-local
+		/^0\./,
+	];
+
+	if (blocked.some((re) => re.test(hostname))) {
+		throw new Error('Custom LLM endpoint must not point to a private or loopback address');
+	}
+
+	// Only allow https for user-supplied URLs
+	if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+		throw new Error('Custom LLM endpoint must use http or https');
+	}
+}
+
 export interface ChatMessage {
 	role: 'system' | 'user' | 'assistant';
 	content: string;
@@ -53,12 +92,18 @@ export async function generateChatCompletion({
 	const allowCustomLlm = user?.useLocalLlm && classStudentCount === 0;
 
 	// 2. Resolve Base URL and API Key (User custom OR Site Settings OR fallback to environment variables)
+	const usingCustomEndpoint = !!(allowCustomLlm && user?.llmBaseUrl);
 	const rawBaseUrl = (
-		(allowCustomLlm && user?.llmBaseUrl) ? user.llmBaseUrl :
+		usingCustomEndpoint ? user!.llmBaseUrl! :
 		settings.llmEndpoint ||
 		env.DEFAULT_LLM_BASE_URL ||
 		''
 	).replace(/^["']|["']$/g, '');
+
+	// SSRF guard: reject private/loopback addresses for user-supplied endpoints
+	if (usingCustomEndpoint && rawBaseUrl) {
+		assertSafeUrl(rawBaseUrl);
+	}
 
 	const apiKey = (
 		(allowCustomLlm && user?.llmApiKey) ? user.llmApiKey :

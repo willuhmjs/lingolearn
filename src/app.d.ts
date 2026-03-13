@@ -14,8 +14,6 @@ declare global {
 				totalXp: number;
 				currentStreak: number;
 				useLocalLlm?: boolean;
-				llmBaseUrl?: string | null;
-				llmApiKey?: string | null;
 				activeLanguage: {
 					id: string;
 					code: string;

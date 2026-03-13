@@ -83,6 +83,13 @@ export async function POST(event) {
 			return json({ error: 'Missing userInput or targetSentence' }, { status: 400 });
 		}
 
+		if (typeof userInput !== 'string' || userInput.length > 2000) {
+			return json({ error: 'userInput must be a string of at most 2000 characters' }, { status: 400 });
+		}
+		if (typeof targetSentence !== 'string' || targetSentence.length > 2000) {
+			return json({ error: 'targetSentence must be a string of at most 2000 characters' }, { status: 400 });
+		}
+
 		// Fetch the full objects for the targeted IDs, preserving client's order
 		const targetedVocabRaw = await prisma.vocabulary.findMany({
 			where: { id: { in: targetedVocabularyIds || [] } }
@@ -320,7 +327,6 @@ export async function POST(event) {
 		});
 	} catch (error) {
 		console.error('Error submitting answer:', error);
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		return json({ error: message }, { status: 500 });
+		return json({ error: 'Failed to submit answer' }, { status: 500 });
 	}
 }
