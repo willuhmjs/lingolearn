@@ -380,11 +380,11 @@
 					<input id="new-answer" type="text" bind:value={newAnswer} disabled={isPublishing} placeholder="e.g. Bonjour" class="form-input answer-input" />
 				</div>
 				<div class="field">
-					<label>Incorrect Options (Optional)</label>
+					<label for="new-option-1">Incorrect Options (Optional)</label>
 					<div class="options-grid">
-						<input type="text" bind:value={newOptions[0]} disabled={isPublishing} placeholder="Distractor 1" class="form-input" />
-						<input type="text" bind:value={newOptions[1]} disabled={isPublishing} placeholder="Distractor 2" class="form-input" />
-						<input type="text" bind:value={newOptions[2]} disabled={isPublishing} placeholder="Distractor 3" class="form-input" />
+						<input id="new-option-1" type="text" bind:value={newOptions[0]} disabled={isPublishing} placeholder="Distractor 1" class="form-input" />
+						<input type="text" bind:value={newOptions[1]} disabled={isPublishing} placeholder="Distractor 2" class="form-input" aria-label="Distractor 2" />
+						<input type="text" bind:value={newOptions[2]} disabled={isPublishing} placeholder="Distractor 3" class="form-input" aria-label="Distractor 3" />
 					</div>
 				</div>
 				<button onclick={addQuestion} disabled={isPublishing} class="btn-primary save-btn mt-2">Save Question</button>
@@ -413,11 +413,11 @@
 							<input id="edit-answer" type="text" bind:value={editAnswer} class="form-input answer-input" />
 						</div>
 						<div class="field">
-							<label>Incorrect Options (Optional)</label>
+							<label for="edit-option-1">Incorrect Options (Optional)</label>
 							<div class="options-grid">
-								<input type="text" bind:value={editOptions[0]} class="form-input" />
-								<input type="text" bind:value={editOptions[1]} class="form-input" />
-								<input type="text" bind:value={editOptions[2]} class="form-input" />
+								<input id="edit-option-1" type="text" bind:value={editOptions[0]} class="form-input" aria-label="Distractor 1" />
+								<input type="text" bind:value={editOptions[1]} class="form-input" aria-label="Distractor 2" />
+								<input type="text" bind:value={editOptions[2]} class="form-input" aria-label="Distractor 3" />
 							</div>
 						</div>
 						<div class="edit-actions" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">

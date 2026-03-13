@@ -22,6 +22,10 @@
 	$: isFinished = dueReviews.length > 0 ? currentReviewIndex >= dueReviews.length : true;
 	$: showingAnswer = gradeResult !== null;
 
+	$: if (currentReview && !showingAnswer && reviewInputRef) {
+		setTimeout(() => reviewInputRef?.focus(), 0);
+	}
+
 	$: effectiveCorrect = userOverride !== null ? userOverride : gradeResult?.correct ?? false;
 	$: effectiveScore = userOverride !== null ? (userOverride ? 1.0 : 0.0) : (gradeResult?.score ?? 0);
 

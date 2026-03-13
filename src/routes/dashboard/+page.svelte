@@ -220,13 +220,27 @@
 						)
 					};
 				} else {
-					data = {
-						...data,
-						grammarRules: [
-							...data.grammarRules,
-							{ grammarRuleId: ruleId, srsState: 'MASTERED', eloRating: 1200, nextReviewDate: null }
-						]
-					};
+					// Create a new grammar rule progress entry with the full structure
+					const newGrammarRule = data.allGrammarRules.find((r: any) => r.id === ruleId);
+					if (newGrammarRule) {
+						data = {
+							...data,
+							grammarRules: [
+								...data.grammarRules,
+								{
+									id: `temp-${ruleId}`,
+									createdAt: new Date(),
+									updatedAt: new Date(),
+									userId: data.user?.id || '',
+									grammarRuleId: ruleId,
+									srsState: 'MASTERED' as const,
+									eloRating: 1200,
+									nextReviewDate: null,
+									grammarRule: newGrammarRule
+								} as any
+							]
+						};
+					}
 				}
 				// Update the modal stack entry so the detail view reflects mastery
 				modalStack = modalStack.map((item, i) => {

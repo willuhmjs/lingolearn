@@ -606,26 +606,6 @@
 		font-weight: 600;
 	}
 
-	.form-error {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background-color: #fef2f2;
-		color: #ef4444;
-		font-weight: 700;
-		font-size: 0.875rem;
-		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		border: 2px solid #fecaca;
-		margin: 0;
-	}
-
-	.form-error svg {
-		width: 1.25rem;
-		height: 1.25rem;
-		flex-shrink: 0;
-	}
-
 	.form-actions {
 		margin-top: auto;
 		padding-top: 1rem;
@@ -688,6 +668,7 @@
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
+		line-clamp: 2;
 		overflow: hidden;
 	}
 

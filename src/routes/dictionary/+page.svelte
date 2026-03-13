@@ -236,7 +236,6 @@
 					on:input={handleInput}
 					class="search-input"
 					placeholder="Search for words in {currentLanguage} or English..."
-					autofocus
 				/>
 				{#if loading}
 					<div class="loading-wrapper">

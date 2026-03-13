@@ -81,7 +81,6 @@
 						Create Remediation Assignment
 					</div>
 					<ul
-						tabindex="0"
 						class="dropdown-content z-[1] menu p-2 shadow bg-gray-700 rounded-box w-52 mt-1"
 					>
 						<li><button on:click={() => createRemediationAssignment(10)}>Top 10 Words</button></li>

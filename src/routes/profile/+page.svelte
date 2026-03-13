@@ -14,10 +14,15 @@
 	let isUpdatingLanguage = $state(false);
 	let isDeletingAccount = $state(false);
 
-	// LLM settings state
-	let llmBaseUrl = $state(data.user?.llmBaseUrl || '');
-	let llmApiKey = $state(data.user?.llmApiKey || '');
-	let llmModel = $state(data.user?.llmModel || '');
+	// LLM settings state (local editable copies of server data)
+	let llmBaseUrl = $state('');
+	let llmApiKey = $state('');
+	let llmModel = $state('');
+	$effect(() => {
+		llmBaseUrl = data.user?.llmBaseUrl ?? '';
+		llmApiKey = data.user?.llmApiKey ?? '';
+		llmModel = data.user?.llmModel ?? '';
+	});
 	let availableModels = $state<string[]>([]);
 	let isFetchingModels = $state(false);
 
@@ -209,7 +214,7 @@
 					<button
 						type="button"
 						class="fetch-models-btn"
-						on:click={fetchModels}
+						onclick={fetchModels}
 						disabled={isFetchingModels || !llmBaseUrl}
 					>
 						{isFetchingModels ? 'Fetching...' : 'Fetch Models \u2192'}
@@ -320,7 +325,7 @@
 
 		<button
 			class="delete-btn"
-			on:click={() => (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal()}
+			onclick={() => (document.getElementById('delete-modal') as HTMLDialogElement)?.showModal()}
 		>
 			Delete Account
 		</button>
@@ -449,26 +454,6 @@
 		font-size: 0.875rem;
 		font-weight: 600;
 		width: fit-content;
-	}
-
-	.alert {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		margin-bottom: 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
-
-	.alert-success {
-		background-color: #ecfdf5;
-		color: #065f46;
-		border: 1px solid #a7f3d0;
-	}
-
-	.alert-error {
-		background-color: #fef2f2;
-		color: #991b1b;
-		border: 1px solid #fecaca;
 	}
 
 	.llm-desc {

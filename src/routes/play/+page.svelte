@@ -2628,6 +2628,8 @@ r<svelte:head>
 </div>
 
 {#if showClassModal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="modal-backdrop" transition:fade={{ duration: 200 }} on:click={() => showClassModal = false}>
 		<div class="modal" on:click|stopPropagation>
 			<div class="modal-header">
@@ -2928,6 +2930,7 @@ r<svelte:head>
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
 		-webkit-box-orient: vertical;
+		line-clamp: 1;
 		overflow: hidden;
 	}
 
@@ -2957,6 +2960,7 @@ r<svelte:head>
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
+		line-clamp: 2;
 		overflow: hidden;
 	}
 
@@ -3085,8 +3089,7 @@ r<svelte:head>
 		user-select: none;
 	}
 
-	.page-container input,
-	.page-container textarea {
+	.page-container input {
 		-webkit-user-select: text;
 		user-select: text;
 	}
@@ -3401,20 +3404,6 @@ r<svelte:head>
 		border-bottom-color: #3b82f6;
 	}
 
-	.help-text p {
-		font-size: 0.9rem;
-		color: #64748b;
-		background: #f1f5f9;
-		padding: 0.75rem;
-		border-radius: 6px;
-		margin: 0;
-	}
-
-	:global(html[data-theme='dark']) .help-text p {
-		background: #1e293b;
-		color: #94a3b8;
-	}
-
 	.concept-list {
 		list-style: none;
 		padding: 0;
@@ -3645,42 +3634,6 @@ r<svelte:head>
 
 	.form-group {
 		margin-bottom: 1rem;
-	}
-
-	.form-group label {
-		display: block;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #334155;
-		margin-bottom: 0.5rem;
-	}
-
-	.form-group textarea {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid var(--input-border, #cbd5e1);
-		border-radius: 8px;
-		font-family: inherit;
-		font-size: 1rem;
-		color: var(--input-text, #0f172a);
-		background: var(--input-bg, #ffffff);
-		box-sizing: border-box;
-		resize: vertical;
-		transition:
-			border-color 0.15s,
-			box-shadow 0.15s;
-	}
-
-	.form-group textarea:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-
-	.form-group textarea:disabled {
-		background-color: #f1f5f9;
-		color: #94a3b8;
-		cursor: not-allowed;
 	}
 
 	.btn {

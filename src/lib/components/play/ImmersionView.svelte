@@ -3,7 +3,7 @@
 	import toast from 'svelte-french-toast';
 
 	export let language: { name: string; flag?: string } | null = null;
-	export let cefrLevel: string = 'A1';
+	export const cefrLevel: string = 'A1';
 	export let assignmentId: string | null = null;
 	export let assignmentProgress: { score: number; targetScore: number; passed: boolean } | null = null;
 
@@ -270,7 +270,7 @@
 
 		<button class="generate-btn" on:click={generate} disabled={loading}>
 			{#if loading}
-				<span class="spinner" />
+				<span class="spinner"></span>
 				Generating...
 			{:else if session}
 				Generate New
@@ -283,7 +283,7 @@
 	{#if loading}
 		<div class="loading-card" in:fade={{ duration: 200 }}>
 			<div class="loading-inner">
-				<div class="loading-spinner" />
+				<div class="loading-spinner"></div>
 				<p>Creating your {selectedMediaType === 'random' ? 'content' : selectedMediaType.replace(/_/g, ' ')}...</p>
 			</div>
 		</div>
@@ -504,7 +504,7 @@
 								bind:value={state.frText}
 								disabled={state.frSubmitted || state.frSubmitting}
 								on:input={() => { answers[question.id] = state; answers = answers; }}
-							/>
+							></textarea>
 							{#if !state.frSubmitted}
 								<button
 									class="fr-submit-btn"

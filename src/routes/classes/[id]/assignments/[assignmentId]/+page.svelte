@@ -256,6 +256,8 @@
 </div>
 
 {#if showEditModal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="modal-backdrop"
 		on:click={closeEditModal}
@@ -330,7 +332,7 @@
 				</div>
 
 				<div class="field grammar-rules-field">
-					<label>Target Grammar Rules (optional)</label>
+					<span class="field-label">Target Grammar Rules (optional)</span>
 					<div class="grammar-rules-container">
 						{#if availableRules.length > 0}
 							<div class="grammar-search">
@@ -844,13 +846,8 @@
 		color: #0f172a;
 	}
 
-	.edit-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.field label {
+	.field label,
+	.field-label {
 		display: block;
 		font-size: 0.75rem;
 		font-weight: 800;
@@ -865,8 +862,7 @@
 	}
 
 	.field input,
-	.field select,
-	.field textarea {
+	.field select {
 		width: 100%;
 		padding: 0.7rem 1rem;
 		border-radius: 1rem;
@@ -879,12 +875,10 @@
 		transition: border-color 0.2s;
 		box-sizing: border-box;
 		outline: none;
-		resize: vertical;
 	}
 
 	.field input:focus,
-	.field select:focus,
-	.field textarea:focus {
+	.field select:focus {
 		border-color: #22c55e;
 	}
 
@@ -1136,17 +1130,6 @@
 		font-size: 0.85rem;
 		font-weight: 600;
 		margin: 0;
-	}
-
-	.form-error {
-		background-color: #fef2f2;
-		color: #ef4444;
-		font-weight: 700;
-		font-size: 0.875rem;
-		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		border: 2px solid #fecaca;
-		margin: 1rem 0 0;
 	}
 
 </style>

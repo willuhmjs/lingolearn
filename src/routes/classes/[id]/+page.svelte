@@ -511,6 +511,8 @@
 </div>
 
 {#if showCreateAssignmentModal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="modal-backdrop"
 		on:click={closeCreateAssignmentModal}
@@ -579,7 +581,7 @@
 				</div>
 
 				<div class="field grammar-rules-field">
-					<label>Target Grammar Rules (optional)</label>
+					<span class="field-label">Target Grammar Rules (optional)</span>
 					<div class="grammar-rules-container">
 						{#if availableRules.length > 0}
 							<div class="grammar-search">
@@ -934,10 +936,6 @@
 	}
 
 	/* Create Assignment Form */
-	.create-form-card {
-		margin-bottom: 1.5rem;
-	}
-
 	.create-form-title {
 		font-size: 1rem;
 		color: var(--text-color, #1e293b);
@@ -981,12 +979,8 @@
 		}
 	}
 
-	.create-form-submit {
-		display: flex;
-		align-items: flex-end;
-	}
-
-	.field label {
+	.field label,
+	.field-label {
 		display: block;
 		font-size: 0.75rem;
 		font-weight: 800;
@@ -1177,17 +1171,6 @@
 		margin: 0;
 	}
 
-	.form-error {
-		background-color: #fef2f2;
-		color: #ef4444;
-		font-weight: 700;
-		font-size: 0.875rem;
-		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		border: 2px solid #fecaca;
-		margin: 1rem 0 0;
-	}
-
 	/* Assignments List */
 	.assignments-list {
 		display: flex;
@@ -1318,23 +1301,6 @@
 	.btn-copy:active {
 		transform: scale(0.98) translateY(2px);
 		box-shadow: 0 2px 0 #cbd5e1;
-	}
-
-	.btn-delete {
-		background-color: #fee2e2;
-		color: #ef4444;
-		border-color: transparent;
-		box-shadow: 0 4px 0 #fca5a5;
-	}
-
-	.btn-delete:hover {
-		background-color: #fecaca;
-		transform: scale(1.02);
-	}
-
-	.btn-delete:active {
-		transform: scale(0.98) translateY(2px);
-		box-shadow: 0 2px 0 #fca5a5;
 	}
 
 	.assignment-actions-row {

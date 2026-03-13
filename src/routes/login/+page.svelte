@@ -52,8 +52,9 @@
 
 		<div class="google-auth">
 			<button
+				type="button"
 				class="google-btn"
-				on:click={handleGoogleSignIn}
+				onclick={handleGoogleSignIn}
 				disabled={isGoogleSigningIn}
 				aria-label="Sign in with Google"
 				aria-busy={isGoogleSigningIn}

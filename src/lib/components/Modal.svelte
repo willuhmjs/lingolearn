@@ -46,6 +46,7 @@
 	<div
 		class="modal-backdrop"
 		role="dialog"
+		tabindex="-1"
 		aria-modal="true"
 		aria-labelledby={modalState.title ? 'modal-title' : undefined}
 		aria-describedby="modal-message"

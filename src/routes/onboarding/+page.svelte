@@ -599,22 +599,6 @@
 		color: #94a3b8;
 	}
 
-	.error-alert {
-		background-color: #fef2f2;
-		border-left: 4px solid #ef4444;
-		color: #b91c1c;
-		padding: 1rem;
-		border-radius: 0.25rem;
-		margin-top: 1rem;
-		align-self: center;
-		width: 100%;
-		max-width: 90%;
-	}
-
-	.error-alert p {
-		margin: 0;
-	}
-
 	.chat-input-form {
 		display: flex;
 		gap: 0.75rem;
@@ -683,15 +667,6 @@
 
 	.btn-secondary:hover:not(:disabled) {
 		background-color: #dc2626;
-	}
-
-	.btn-success {
-		background-color: #16a34a;
-		color: #ffffff;
-	}
-
-	.btn-success:hover:not(:disabled) {
-		background-color: #15803d;
 	}
 
 	.completion-buttons {
