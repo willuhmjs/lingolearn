@@ -94,218 +94,220 @@
 		<p>Manage your classes and learning groups.</p>
 	</header>
 
-	<!-- List of Classes -->
-	<section class="my-classes-section" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-		<h2 class="section-title">My Classes</h2>
+	<div class="classes-layout">
+		<!-- List of Classes -->
+		<section class="my-classes-section" in:fly={{ y: 20, duration: 400, delay: 100 }}>
+			<h2 class="section-title">My Classes</h2>
 
-		{#if data.classes && data.classes.length > 0}
-			<div class="classes-grid">
-				{#each data.classes as cls}
-					<a href="/classes/{cls.id}" class="card-duo class-card">
-						<h3 class="class-card-name">{cls.name}</h3>
-						{#if cls.description}
-							<p class="class-card-desc">{cls.description}</p>
-						{:else}
-							<div class="class-card-spacer"></div>
-						{/if}
-						<div class="class-card-meta">
-							<span class="meta-item">
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-									<path
-										d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
-									/>
-								</svg>
-								{cls.members.length} members
-							</span>
-							<span class="meta-item">
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-									<path
-										fill-rule="evenodd"
-										d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H7z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-								{cls.assignments.length} tasks
-							</span>
-						</div>
-					</a>
-				{/each}
-			</div>
-		{:else}
-			<div class="empty-state">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-					/>
-				</svg>
-				<p class="empty-title">No classes yet</p>
-				<p class="empty-desc">Create a new class or join one using an invite code!</p>
-			</div>
-		{/if}
-	</section>
-
-	<!-- Create / Join Forms -->
-	<section class="forms-section" in:fly={{ y: 20, duration: 400, delay: 200 }}>
-		<div class="tabs-container">
-			<div class="tabs">
-				<button
-					class="tab-btn"
-					class:active={activeTab === 'create'}
-					onclick={() => (activeTab = 'create')}
-				>
-					Create Class
-				</button>
-				<button
-					class="tab-btn"
-					class:active={activeTab === 'join'}
-					onclick={() => (activeTab = 'join')}
-				>
-					Join Class
-				</button>
-			</div>
-		</div>
-
-		{#if activeTab === 'create'}
-			<div class="form-card-wrapper" in:fly={{ y: 10, duration: 300 }}>
-				<div class="card-duo form-card create-card">
-					<div class="card-header">
-						<div class="icon-wrapper create-icon">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-							</svg>
-						</div>
-						<h2>Create a Class</h2>
-						<p class="card-subtitle">Start a new learning group</p>
-					</div>
-					<form
-						onsubmit={(e) => {
-							e.preventDefault();
-							handleCreate();
-						}}
-						class="form-inner"
+			{#if data.classes && data.classes.length > 0}
+				<div class="classes-grid">
+					{#each data.classes as cls}
+						<a href="/classes/{cls.id}" class="card-duo class-card">
+							<h3 class="class-card-name">{cls.name}</h3>
+							{#if cls.description}
+								<p class="class-card-desc">{cls.description}</p>
+							{:else}
+								<div class="class-card-spacer"></div>
+							{/if}
+							<div class="class-card-meta">
+								<span class="meta-item">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+										<path
+											d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
+										/>
+									</svg>
+									{cls.members.length} members
+								</span>
+								<span class="meta-item">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+										<path
+											fill-rule="evenodd"
+											d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H7z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+									{cls.assignments.length} tasks
+								</span>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{:else}
+				<div class="empty-state">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
 					>
-						<div class="field">
-							<label for="name">Class Name</label>
-							<div class="input-wrapper">
-								<input
-									type="text"
-									id="name"
-									bind:value={createName}
-									placeholder="e.g. German 101"
-									required
-									disabled={isCreating}
-								/>
-							</div>
-						</div>
-						<div class="field">
-							<label for="description">Description <span class="optional">(Optional)</span></label>
-							<div class="input-wrapper">
-								<textarea
-									id="description"
-									bind:value={createDescription}
-									placeholder="What is this class about?"
-									rows="2"
-									disabled={isCreating}
-								></textarea>
-							</div>
-						</div>
-						<div class="field">
-							<label for="language">Primary Language</label>
-							<div class="input-wrapper select-wrapper">
-								<select id="language" bind:value={createLanguage} disabled={isCreating}>
-									<option value="international">🌍 International</option>
-									<option value="de">🇩🇪 German</option>
-									<option value="es">🇪🇸 Spanish</option>
-									<option value="fr">🇫🇷 French</option>
-								</select>
-							</div>
-						</div>
-						<div class="form-actions">
-							<button
-								type="submit"
-								disabled={isCreating || !createName}
-								class="btn-duo btn-primary btn-full"
-							>
-								{isCreating ? 'Creating...' : 'Create Class'}
-							</button>
-						</div>
-					</form>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+						/>
+					</svg>
+					<p class="empty-title">No classes yet</p>
+					<p class="empty-desc">Create a new class or join one using an invite code!</p>
+				</div>
+			{/if}
+		</section>
+
+		<!-- Create / Join Forms -->
+		<section class="forms-section" in:fly={{ y: 20, duration: 400, delay: 200 }}>
+			<div class="tabs-container">
+				<div class="tabs">
+					<button
+						class="tab-btn"
+						class:active={activeTab === 'create'}
+						onclick={() => (activeTab = 'create')}
+					>
+						Create Class
+					</button>
+					<button
+						class="tab-btn"
+						class:active={activeTab === 'join'}
+						onclick={() => (activeTab = 'join')}
+					>
+						Join Class
+					</button>
 				</div>
 			</div>
-		{:else}
-			<div class="form-card-wrapper" in:fly={{ y: 10, duration: 300 }}>
-				<div class="card-duo form-card join-card">
-					<div class="card-header">
-						<div class="icon-wrapper join-icon">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								stroke-width="2"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-								/>
-							</svg>
-						</div>
-						<h2>Join a Class</h2>
-						<p class="card-subtitle">Enter a code from your teacher</p>
-					</div>
-					<form
-						onsubmit={(e) => {
-							e.preventDefault();
-							handleJoin();
-						}}
-						class="form-inner"
-					>
-						<div class="field">
-							<label for="inviteCode">Invite Code</label>
-							<div class="code-input-container">
-								<input
-									type="text"
-									id="inviteCode"
-									bind:value={joinCode}
-									placeholder="------"
-									class="invite-code-input"
-									maxlength="6"
-									required
-									autocomplete="off"
-									disabled={isJoining}
-								/>
-								<div class="code-format-hint">6 alphanumeric characters</div>
+
+			{#if activeTab === 'create'}
+				<div class="form-card-wrapper" in:fly={{ y: 10, duration: 300 }}>
+					<div class="card-duo form-card create-card">
+						<div class="card-header">
+							<div class="icon-wrapper create-icon">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+								</svg>
 							</div>
+							<h2>Create a Class</h2>
+							<p class="card-subtitle">Start a new learning group</p>
 						</div>
-						<div class="form-actions">
-							<button
-								type="submit"
-								disabled={isJoining || joinCode.length < 6}
-								class="btn-duo btn-join btn-full"
-							>
-								{isJoining ? 'Joining...' : 'Join Class'}
-							</button>
-						</div>
-					</form>
+						<form
+							onsubmit={(e) => {
+								e.preventDefault();
+								handleCreate();
+							}}
+							class="form-inner"
+						>
+							<div class="field">
+								<label for="name">Class Name</label>
+								<div class="input-wrapper">
+									<input
+										type="text"
+										id="name"
+										bind:value={createName}
+										placeholder="e.g. German 101"
+										required
+										disabled={isCreating}
+									/>
+								</div>
+							</div>
+							<div class="field">
+								<label for="description">Description <span class="optional">(Optional)</span></label>
+								<div class="input-wrapper">
+									<textarea
+										id="description"
+										bind:value={createDescription}
+										placeholder="What is this class about?"
+										rows="2"
+										disabled={isCreating}
+									></textarea>
+								</div>
+							</div>
+							<div class="field">
+								<label for="language">Primary Language</label>
+								<div class="input-wrapper select-wrapper">
+									<select id="language" bind:value={createLanguage} disabled={isCreating}>
+										<option value="international">🌍 International</option>
+										<option value="de">🇩🇪 German</option>
+										<option value="es">🇪🇸 Spanish</option>
+										<option value="fr">🇫🇷 French</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-actions">
+								<button
+									type="submit"
+									disabled={isCreating || !createName}
+									class="btn-duo btn-primary btn-full"
+								>
+									{isCreating ? 'Creating...' : 'Create Class'}
+								</button>
+							</div>
+						</form>
+					</div>
 				</div>
-			</div>
-		{/if}
-	</section>
+			{:else}
+				<div class="form-card-wrapper" in:fly={{ y: 10, duration: 300 }}>
+					<div class="card-duo form-card join-card">
+						<div class="card-header">
+							<div class="icon-wrapper join-icon">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+									/>
+								</svg>
+							</div>
+							<h2>Join a Class</h2>
+							<p class="card-subtitle">Enter a code from your teacher</p>
+						</div>
+						<form
+							onsubmit={(e) => {
+								e.preventDefault();
+								handleJoin();
+							}}
+							class="form-inner"
+						>
+							<div class="field">
+								<label for="inviteCode">Invite Code</label>
+								<div class="code-input-container">
+									<input
+										type="text"
+										id="inviteCode"
+										bind:value={joinCode}
+										placeholder="------"
+										class="invite-code-input"
+										maxlength="6"
+										required
+										autocomplete="off"
+										disabled={isJoining}
+									/>
+									<div class="code-format-hint">6 alphanumeric characters</div>
+								</div>
+							</div>
+							<div class="form-actions">
+								<button
+									type="submit"
+									disabled={isJoining || joinCode.length < 6}
+									class="btn-duo btn-join btn-full"
+								>
+									{isJoining ? 'Joining...' : 'Join Class'}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			{/if}
+		</section>
+	</div>
 </div>
 
 <style>
@@ -344,7 +346,7 @@
 	}
 
 	.classes-container {
-		max-width: 1000px;
+		max-width: 1200px;
 		margin: 0 auto;
 		padding: 2rem 1rem;
 	}
@@ -366,14 +368,21 @@
 		margin: 0;
 	}
 
+	.classes-layout {
+		display: grid;
+		grid-template-columns: 1fr 440px;
+		gap: 2.5rem;
+		align-items: start;
+	}
+
 	.forms-section {
-		margin-top: 3rem;
+		margin-top: 0;
 	}
 
 	.tabs-container {
 		display: flex;
 		justify-content: center;
-		margin-bottom: 2rem;
+		margin-bottom: 1.5rem;
 	}
 
 	.tabs {
@@ -424,8 +433,8 @@
 	}
 
 	.form-card-wrapper {
-		max-width: 500px;
-		margin: 0 auto;
+		max-width: 100%;
+		margin: 0;
 	}
 
 	.form-card {
@@ -613,6 +622,7 @@
 
 	.my-classes-section {
 		margin-top: 0;
+		min-width: 0;
 	}
 
 	.section-title {
@@ -632,12 +642,6 @@
 	@media (min-width: 640px) {
 		.classes-grid {
 			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.classes-grid {
-			grid-template-columns: 1fr 1fr 1fr;
 		}
 	}
 
@@ -727,6 +731,16 @@
 		color: #94a3b8;
 		margin: 0;
 		font-size: 0.95rem;
+	}
+
+	@media (max-width: 900px) {
+		.classes-layout {
+			grid-template-columns: 1fr;
+		}
+
+		.forms-section {
+			margin-top: 0;
+		}
 	}
 
 	@media (max-width: 768px) {
