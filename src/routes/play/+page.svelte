@@ -2052,6 +2052,7 @@ r<svelte:head>
 						class="btn-duo btn-ai"
 						style="margin-top: 1.5rem; width: 100%;"
 					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
 						{gameMode === 'chat' ? 'Start Chat Session' : 'Generate Next Challenge'}
 					</button>
 				</div>
@@ -2389,6 +2390,7 @@ r<svelte:head>
 						class="btn-duo btn-ai next-btn"
 						style="margin-top: 1.5rem; width: 100%;"
 					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
 						Next Challenge
 					</button>
 				</div>
@@ -4440,8 +4442,8 @@ r<svelte:head>
 	}
 
 	.chat-cta-btn:hover {
-		border-color: #93c5fd;
-		background: #eff6ff;
+		border-color: #c4b5fd;
+		background: #f5f3ff;
 		transform: translateY(-2px);
 	}
 
@@ -4452,21 +4454,21 @@ r<svelte:head>
 	}
 
 	:global(html[data-theme='dark']) .chat-cta-btn:hover {
-		border-color: #3b82f6;
-		background: #1e293b;
+		border-color: #7c3aed;
+		background: #1e1533;
 	}
 
 	.chat-cta-btn.active {
-		border-color: #1cb0f6;
+		border-color: #8b5cf6;
 		border-style: solid;
-		background: #ddf4ff;
-		color: #1cb0f6;
+		background: #f5f3ff;
+		color: #8b5cf6;
 	}
 
 	:global(html[data-theme='dark']) .chat-cta-btn.active {
-		border-color: #38bdf8;
-		background: #0c2340;
-		color: #38bdf8;
+		border-color: #a78bfa;
+		background: #2e1065;
+		color: #a78bfa;
 	}
 
 	.chat-cta-subtitle {

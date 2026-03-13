@@ -159,6 +159,7 @@
 	}
 
 	let messages: ChatMessage[] = [];
+	let userMessageCount = 0;
 
 	async function scrollToBottom() {
 		await tick();
@@ -174,7 +175,7 @@
 		}
 		sessionStarted = true;
 		messages = [];
-		// Add an initial empty state or we can just let the user send the first message.
+		userMessageCount = 0;
 		scrollToBottom();
 	}
 
@@ -183,6 +184,9 @@
 
 		const userMessageText = message;
 		message = '';
+
+		userMessageCount += 1;
+		const isFirstMessage = userMessageCount === 1;
 
 		const tempUserMessage: ChatMessage = {
 			id: Date.now().toString(),
@@ -280,7 +284,7 @@
 									? { 
 											...m, 
 											content: event.message.message || event.message.content || m.content, 
-											correction: event.message.correction,
+											correction: isFirstMessage ? null : event.message.correction,
 											eloUpdates: hasEloUpdates,
 											vocabularyUpdates: grading.vocabularyUpdates,
 											extraVocabLemmas: grading.extraVocabLemmas
@@ -316,7 +320,7 @@
 								? { 
 										...m, 
 										content: event.message.message || event.message.content || m.content, 
-										correction: event.message.correction,
+										correction: isFirstMessage ? null : event.message.correction,
 										eloUpdates: hasEloUpdates,
 										vocabularyUpdates: grading.vocabularyUpdates,
 										extraVocabLemmas: grading.extraVocabLemmas
@@ -492,11 +496,14 @@
 	{/if}
 	
 	<div class="chat-header-main" in:fly={{ y: 20, duration: 400 }}>
-		<a href="/play" class="back-link dark:text-slate-400" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+		<a href="/play" class="back-link dark:text-slate-400" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
 			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 			Back to Play
 		</a>
-		<h1>AI Chat Practice</h1>
+		<h1>
+			<svg class="ai-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+			AI Chat Practice
+		</h1>
 	</div>
 
 
@@ -529,7 +536,8 @@
 						placeholder="e.g. A friendly waiter at a café"
 					/>
 				</div>
-				<button type="button" on:click={startSession} class="btn-duo btn-primary start-btn" aria-label="Start conversation">
+				<button type="button" on:click={startSession} class="btn-duo btn-ai start-btn" aria-label="Start conversation">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.5rem;height:1.5rem;flex-shrink:0;margin-right:0.5rem;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
 					Start Conversation
 				</button>
 			</div>
@@ -539,7 +547,13 @@
 			<!-- Header -->
 			<div class="chat-header">
 				<div class="persona-info">
-					<span class="persona-name">{persona}</span>
+					<div class="persona-name-row">
+						<span class="persona-name">{persona}</span>
+						<span class="ai-badge">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:0.7rem;height:0.7rem;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+							AI
+						</span>
+					</div>
 					<span class="persona-lang">{language}</span>
 				</div>
 				{#if !isAssignment}
@@ -563,6 +577,7 @@
 							<div class="wave">👋</div>
 							<p>Start the conversation! Introduce yourself or say hello.</p>
 							<button on:click={startAIConversation} class="ai-start-btn" disabled={isLoading}>
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem;flex-shrink:0;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
 								Make the AI ask the first question
 							</button>
 						</div>
@@ -687,14 +702,26 @@
 	.chat-header-main {
 		margin-bottom: 2rem;
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
 	}
 
 	.chat-header-main h1 {
 		font-size: 1.875rem;
 		font-weight: 800;
 		letter-spacing: -0.025em;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0;
+	}
+
+	.ai-title-icon {
+		width: 2.25rem;
+		height: 2.25rem;
+		color: #8b5cf6;
+		flex-shrink: 0;
 	}
 
 	.setup-card {
@@ -753,8 +780,8 @@
 	}
 
 	.randomize-btn:hover {
-		color: #3b82f6;
-		background-color: #f1f5f9;
+		color: #1cb0f6;
+		background-color: var(--link-hover-bg, #ddf4ff);
 	}
 
 	.randomize-btn svg {
@@ -781,14 +808,12 @@
 	}
 
 	.form-group input:focus {
-		border-color: #3b82f6;
+		border-color: #8b5cf6;
 	}
 
 	.start-btn {
 		margin-top: 1rem;
 		width: 100%;
-		padding-top: 1rem;
-		padding-bottom: 1rem;
 		font-size: 1.125rem;
 	}
 
@@ -798,13 +823,15 @@
 		flex-direction: column;
 		overflow: hidden;
 		padding: 0;
+		transform: none !important;
+		box-shadow: 0 4px 0 var(--card-border, #e5e7eb) !important;
 	}
 
 	.chat-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		border-bottom: 2px solid var(--card-border, #f1f5f9);
+		border-bottom: 2px solid var(--card-border, #e5e7eb);
 		background-color: var(--header-bg, #f8fafc);
 		padding: 1rem 1.5rem;
 	}
@@ -814,23 +841,50 @@
 		flex-direction: column;
 	}
 
+	.persona-name-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.persona-name {
 		font-weight: 700;
+	}
+
+	.ai-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		background-color: #f5f3ff;
+		color: #8b5cf6;
+		border: 1px solid #ddd6fe;
+		border-radius: 9999px;
+		padding: 0.125rem 0.5rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	:global(html[data-theme='dark']) .ai-badge {
+		background-color: #2e1065;
+		color: #a78bfa;
+		border-color: #6d28d9;
 	}
 
 	.persona-lang {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #64748b;
+		color: var(--text-secondary, #64748b);
 	}
 
 	.end-session-btn {
 		border-radius: 9999px;
-		background-color: #e2e8f0;
+		background-color: var(--card-border, #e2e8f0);
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		font-weight: 700;
-		color: #475569;
+		color: var(--text-color, #475569);
 		transition: background-color 0.2s;
 		border: none;
 		cursor: pointer;
@@ -856,16 +910,19 @@
 		margin-top: 2.5rem;
 		text-align: center;
 		font-weight: 500;
-		color: #64748b;
+		color: var(--text-secondary, #64748b);
 	}
 
 	.ai-start-btn {
 		margin-top: 1.5rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.625rem;
 		font-size: 0.9375rem;
 		padding: 0.75rem 1.25rem;
 		background-color: var(--card-bg, #ffffff);
-		color: #3b82f6;
-		border: 2px solid #3b82f6;
+		color: #8b5cf6;
+		border: 2px solid #8b5cf6;
 		border-radius: 0.75rem;
 		font-weight: 700;
 		cursor: pointer;
@@ -873,7 +930,7 @@
 	}
 
 	.ai-start-btn:hover:not(:disabled) {
-		background-color: #eff6ff;
+		background-color: #f5f3ff;
 	}
 
 	.ai-start-btn:disabled {
@@ -882,13 +939,13 @@
 	}
 
 	:global(html[data-theme='dark']) .ai-start-btn {
-		background-color: #1e293b;
-		color: #60a5fa;
-		border-color: #3b82f6;
+		background-color: var(--card-bg, #111827);
+		color: #a78bfa;
+		border-color: #8b5cf6;
 	}
 
 	:global(html[data-theme='dark']) .ai-start-btn:hover:not(:disabled) {
-		background-color: #334155;
+		background-color: #2e1065;
 	}
 
 	.wave {
@@ -939,7 +996,7 @@
 
 	.bubble-user {
 		border-bottom-right-radius: 0.125rem;
-		background-color: #3b82f6;
+		background-color: #1cb0f6;
 		color: white;
 	}
 
@@ -1023,7 +1080,7 @@
 	}
 
 	.input-area {
-		border-top: 2px solid var(--card-border, #f1f5f9);
+		border-top: 2px solid var(--card-border, #e5e7eb);
 		background-color: var(--card-bg, #ffffff);
 		padding: 1rem;
 	}
@@ -1062,7 +1119,7 @@
 	}
 
 	.textarea-container textarea:focus {
-		border-color: #3b82f6;
+		border-color: #1cb0f6;
 		background-color: var(--card-bg, #ffffff);
 	}
 
@@ -1079,9 +1136,9 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 0.75rem;
-		background-color: #3b82f6;
+		background-color: #22c55e;
 		color: white;
-		box-shadow: 0 4px 0 #2563eb;
+		box-shadow: 0 4px 0 #16a34a;
 		transition:
 			transform 0.1s,
 			box-shadow 0.1s,
@@ -1091,13 +1148,13 @@
 	}
 
 	.send-btn:hover:not(:disabled) {
-		background-color: #60a5fa;
-		box-shadow: 0 4px 0 #2563eb;
+		background-color: #4ade80;
+		box-shadow: 0 4px 0 #16a34a;
 	}
 
 	.send-btn:active:not(:disabled) {
 		transform: translateY(4px);
-		box-shadow: 0 0 0 #2563eb;
+		box-shadow: 0 0 0 #16a34a;
 	}
 
 	.send-btn:disabled {
@@ -1196,7 +1253,7 @@
 	}
 	.progress-bar-fill {
 		height: 100%;
-		background-color: #3b82f6;
+		background-color: #1cb0f6;
 		transition: width 0.3s ease;
 	}
 	.feedback-box {

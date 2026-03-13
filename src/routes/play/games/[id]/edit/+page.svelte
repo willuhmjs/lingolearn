@@ -350,7 +350,8 @@
 					disabled={isGenerating || !generateTopic || isPublishing}
 					class="btn-ai generate-btn {isGenerating ? 'submitting' : ''}"
 				>
-					{isGenerating ? 'Generating...' : 'Generate AI'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.1rem;height:1.1rem;flex-shrink:0;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+					{isGenerating ? 'Generating...' : 'Generate'}
 				</button>
 			</div>
 		</div>
@@ -363,7 +364,7 @@
 			Questions ({game.questions.length})
 		</h2>
 		<button onclick={() => isAddingQuestion = !isAddingQuestion} disabled={isPublishing} class="link-btn add-btn">
-			{isAddingQuestion ? 'Cancel' : '+ Add Manual Question'}
+			{isAddingQuestion ? 'Cancel' : '+ Add Question'}
 		</button>
 	</div>
 
@@ -758,6 +759,9 @@
 		border-radius: 0.75rem;
 		font-weight: bold;
 		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.submitting {

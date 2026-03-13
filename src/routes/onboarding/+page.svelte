@@ -417,9 +417,10 @@
 						<button
 							type="submit"
 							disabled={loading || completed || !userInput.trim()}
-							class="btn btn-primary"
+							class="send-btn"
+							aria-label="Send message"
 						>
-							Send
+							<svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
 						</button>
 						{#if messages.filter((m) => m.role === 'user').length >= 1}
 							<button
@@ -631,6 +632,43 @@
 		background-color: #f1f5f9;
 		color: #94a3b8;
 		cursor: not-allowed;
+	}
+
+	.send-btn {
+		display: flex;
+		height: 52px;
+		width: 52px;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.75rem;
+		background-color: #22c55e;
+		color: white;
+		box-shadow: 0 4px 0 #16a34a;
+		transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+		border: none;
+		cursor: pointer;
+	}
+
+	.send-btn:hover:not(:disabled) {
+		background-color: #4ade80;
+		box-shadow: 0 4px 0 #16a34a;
+	}
+
+	.send-btn:active:not(:disabled) {
+		transform: translateY(4px);
+		box-shadow: 0 0 0 #16a34a;
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		pointer-events: none;
+	}
+
+	.send-btn .icon {
+		height: 1.5rem;
+		width: 1.5rem;
 	}
 
 	.btn {
