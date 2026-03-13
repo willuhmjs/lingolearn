@@ -2,6 +2,34 @@ import { json } from '@sveltejs/kit';
 import { generateChatCompletion } from '$lib/server/llm';
 import { updateGamification } from '$lib/server/gamification';
 import { isClearlyCorrect } from '$lib/server/fuzzyGrade';
+import { prisma } from '$lib/server/prisma';
+
+/** Track a correct answer against an assignment score record for immerse mode. */
+async function updateAssignmentScore(assignmentId: string, userId: string, correctCount: number) {
+	const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
+	if (!assignment) return null;
+
+	// Verify the user is a member of the assignment's class
+	const member = await prisma.classMember.findUnique({
+		where: { classId_userId: { classId: assignment.classId, userId } }
+	});
+	if (!member) return null;
+
+	const current = await prisma.assignmentScore.findUnique({
+		where: { assignmentId_userId: { assignmentId, userId } }
+	});
+
+	const newScore = (current?.score ?? 0) + correctCount;
+	const passed = newScore >= assignment.targetScore;
+
+	const updated = await prisma.assignmentScore.upsert({
+		where: { assignmentId_userId: { assignmentId, userId } },
+		create: { assignmentId, userId, score: newScore, passed },
+		update: { score: newScore, passed }
+	});
+
+	return { score: updated.score, targetScore: assignment.targetScore, passed: updated.passed };
+}
 
 export async function POST({ request, locals }) {
 	if (!locals.user) {
@@ -9,12 +37,19 @@ export async function POST({ request, locals }) {
 	}
 
 	try {
-		const { question, userAnswer, sampleAnswer, awardXp, directXp } = await request.json();
+		const { question, userAnswer, sampleAnswer, awardXp, directXp, assignmentId, correctCount } = await request.json();
 
 		// directXp: skip LLM grading, just award this XP amount directly (used for MCQ batches)
-		if (typeof directXp === 'number' && directXp > 0) {
-			await updateGamification(locals.user.id, directXp);
-			return json({ score: 1, feedback: '' });
+		if (typeof directXp === 'number' && (directXp > 0 || assignmentId)) {
+			if (!assignmentId) {
+				await updateGamification(locals.user.id, directXp);
+			}
+			// Update assignment score for MCQ batch if in assignment context
+			let assignmentProgress = null;
+			if (assignmentId && typeof correctCount === 'number' && correctCount > 0) {
+				assignmentProgress = await updateAssignmentScore(assignmentId, locals.user.id, correctCount);
+			}
+			return json({ score: 1, feedback: '', assignmentProgress });
 		}
 
 		if (!userAnswer?.trim()) {
@@ -23,10 +58,14 @@ export async function POST({ request, locals }) {
 
 		// Fast path: skip LLM if fuzzy matching is confident the answer is correct
 		if (sampleAnswer && isClearlyCorrect(userAnswer, sampleAnswer)) {
-			if (awardXp && typeof awardXp === 'number') {
+			if (!assignmentId && awardXp && typeof awardXp === 'number') {
 				await updateGamification(locals.user.id, awardXp);
 			}
-			return json({ score: 1, feedback: '' });
+			let assignmentProgress = null;
+			if (assignmentId) {
+				assignmentProgress = await updateAssignmentScore(assignmentId, locals.user.id, 1);
+			}
+			return json({ score: 1, feedback: '', assignmentProgress });
 		}
 
 		const systemPrompt = `You are grading a reading comprehension answer for a language learning app.
@@ -51,15 +90,21 @@ Student's answer: ${userAnswer}`;
 		const result = JSON.parse(response.choices[0].message.content);
 		const score = typeof result.score === 'number' ? Math.max(0, Math.min(1, result.score)) : 0;
 
-		// Award XP proportional to score
-		if (awardXp && typeof awardXp === 'number' && score > 0) {
+		// Award XP proportional to score (skip XP for assignments)
+		if (!assignmentId && awardXp && typeof awardXp === 'number' && score > 0) {
 			const xpEarned = Math.round(awardXp * score);
 			if (xpEarned > 0) {
 				await updateGamification(locals.user.id, xpEarned);
 			}
 		}
 
-		return json({ score, feedback: result.feedback || '' });
+		// Track assignment score: count as correct if score >= 0.5
+		let assignmentProgress = null;
+		if (assignmentId && score >= 0.5) {
+			assignmentProgress = await updateAssignmentScore(assignmentId, locals.user.id, 1);
+		}
+
+		return json({ score, feedback: result.feedback || '', assignmentProgress });
 	} catch (error) {
 		console.error('Immersion grade error:', error);
 		return json({ score: 0, feedback: 'Could not grade your answer. Please try again.' });

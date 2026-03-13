@@ -16,6 +16,14 @@ async function updateAssignmentScore(assignmentId: string, userId: string, isCor
 		throw new Error('Assignment not found');
 	}
 
+	// Verify the user is a member of the assignment's class
+	const member = await prisma.classMember.findUnique({
+		where: { classId_userId: { classId: assignment.classId, userId } }
+	});
+	if (!member) {
+		throw new Error('User is not a member of this class');
+	}
+
 	const increment = isCorrect ? 1 : 0;
 
 	const current = await prisma.assignmentScore.findUnique({

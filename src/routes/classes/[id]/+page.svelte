@@ -621,6 +621,7 @@
 							<option value="target-to-native">Target to Native</option>
 							<option value="fill-blank">Fill in the Blank</option>
 							<option value="chat">Chat</option>
+							<option value="immerse">Immerse</option>
 						</select>
 					</div>
 					<div class="field field-small">
@@ -648,6 +649,8 @@
 						<label for="targetScore">
 							{#if createAssignmentMode === 'chat'}
 								Target Turns
+							{:else if createAssignmentMode === 'immerse'}
+								Target Questions
 							{:else}
 								Pass Score
 							{/if}
@@ -661,6 +664,8 @@
 						/>
 						{#if createAssignmentMode === 'chat'}
 							<span style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; display: block;">Number of turns for chat</span>
+						{:else if createAssignmentMode === 'immerse'}
+							<span style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; display: block;">Number of correct answers to pass</span>
 						{/if}
 					</div>
 					<div class="field field-small">

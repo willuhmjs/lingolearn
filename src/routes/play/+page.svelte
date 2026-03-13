@@ -184,7 +184,11 @@
 			: null;
 	// Lock game mode to assignment's required mode when in assignment context
 	if (assignment) {
-		gameMode = (assignment.gamemode as GameMode) ?? gameMode;
+		if (assignment.gamemode === 'immerse') {
+			activeTab = 'immerse';
+		} else {
+			gameMode = (assignment.gamemode as GameMode) ?? gameMode;
+		}
 	}
 
 	// Loading progress & cycling tips
@@ -2392,7 +2396,60 @@ r<svelte:head>
 			</div>
 		{:else if activeTab === 'immerse'}
 			<div class="immerse-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-				<ImmersionView language={lessonLanguage} cefrLevel={userLevel} />
+				{#if assignment && assignment.gamemode === 'immerse' && assignmentProgress}
+					<div
+						class="card card-duo assignment-banner {assignmentProgress.passed ? 'passed' : 'active'}"
+						in:fly={{ y: 20, duration: 400, delay: 100 }}
+					>
+						<div class="assignment-info">
+							<div class="assignment-icon">
+								{assignmentProgress.passed ? '🏆' : '📋'}
+							</div>
+							<div class="assignment-details">
+								<h2 class="assignment-title">{assignment.title}</h2>
+								<div class="assignment-meta">
+									<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
+									<span class="meta-badge gamemode">immerse</span>
+									<span class="meta-badge language">
+										{assignment.language === 'international'
+											? '🌍 International'
+											: `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
+									</span>
+								</div>
+							</div>
+						</div>
+						<div class="assignment-actions">
+							<div class="progress-box">
+								<p class="progress-label">Progress</p>
+								<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
+									{assignmentProgress.score}<span class="progress-target"
+										>/{assignmentProgress.targetScore}</span
+									>
+								</p>
+							</div>
+							<a href="/classes/{assignment.classId}" class="btn-duo btn-secondary back-btn">
+								Back to Class
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
+								>
+							</a>
+						</div>
+					</div>
+				{/if}
+				<ImmersionView
+					language={lessonLanguage}
+					cefrLevel={userLevel}
+					assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
+					bind:assignmentProgress
+				/>
 			</div>
 		{:else}
 			<div class="games-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>

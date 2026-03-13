@@ -4,6 +4,8 @@
 
 	export let language: { name: string; flag?: string } | null = null;
 	export let cefrLevel: string = 'A1';
+	export let assignmentId: string | null = null;
+	export let assignmentProgress: { score: number; targetScore: number; passed: boolean } | null = null;
 
 	type MediaType =
 		| 'news_article'
@@ -116,6 +118,22 @@
 		// Trigger reactivity
 		answers = answers;
 
+		// For assignments, immediately track correct MCQ answers
+		if (assignmentId && correct) {
+			fetch('/api/immersion/grade', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ directXp: 0, assignmentId, correctCount: 1 })
+			})
+				.then((res) => res.json())
+				.then((data) => {
+					if (data.assignmentProgress && assignmentProgress) {
+						assignmentProgress = data.assignmentProgress;
+					}
+				})
+				.catch(() => {});
+		}
+
 		checkSessionComplete();
 	}
 
@@ -134,10 +152,14 @@
 					question: question.question,
 					userAnswer: state.frText,
 					sampleAnswer: question.sampleAnswer,
-					awardXp: question.points
+					awardXp: question.points,
+					assignmentId
 				})
 			});
 			const result = await res.json();
+			if (result.assignmentProgress && assignmentProgress) {
+				assignmentProgress = result.assignmentProgress;
+			}
 			const xpEarned = Math.round(question.points * (result.score || 0));
 			totalXpEarned += xpEarned;
 
@@ -171,14 +193,16 @@
 			sessionComplete = true;
 			// Tally MCQ XP (awarded client-side since it doesn't need LLM)
 			let mcqXp = 0;
+			let mcqCorrectCount = 0;
 			session.questions.forEach((q) => {
 				if (q.type === 'multiple_choice' && answers[q.id]?.mcqCorrect) {
 					mcqXp += q.points;
+					mcqCorrectCount++;
 				}
 			});
-			if (mcqXp > 0) {
+			if (mcqXp > 0 && !assignmentId) {
 				totalXpEarned += mcqXp;
-				// Award MCQ XP directly (no LLM grading needed)
+				// Award MCQ XP directly (no LLM grading needed, skip for assignments)
 				fetch('/api/immersion/grade', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
