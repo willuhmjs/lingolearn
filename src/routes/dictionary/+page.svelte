@@ -174,6 +174,7 @@
 			if (res.ok) {
 				// Update local state to show it was added
 				addedWords = [...addedWords, vocabularyId];
+				searchInputEl?.focus();
 			} else {
 				console.error('Failed to add word');
 			}

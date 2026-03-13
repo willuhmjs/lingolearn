@@ -9,6 +9,30 @@
 	export let data;
 
 	let sessionStarted = false;
+
+	// Only show a correction if it actually contains an error, not a "looks good" message
+	function parseCorrection(correction: string | null | undefined): string | null {
+		if (!correction) return null;
+		const lower = correction.toLowerCase().trim();
+		const noErrorPhrases = [
+			'your sentence is correct',
+			'no grammatical error',
+			'no errors',
+			'no correction needed',
+			'looks correct',
+			'is correct',
+			'correctly',
+			'well done',
+			'great job',
+			'perfect',
+			'no mistakes',
+			'no issues'
+		];
+		if (noErrorPhrases.some((p) => lower.includes(p))) return null;
+		return correction;
+	}
+	let showTopicChange = false;
+	let newPersona = '';
 	let sessionId = '';
 	
 	// Assignment state
@@ -29,6 +53,7 @@
 	$: language = $page.data.user?.activeLanguage?.name || 'German';
 	let message = '';
 	let isLoading = false;
+	let isTyping = false;
 	let chatContainer: HTMLElement;
 	let chatInputRef: HTMLTextAreaElement;
 
@@ -147,11 +172,42 @@
 		persona = newTopic;
 	}
 
+	function openTopicChange() {
+		newPersona = persona;
+		showTopicChange = true;
+	}
+
+	function cancelTopicChange() {
+		showTopicChange = false;
+		newPersona = '';
+	}
+
+	function randomizeNewPersona() {
+		let newTopic;
+		do {
+			const randomIndex = Math.floor(Math.random() * TOPICS.length);
+			newTopic = TOPICS[randomIndex];
+		} while (newTopic === newPersona && TOPICS.length > 1);
+		newPersona = newTopic;
+	}
+
+	async function confirmTopicChange() {
+		if (!newPersona.trim()) return;
+		persona = newPersona.trim();
+		showTopicChange = false;
+		newPersona = '';
+		sessionId = '';
+		messages = [];
+		userMessageCount = 0;
+		await startSession();
+	}
+
 	interface ChatMessage {
 		id: string;
 		role: string;
 		content: string;
 		correction?: string | null;
+		correctionType?: 'correction' | 'feedback';
 		feedbackEnglish?: string;
 		eloUpdates?: boolean;
 		vocabularyUpdates?: any[];
@@ -218,12 +274,7 @@
 			const reader = res.body?.getReader();
 			if (!reader) throw new Error('No response stream');
 
-			const assistantMessage: ChatMessage = {
-				id: Date.now().toString() + '-ai',
-				role: 'assistant',
-				content: ''
-			};
-			messages = [...messages, assistantMessage];
+			isTyping = true;
 
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -248,50 +299,22 @@
 							}
 						} else if (event.type === 'chunk') {
 							fullContent += event.content;
-
-							// Try to extract just the message part if we can see it
-							// The JSON stream from new API looks like {"message": "something", "feedbackEnglish": ...}
-							const messageMatch = fullContent.match(/"message"\s*:\s*"([^]*)/);
-							if (messageMatch && messageMatch[1]) {
-								let extracted = messageMatch[1];
-								const endQuoteIdx = extracted.indexOf('",');
-								if (endQuoteIdx !== -1) {
-									extracted = extracted.substring(0, endQuoteIdx);
-								} else {
-									const endBraceIdx = extracted.lastIndexOf('"}');
-									if (endBraceIdx !== -1) {
-										extracted = extracted.substring(0, endBraceIdx);
-									}
-								}
-								// Handle basic escaped quotes
-								extracted = extracted
-									.replace(/\\"/g, '"')
-									.replace(/\\\\/g, '\\')
-									.replace(/\\n/g, '\n');
-
-								messages = messages.map((m) =>
-									m.id === assistantMessage.id ? { ...m, content: extracted } : m
-								);
-								scrollToBottom();
-							}
 						} else if (event.type === 'done') {
+							isTyping = false;
 							const grading = event.grading || {};
 							const hasEloUpdates = (grading.vocabularyUpdates && grading.vocabularyUpdates.length > 0) || 
 												(grading.extraVocabLemmas && grading.extraVocabLemmas.length > 0);
-							
-							messages = messages.map((m) =>
-								m.id === assistantMessage.id
-									? { 
-											...m, 
-											content: event.message.message || event.message.content || m.content, 
-											correction: isFirstMessage ? null : event.message.correction,
-											eloUpdates: hasEloUpdates,
-											vocabularyUpdates: grading.vocabularyUpdates,
-											extraVocabLemmas: grading.extraVocabLemmas
-										}
-									: m
-							);
-							
+							messages = [...messages, {
+								id: Date.now().toString() + '-ai',
+								role: 'assistant',
+								content: event.message.message || event.message.content || '',
+								correction: isFirstMessage ? null : parseCorrection(event.message.correction),
+								correctionType: grading.correctionType || 'correction',
+								feedbackEnglish: event.message.feedbackEnglish || '',
+								eloUpdates: hasEloUpdates,
+								vocabularyUpdates: grading.vocabularyUpdates,
+								extraVocabLemmas: grading.extraVocabLemmas
+							}];
 							if (grading.assignmentCompleted) {
 								isPassed = true;
 							}
@@ -306,37 +329,7 @@
 				}
 			}
 
-			// flush buffer
-			if (buffer.trim()) {
-				console.log("Flushing buffer:", buffer);
-				try {
-					const event = JSON.parse(buffer.trim());
-					if (event.type === 'done') {
-						const grading = event.grading || {};
-						const hasEloUpdates = (grading.vocabularyUpdates && grading.vocabularyUpdates.length > 0) || 
-											(grading.extraVocabLemmas && grading.extraVocabLemmas.length > 0);
-						messages = messages.map((m) =>
-							m.id === assistantMessage.id
-								? { 
-										...m, 
-										content: event.message.message || event.message.content || m.content, 
-										correction: isFirstMessage ? null : event.message.correction,
-										eloUpdates: hasEloUpdates,
-										vocabularyUpdates: grading.vocabularyUpdates,
-										extraVocabLemmas: grading.extraVocabLemmas
-									}
-								: m
-						);
-						if (grading.assignmentCompleted) {
-							isPassed = true;
-						}
-						if (isAssignment) {
-							messagesSent += 1;
-						}
-						scrollToBottom();
-					}
-				} catch (err) {}
-			}
+
 		} catch (error: any) {
 			console.error(error);
 			toast.error(error.message || 'An error occurred.');
@@ -371,12 +364,7 @@
 			const reader = res.body?.getReader();
 			if (!reader) throw new Error('No response stream');
 
-			const assistantMessage: ChatMessage = {
-				id: Date.now().toString() + '-ai',
-				role: 'assistant',
-				content: ''
-			};
-			messages = [...messages, assistantMessage];
+			isTyping = true;
 
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -401,36 +389,14 @@
 							}
 						} else if (event.type === 'chunk') {
 							fullContent += event.content;
-
-							// Try to extract just the reply part if we can see it
-							const replyMatch = fullContent.match(/"reply"\s*:\s*"([^]*)/);
-							if (replyMatch && replyMatch[1]) {
-								let extracted = replyMatch[1];
-								const endQuoteIdx = extracted.indexOf('",');
-								if (endQuoteIdx !== -1) {
-									extracted = extracted.substring(0, endQuoteIdx);
-								} else {
-									const endBraceIdx = extracted.lastIndexOf('"}');
-									if (endBraceIdx !== -1) {
-										extracted = extracted.substring(0, endBraceIdx);
-									}
-								}
-								extracted = extracted
-									.replace(/\\"/g, '"')
-									.replace(/\\\\/g, '\\')
-									.replace(/\\n/g, '\n');
-
-								messages = messages.map((m) =>
-									m.id === assistantMessage.id ? { ...m, content: extracted } : m
-								);
-								scrollToBottom();
-							}
 						} else if (event.type === 'done') {
-							messages = messages.map((m) =>
-								m.id === assistantMessage.id
-									? { ...m, content: event.message.content, correction: event.message.correction }
-									: m
-							);
+							isTyping = false;
+							messages = [...messages, {
+								id: Date.now().toString() + '-ai',
+								role: 'assistant',
+								content: event.message.content || '',
+								correction: null
+							}];
 							scrollToBottom();
 						}
 					} catch (err) {
@@ -468,6 +434,10 @@
 		}
 	}
 </script>
+
+<svelte:head>
+	<title>AI Chat Practice - LingoLearn</title>
+</svelte:head>
 
 <div class="chat-container">
 	{#if isAssignment}
@@ -553,21 +523,51 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:0.7rem;height:0.7rem;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
 							AI
 						</span>
+						{#if !isAssignment && userMessageCount > 0}
+							<span class="turn-counter">Turn {userMessageCount}</span>
+						{/if}
 					</div>
 					<span class="persona-lang">{language}</span>
 				</div>
 				{#if !isAssignment}
-				<button
-					on:click={() => {
-						sessionStarted = false;
-						sessionId = '';
-					}}
-					class="end-session-btn"
-				>
-					End Session
-				</button>
+				<div class="session-actions">
+					<button on:click={openTopicChange} class="change-topic-btn" disabled={showTopicChange}>
+						Change Topic
+					</button>
+					<button
+						on:click={() => {
+							sessionStarted = false;
+							sessionId = '';
+							showTopicChange = false;
+						}}
+						class="end-session-btn"
+					>
+						End Session
+					</button>
+				</div>
 				{/if}
 			</div>
+
+			{#if showTopicChange}
+				<div class="topic-change-bar">
+					<input
+						type="text"
+						bind:value={newPersona}
+						class="topic-change-input"
+						placeholder="Enter a new persona or topic..."
+						on:keydown={(e) => e.key === 'Enter' && confirmTopicChange()}
+					/>
+					<button on:click={randomizeNewPersona} class="randomize-inline-btn" title="Randomize">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+					</button>
+					<button on:click={confirmTopicChange} class="confirm-topic-btn" disabled={!newPersona.trim() || isLoading}>
+						Start
+					</button>
+					<button on:click={cancelTopicChange} class="cancel-topic-btn">
+						Cancel
+					</button>
+				</div>
+			{/if}
 
 			<!-- Messages Area -->
 			<div class="messages-area" bind:this={chatContainer}>
@@ -589,7 +589,11 @@
 								class="message-content {msg.role === 'user' ? 'content-user' : 'content-assistant'}"
 							>
 								<div class="bubble {msg.role === 'user' ? 'bubble-user' : 'bubble-assistant'}">
-									<p>{msg.content}</p>
+									{#if msg.content}
+										<p>{msg.content}</p>
+									{:else}
+										<span class="typing-dots"><span></span><span></span><span></span></span>
+									{/if}
 								</div>
 
 								{#if msg.feedbackEnglish}
@@ -611,7 +615,7 @@
 								</div>
 							{/if}
 							{#if msg.correction}
-									<div class="correction-box">
+									<div class="correction-box" class:correction-is-feedback={msg.correctionType === 'feedback'}>
 										<div class="correction-header">
 											<svg
 												class="icon"
@@ -626,7 +630,7 @@
 													d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 												/>
 											</svg>
-											Correction
+											{msg.correctionType === 'feedback' ? 'Feedback' : 'Correction'}
 										</div>
 										<p>{msg.correction}</p>
 									</div>
@@ -872,10 +876,61 @@
 		border-color: #6d28d9;
 	}
 
+	.turn-counter {
+		display: inline-flex;
+		align-items: center;
+		background-color: #f0fdf4;
+		color: #15803d;
+		border: 1px solid #bbf7d0;
+		border-radius: 9999px;
+		padding: 0.1rem 0.5rem;
+		font-size: 0.7rem;
+		font-weight: 700;
+	}
+
+	:global(html[data-theme='dark']) .turn-counter {
+		background-color: rgba(20, 83, 45, 0.3);
+		color: #4ade80;
+		border-color: rgba(74, 222, 128, 0.3);
+	}
+
 	.persona-lang {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--text-secondary, #64748b);
+	}
+
+	.session-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.change-topic-btn {
+		border-radius: 9999px;
+		background-color: #eff6ff;
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		color: #1d4ed8;
+		transition: background-color 0.2s;
+		border: 1px solid #bfdbfe;
+		cursor: pointer;
+	}
+
+	.change-topic-btn:hover:not(:disabled) {
+		background-color: #dbeafe;
+	}
+
+	.change-topic-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	:global(html[data-theme='dark']) .change-topic-btn {
+		background-color: rgba(30, 58, 138, 0.3);
+		color: #93c5fd;
+		border-color: rgba(147, 197, 253, 0.3);
 	}
 
 	.end-session-btn {
@@ -892,6 +947,110 @@
 
 	.end-session-btn:hover {
 		background-color: #cbd5e1;
+	}
+
+	.topic-change-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 1rem;
+		background-color: #f8fafc;
+		border-bottom: 1px solid var(--card-border, #e2e8f0);
+	}
+
+	:global(html[data-theme='dark']) .topic-change-bar {
+		background-color: #1e293b;
+		border-color: #334155;
+	}
+
+	.topic-change-input {
+		flex: 1;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid #cbd5e1;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-family: inherit;
+		background-color: white;
+		color: #0f172a;
+		min-width: 0;
+	}
+
+	.topic-change-input:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	:global(html[data-theme='dark']) .topic-change-input {
+		background-color: #0f172a;
+		border-color: #334155;
+		color: white;
+	}
+
+	.randomize-inline-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 0.5rem;
+		background-color: #f1f5f9;
+		border: 1px solid #e2e8f0;
+		color: #64748b;
+		cursor: pointer;
+		flex-shrink: 0;
+		transition: background-color 0.15s;
+	}
+
+	.randomize-inline-btn:hover {
+		background-color: #e2e8f0;
+	}
+
+	:global(html[data-theme='dark']) .randomize-inline-btn {
+		background-color: #1e293b;
+		border-color: #334155;
+		color: #94a3b8;
+	}
+
+	.confirm-topic-btn {
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		background-color: #22c55e;
+		color: white;
+		font-size: 0.875rem;
+		font-weight: 700;
+		border: none;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background-color 0.15s;
+		flex-shrink: 0;
+	}
+
+	.confirm-topic-btn:hover:not(:disabled) {
+		background-color: #16a34a;
+	}
+
+	.confirm-topic-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.cancel-topic-btn {
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		background-color: transparent;
+		color: #94a3b8;
+		font-size: 0.875rem;
+		font-weight: 600;
+		border: none;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: color 0.15s;
+		flex-shrink: 0;
+	}
+
+	.cancel-topic-btn:hover {
+		color: #64748b;
 	}
 
 	.messages-area {
@@ -1004,6 +1163,29 @@
 		border-bottom-left-radius: 0.125rem;
 		border: 1px solid var(--card-border, #e2e8f0);
 		background-color: var(--card-bg, #ffffff);
+	}
+
+	.typing-dots {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.125rem 0.25rem;
+	}
+
+	.typing-dots span {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background-color: #94a3b8;
+		animation: typing-bounce 1.2s ease-in-out infinite;
+	}
+
+	.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+	.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+	@keyframes typing-bounce {
+		0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+		30% { transform: translateY(-0.35rem); opacity: 1; }
 	}
 
 	.correction-box {
@@ -1177,14 +1359,34 @@
 		background-color: #475569;
 	}
 
+	.correction-is-feedback {
+		border-color: #bbf7d0;
+		background-color: #f0fdf4;
+		color: #14532d;
+	}
+
+	.correction-is-feedback .correction-header {
+		color: #15803d;
+	}
+
 	:global(html[data-theme='dark']) .correction-box {
 		border-color: rgba(124, 45, 18, 0.5);
 		background-color: rgba(124, 45, 18, 0.2);
 		color: #fed7aa;
 	}
 
+	:global(html[data-theme='dark']) .correction-box.correction-is-feedback {
+		border-color: rgba(74, 222, 128, 0.3);
+		background-color: rgba(20, 83, 45, 0.2);
+		color: #bbf7d0;
+	}
+
 	:global(html[data-theme='dark']) .correction-header {
 		color: #fb923c;
+	}
+
+	:global(html[data-theme='dark']) .correction-is-feedback .correction-header {
+		color: #4ade80;
 	}
 
 	.assignment-banner {

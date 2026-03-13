@@ -162,6 +162,8 @@
 	let feedback: any = null;
 	let submitting = false;
 	let showEnglishFeedback = false;
+	let sessionXp = 0;
+	let sessionChallenges = 0;
 	let gameMode: GameMode = data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target';
 	let fillBlankAnswers: string[] = [];
 	let selectedChoice: string | null = null;
@@ -1844,6 +1846,11 @@
 					showEnglishFeedback = true;
 				}
 
+				// Accumulate session XP (1 XP per score point, rounded)
+				sessionChallenges += 1;
+				const xpEarned = Math.round((data.globalScore ?? 0) * 10);
+				sessionXp += xpEarned;
+
 				// Level Up Celebration
 				if (data.levelUp) {
 					userLevel = data.levelUp.newLevel;
@@ -1873,7 +1880,7 @@
 	}
 </script>
 
-r<svelte:head>
+<svelte:head>
 	<title>Play - LingoLearn</title>
 </svelte:head>
 
@@ -2081,6 +2088,19 @@ r<svelte:head>
 				</div>
 			{/if}
 
+			{#if sessionChallenges > 0}
+				<div class="session-xp-strip" in:fly={{ y: -10, duration: 300 }}>
+					<span class="session-xp-stat">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:0.875rem;height:0.875rem;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+						+{sessionXp} XP
+					</span>
+					<span class="session-xp-divider"></span>
+					<span class="session-xp-stat">
+						{sessionChallenges} {sessionChallenges === 1 ? 'challenge' : 'challenges'} this session
+					</span>
+				</div>
+			{/if}
+
 			{#if challenge && !loading}
 				<div
 					class="card card-duo challenge-card dark:bg-slate-800 dark:border-slate-700"
@@ -2209,6 +2229,7 @@ r<svelte:head>
 								{loading}
 								bind:userInput
 								{lessonLanguage}
+								on:submit={submitAnswer}
 							/>
 						{/if}
 
@@ -4383,12 +4404,24 @@ r<svelte:head>
 		}
 
 		.mode-buttons {
-			flex-direction: column;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			justify-content: flex-start;
+			padding-bottom: 0.375rem;
+			-webkit-overflow-scrolling: touch;
+			scrollbar-width: none;
+		}
+
+		.mode-buttons::-webkit-scrollbar {
+			display: none;
 		}
 
 		.mode-btn {
-			width: 100%;
-			box-sizing: border-box;
+			flex-shrink: 0;
+			white-space: nowrap;
+			font-size: 0.875rem;
+			padding: 0.625rem 1rem;
 		}
 
 		.btn-duo {
@@ -4517,6 +4550,46 @@ r<svelte:head>
 
 	.grammar-ref-chevron.expanded {
 		transform: rotate(180deg);
+	}
+
+	.session-xp-strip {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 1rem;
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		border: 1px solid #bbf7d0;
+		border-radius: 0.75rem;
+		margin-bottom: 0.75rem;
+	}
+
+	:global(html[data-theme='dark']) .session-xp-strip {
+		background: linear-gradient(135deg, rgba(20, 83, 45, 0.2) 0%, rgba(21, 128, 61, 0.2) 100%);
+		border-color: rgba(74, 222, 128, 0.25);
+	}
+
+	.session-xp-stat {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: #15803d;
+	}
+
+	:global(html[data-theme='dark']) .session-xp-stat {
+		color: #4ade80;
+	}
+
+	.session-xp-divider {
+		width: 1px;
+		height: 1rem;
+		background-color: #86efac;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .session-xp-divider {
+		background-color: rgba(74, 222, 128, 0.3);
 	}
 
 	/* Fix 4 - Change Mode link */

@@ -190,6 +190,7 @@
 							<span class="nav-text">Review</span>
 						</a>
 					{/if}
+					{#if !user.hasOnboarded}
 					<a
 						href="/onboarding"
 						class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}"
@@ -207,6 +208,7 @@
 						>
 						<span class="nav-text">Onboarding</span>
 					</a>
+					{/if}
 					{#if user.role === 'ADMIN'}
 						<a
 							href="/admin"

@@ -36,6 +36,16 @@
 		return map[(name || '').toLowerCase()] || 'en-US';
 	}
 
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey && !submitting && !feedback && !loading) {
+			e.preventDefault();
+			dispatch('submit');
+		}
+	}
+
 	// Auto-focus when the component mounts (challenge is ready since parent only renders this when !loading)
 	onMount(() => {
 		inputEl?.focus();
@@ -70,9 +80,10 @@
 		placeholder={loading
 			? 'Generating challenge...'
 			: challenge?.gameMode === 'target-to-native'
-				? 'Type your English translation here...'
-				: `Type your ${lessonLanguage?.name || 'Target'} translation here... (Or ask for help / translation in English)`}
+				? 'Type your English translation here... (Enter to submit)'
+				: `Type your ${lessonLanguage?.name || 'Target'} translation here... (Enter to submit)`}
 		class="dark:bg-slate-900 dark:text-white dark:border-slate-700"
+		on:keydown={handleKeydown}
 	></textarea>
 </div>
 

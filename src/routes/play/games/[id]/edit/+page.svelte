@@ -265,6 +265,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{game.title} - Game Editor | LingoLearn</title>
+</svelte:head>
+
 <div class="editor-container">
 	<div class="header-section">
 		<div>

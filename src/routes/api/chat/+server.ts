@@ -161,7 +161,7 @@ Keep your responses relatively short, realistic, and conversational, suitable fo
 
 In addition to your reply, you must act as a grader. You must ONLY evaluate the user's MOST RECENT message for both vocabulary and grammar accuracy.
 CRITICAL: Do NOT correct or evaluate any previous messages in the chat history. The chat history is provided ONLY for conversational context. Your feedback must apply EXCLUSIVELY to the very last message sent by the user.
-Provide brief feedback in English ("feedbackEnglish") on their grammar and vocabulary usage in their MOST RECENT message only.
+Provide brief feedback in English ("feedbackEnglish") on their grammar and vocabulary usage in their MOST RECENT message only. Set "correctionType" to "correction" if the message contained errors that need fixing, or "feedback" if the message was correct or only has minor style notes.
 If the user correctly used any of their targeted vocabulary in their most recent message, or if you can evaluate words they used, provide a score (0.0 to 1.0) for them in "vocabularyUpdates".
 If they correctly used any of their targeted grammar rules in their most recent message, provide a score (0.0 to 1.0) for them in "grammarUpdates". BE THOROUGH: if the most recent message demonstrates a grammar rule (e.g. past tense, word order), you MUST score it.
 If they used OTHER ${currentSession.language} words correctly by coincidence in their most recent message, list their base forms (lemmas) in lowercase in "extraVocabLemmas".
@@ -177,6 +177,7 @@ Return your response as a JSON object with the following structure:
 {
   "message": "Your response as the persona in ${currentSession.language}",
   "feedbackEnglish": "Brief English feedback on the user's grammar/vocabulary usage strictly in their MOST RECENT message",
+  "correctionType": "correction" | "feedback",
   "vocabularyUpdates": [ { "id": "<vocabulary ID from the list>", "score": <number (0.0 to 1.0)> } ],
   "grammarUpdates": [ { "id": "<grammar ID from the list>", "score": <number (0.0 to 1.0)> } ],
   "extraVocabLemmas": ["<lemma1>", "<lemma2>"]${('assignmentId' in currentSession && currentSession.assignmentId) ? ',\n  "assignmentCompleted": <boolean>' : ''}
