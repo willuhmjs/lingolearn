@@ -50,14 +50,51 @@
 	$: currentLanguage = data.user?.activeLanguage?.name || 'German';
 	$: activeLanguageId = data.user?.activeLanguage?.id;
 	$: grammarRules = data.grammarRules || [];
+	$: learningWords = data.learningWords || [];
+	$: displayResults = query.trim() ? results : learningWords;
 	
-	// Group grammar rules by level
+	let grammarSortMode: 'prereq' | 'alpha' = 'prereq';
+
+	// Topological sort (prerequisite chain order)
+	$: topoSortedRules = (() => {
+		const rules = grammarRules;
+		const sorted: any[] = [];
+		const visited = new Set<string>();
+		const visiting = new Set<string>();
+
+		function visit(rule: any) {
+			if (visited.has(rule.id)) return;
+			if (visiting.has(rule.id)) return;
+			visiting.add(rule.id);
+			for (const dep of rule.dependencies || []) {
+				const depRule = rules.find((r: any) => r.id === dep.id);
+				if (depRule) visit(depRule);
+			}
+			visiting.delete(rule.id);
+			visited.add(rule.id);
+			sorted.push(rule);
+		}
+
+		for (const rule of rules) visit(rule);
+		return sorted;
+	})();
+
+	// Group grammar rules by level (for alpha mode)
 	$: groupedGrammar = grammarRules.reduce((acc: any, rule: any) => {
 		if (!acc[rule.level]) acc[rule.level] = [];
 		acc[rule.level].push(rule);
 		return acc;
 	}, {});
 	$: sortedLevels = Object.keys(groupedGrammar).sort();
+
+	$: filteredTopoRules = (() => {
+		if (!grammarQuery.trim()) return topoSortedRules;
+		const q = grammarQuery.toLowerCase();
+		return topoSortedRules.filter((rule: any) =>
+			rule.title.toLowerCase().includes(q) ||
+			(rule.description && rule.description.toLowerCase().includes(q))
+		);
+	})();
 
 	$: filteredGroupedGrammar = (() => {
 		if (!grammarQuery.trim()) return groupedGrammar;
@@ -307,9 +344,12 @@
 						</li>
 					{/each}
 				</ul>
-			{:else if results.length > 0}
+			{:else if displayResults.length > 0}
+				{#if !query.trim() && learningWords.length > 0}
+					<p class="learning-words-label">Words you're currently learning</p>
+				{/if}
 				<ul class="results-list">
-					{#each results as result (result.id)}
+					{#each displayResults as result (result.id)}
 						<li class="result-item">
 							<div class="result-content">
 								<div class="result-details">
@@ -416,7 +456,7 @@
 						{/if}
 					</div>
 				</div>
-			{:else if !loading}
+			{:else if !loading && learningWords.length === 0}
 				<div class="empty-state" in:fade>
 					<div class="empty-icon">🔍</div>
 					<p>Type a word to search the dictionary.</p>
@@ -442,40 +482,71 @@
 						placeholder="Search grammar rules..."
 					/>
 				</div>
-				<button class="btn-export-pdf no-print" onclick={() => window.print()} title="Export grammar guide as PDF">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-					Export PDF
-				</button>
+				<div class="grammar-toolbar-right">
+					<div class="sort-toggle" role="group" aria-label="Sort order">
+						<button
+							class="sort-btn {grammarSortMode === 'prereq' ? 'active' : ''}"
+							onclick={() => (grammarSortMode = 'prereq')}
+							title="Sort by prerequisite chain"
+							aria-pressed={grammarSortMode === 'prereq'}
+						>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" aria-hidden="true">
+								<path d="M8 6h13M8 12h9M8 18h5"/>
+								<circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+								<circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+								<circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+							</svg>
+							<span>Chain</span>
+						</button>
+						<button
+							class="sort-btn {grammarSortMode === 'alpha' ? 'active' : ''}"
+							onclick={() => (grammarSortMode = 'alpha')}
+							title="Sort alphabetically by level"
+							aria-pressed={grammarSortMode === 'alpha'}
+						>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" aria-hidden="true">
+								<path d="M3 6h4l3 12M3 6l3 12m-3 0h6M14 6l4 12m0 0l-2-6m2 6h-4m4 0l2-6"/>
+							</svg>
+							<span>A–Z</span>
+						</button>
+					</div>
+					<button class="btn-export-pdf no-print" onclick={() => window.print()} title="Export grammar guide as PDF">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+						Export PDF
+					</button>
+				</div>
 			</div>
 
-			{#if sortedLevels.length === 0}
+			{#if grammarRules.length === 0}
 				<div class="empty-state">
 					<p>No grammar rules found for this language.</p>
 				</div>
-			{:else if filteredLevels.length === 0}
-				<div class="empty-state">
-					<p>No rules match "{grammarQuery}".</p>
-				</div>
-			{:else}
-				{#each filteredLevels as level}
-					<div class="grammar-level-section">
-						<h2 class="level-heading">Level {level}</h2>
-						<div class="grammar-rules-list">
-							{#each filteredGroupedGrammar[level] as rule}
-								<div class="grammar-rule-card">
-									<button
-										type="button"
-										class="grammar-rule-header"
-										onclick={() => toggleGrammar(rule.id)}
-										aria-expanded={expandedGrammarId === rule.id}
-										aria-controls="grammar-{rule.id}"
-									>
-										<div class="grammar-rule-title-wrapper">
-											<h3 class="grammar-rule-title">{rule.title}</h3>
-											{#if rule.description}
-												<p class="grammar-rule-desc">{rule.description}</p>
-											{/if}
-										</div>
+			{:else if grammarSortMode === 'prereq'}
+				{#if filteredTopoRules.length === 0}
+					<div class="empty-state">
+						<p>No rules match "{grammarQuery}".</p>
+					</div>
+				{:else}
+					<div class="grammar-rules-list">
+						{#each filteredTopoRules as rule (rule.id)}
+							<div class="grammar-rule-card">
+								<button
+									type="button"
+									class="grammar-rule-header"
+									onclick={() => toggleGrammar(rule.id)}
+									aria-expanded={expandedGrammarId === rule.id}
+									aria-controls="grammar-{rule.id}"
+								>
+									<div class="grammar-rule-title-wrapper">
+										<h3 class="grammar-rule-title">{rule.title}</h3>
+										{#if rule.description}
+											<p class="grammar-rule-desc">{rule.description}</p>
+										{/if}
+									</div>
+									<div class="grammar-rule-header-right">
+										{#if rule.level}
+											<span class="grammar-level-badge">{rule.level}</span>
+										{/if}
 										<span class="grammar-toggle-btn" aria-hidden="true">
 											{#if expandedGrammarId === rule.id}
 												<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
@@ -483,30 +554,87 @@
 												<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
 											{/if}
 										</span>
-									</button>
-									
-									{#if expandedGrammarId === rule.id}
-										<div class="grammar-rule-content" id="grammar-{rule.id}" transition:slide={{ duration: 200 }}>
-											{#if rule.dependencies?.length > 0}
-												<div class="grammar-prereqs">
-													<span class="prereq-label">Requires:</span>
-													{#each rule.dependencies as dep, i}
-														<button type="button" class="prereq-link" onclick={() => toggleGrammar(dep.id)} title="Jump to: {dep.title}">{dep.title}</button>{#if i < rule.dependencies.length - 1}<span class="prereq-arrow"> → </span>{/if}
-													{/each}
-												</div>
-											{/if}
-											{#if rule.guide}
-												<div class="grammar-guide markdown-body">
-													{@html marked(rule.guide)}
-												</div>
-											{/if}
-										</div>
-									{/if}
-								</div>
-							{/each}
-						</div>
+									</div>
+								</button>
+
+								{#if expandedGrammarId === rule.id}
+									<div class="grammar-rule-content" id="grammar-{rule.id}" transition:slide={{ duration: 200 }}>
+										{#if rule.dependencies?.length > 0}
+											<div class="grammar-prereqs">
+												<span class="prereq-label">Requires:</span>
+												{#each rule.dependencies as dep, i}
+													<button type="button" class="prereq-link" onclick={() => toggleGrammar(dep.id)} title="Jump to: {dep.title}">{dep.title}</button>{#if i < rule.dependencies.length - 1}<span class="prereq-arrow"> → </span>{/if}
+												{/each}
+											</div>
+										{/if}
+										{#if rule.guide}
+											<div class="grammar-guide markdown-body">
+												{@html marked(rule.guide)}
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
 					</div>
-				{/each}
+				{/if}
+			{:else}
+				{#if filteredLevels.length === 0}
+					<div class="empty-state">
+						<p>No rules match "{grammarQuery}".</p>
+					</div>
+				{:else}
+					{#each filteredLevels as level}
+						<div class="grammar-level-section">
+							<h2 class="level-heading">Level {level}</h2>
+							<div class="grammar-rules-list">
+								{#each filteredGroupedGrammar[level] as rule}
+									<div class="grammar-rule-card">
+										<button
+											type="button"
+											class="grammar-rule-header"
+											onclick={() => toggleGrammar(rule.id)}
+											aria-expanded={expandedGrammarId === rule.id}
+											aria-controls="grammar-{rule.id}"
+										>
+											<div class="grammar-rule-title-wrapper">
+												<h3 class="grammar-rule-title">{rule.title}</h3>
+												{#if rule.description}
+													<p class="grammar-rule-desc">{rule.description}</p>
+												{/if}
+											</div>
+											<span class="grammar-toggle-btn" aria-hidden="true">
+												{#if expandedGrammarId === rule.id}
+													<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+												{:else}
+													<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+												{/if}
+											</span>
+										</button>
+
+										{#if expandedGrammarId === rule.id}
+											<div class="grammar-rule-content" id="grammar-{rule.id}" transition:slide={{ duration: 200 }}>
+												{#if rule.dependencies?.length > 0}
+													<div class="grammar-prereqs">
+														<span class="prereq-label">Requires:</span>
+														{#each rule.dependencies as dep, i}
+															<button type="button" class="prereq-link" onclick={() => toggleGrammar(dep.id)} title="Jump to: {dep.title}">{dep.title}</button>{#if i < rule.dependencies.length - 1}<span class="prereq-arrow"> → </span>{/if}
+														{/each}
+													</div>
+												{/if}
+												{#if rule.guide}
+													<div class="grammar-guide markdown-body">
+														{@html marked(rule.guide)}
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -883,6 +1011,15 @@
 		to { transform: rotate(360deg); }
 	}
 
+	.learning-words-label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--color-text-muted, #6b7280);
+		margin-bottom: 0.75rem;
+	}
+
 	.results-list {
 		list-style: none;
 		padding: 0;
@@ -1089,6 +1226,95 @@
 	.grammar-library-toolbar .grammar-search-wrapper {
 		flex: 1;
 		margin-bottom: 0;
+	}
+
+	.grammar-toolbar-right {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.sort-toggle {
+		display: flex;
+		align-items: center;
+		background: #f1f5f9;
+		border: 1.5px solid #e2e8f0;
+		border-radius: 0.65rem;
+		padding: 0.2rem;
+		gap: 0.15rem;
+	}
+
+	.sort-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.35rem 0.65rem;
+		border-radius: 0.45rem;
+		border: none;
+		background: transparent;
+		color: #64748b;
+		font-size: 0.78rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.15s;
+		white-space: nowrap;
+	}
+
+	.sort-btn:hover {
+		color: #1e293b;
+		background: #e2e8f0;
+	}
+
+	.sort-btn.active {
+		background: #ffffff;
+		color: #1e293b;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	:global(html[data-theme='dark']) .sort-toggle {
+		background: #1e293b;
+		border-color: #334155;
+	}
+
+	:global(html[data-theme='dark']) .sort-btn {
+		color: #94a3b8;
+	}
+
+	:global(html[data-theme='dark']) .sort-btn:hover {
+		color: #e2e8f0;
+		background: #334155;
+	}
+
+	:global(html[data-theme='dark']) .sort-btn.active {
+		background: #0f172a;
+		color: #f1f5f9;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+	}
+
+	.grammar-level-badge {
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		padding: 0.15rem 0.45rem;
+		border-radius: 0.35rem;
+		background: #f1f5f9;
+		color: #64748b;
+		border: 1px solid #e2e8f0;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .grammar-level-badge {
+		background: #1e293b;
+		color: #94a3b8;
+		border-color: #334155;
+	}
+
+	.grammar-rule-header-right {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	.btn-export-pdf {
