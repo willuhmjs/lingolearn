@@ -1,5 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { getAverageLoadTime, getSampleCount, recordLoadTime } from '$lib/server/loadTimeStat';
+import {
+	getAverageLoadTime,
+	getSampleCount,
+	recordLoadTime,
+	getUserLocalAverage,
+	getUserLocalSampleCount,
+	recordUserLocalLoadTime
+} from '$lib/server/loadTimeStat';
 
 // Throttle: one contribution per user per 60 seconds to prevent stat poisoning.
 const userLastContribution = new Map<string, number>();
@@ -12,9 +19,17 @@ export async function GET({ locals }) {
 
 	const isLocalMode = !!locals.user.useLocalLlm;
 
+	if (isLocalMode) {
+		const [averageMs, sampleCount] = await Promise.all([
+			getUserLocalAverage(locals.user.id),
+			getUserLocalSampleCount(locals.user.id)
+		]);
+		return json({ averageMs, sampleCount, isLocalMode });
+	}
+
 	return json({
-		averageMs: getAverageLoadTime(isLocalMode),
-		sampleCount: getSampleCount(isLocalMode),
+		averageMs: getAverageLoadTime(),
+		sampleCount: getSampleCount(),
 		isLocalMode
 	});
 }
@@ -45,7 +60,11 @@ export async function POST({ locals, request }) {
 		userLastContribution.set(locals.user.id, now);
 
 		const isLocalMode = !!locals.user.useLocalLlm;
-		await recordLoadTime(loadTimeMs, isLocalMode);
+		if (isLocalMode) {
+			await recordUserLocalLoadTime(locals.user.id, loadTimeMs);
+		} else {
+			await recordLoadTime(loadTimeMs);
+		}
 		return json({ success: true, isLocalMode });
 	} catch {
 		return json({ error: 'Invalid payload' }, { status: 400 });

@@ -74,6 +74,8 @@ model User {
   createdGames          Game[]
   grammarRuleProgress   UserGrammarRuleProgress[]
   levelUpEvents         LevelUpEvent[]
+
+  localLoadTimeSamples  Int[]  @default([])
 }
 
 model UserProgress {

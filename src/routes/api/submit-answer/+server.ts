@@ -257,7 +257,9 @@ export async function POST(event) {
 				// Post-stream processing: parse response, update Elo/SRS, then send final payload, then close
 				try {
 					const evaluation = parseEvaluationResponse(fullContent);
-					// Remap short IDs (v0, g0, ...) back to real UUIDs for DB updates
+					// Remap short IDs (v0, g0, ...) back to real UUIDs for DB updates.
+					// This idMap is built fresh by buildEvaluationPrompt() from the real DB
+					// objects — it is independent of the idMap produced by generate-lesson.
 					const remappedEvaluation = {
 						...evaluation,
 						vocabularyUpdates: evaluation.vocabularyUpdates.map((u: any) => ({
