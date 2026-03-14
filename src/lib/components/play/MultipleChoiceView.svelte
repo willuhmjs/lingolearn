@@ -18,10 +18,34 @@
 		hasSubmittedMc: boolean;
 		submitAnswer: () => void;
 	} = $props();
+
+	const isDisabled = $derived(submitting || feedback !== null || loading || hasSubmittedMc);
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (isDisabled) return;
+		// Ignore when typing in an input/textarea
+		const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+		if (tag === 'input' || tag === 'textarea') return;
+
+		const keyMap: Record<string, number> = {
+			'1': 0, 'a': 0,
+			'2': 1, 'b': 1,
+			'3': 2, 'c': 2,
+			'4': 3, 'd': 3
+		};
+		const idx = keyMap[e.key.toLowerCase()];
+		if (idx !== undefined && idx < shuffledChoices.length) {
+			e.preventDefault();
+			selectedChoice = shuffledChoices[idx];
+			submitAnswer();
+		}
+	}
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="mc-choices">
-	{#each shuffledChoices as choice}
+	{#each shuffledChoices as choice, i}
 		<button
 			type="button"
 			class="mc-choice-btn"
@@ -31,12 +55,15 @@
 			class:incorrect={(feedback || hasSubmittedMc) &&
 				selectedChoice === choice &&
 				choice !== challenge.targetSentence}
-			disabled={submitting || feedback !== null || loading || hasSubmittedMc}
+			disabled={isDisabled}
 			onclick={() => {
 				selectedChoice = choice;
 				submitAnswer();
 			}}
 		>
+			{#if !isDisabled}
+				<span class="mc-key-hint">{i + 1}</span>
+			{/if}
 			{choice.replace(/<vocab[^>]*>/g, '').replace(/<\/vocab>/g, '')}
 		</button>
 	{/each}
@@ -62,6 +89,29 @@
 		cursor: pointer;
 		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 		box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.mc-key-hint {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.4rem;
+		height: 1.4rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		background: var(--card-border, #e2e8f0);
+		color: #64748b;
+		border-radius: 0.3rem;
+		flex-shrink: 0;
+		letter-spacing: 0;
+	}
+
+	:global(html[data-theme='dark']) .mc-key-hint {
+		background: #334155;
+		color: #94a3b8;
 	}
 
 	.mc-choice-btn:hover:not(:disabled) {
