@@ -270,8 +270,7 @@ Your job is to decide if a username is appropriate for a classroom environment.
 Rules — reject if the username:
 - Contains profanity, slurs, or offensive language (in any language)
 - References violence, drugs, sexual content, or hate speech
-- Impersonates a real person, teacher, or staff member (e.g. "MrSmith", "TeacherJohn")
-- Is otherwise clearly inappropriate for a school setting
+- Is otherwise clearly inappropriate for a college setting
 
 Allow creative, playful, or fun usernames that are harmless.
 
