@@ -484,6 +484,7 @@
 						class="type-pill"
 						class:active={selectedMediaType === type}
 						onclick={() => (selectedMediaType = type)}
+						disabled={loading}
 					>
 						{type === 'random'
 							? '🎲 Random'
@@ -516,6 +517,7 @@
 						onclick={toggleBookmark}
 						title={isBookmarked ? 'Remove bookmark' : 'Save this content'}
 						aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this content'}
+						disabled={loading}
 					>
 						<svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" aria-hidden="true" width="18" height="18">
 							<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
@@ -527,6 +529,7 @@
 						class="bookmark-list-btn"
 						onclick={() => showBookmarks = !showBookmarks}
 						title="Saved content"
+						disabled={loading}
 					>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" width="16" height="16">
 							<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
