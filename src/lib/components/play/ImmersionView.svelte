@@ -525,17 +525,137 @@
 	</div>
 
 	{#if loading}
+		{@const skeletonType = selectedMediaType === 'random' ? 'news_article' : selectedMediaType}
 		<div class="loading-card skeleton-card" in:fade={{ duration: 200 }} aria-busy="true" aria-label="Generating content">
+			<!-- Shared: media type badge -->
 			<div class="skeleton-badge"></div>
-			<div class="skeleton-headline"></div>
-			<div class="skeleton-line"></div>
-			<div class="skeleton-line skeleton-line-short"></div>
-			<div class="skeleton-paragraph">
+
+			{#if skeletonType === 'news_article'}
+				<!-- Source bar: two short pills side by side -->
+				<div class="skeleton-row">
+					<div class="skeleton-pill" style="width:5rem"></div>
+					<div class="skeleton-pill" style="width:4rem"></div>
+				</div>
+				<div class="skeleton-headline"></div>
+				<div class="skeleton-byline"></div>
+				<div class="skeleton-rule"></div>
+				<div class="skeleton-line"></div>
+				<div class="skeleton-line skeleton-line-short"></div>
+				<div class="skeleton-line"></div>
+				<div class="skeleton-line" style="width:85%"></div>
+				<div class="skeleton-line skeleton-line-short"></div>
+
+			{:else if skeletonType === 'advertisement'}
+				<!-- Brand + product + slogan + feature bullets + price + CTA -->
+				<div class="skeleton-pill" style="width:6rem;margin-bottom:0.5rem"></div>
+				<div class="skeleton-headline" style="width:70%"></div>
+				<div class="skeleton-line" style="width:55%;font-style:italic"></div>
+				<div class="skeleton-bullet-list">
+					<div class="skeleton-bullet"></div>
+					<div class="skeleton-bullet"></div>
+					<div class="skeleton-bullet"></div>
+				</div>
+				<div class="skeleton-pill" style="width:4rem;margin-top:0.5rem"></div>
+				<div class="skeleton-cta-btn"></div>
+
+			{:else if skeletonType === 'restaurant_menu'}
+				<!-- Restaurant name + tagline + 2 sections with items -->
+				<div class="skeleton-headline" style="width:60%;text-align:center;margin:0 auto 0.5rem"></div>
+				<div class="skeleton-line" style="width:45%;margin:0 auto 1.25rem"></div>
+				<div class="skeleton-section-title"></div>
+				<div class="skeleton-menu-item">
+					<div style="flex:1"><div class="skeleton-line" style="width:55%"></div><div class="skeleton-line skeleton-line-short"></div></div>
+					<div class="skeleton-pill" style="width:2.5rem"></div>
+				</div>
+				<div class="skeleton-menu-item">
+					<div style="flex:1"><div class="skeleton-line" style="width:65%"></div><div class="skeleton-line skeleton-line-short"></div></div>
+					<div class="skeleton-pill" style="width:2.5rem"></div>
+				</div>
+				<div class="skeleton-section-title" style="margin-top:1rem"></div>
+				<div class="skeleton-menu-item">
+					<div style="flex:1"><div class="skeleton-line" style="width:50%"></div><div class="skeleton-line skeleton-line-short"></div></div>
+					<div class="skeleton-pill" style="width:2.5rem"></div>
+				</div>
+
+			{:else if skeletonType === 'social_post'}
+				<!-- Avatar + username/handle + timestamp + content + hashtags + stats -->
+				<div class="skeleton-social-header">
+					<div class="skeleton-avatar"></div>
+					<div class="skeleton-social-meta">
+						<div class="skeleton-line" style="width:7rem;height:0.85rem"></div>
+						<div class="skeleton-line" style="width:5rem;height:0.75rem;margin-top:0.25rem"></div>
+					</div>
+					<div class="skeleton-pill" style="width:3rem;margin-left:auto"></div>
+				</div>
+				<div class="skeleton-line" style="margin-top:0.75rem"></div>
+				<div class="skeleton-line"></div>
+				<div class="skeleton-line skeleton-line-short"></div>
+				<div class="skeleton-row" style="margin-top:0.5rem;gap:0.5rem">
+					<div class="skeleton-pill" style="width:4rem"></div>
+					<div class="skeleton-pill" style="width:4rem"></div>
+					<div class="skeleton-pill" style="width:4rem"></div>
+				</div>
+				<div class="skeleton-row" style="margin-top:0.75rem">
+					<div class="skeleton-pill" style="width:3.5rem"></div>
+					<div class="skeleton-pill" style="width:3.5rem"></div>
+				</div>
+
+			{:else if skeletonType === 'recipe'}
+				<!-- Title + meta chips + two-column: ingredients / steps -->
+				<div class="skeleton-headline" style="width:70%"></div>
+				<div class="skeleton-row" style="flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+					<div class="skeleton-pill" style="width:6rem"></div>
+					<div class="skeleton-pill" style="width:7rem"></div>
+					<div class="skeleton-pill" style="width:5rem"></div>
+				</div>
+				<div class="skeleton-recipe-cols">
+					<div class="skeleton-col">
+						<div class="skeleton-section-title" style="width:60%"></div>
+						<div class="skeleton-bullet"></div>
+						<div class="skeleton-bullet"></div>
+						<div class="skeleton-bullet"></div>
+						<div class="skeleton-bullet" style="width:55%"></div>
+					</div>
+					<div class="skeleton-col">
+						<div class="skeleton-section-title" style="width:70%"></div>
+						<div class="skeleton-line"></div>
+						<div class="skeleton-line skeleton-line-short"></div>
+						<div class="skeleton-line"></div>
+						<div class="skeleton-line" style="width:80%"></div>
+					</div>
+				</div>
+
+			{:else if skeletonType === 'review'}
+				<!-- Subject + stars + author/date + body + verdict -->
+				<div class="skeleton-row" style="align-items:flex-start;justify-content:space-between">
+					<div>
+						<div class="skeleton-headline" style="width:12rem"></div>
+						<div class="skeleton-pill" style="width:5rem;margin-top:0.4rem"></div>
+					</div>
+					<div style="text-align:right">
+						<div class="skeleton-line" style="width:6rem;height:0.8rem"></div>
+						<div class="skeleton-line" style="width:4rem;height:0.75rem;margin-top:0.3rem"></div>
+					</div>
+				</div>
+				<div class="skeleton-line" style="margin-top:0.75rem"></div>
+				<div class="skeleton-line"></div>
+				<div class="skeleton-line skeleton-line-short"></div>
+				<div class="skeleton-verdict"></div>
+
+			{:else if skeletonType === 'letter'}
+				<!-- Location/date, salutation, body paragraphs, closing, signature -->
+				<div class="skeleton-line" style="width:10rem;margin-bottom:1rem"></div>
+				<div class="skeleton-line" style="width:8rem;margin-bottom:0.75rem"></div>
 				<div class="skeleton-line"></div>
 				<div class="skeleton-line"></div>
 				<div class="skeleton-line skeleton-line-short"></div>
-			</div>
-			<div class="skeleton-hint">Creating your {selectedMediaType === 'random' ? 'content' : selectedMediaType.replace(/_/g, ' ')}...</div>
+				<div class="skeleton-line" style="margin-top:0.5rem"></div>
+				<div class="skeleton-line" style="width:80%"></div>
+				<div class="skeleton-line" style="width:6rem;margin-top:1rem"></div>
+				<div class="skeleton-line" style="width:8rem;margin-top:0.25rem"></div>
+			{/if}
+
+			<div class="skeleton-hint">Generating your {selectedMediaType === 'random' ? 'content' : selectedMediaType.replace(/_/g, ' ')}...</div>
 		</div>
 	{/if}
 
@@ -1111,60 +1231,177 @@
 		50% { opacity: 0.4; }
 	}
 
-	.skeleton-card {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
+	/* Base pulse applied to all skeleton shapes */
 	.skeleton-badge,
 	.skeleton-headline,
+	.skeleton-byline,
+	.skeleton-rule,
 	.skeleton-line,
-	.skeleton-paragraph {
+	.skeleton-pill,
+	.skeleton-bullet,
+	.skeleton-cta-btn,
+	.skeleton-avatar,
+	.skeleton-section-title,
+	.skeleton-verdict {
 		background: var(--card-border, #e2e8f0);
 		border-radius: 0.375rem;
 		animation: skeleton-pulse 1.5s ease-in-out infinite;
 	}
 
+	.skeleton-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	/* Badge — media type chip at top */
 	.skeleton-badge {
 		height: 1.5rem;
 		width: 8rem;
-		margin-bottom: 0.5rem;
+		border-radius: 999px;
+		margin-bottom: 0.75rem;
 	}
 
+	/* Large title line */
 	.skeleton-headline {
 		height: 1.75rem;
 		width: 80%;
-		margin-bottom: 0.5rem;
 	}
 
-	.skeleton-line {
-		height: 1rem;
+	/* Byline / subtitle */
+	.skeleton-byline {
+		height: 0.85rem;
+		width: 45%;
+	}
+
+	/* Horizontal rule (news) */
+	.skeleton-rule {
+		height: 1px;
 		width: 100%;
-		margin-bottom: 0.25rem;
+		margin: 0.5rem 0;
+		opacity: 0.5;
+	}
+
+	/* Body text line */
+	.skeleton-line {
+		height: 0.9rem;
+		width: 100%;
 	}
 
 	.skeleton-line-short {
 		width: 65%;
 	}
 
-	.skeleton-paragraph {
-		background: none;
-		animation: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-		margin-top: 0.75rem;
+	/* Small rounded chip (hashtag, price, meta) */
+	.skeleton-pill {
+		height: 1.25rem;
+		border-radius: 999px;
+		flex-shrink: 0;
 	}
 
-	.skeleton-paragraph .skeleton-line {
+	/* Bullet-list items */
+	.skeleton-bullet-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding-left: 1rem;
+		margin: 0.25rem 0;
+	}
+
+	.skeleton-bullet {
+		height: 0.85rem;
+		width: 75%;
+		position: relative;
+	}
+
+	.skeleton-bullet::before {
+		content: '';
+		position: absolute;
+		left: -0.875rem;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 0.4rem;
+		height: 0.4rem;
+		border-radius: 50%;
 		background: var(--card-border, #e2e8f0);
-		border-radius: 0.375rem;
-		animation: skeleton-pulse 1.5s ease-in-out infinite;
+	}
+
+	/* Ad CTA button shape */
+	.skeleton-cta-btn {
+		height: 2.25rem;
+		width: 60%;
+		border-radius: 0.5rem;
+		margin: 0.5rem auto 0;
+	}
+
+	/* Social avatar circle */
+	.skeleton-avatar {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	/* Social post header row */
+	.skeleton-social-header {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.skeleton-social-meta {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+	}
+
+	/* Horizontal flex row helper */
+	.skeleton-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	/* Section title (menu section, recipe section) */
+	.skeleton-section-title {
+		height: 1.1rem;
+		width: 40%;
+		margin: 0.5rem 0 0.4rem;
+	}
+
+	/* Menu row: name+desc left, price right */
+	.skeleton-menu-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+		padding: 0.4rem 0;
+		border-bottom: 1px solid var(--card-border, #e2e8f0);
+	}
+
+	/* Recipe two-column layout */
+	.skeleton-recipe-cols {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.skeleton-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	/* Review verdict bar */
+	.skeleton-verdict {
+		height: 2.5rem;
+		width: 100%;
+		border-radius: 0.5rem;
+		margin-top: 0.5rem;
 	}
 
 	.skeleton-hint {
-		margin-top: 1rem;
+		margin-top: 1.25rem;
 		color: #94a3b8;
 		font-size: 0.875rem;
 		text-align: center;
