@@ -313,8 +313,12 @@
 					</svg>
 				</div>
 				<h2>All caught up!</h2>
-				<p>You have no reviews due right now. Great job keeping your streak alive!</p>
-				<a href="/dashboard" class="btn-duo btn-primary back-btn">Back to Dashboard</a>
+				<p>No reviews due right now. Great job keeping your streak alive!</p>
+				<p class="empty-cta-desc">Want to keep practicing? Head over to Play to learn new words.</p>
+				<div class="empty-cta-row">
+					<a href="/play" class="btn-duo btn-primary">Go to Play</a>
+					<a href="/dashboard" class="btn-duo btn-secondary">Dashboard</a>
+				</div>
 			</div>
 		{:else if !sessionStarted}
 			<div class="card-duo session-start-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
@@ -928,6 +932,30 @@
 	.back-btn {
 		width: 100%;
 		max-width: 200px;
+	}
+
+	.empty-cta-desc {
+		color: #64748b;
+		font-size: 0.9rem;
+		margin-top: 0.25rem !important;
+	}
+
+	.empty-cta-row {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.btn-secondary {
+		background: transparent;
+		border: 2px solid var(--card-border, #e2e8f0);
+		color: var(--text-color, #0f172a);
+	}
+
+	.btn-secondary:hover {
+		background: var(--card-border, #e2e8f0);
 	}
 
 	.review-card {

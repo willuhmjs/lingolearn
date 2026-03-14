@@ -467,7 +467,11 @@
 			</div>
 			
 			{#if data.vocabularies.length === 0}
-				<p class="empty-state">No vocabulary data available yet. Start learning!</p>
+				<div class="empty-state-vocab">
+					<p class="empty-state-vocab-title">No vocabulary added yet</p>
+					<p class="empty-state-vocab-desc">Start a lesson to build your word bank and track your progress here.</p>
+					<a href="/play" class="empty-state-vocab-btn">Start Learning</a>
+				</div>
 			{:else}
 				<div class="heatmap-grid">
 					{#each data.vocabularies as vocab}
@@ -1914,6 +1918,53 @@
 	:global(html[data-theme='dark']) .empty-state {
 		background: #1e293b;
 		border-color: #475569;
+	}
+
+	.empty-state-vocab {
+		text-align: center;
+		padding: 3rem 2rem;
+		background: #f8fafc;
+		border-radius: 1rem;
+		border: 2px dashed #cbd5e1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	:global(html[data-theme='dark']) .empty-state-vocab {
+		background: #1e293b;
+		border-color: #475569;
+	}
+
+	.empty-state-vocab-title {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: var(--text-color, #0f172a);
+		margin: 0;
+	}
+
+	.empty-state-vocab-desc {
+		color: #64748b;
+		font-size: 0.95rem;
+		margin: 0;
+	}
+
+	.empty-state-vocab-btn {
+		margin-top: 0.75rem;
+		display: inline-block;
+		background: #1cb0f6;
+		color: #fff;
+		font-weight: 700;
+		padding: 0.6rem 1.5rem;
+		border-radius: 0.75rem;
+		text-decoration: none;
+		font-size: 0.95rem;
+		transition: background 0.15s;
+	}
+
+	.empty-state-vocab-btn:hover {
+		background: #0ea5e9;
 	}
 
 	@media (max-width: 768px) {
