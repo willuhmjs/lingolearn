@@ -464,11 +464,21 @@
 										</span>
 									</button>
 									
-									{#if expandedGrammarId === rule.id && rule.guide}
+									{#if expandedGrammarId === rule.id}
 										<div class="grammar-rule-content" id="grammar-{rule.id}" transition:slide={{ duration: 200 }}>
-											<div class="grammar-guide markdown-body">
-												{@html marked(rule.guide)}
-											</div>
+											{#if rule.dependencies?.length > 0}
+												<div class="grammar-prereqs">
+													<span class="prereq-label">Requires:</span>
+													{#each rule.dependencies as dep, i}
+														<button type="button" class="prereq-link" onclick={() => toggleGrammar(dep.id)} title="Jump to: {dep.title}">{dep.title}</button>{#if i < rule.dependencies.length - 1}<span class="prereq-arrow"> → </span>{/if}
+													{/each}
+												</div>
+											{/if}
+											{#if rule.guide}
+												<div class="grammar-guide markdown-body">
+													{@html marked(rule.guide)}
+												</div>
+											{/if}
 										</div>
 									{/if}
 								</div>
@@ -1086,6 +1096,52 @@
 	.grammar-rule-content {
 		padding: 0 1.25rem 1.25rem;
 		border-top: 1px solid var(--card-border, #f3f4f6);
+	}
+
+	.grammar-prereqs {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		padding: 0.75rem 0 0.5rem;
+		font-size: 0.8rem;
+	}
+
+	.prereq-label {
+		font-weight: 700;
+		color: #64748b;
+		margin-right: 0.25rem;
+	}
+
+	.prereq-link {
+		background: #eff6ff;
+		border: 1px solid #bfdbfe;
+		color: #1d4ed8;
+		border-radius: 0.4rem;
+		padding: 0.15rem 0.5rem;
+		font-size: 0.78rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+
+	.prereq-link:hover {
+		background: #dbeafe;
+	}
+
+	:global(html[data-theme='dark']) .prereq-link {
+		background: #1e3a5f;
+		border-color: #3b82f6;
+		color: #93c5fd;
+	}
+
+	:global(html[data-theme='dark']) .prereq-link:hover {
+		background: #1e40af;
+	}
+
+	.prereq-arrow {
+		color: #94a3b8;
+		font-size: 0.75rem;
 	}
 
 	/* Beautiful Markdown Renderer */

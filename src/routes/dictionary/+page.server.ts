@@ -11,7 +11,10 @@ export const load = async ({ locals }: ServerLoadEvent) => {
 	if (locals.user.activeLanguage?.id) {
 		grammarRules = await prisma.grammarRule.findMany({
 			where: { languageId: locals.user.activeLanguage.id },
-			orderBy: [{ level: 'asc' }, { title: 'asc' }]
+			orderBy: [{ level: 'asc' }, { title: 'asc' }],
+			include: {
+				dependencies: { select: { id: true, title: true, level: true } }
+			}
 		});
 	}
 
