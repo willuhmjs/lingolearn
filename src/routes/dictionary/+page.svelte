@@ -1009,16 +1009,23 @@
 
 	.result-meaning {
 		margin-top: 0.5rem;
-		color: var(--text-color, #4b5563);
-		opacity: 0.8;
+		color: #374151;
+	}
+
+	:global(html[data-theme='dark']) .result-meaning {
+		color: #cbd5e1;
 	}
 
 	.result-pos {
 		margin-top: 0.5rem;
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: #6b7280;
 		text-transform: uppercase;
 		font-weight: 600;
+	}
+
+	:global(html[data-theme='dark']) .result-pos {
+		color: #94a3b8;
 	}
 
 	.srs-badge {

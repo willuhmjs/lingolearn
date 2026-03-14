@@ -1363,6 +1363,10 @@
 		font-weight: 500;
 	}
 
+	:global(html[data-theme='dark']) .stat-label {
+		color: #94a3b8;
+	}
+
 	.stat-value {
 		color: #0f172a;
 		font-weight: 700;
@@ -1395,6 +1399,10 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		font-weight: 600;
+	}
+
+	:global(html[data-theme='dark']) .srs-breakdown h4 {
+		color: #94a3b8;
 	}
 
 	.breakdown-row {
