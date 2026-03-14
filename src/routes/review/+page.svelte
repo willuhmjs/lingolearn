@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { fly, fade } from 'svelte/transition';
+	import { fly, fade, scale } from 'svelte/transition';
+	import { elasticOut } from 'svelte/easing';
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 	import VoiceDictation from '$lib/components/VoiceDictation.svelte';
+	import Confetti from '$lib/components/Confetti.svelte';
 	import { requiresSpecialKeyboard } from '$lib/utils/keyboard';
+	import { haptics } from '$lib/utils/haptic';
 	import { page } from '$app/stores';
 	export let data: PageData;
 
@@ -16,6 +19,8 @@
 
 	let gradeResult: { correct: boolean; score: number } | null = null;
 	let userOverride: boolean | null = null;
+	let showKeyboardHelp = false;
+	let triggerConfetti = false;
 
 	// Session summary tracking (#7)
 	type ReviewResult = { lemma: string; correct: boolean; answer: string; correctMeaning: string };
@@ -46,22 +51,67 @@
 	$: accuracyPct = sessionResults.length > 0 ? Math.round((correctCount / sessionResults.length) * 100) : 0;
 	$: missedWords = sessionResults.filter((r) => !r.correct);
 
-	// Keyboard shortcut: Space/Enter continues after grading (#9)
+	// Trigger confetti on perfect session
+	$: if (isFinished && accuracyPct === 100 && sessionResults.length > 0 && !triggerConfetti) {
+		triggerConfetti = true;
+		setTimeout(() => {
+			triggerConfetti = false;
+		}, 100);
+	}
+
+	// Enhanced keyboard shortcuts (#10)
 	function handleGlobalKeydown(e: KeyboardEvent) {
-		if (!sessionStarted || !showingAnswer) return;
 		const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-		if (tag === 'input' || tag === 'textarea' || tag === 'button') return;
-		if ((e.key === ' ' || e.key === 'Enter') && !isSubmitting) {
+		const isInputField = tag === 'input' || tag === 'textarea';
+
+		// Shift+R: Report an error
+		if (e.shiftKey && e.key.toLowerCase() === 'r' && sessionStarted && !isFinished) {
 			e.preventDefault();
-			submitAndNext();
+			reportError();
+			return;
 		}
+
+		// Don't interfere with input fields for other shortcuts
+		if (isInputField && e.key !== 'Enter') return;
+
+		if (!sessionStarted) return;
+
+		// After showing answer: Space/Enter to continue
+		if (showingAnswer) {
+			if ((e.key === ' ' || e.key === 'Enter') && !isSubmitting) {
+				e.preventDefault();
+				submitAndNext();
+			}
+			return;
+		}
+
+		// Before showing answer: Enter to submit
+		if (e.key === 'Enter' && !isGrading) {
+			e.preventDefault();
+			showAnswer();
+			return;
+		}
+
+		// TODO: Space to play audio (when audio is implemented)
+		// if (e.key === ' ' && currentReview?.audio) {
+		// 	e.preventDefault();
+		// 	playAudio();
+		// }
+	}
+
+	function reportError() {
+		// TODO: Implement error reporting UI
+		alert('Error reporting feature coming soon! This will allow you to flag incorrect translations or mistakes.');
 	}
 
 	async function showAnswer() {
 		if (isGrading) return;
 
+		haptics.medium(); // Haptic feedback on submission
+
 		if (!typedAnswer.trim()) {
 			gradeResult = { correct: false, score: 0 };
+			haptics.error(); // Haptic for empty answer
 			return;
 		}
 
@@ -79,11 +129,19 @@
 
 			if (res.ok) {
 				gradeResult = await res.json();
+				// Haptic feedback based on result
+				if (gradeResult.correct) {
+					haptics.success();
+				} else {
+					haptics.error();
+				}
 			} else {
 				gradeResult = { correct: false, score: 0 };
+				haptics.error();
 			}
 		} catch {
 			gradeResult = { correct: false, score: 0 };
+			haptics.error();
 		} finally {
 			isGrading = false;
 		}
@@ -92,6 +150,8 @@
 	async function submitAndNext() {
 		if (isSubmitting || !currentReview) return;
 		isSubmitting = true;
+
+		haptics.medium(); // Haptic on continue
 
 		try {
 			const res = await fetch('/api/review/submit', {
@@ -126,12 +186,15 @@
 	}
 
 	function toggleOverride() {
+		haptics.light(); // Haptic on toggle
 		userOverride = userOverride !== null ? !userOverride : !gradeResult?.correct;
 	}
 
 	async function skipWord() {
 		if (isSubmitting || !currentReview) return;
 		isSubmitting = true;
+
+		haptics.light(); // Light haptic for skip
 
 		try {
 			const res = await fetch('/api/review/submit', {
@@ -168,6 +231,7 @@
 	// Undo last submitted card (#8)
 	function undoLast() {
 		if (undoStack.length === 0 || showingAnswer) return;
+		haptics.warning(); // Haptic for undo action
 		const last = undoStack[undoStack.length - 1];
 		undoStack = undoStack.slice(0, -1);
 		sessionResults = sessionResults.slice(0, -1);
@@ -183,6 +247,8 @@
 <svelte:head>
 	<title>Vocabulary Review - LingoLearn</title>
 </svelte:head>
+
+<Confetti trigger={triggerConfetti} />
 
 <div class="page-container">
 	<div class="content-wrapper">
@@ -203,8 +269,40 @@
 						Undo
 					</button>
 				{/if}
+				<button class="btn-kbd-help" onclick={() => showKeyboardHelp = !showKeyboardHelp} title="Keyboard shortcuts">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+						<rect x="2" y="4" width="20" height="16" rx="2" />
+						<path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+					</svg>
+				</button>
 			</div>
 		</header>
+
+		<!-- Keyboard Shortcuts Help Modal -->
+		{#if showKeyboardHelp}
+			<div class="kbd-modal-overlay" onclick={() => showKeyboardHelp = false}>
+				<div class="kbd-modal" onclick={(e) => e.stopPropagation()}>
+					<div class="kbd-modal-header">
+						<h3>Keyboard Shortcuts</h3>
+						<button class="kbd-modal-close" onclick={() => showKeyboardHelp = false}>×</button>
+					</div>
+					<div class="kbd-modal-body">
+						<div class="kbd-shortcut">
+							<span class="kbd-key">Enter</span>
+							<span class="kbd-desc">Show answer / Continue</span>
+						</div>
+						<div class="kbd-shortcut">
+							<span class="kbd-key">Space</span>
+							<span class="kbd-desc">Continue after grading</span>
+						</div>
+						<div class="kbd-shortcut">
+							<span class="kbd-key">Shift</span> + <span class="kbd-key">R</span>
+							<span class="kbd-desc">Report an error</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		{#if hasNoReviews}
 			<div class="card-duo finished-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
@@ -236,7 +334,13 @@
 		{:else if isFinished}
 			<!-- Session Summary (#7) -->
 			<div class="card-duo summary-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-				<div class="summary-icon" class:summary-perfect={accuracyPct === 100} class:summary-good={accuracyPct >= 70 && accuracyPct < 100} class:summary-ok={accuracyPct < 70}>
+				<div
+					class="summary-icon"
+					class:summary-perfect={accuracyPct === 100}
+					class:summary-good={accuracyPct >= 70 && accuracyPct < 100}
+					class:summary-ok={accuracyPct < 70}
+					in:scale={{ duration: 600, delay: 200, easing: elasticOut }}
+				>
 					{#if accuracyPct === 100}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -411,6 +515,7 @@
 										Grading...
 									{:else}
 										Show Answer
+										<span class="kbd-hint">Enter</span>
 									{/if}
 								</button>
 								<button
@@ -515,8 +620,9 @@
 		background: #1e293b;
 	}
 
-	/* Continue keyboard hint (#9) */
-	.continue-hint {
+	/* Keyboard hints */
+	.continue-hint,
+	.kbd-hint {
 		font-size: 0.65rem;
 		font-weight: 700;
 		background: rgba(255, 255, 255, 0.25);
@@ -526,6 +632,153 @@
 		margin-left: 0.5rem;
 		letter-spacing: 0.04em;
 		opacity: 0.85;
+	}
+
+	/* Keyboard help button */
+	.btn-kbd-help {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: 2px solid #e2e8f0;
+		color: #64748b;
+		padding: 0.4rem;
+		border-radius: 0.75rem;
+		cursor: pointer;
+		transition: all 0.15s;
+		width: 2.5rem;
+		height: 2.5rem;
+	}
+
+	.btn-kbd-help svg {
+		width: 1.2rem;
+		height: 1.2rem;
+	}
+
+	.btn-kbd-help:hover {
+		border-color: #94a3b8;
+		color: #334155;
+		background: #f8fafc;
+	}
+
+	:global(html[data-theme='dark']) .btn-kbd-help {
+		border-color: #334155;
+		color: #94a3b8;
+	}
+
+	:global(html[data-theme='dark']) .btn-kbd-help:hover {
+		border-color: #64748b;
+		color: #cbd5e1;
+		background: #1e293b;
+	}
+
+	/* Keyboard modal */
+	.kbd-modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 1rem;
+	}
+
+	.kbd-modal {
+		background: var(--card-bg, #ffffff);
+		border-radius: 1rem;
+		padding: 1.5rem;
+		max-width: 400px;
+		width: 100%;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+	}
+
+	.kbd-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.kbd-modal-header h3 {
+		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 800;
+		color: var(--text-color, #0f172a);
+	}
+
+	.kbd-modal-close {
+		background: none;
+		border: none;
+		font-size: 2rem;
+		color: #94a3b8;
+		cursor: pointer;
+		padding: 0;
+		line-height: 1;
+		width: 2rem;
+		height: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.5rem;
+		transition: all 0.15s;
+	}
+
+	.kbd-modal-close:hover {
+		background: #f1f5f9;
+		color: #64748b;
+	}
+
+	:global(html[data-theme='dark']) .kbd-modal-close:hover {
+		background: #1e293b;
+		color: #cbd5e1;
+	}
+
+	.kbd-modal-body {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.kbd-shortcut {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.kbd-key {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 3rem;
+		padding: 0.375rem 0.75rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		background: #f8fafc;
+		border: 2px solid #e2e8f0;
+		border-radius: 0.375rem;
+		color: #475569;
+		box-shadow: 0 2px 0 #e2e8f0;
+	}
+
+	:global(html[data-theme='dark']) .kbd-key {
+		background: #1e293b;
+		border-color: #334155;
+		color: #cbd5e1;
+		box-shadow: 0 2px 0 #334155;
+	}
+
+	.kbd-desc {
+		flex: 1;
+		font-size: 0.875rem;
+		color: #64748b;
+	}
+
+	:global(html[data-theme='dark']) .kbd-desc {
+		color: #94a3b8;
 	}
 
 	.session-start-card {
@@ -626,7 +879,16 @@
 		border-radius: 50%;
 		margin-bottom: 2rem;
 		box-shadow: 0 4px 0 #16a34a33;
-		animation: bounce-subtle 2s infinite ease-in-out;
+		animation: bounce-subtle 2s infinite ease-in-out, pulse-glow 2s infinite;
+	}
+
+	@keyframes pulse-glow {
+		0%, 100% {
+			box-shadow: 0 4px 0 #16a34a33, 0 0 0 0 rgba(16, 185, 129, 0.4);
+		}
+		50% {
+			box-shadow: 0 4px 0 #16a34a33, 0 0 0 12px rgba(16, 185, 129, 0);
+		}
 	}
 
 	.success-icon svg {
@@ -759,6 +1021,15 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
+		transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.show-answer-btn:hover:not(:disabled) {
+		transform: translateY(-2px) scale(1.02);
+	}
+
+	.show-answer-btn:active:not(:disabled) {
+		transform: translateY(0) scale(0.98);
 	}
 
 	.grading-spinner {
@@ -802,6 +1073,18 @@
 		border-radius: 1rem;
 		font-weight: 800;
 		font-size: 1.125rem;
+		animation: slide-in-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+	}
+
+	@keyframes slide-in-bounce {
+		0% {
+			transform: translateY(-20px) scale(0.9);
+			opacity: 0;
+		}
+		100% {
+			transform: translateY(0) scale(1);
+			opacity: 1;
+		}
 	}
 
 	.grade-correct {
@@ -1120,6 +1403,33 @@
 		background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
 		color: #16a34a;
 		box-shadow: 0 4px 0 #16a34a33;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.summary-perfect::before {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: linear-gradient(
+			45deg,
+			transparent 30%,
+			rgba(255, 255, 255, 0.3) 50%,
+			transparent 70%
+		);
+		animation: shimmer 3s infinite;
+	}
+
+	@keyframes shimmer {
+		0% {
+			transform: translateX(-100%) translateY(-100%) rotate(45deg);
+		}
+		100% {
+			transform: translateX(100%) translateY(100%) rotate(45deg);
+		}
 	}
 	.summary-good {
 		background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
