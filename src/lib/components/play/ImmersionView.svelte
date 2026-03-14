@@ -125,9 +125,28 @@
 		error: string;
 	};
 	let wordPopup = $state<WordPopup | null>(null);
+	let wordAddedSet = $state(new Set<string>());
+	let wordAddingId = $state<string | null>(null);
 
 	const skeletonType = $derived(selectedMediaType === 'random' ? 'news_article' : selectedMediaType);
 	let wordLookupCache = new Map<string, any>();
+
+	async function addWordToVocabulary(vocabularyId: string) {
+		if (!vocabularyId || wordAddedSet.has(vocabularyId) || wordAddingId) return;
+		wordAddingId = vocabularyId;
+		try {
+			const res = await fetch('/api/user/vocabulary', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ vocabularyId })
+			});
+			if (res.ok) {
+				wordAddedSet = new Set([...wordAddedSet, vocabularyId]);
+			}
+		} catch { /* non-critical */ } finally {
+			wordAddingId = null;
+		}
+	}
 
 	function extractClickedWord(e: MouseEvent): string {
 		const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
@@ -422,6 +441,15 @@
 					{m.value}
 				</div>
 			{/each}
+			{#if r.id}
+				<div class="word-popup-actions">
+					{#if wordAddedSet.has(r.id)}
+						<span class="word-popup-added">✓ Added</span>
+					{:else}
+						<button class="word-popup-add-btn" onclick={() => addWordToVocabulary(r.id)} disabled={wordAddingId === r.id}>{wordAddingId === r.id ? 'Adding...' : '+ Add to vocabulary'}</button>
+					{/if}
+				</div>
+			{/if}
 		{:else if wordPopup.error}
 			<div class="word-popup-error">{wordPopup.error}</div>
 		{/if}
@@ -2611,5 +2639,45 @@
 	.word-popup-error {
 		font-size: 0.82rem;
 		color: #94a3b8;
+	}
+
+	.word-popup-actions {
+		margin-top: 0.6rem;
+		padding-top: 0.6rem;
+		border-top: 1px solid var(--card-border, #e2e8f0);
+	}
+
+	.word-popup-add-btn {
+		width: 100%;
+		background: #1cb0f6;
+		border: none;
+		color: #fff;
+		font-size: 0.78rem;
+		font-weight: 700;
+		padding: 0.35rem 0.75rem;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+
+	.word-popup-add-btn:hover:not(:disabled) {
+		background: #0ea5e9;
+	}
+
+	.word-popup-add-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.word-popup-added {
+		display: block;
+		text-align: center;
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: #16a34a;
+	}
+
+	:global(html[data-theme='dark']) .word-popup-added {
+		color: #4ade80;
 	}
 </style>
