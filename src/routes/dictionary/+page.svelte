@@ -801,16 +801,20 @@
 								<span class="dict-label">conjugations</span>
 								{#each Object.entries(selectedResult.metadata.conjugations) as [tense, forms]}
 									<p class="conj-tense-label">{tense}</p>
-									<table class="declension-table">
-										<tbody>
-											{#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
-												<tr>
-													<td class="case-name">{person}</td>
-													<td>{conjugation}</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
+									{#if forms !== null && typeof forms === 'object' && !Array.isArray(forms)}
+										<table class="declension-table">
+											<tbody>
+												{#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
+													<tr>
+														<td class="case-name">{person}</td>
+														<td>{conjugation}</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									{:else}
+										<p class="conj-form">{forms}</p>
+									{/if}
 								{/each}
 							</div>
 						</div>
@@ -1916,6 +1920,12 @@
 		letter-spacing: 0.06em;
 		color: var(--text-color, #6b7280);
 		margin: 0.75rem 0 0.125rem;
+	}
+
+	.conj-form {
+		font-size: 0.8125rem;
+		color: var(--text-color, #374151);
+		margin: 0.125rem 0 0.5rem;
 	}
 
 	/* Example block */

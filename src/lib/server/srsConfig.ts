@@ -53,8 +53,9 @@ export const CEFR_CONFIG = {
 	// Minimum percentage of encountered vocabulary that must be KNOWN or MASTERED to level up
 	VOCAB_MASTERY_THRESHOLD: 0.8,
 
-	// All grammar rules at the current level must be KNOWN or MASTERED to level up
-	GRAMMAR_MASTERY_THRESHOLD: 1.0,
+	// Percentage of grammar rules the user has INTERACTED with that must be KNOWN or MASTERED to level up.
+	// Uses interacted rules as denominator (not all DB rules) so unencountered rules don't block progress.
+	GRAMMAR_MASTERY_THRESHOLD: 0.9,
 
 	// Minimum number of words a user must have encountered (non-UNSEEN) at a level
 	// before they can level up. Prevents levelling up on a tiny sample of words.
@@ -69,10 +70,22 @@ export const CEFR_CONFIG = {
 
 // XP Rewards Configuration
 export const XP_CONFIG = {
-	// XP awarded for correct answers by game mode
+	// Base XP awarded for correct answers by game mode
 	CORRECT_ANSWER: {
 		MULTIPLE_CHOICE: 5, // Easier mode = less XP
 		OTHER_MODES: 10, // Translation, fill-in-blank, etc.
+	},
+
+	// Bonus XP multiplier per CEFR level above A1 (stacks: A2=+1, B1=+2, etc.)
+	LEVEL_BONUS_PER_CEFR_TIER: 2,
+
+	// XP awarded when the user levels up to a new CEFR level
+	LEVEL_UP_BONUS: {
+		A2: 100,
+		B1: 200,
+		B2: 350,
+		C1: 500,
+		C2: 750,
 	},
 
 	// Minimum score threshold to earn XP
@@ -87,6 +100,9 @@ export const LESSON_CONFIG = {
 	LEARNING_POOL_MIN: 3,
 	// How many words to surface per lesson from the learning pool
 	LESSON_VOCAB_MAX: 6,
+	// Maximum number of brand-new (UNSEEN) words that can be introduced per calendar day.
+	// Prevents working-memory overload for motivated users doing many lessons in a row.
+	NEW_WORDS_PER_DAY_CAP: 10,
 } as const;
 
 // Gamification Configuration
@@ -98,3 +114,24 @@ export const GAMIFICATION_CONFIG = {
 // Type exports for TypeScript
 export type CefrLevel = (typeof CEFR_CONFIG.LEVELS)[number];
 export type GameMode = keyof typeof ELO_CONFIG.K_MULTIPLIERS;
+
+/**
+ * Compute XP to award for a correct answer.
+ * Base amount scales up by LEVEL_BONUS_PER_CEFR_TIER for each CEFR tier above A1,
+ * rewarding higher-level learners more for the same effort.
+ *
+ * Example (OTHER_MODES base = 10, bonus = 2):
+ *   A1 → 10, A2 → 12, B1 → 14, B2 → 16, C1 → 18, C2 → 20
+ */
+export function computeAnswerXp(baseXp: number, cefrLevel: string): number {
+	const tierIndex = CEFR_CONFIG.LEVELS.indexOf(cefrLevel as CefrLevel);
+	const tier = tierIndex >= 0 ? tierIndex : 0;
+	return baseXp + tier * XP_CONFIG.LEVEL_BONUS_PER_CEFR_TIER;
+}
+
+/**
+ * XP bonus for levelling up to a new CEFR level. Returns 0 if the level has no bonus.
+ */
+export function levelUpXp(newLevel: string): number {
+	return XP_CONFIG.LEVEL_UP_BONUS[newLevel as keyof typeof XP_CONFIG.LEVEL_UP_BONUS] ?? 0;
+}

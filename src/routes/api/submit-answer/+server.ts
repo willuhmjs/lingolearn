@@ -5,9 +5,17 @@ import { prisma } from '$lib/server/prisma';
 import { submitAnswerRateLimiter } from '$lib/server/ratelimit';
 import { updateGamification } from '$lib/server/gamification';
 import { CefrService } from '$lib/server/cefrService';
-import { XP_CONFIG } from '$lib/server/srsConfig';
-import { isClearlyCorrect } from '$lib/server/fuzzyGrade';
+import { XP_CONFIG, computeAnswerXp, levelUpXp } from '$lib/server/srsConfig';
+import { isClearlyCorrect, isClearlyWrong } from '$lib/server/fuzzyGrade';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
+
+/** Fire-and-forget ELO decay — runs in background, never blocks the response. */
+function fireEloDecay(userId: string, languageId: string | undefined) {
+	if (!languageId) return;
+	CefrService.applyEloDecay(userId, languageId).catch(err =>
+		console.error('[ELO Decay] Background decay failed:', err)
+	);
+}
 
 /** Track a correct/incorrect answer against an assignment score record. */
 async function updateAssignmentScore(assignmentId: string, userId: string, isCorrect: boolean) {
@@ -141,19 +149,22 @@ export async function POST(event) {
 				}
 			}
 
-			// Award XP for correct answers (multiple choice awards less).
-			// No XP during class assignments — prevents gaming the system.
-			const xpToAdd = isCorrect && !assignmentId ? XP_CONFIG.CORRECT_ANSWER.MULTIPLE_CHOICE : 0;
-			if (xpToAdd > 0) {
-				await updateGamification(userId, xpToAdd);
-			}
-
-			// Check for CEFR level up
+			// Check for CEFR level up before awarding XP (so we can add level-up bonus).
 			let levelUp = null;
 			if (locals.user.activeLanguage?.id) {
 				levelUp = await CefrService.evaluateLevelUp(userId, locals.user.activeLanguage.id);
 			}
 
+			// Award XP for correct answers (multiple choice awards less).
+			// No XP during class assignments — prevents gaming the system.
+			if (isCorrect && !assignmentId) {
+				const cefrLevel = locals.user.cefrLevel || 'A1';
+				const answerXp = computeAnswerXp(XP_CONFIG.CORRECT_ANSWER.MULTIPLE_CHOICE, cefrLevel);
+				const bonusXp = levelUp ? levelUpXp(levelUp.newLevel) : 0;
+				await updateGamification(userId, answerXp + bonusXp);
+			}
+
+			fireEloDecay(userId, locals.user.activeLanguage?.id);
 			return json({ ...remappedEvaluation, assignmentProgress, levelUp });
 		}
 
@@ -181,17 +192,35 @@ export async function POST(event) {
 					}
 				}
 
-				// No XP during class assignments — prevents gaming the system.
-			if (!assignmentId) {
-				await updateGamification(userId, XP_CONFIG.CORRECT_ANSWER.OTHER_MODES);
-			}
-
+				// Check for CEFR level up before awarding XP.
 				let levelUp = null;
 				if (locals.user.activeLanguage?.id) {
 					levelUp = await CefrService.evaluateLevelUp(userId, locals.user.activeLanguage.id);
 				}
 
+				// No XP during class assignments — prevents gaming the system.
+				if (!assignmentId) {
+					const cefrLevel = locals.user.cefrLevel || 'A1';
+					const answerXp = computeAnswerXp(XP_CONFIG.CORRECT_ANSWER.OTHER_MODES, cefrLevel);
+					const bonusXp = levelUp ? levelUpXp(levelUp.newLevel) : 0;
+					await updateGamification(userId, answerXp + bonusXp);
+				}
+
+				fireEloDecay(userId, locals.user.activeLanguage?.id);
 				return json({ ...remappedEvaluation, assignmentProgress, levelUp });
+			}
+
+			// Fast path for clearly wrong answers: skip LLM, score 0.
+			if (isClearlyWrong(userInput, targetSentence)) {
+				const remappedEvaluation = {
+					globalScore: 0,
+					vocabularyUpdates: targetedVocabulary.map((v: any) => ({ id: v.id, score: 0 })),
+					grammarUpdates: targetedGrammar.map((g: any) => ({ id: g.id, score: 0 })),
+					extraVocabLemmas: [],
+					feedback: ''
+				};
+				await updateEloRatings(userId, remappedEvaluation, gameMode);
+				return json({ ...remappedEvaluation, assignmentProgress: null, levelUp: null });
 			}
 		}
 
@@ -296,19 +325,23 @@ export async function POST(event) {
 						}
 					}
 
-					// Award XP for high-scoring answers.
-					// No XP during class assignments — prevents gaming the system.
-					const earnedXp = (evaluation.globalScore ?? 0) >= XP_CONFIG.SCORE_THRESHOLD && !assignmentId;
-					const xpToAdd = earnedXp ? XP_CONFIG.CORRECT_ANSWER.OTHER_MODES : 0;
-					if (xpToAdd > 0) {
-						await updateGamification(userId, xpToAdd);
-					}
-
-					// Check for CEFR level up
+					// Check for CEFR level up before awarding XP (so we can add the level-up bonus).
 					let levelUp = null;
 					if (activeLanguageId) {
 						levelUp = await CefrService.evaluateLevelUp(userId, activeLanguageId);
 					}
+
+					// Award XP for high-scoring answers.
+					// No XP during class assignments — prevents gaming the system.
+					const earnedXp = (evaluation.globalScore ?? 0) >= XP_CONFIG.SCORE_THRESHOLD && !assignmentId;
+					if (earnedXp) {
+						const cefrLevel = locals.user.cefrLevel || 'A1';
+						const answerXp = computeAnswerXp(XP_CONFIG.CORRECT_ANSWER.OTHER_MODES, cefrLevel);
+						const bonusXp = levelUp ? levelUpXp(levelUp.newLevel) : 0;
+						await updateGamification(userId, answerXp + bonusXp);
+					}
+
+					fireEloDecay(userId, activeLanguageId);
 
 					// Send the final evaluation payload before closing the stream
 					// We return the remapped evaluation so the client gets real UUIDs back with eloAfter

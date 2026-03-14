@@ -99,12 +99,15 @@ export class CefrService {
 
     // Vocab denominator: only words the user has actually encountered (user-relative).
     // This prevents auto-generated or unseen DB words from inflating the denominator.
-    // Grammar denominator: full DB count — grammar is curated, and 100% is required.
-    const [encounteredVocabCount, totalGrammarCount] = await Promise.all([
+    // Grammar denominator: only grammar rules the user has interacted with (not all DB rules).
+    // This prevents unencountered grammar from permanently blocking level-up.
+    const [encounteredVocabCount, interactedGrammarCount] = await Promise.all([
       prisma.userVocabulary.count({
         where: { userId, vocabulary: { languageId, cefrLevel: currentLevel } }
       }),
-      prisma.grammarRule.count({ where: { languageId, level: currentLevel } })
+      prisma.userGrammarRule.count({
+        where: { userId, grammarRule: { languageId, level: currentLevel } }
+      })
     ]);
 
     // Must have encountered a minimum number of vocab words at this level
@@ -132,8 +135,9 @@ export class CefrService {
 
     // Vocab: 80% of encountered words must be KNOWN/MASTERED
     const vocabMastery = masteredVocabCount / encounteredVocabCount;
-    // Grammar: 100% of all grammar rules at this level must be KNOWN/MASTERED
-    const grammarMastery = totalGrammarCount > 0 ? masteredGrammarCount / totalGrammarCount : 1.0;
+    // Grammar: 90% of interacted grammar rules must be KNOWN/MASTERED.
+    // Using interacted count so unencountered rules don't permanently block level-up.
+    const grammarMastery = interactedGrammarCount > 0 ? masteredGrammarCount / interactedGrammarCount : 1.0;
 
     // Average ELO for KNOWN/MASTERED items
     const [vocabElos, grammarElos] = await Promise.all([
@@ -225,41 +229,38 @@ export class CefrService {
       ? (CEFR_CONFIG.LEVELS.slice(newLevelIndex, oldLevelIndex) as string[])
       : [];
 
-    // Auto-master grammar for previous levels
-    for (const level of levelsToMaster) {
-      const grammarRules = await prisma.grammarRule.findMany({
-        where: { languageId, level }
+    // Fetch all grammar rules for levels to master and levels to revert in parallel.
+    const [rulesToMaster, rulesToRevert] = await Promise.all([
+      levelsToMaster.length > 0
+        ? prisma.grammarRule.findMany({ where: { languageId, level: { in: levelsToMaster } } })
+        : Promise.resolve([]),
+      levelsToRevert.length > 0
+        ? prisma.grammarRule.findMany({ where: { languageId, level: { in: levelsToRevert } }, select: { id: true } })
+        : Promise.resolve([])
+    ]);
+
+    // Build all upsert operations for auto-mastering previous levels.
+    const masterOps = rulesToMaster.map(rule => {
+      const baseElo = CEFR_CONFIG.BASE_ELO[rule.level as keyof typeof CEFR_CONFIG.BASE_ELO] ?? CEFR_CONFIG.BASE_ELO.A1;
+      return prisma.userGrammarRule.upsert({
+        where: { userId_grammarRuleId: { userId, grammarRuleId: rule.id } },
+        update: { srsState: SrsState.MASTERED },
+        create: { userId, grammarRuleId: rule.id, srsState: SrsState.MASTERED, eloRating: baseElo }
       });
+    });
 
-      const baseElo = CEFR_CONFIG.BASE_ELO[level as keyof typeof CEFR_CONFIG.BASE_ELO];
+    // Batch revert: updateMany handles all IDs in one query.
+    const revertIds = rulesToRevert.map(r => r.id);
 
-      for (const rule of grammarRules) {
-        await prisma.userGrammarRule.upsert({
-          where: { userId_grammarRuleId: { userId, grammarRuleId: rule.id } },
-          update: { srsState: SrsState.MASTERED },
-          create: {
-            userId,
-            grammarRuleId: rule.id,
-            srsState: SrsState.MASTERED,
-            eloRating: baseElo
-          }
-        });
-      }
+    // Execute mastering upserts in a single transaction, then revert in one updateMany.
+    if (masterOps.length > 0) {
+      await prisma.$transaction(masterOps);
     }
-
-    // Revert auto-mastered grammar when downgrading
-    for (const level of levelsToRevert) {
-      const grammarRules = await prisma.grammarRule.findMany({
-        where: { languageId, level },
-        select: { id: true }
+    if (revertIds.length > 0) {
+      await prisma.userGrammarRule.updateMany({
+        where: { userId, grammarRuleId: { in: revertIds } },
+        data: { srsState: SrsState.UNSEEN }
       });
-      const ruleIds = grammarRules.map((r) => r.id);
-      if (ruleIds.length > 0) {
-        await prisma.userGrammarRule.updateMany({
-          where: { userId, grammarRuleId: { in: ruleIds } },
-          data: { srsState: SrsState.UNSEEN }
-        });
-      }
     }
 
     console.log(
@@ -359,8 +360,8 @@ export class CefrService {
 
     // vocabMastery: % of encountered words that are KNOWN/MASTERED
     const vocabMastery = encounteredVocab > 0 ? masteredVocab / encounteredVocab : 0;
-    // grammarMastery: % of all grammar rules that are KNOWN/MASTERED (100% required)
-    const grammarMastery = totalGrammar > 0 ? masteredGrammar / totalGrammar : 1.0;
+    // grammarMastery: % of interacted grammar rules that are KNOWN/MASTERED (90% required)
+    const grammarMastery = interactedGrammar > 0 ? masteredGrammar / interactedGrammar : 1.0;
     // vocabExposure: progress toward the minimum encountered-word floor
     const vocabExposure = Math.min(1, encounteredVocab / CEFR_CONFIG.MIN_ENCOUNTERED_VOCAB);
     // grammarExposure: fraction of grammar rules the user has interacted with at all

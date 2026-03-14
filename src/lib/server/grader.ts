@@ -3,7 +3,6 @@ import { ELO_CONFIG, CEFR_CONFIG } from './srsConfig';
 import { reviewCard, scoreToRating, deriveSrsStateFromFsrs, DEFAULT_FSRS_PARAMETERS } from './fsrs';
 import type { FsrsCard } from './fsrs';
 
-type SrsState = 'UNSEEN' | 'LEARNING' | 'KNOWN' | 'MASTERED';
 type Vocabulary = {
 	id: string;
 	lemma: string;
@@ -394,151 +393,103 @@ export async function updateEloRatings(
 	gameMode: string = 'native-to-target'
 ) {
 	console.log(`Updating Elos for user ${userId} with payload:`, JSON.stringify(payload, null, 2));
-	for (const vocabUpdate of payload.vocabularyUpdates || []) {
-		try {
-			// Ensure the Vocabulary exists
-			const vocab = await prisma.vocabulary.findUnique({
-				where: { id: vocabUpdate.id }
-			}) || await prisma.vocabulary.create({
-				data: {
-					id: vocabUpdate.id,
-					lemma: vocabUpdate.id // Fallback to id if lemma isn't available
-				}
-			});
 
-			// Use the CEFR level of the vocabulary item to determine base difficulty
-			const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
+	// Process a single vocabulary update: run FSRS, compute new ELO, write to DB.
+	async function processVocabUpdate(vocabUpdate: EvaluationPayload['vocabularyUpdates'][number]) {
+		const vocab = await prisma.vocabulary.findUnique({
+			where: { id: vocabUpdate.id }
+		}) || await prisma.vocabulary.create({
+			data: { id: vocabUpdate.id, lemma: vocabUpdate.id }
+		});
 
-			const userVocab = await prisma.userVocabulary.findUnique({
-				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } }
-			});
+		const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
+		const userVocab = await prisma.userVocabulary.findUnique({
+			where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } }
+		});
+		const currentElo = userVocab?.eloRating ?? baseDifficulty;
 
-			const currentElo = userVocab?.eloRating ?? baseDifficulty;
+		// FSRS is the single source of truth for SRS state and review scheduling.
+		const fsrs = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
+		const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+		const newElo = calculateNewElo(currentElo, vocabUpdate.score, baseDifficulty, gameMode, priorRepetitions);
 
-			// FSRS is the single source of truth for SRS state and review scheduling.
-			// Run it first so we have the prior repetition count for K-factor decay.
-			const fsrs = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
-			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+		vocabUpdate.eloBefore = currentElo;
+		vocabUpdate.eloAfter = newElo;
+		const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
-			const newElo = calculateNewElo(currentElo, vocabUpdate.score, baseDifficulty, gameMode, priorRepetitions);
-
-			vocabUpdate.eloBefore = currentElo;
-			vocabUpdate.eloAfter = newElo;
-			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
-
-			await prisma.userVocabulary.upsert({
-				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-				create: {
-					userId,
-					vocabularyId: vocab.id,
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				},
-				update: {
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				}
-			});
-		} catch (err) {
-			console.error(`Failed to update user vocabulary ${vocabUpdate.id}:`, err);
-		}
+		await prisma.userVocabulary.upsert({
+			where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
+			create: { userId, vocabularyId: vocab.id, eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate },
+			update: { eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate }
+		});
 	}
 
-	// Process grammar updates for all modes
-	for (const grammarUpdate of payload.grammarUpdates || []) {
-		try {
-			// Ensure the GrammarRule exists
-			const grammarExists = await prisma.grammarRule.findUnique({
-				where: { id: grammarUpdate.id }
-			});
-
-			if (!grammarExists) {
-				console.warn(`Attempted to update non-existent grammar rule: ${grammarUpdate.id}`);
-				continue;
-			}
-
-			const baseDifficulty = mapLevelToElo(grammarExists?.level || 'A1');
-
-			const userGrammar = await prisma.userGrammarRule.findUnique({
-				where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } }
-			});
-
-			const currentElo = userGrammar?.eloRating ?? baseDifficulty;
-
-			// FSRS for grammar — run first to get prior repetition count for K-factor decay.
-			const fsrs = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
-			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
-
-			const newElo = calculateNewElo(currentElo, grammarUpdate.score, baseDifficulty, gameMode, priorRepetitions);
-
-			grammarUpdate.eloBefore = currentElo;
-			grammarUpdate.eloAfter = newElo;
-			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
-
-			await prisma.userGrammarRule.upsert({
-				where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } },
-				create: {
-					userId,
-					grammarRuleId: grammarUpdate.id,
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				},
-				update: {
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				}
-			});
-		} catch (err) {
-			console.error(`Failed to update user grammar rule ${grammarUpdate.id}:`, err);
+	// Process a single grammar update: run FSRS, compute new ELO, write to DB.
+	async function processGrammarUpdate(grammarUpdate: EvaluationPayload['grammarUpdates'][number]) {
+		const grammarExists = await prisma.grammarRule.findUnique({ where: { id: grammarUpdate.id } });
+		if (!grammarExists) {
+			console.warn(`Attempted to update non-existent grammar rule: ${grammarUpdate.id}`);
+			return;
 		}
+
+		const baseDifficulty = mapLevelToElo(grammarExists.level || 'A1');
+		const userGrammar = await prisma.userGrammarRule.findUnique({
+			where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } }
+		});
+		const currentElo = userGrammar?.eloRating ?? baseDifficulty;
+
+		// FSRS for grammar — run first to get prior repetition count for K-factor decay.
+		const fsrs = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
+		const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+		const newElo = calculateNewElo(currentElo, grammarUpdate.score, baseDifficulty, gameMode, priorRepetitions);
+
+		grammarUpdate.eloBefore = currentElo;
+		grammarUpdate.eloAfter = newElo;
+		const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
+
+		await prisma.userGrammarRule.upsert({
+			where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } },
+			create: { userId, grammarRuleId: grammarUpdate.id, eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate },
+			update: { eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate }
+		});
 	}
 
-	// Process any extra vocabulary the user correctly used by coincidence
-	for (const lemma of payload.extraVocabLemmas || []) {
-		if (!lemma) continue;
-		try {
-			// Look up the word in the global vocabulary — only process if it has meanings
-			const vocab = await prisma.vocabulary.findFirst({
-				where: { lemma: lemma, meanings: { some: {} } }
-			});
-			// Skip words not in the vocabulary with meanings (avoids adding meaningless review cards)
-			if (!vocab) continue;
+	// Process an extra vocab lemma the user used correctly by coincidence.
+	async function processExtraLemma(lemma: string) {
+		// Only process words that exist in the vocabulary with meanings (avoids meaningless review cards).
+		const vocab = await prisma.vocabulary.findFirst({
+			where: { lemma, meanings: { some: {} } }
+		});
+		if (!vocab) return;
 
-			const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
+		const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
+		const userVocab = await prisma.userVocabulary.findUnique({
+			where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } }
+		});
+		const currentElo = userVocab?.eloRating ?? baseDifficulty;
 
-			const userVocab = await prisma.userVocabulary.findUnique({
-				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } }
-			});
+		const fsrs = await updateSrsMetrics(userId, vocab.id, 1.0, 'vocabulary');
+		const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+		const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode, priorRepetitions);
+		const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
-			const currentElo = userVocab?.eloRating ?? baseDifficulty;
-
-			const fsrs = await updateSrsMetrics(userId, vocab.id, 1.0, 'vocabulary');
-			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
-
-			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode, priorRepetitions);
-			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
-
-			await prisma.userVocabulary.upsert({
-				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-				create: {
-					userId,
-					vocabularyId: vocab.id,
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				},
-				update: {
-					eloRating: newElo,
-					srsState: newState,
-					nextReviewDate: fsrs.nextReviewDate
-				}
-			});
-		} catch (err) {
-			console.error(`Failed to process extra vocab lemma ${lemma}:`, err);
-		}
+		await prisma.userVocabulary.upsert({
+			where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
+			create: { userId, vocabularyId: vocab.id, eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate },
+			update: { eloRating: newElo, srsState: newState, nextReviewDate: fsrs.nextReviewDate }
+		});
 	}
+
+	// Run all vocab, grammar, and extra-lemma updates in parallel.
+	await Promise.all([
+		...(payload.vocabularyUpdates || []).map(u =>
+			processVocabUpdate(u).catch(err => console.error(`Failed to update user vocabulary ${u.id}:`, err))
+		),
+		...(payload.grammarUpdates || []).map(u =>
+			processGrammarUpdate(u).catch(err => console.error(`Failed to update user grammar rule ${u.id}:`, err))
+		),
+		...(payload.extraVocabLemmas || []).filter(Boolean).map(lemma =>
+			processExtraLemma(lemma).catch(err => console.error(`Failed to process extra vocab lemma ${lemma}:`, err))
+		)
+	]);
 }

@@ -214,31 +214,20 @@ export async function POST({ request, locals }: RequestEvent) {
 				});
 
 				const validVocabs = vocabularies.filter(v => v.meanings && v.meanings.length > 0);
-				
+
 				// Calculate skipped count by checking which normalized words were not found
 				// Note: one normalized word could match multiple or zero vocabs depending on db state
 				const foundLemmas = new Set(validVocabs.map(v => v.lemma.toLowerCase()));
 				const skippedCount = normalizedWords.filter(w => !foundLemmas.has(w.toLowerCase())).length;
 
-				for (const vocabulary of validVocabs) {
-					await prisma.userVocabulary.upsert({
-						where: {
-							userId_vocabularyId: {
-								userId: userId,
-								vocabularyId: vocabulary.id
-							}
-						},
-						update: {
-							srsState: state
-						},
-						create: {
-							userId: userId,
-							vocabularyId: vocabulary.id,
-							srsState: state,
-							eloRating: startingElo
-						}
-					});
-				}
+				// Upsert all matching vocabulary entries in parallel.
+				await Promise.all(validVocabs.map(vocabulary =>
+					prisma.userVocabulary.upsert({
+						where: { userId_vocabularyId: { userId: userId, vocabularyId: vocabulary.id } },
+						update: { srsState: state },
+						create: { userId: userId, vocabularyId: vocabulary.id, srsState: state, eloRating: startingElo }
+					})
+				));
 				const addedCount = validVocabs.length;
 				console.log(
 					`[Onboarding] Added ${addedCount} ${state} words for user ${userId} at Elo ${startingElo}${skippedCount > 0 ? ` (skipped ${skippedCount} not in dictionary)` : ''}`
@@ -287,25 +276,14 @@ export async function POST({ request, locals }: RequestEvent) {
 					where: { languageId: activeLangId, title: { in: rules } }
 				});
 
-				for (const grammarRule of allRules) {
-					await prisma.userGrammarRule.upsert({
-						where: {
-							userId_grammarRuleId: {
-								userId: userId,
-								grammarRuleId: grammarRule.id
-							}
-						},
-						update: {
-							srsState: state
-						},
-						create: {
-							userId: userId,
-							grammarRuleId: grammarRule.id,
-							srsState: state,
-							eloRating: startingElo
-						}
-					});
-				}
+				// Upsert all matching grammar rules in parallel.
+				await Promise.all(allRules.map(grammarRule =>
+					prisma.userGrammarRule.upsert({
+						where: { userId_grammarRuleId: { userId: userId, grammarRuleId: grammarRule.id } },
+						update: { srsState: state },
+						create: { userId: userId, grammarRuleId: grammarRule.id, srsState: state, eloRating: startingElo }
+					})
+				));
 				console.log(
 					`[Onboarding] Added ${allRules.length} ${state} grammar rules for user ${userId} at Elo ${startingElo}`
 				);

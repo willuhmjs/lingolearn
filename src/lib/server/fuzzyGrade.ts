@@ -85,8 +85,11 @@ function levenshteinSimilarity(a: string, b: string): number {
 /**
  * Returns true if the user's answer is clearly correct without needing LLM grading.
  * - Exact match after normalization → true
- * - Multiset token Jaccard ≥ 0.85 (≥85% word overlap, order-independent, with German stemming) → true
+ * - Multiset token Jaccard ≥ threshold (scales with sentence length) → true
  * - Normalized Levenshtein similarity ≥ 0.92 (near-identical strings) → true
+ *
+ * Jaccard threshold scales with reference token count so that short sentences
+ * (where one wrong word has high impact) require higher precision than long ones.
  */
 export function isClearlyCorrect(userAnswer: string, referenceAnswer: string): boolean {
 	const normUser = normalizeForFuzzy(userAnswer);
@@ -97,8 +100,40 @@ export function isClearlyCorrect(userAnswer: string, referenceAnswer: string): b
 	const userTokens = tokenize(normUser);
 	const refTokens = tokenize(normRef);
 
-	if (jaccardSimilarity(userTokens, refTokens) >= 0.85) return true;
+	// Scale Jaccard threshold down for longer sentences:
+	// ≤3 tokens → 0.90, 4–6 tokens → 0.85, 7+ tokens → 0.80
+	const len = refTokens.length;
+	const jaccardThreshold = len <= 3 ? 0.90 : len <= 6 ? 0.85 : 0.80;
+
+	if (jaccardSimilarity(userTokens, refTokens) >= jaccardThreshold) return true;
 	if (levenshteinSimilarity(normUser, normRef) >= 0.92) return true;
+
+	return false;
+}
+
+/**
+ * Returns true if the user's answer is clearly wrong and can skip the LLM entirely.
+ * - Empty or whitespace-only input → true
+ * - Levenshtein similarity ≤ 0.15 (almost nothing in common character-wise) → true
+ * - Jaccard token overlap = 0 (zero shared content words) → true
+ *
+ * Only triggers when confidence is high to avoid false negatives.
+ */
+export function isClearlyWrong(userAnswer: string, referenceAnswer: string): boolean {
+	const trimmed = userAnswer.trim();
+	if (!trimmed) return true;
+
+	const normUser = normalizeForFuzzy(trimmed);
+	const normRef = normalizeForFuzzy(referenceAnswer);
+
+	// Guard: very short inputs (1-2 chars) can't be meaningfully judged as wrong
+	if (normUser.length <= 2) return false;
+
+	if (levenshteinSimilarity(normUser, normRef) <= 0.15) return true;
+
+	const userTokens = tokenize(normUser);
+	const refTokens = tokenize(normRef);
+	if (jaccardSimilarity(userTokens, refTokens) === 0) return true;
 
 	return false;
 }

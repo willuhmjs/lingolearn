@@ -6,6 +6,7 @@ import { buildLessonPrompt, type GameMode } from '$lib/server/promptBuilder';
 import { generateLessonStream } from '$lib/server/lessonLlmService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 import { LESSON_CONFIG } from '$lib/server/srsConfig';
+import { CefrService } from '$lib/server/cefrService';
 
 export async function POST(event) {
 	const { request, locals } = event;
@@ -84,9 +85,20 @@ export async function POST(event) {
 			include: { vocabulary: { include: { meanings: true } } }
 		});
 
-		// 2. If pool < minimum, replenish to max
+		// 2. If pool < minimum, replenish to max (subject to per-day new-word cap)
 		if (learningPool.length < LESSON_CONFIG.LEARNING_POOL_MIN) {
-			const needed = LESSON_CONFIG.LEARNING_POOL_MAX - learningPool.length;
+			// Count how many new words were already introduced today to enforce the daily cap.
+			const startOfDay = new Date(now);
+			startOfDay.setHours(0, 0, 0, 0);
+			const newWordsToday = await prisma.userVocabulary.count({
+				where: {
+					userId,
+					createdAt: { gte: startOfDay },
+					srsState: SrsState.LEARNING
+				}
+			});
+			const dailyHeadroom = Math.max(0, LESSON_CONFIG.NEW_WORDS_PER_DAY_CAP - newWordsToday);
+			const needed = Math.min(LESSON_CONFIG.LEARNING_POOL_MAX - learningPool.length, dailyHeadroom);
 
 			const knownVocabIds = await prisma.userVocabulary.findMany({
 				where: { userId },
@@ -125,19 +137,22 @@ export async function POST(event) {
 				unseenVocabs = [...unseenVocabs, ...additionalUnseen];
 			}
 
-			for (const vocab of unseenVocabs) {
-				const newUserVocab = await prisma.userVocabulary.create({
-					data: {
-						userId,
-						vocabularyId: vocab.id,
-						srsState: SrsState.LEARNING,
-						eloRating: 1000,
-						nextReviewDate: now // Make it due immediately
-					},
-					include: { vocabulary: { include: { meanings: true } } }
-				});
-				learningPool.push(newUserVocab as any);
-			}
+			const newUserVocabs = await Promise.all(
+				unseenVocabs.map(vocab =>
+					prisma.userVocabulary.create({
+						data: {
+							userId,
+							vocabularyId: vocab.id,
+							srsState: SrsState.LEARNING,
+							eloRating: 1000,
+							nextReviewDate: now // Make it due immediately
+						},
+						include: { vocabulary: { include: { meanings: true } } }
+					})
+				)
+			);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			for (const uv of newUserVocabs) learningPool.push(uv as any);
 		}
 
 		// 3. Select due/near-due words from the pool for THIS lesson
@@ -469,6 +484,11 @@ export async function POST(event) {
 				recordTokenUsage(userId, totalTokens);
 			}
 		});
+
+		// Fire-and-forget ELO decay — runs in background, never blocks the response.
+		CefrService.applyEloDecay(userId, activeLanguageId).catch(err =>
+			console.error('[ELO Decay] Background decay failed:', err)
+		);
 
 		return new Response(stream, {
 			headers: {

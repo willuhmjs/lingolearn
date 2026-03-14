@@ -80,7 +80,7 @@ Return the dictionary entry in the following JSON format:
   ],
   "gender": "MASCULINE" | "FEMININE" | "NEUTER" | null,
   "plural": "plural form" | null,
-  "conjugations": { "present": "...", "past": "...", "future": "..." } | null,
+  "conjugations": { "present": { "1sg": "...", "2sg": "...", "3sg": "...", "1pl": "...", "2pl": "...", "3pl": "..." }, "past": { "1sg": "...", "2sg": "...", "3sg": "...", "1pl": "...", "2pl": "...", "3pl": "..." }, "future": { "1sg": "...", "2sg": "...", "3sg": "...", "1pl": "...", "2pl": "...", "3pl": "..." } } | null,
   "declensions": { "nominative": "...", "accusative": "...", "dative": "...", "genitive": "..." } | null,
   "example": "A simple example sentence using the word in ${language.name}",
   "exampleTranslation": "English translation of the example sentence",
