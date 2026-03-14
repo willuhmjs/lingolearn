@@ -50,51 +50,15 @@ export const CEFR_CONFIG = {
 	// All grammar rules at the current level must be KNOWN or MASTERED to level up
 	GRAMMAR_MASTERY_THRESHOLD: 1.0,
 
+	// Minimum number of words a user must have encountered (non-UNSEEN) at a level
+	// before they can level up. Prevents levelling up on a tiny sample of words.
+	MIN_ENCOUNTERED_VOCAB: 10,
+
 	// ELO decay configuration (for items not reviewed recently)
 	DECAY: {
 		THRESHOLD_DAYS: 30, // Items not reviewed for this many days will decay
 		RATE: 0.05, // 5% decay toward baseline per decay period
 	},
-} as const;
-
-// SM-2 Algorithm Configuration (Spaced Repetition)
-export const SM2_CONFIG = {
-	// Default ease factor for new items
-	DEFAULT_EASE_FACTOR: 2.5,
-
-	// Minimum allowed ease factor
-	MIN_EASE_FACTOR: 1.3,
-
-	// Maximum allowed ease factor (prevents runaway interval growth)
-	MAX_EASE_FACTOR: 3.0,
-
-	// Initial intervals (in days) for successful reviews
-	INTERVALS: {
-		FIRST_SUCCESS: 1, // After first correct answer
-		SECOND_SUCCESS: 6, // After second consecutive correct answer
-	},
-
-	// Maximum interval in days. Caps growth to prevent Date overflow and keep
-	// items in active rotation (365 days = reviewed at least once a year).
-	MAX_INTERVAL_DAYS: 365,
-
-	// Grace rating threshold (SM-2 uses 0-5 scale, we convert our 0-1 scores)
-	// Scores >= 0.6 (which becomes grade 3) count as successful
-	SUCCESS_GRADE_THRESHOLD: 3,
-} as const;
-
-// SRS State Thresholds
-export const SRS_STATE_CONFIG = {
-	// Minimum consecutive correct answers to reach KNOWN state
-	KNOWN_THRESHOLD: 3,
-
-	// Minimum interval (days) to reach MASTERED state
-	// Both this AND KNOWN_THRESHOLD must be met to become MASTERED
-	MASTERED_INTERVAL_DAYS: 21, // 3 weeks
-
-	// Minimum number of words a user must have encountered (non-UNSEEN) at a level
-	// before they can level up. Prevents levelling up on a tiny sample of words.
-	MIN_ENCOUNTERED_VOCAB: 10,
 } as const;
 
 // XP Rewards Configuration

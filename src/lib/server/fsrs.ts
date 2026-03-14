@@ -150,7 +150,6 @@ function nextStabilityAfterLapse(
 	stability: number,
 	difficulty: number,
 	retrievability: number,
-	rating: Rating,
 	params: FsrsParameters
 ): number {
 	const { w } = params;
@@ -213,7 +212,6 @@ export function reviewCard(
 			card.stability,
 			card.difficulty,
 			retrievability,
-			rating,
 			params
 		);
 		newCard.lapses += 1;
@@ -280,30 +278,6 @@ export function getSchedulingInfo(
 	}
 
 	return result;
-}
-
-/**
- * Convert SM-2 data to FSRS format for migration
- */
-export function sm2ToFsrs(sm2Data: {
-	interval: number;
-	easeFactor: number;
-	consecutiveCorrect: number;
-}): FsrsCard {
-	// Estimate difficulty from ease factor (inverse relationship)
-	const difficulty = Math.max(1, Math.min(10, 15 - (sm2Data.easeFactor * 4)));
-
-	// Estimate stability from current interval
-	const stability = Math.max(0.1, sm2Data.interval);
-
-	return {
-		difficulty,
-		stability,
-		retrievability: 1,
-		lastReviewDate: new Date(),
-		repetitions: sm2Data.consecutiveCorrect,
-		lapses: 0
-	};
 }
 
 /**

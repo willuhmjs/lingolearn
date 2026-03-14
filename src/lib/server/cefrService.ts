@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { SrsState } from '@prisma/client';
-import { CEFR_CONFIG, SRS_STATE_CONFIG } from './srsConfig';
+import { CEFR_CONFIG } from './srsConfig';
 
 export interface LevelUpdate {
   oldLevel: string;
@@ -106,7 +106,7 @@ export class CefrService {
     ]);
 
     // Must have encountered a minimum number of vocab words at this level
-    if (encounteredVocabCount < SRS_STATE_CONFIG.MIN_ENCOUNTERED_VOCAB) {
+    if (encounteredVocabCount < CEFR_CONFIG.MIN_ENCOUNTERED_VOCAB) {
       return null;
     }
 
@@ -337,7 +337,7 @@ export class CefrService {
     // grammarMastery: % of all grammar rules that are KNOWN/MASTERED (100% required)
     const grammarMastery = totalGrammar > 0 ? masteredGrammar / totalGrammar : 1.0;
     // vocabExposure: progress toward the minimum encountered-word floor
-    const vocabExposure = Math.min(1, encounteredVocab / SRS_STATE_CONFIG.MIN_ENCOUNTERED_VOCAB);
+    const vocabExposure = Math.min(1, encounteredVocab / CEFR_CONFIG.MIN_ENCOUNTERED_VOCAB);
     // grammarExposure: fraction of grammar rules the user has interacted with at all
     const grammarExposure = totalGrammar > 0
       ? (await prisma.userGrammarRule.count({

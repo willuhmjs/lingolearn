@@ -69,7 +69,7 @@
 		<div class="card-header">
 			<div>
 				<h2>Struggling Words</h2>
-				<p class="card-desc">Words with the lowest average ease factor and highest struggle rate across all students.</p>
+				<p class="card-desc">Words with the highest average difficulty and highest struggle rate across all students.</p>
 			</div>
 			<div class="remediation-dropdown" class:open={dropdownOpen}>
 				<button
@@ -108,7 +108,7 @@
 							<th>Word</th>
 							<th>Meaning</th>
 							<th class="center">Students Seen</th>
-							<th class="center">Avg Ease Factor</th>
+							<th class="center">Avg Difficulty</th>
 							<th class="center">Struggle Rate</th>
 						</tr>
 					</thead>
@@ -120,11 +120,11 @@
 								<td class="center">{word.totalStudentsLearned}</td>
 								<td class="center">
 									<div class="ease-cell">
-										<span class="mono">{word.averageEaseFactor.toFixed(2)}</span>
+										<span class="mono">{word.averageDifficulty.toFixed(2)}</span>
 										<span
 											class="difficulty-dot"
-											style="background:{word.averageEaseFactor < 2.0 ? '#ef4444' : word.averageEaseFactor < 2.5 ? '#f97316' : '#22c55e'}"
-											title={word.averageEaseFactor < 2.0 ? 'Very Difficult' : word.averageEaseFactor < 2.5 ? 'Difficult' : 'Okay'}
+											style="background:{word.averageDifficulty > 7 ? '#ef4444' : word.averageDifficulty > 5 ? '#f97316' : '#22c55e'}"
+											title={word.averageDifficulty > 7 ? 'Very Difficult' : word.averageDifficulty > 5 ? 'Difficult' : 'Okay'}
 										></span>
 									</div>
 								</td>

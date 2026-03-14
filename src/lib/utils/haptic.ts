@@ -39,11 +39,11 @@ export const HapticPattern = {
  * Trigger haptic feedback
  * @param pattern - The vibration pattern to use
  */
-export function haptic(pattern: number | number[]): void {
+export function haptic(pattern: number | readonly number[]): void {
 	if (!isVibrateSupported) return;
 
 	try {
-		navigator.vibrate(pattern);
+		navigator.vibrate(Array.isArray(pattern) ? [...pattern] : pattern as number);
 	} catch (error) {
 		console.warn('Haptic feedback failed:', error);
 	}

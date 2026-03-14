@@ -207,15 +207,18 @@ model UserVocabulary {
 }
 
 model UserVocabularyProgress {
-  id                 String   @id @default(uuid())
-  userId             String
-  vocabularyId       String
-  nextReviewDate     DateTime
-  interval           Int      @default(0) // in days
-  easeFactor         Float    @default(2.5)
-  consecutiveCorrect Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id             String    @id @default(uuid())
+  userId         String
+  vocabularyId   String
+  nextReviewDate DateTime
+  difficulty     Float     @default(5.0) // FSRS: [1, 10]
+  stability      Float     @default(0.0) // FSRS: days until 90% forgetting
+  retrievability Float     @default(1.0) // FSRS: current memory strength [0, 1]
+  repetitions    Int       @default(0)
+  lapses         Int       @default(0)
+  lastReviewDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
@@ -242,15 +245,18 @@ model UserGrammarRule {
 }
 
 model UserGrammarRuleProgress {
-  id                 String   @id @default(uuid())
-  userId             String
-  grammarRuleId      String
-  nextReviewDate     DateTime
-  interval           Int      @default(0)
-  easeFactor         Float    @default(2.5)
-  consecutiveCorrect Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id             String    @id @default(uuid())
+  userId         String
+  grammarRuleId  String
+  nextReviewDate DateTime
+  difficulty     Float     @default(5.0) // FSRS: [1, 10]
+  stability      Float     @default(0.0) // FSRS: days until 90% forgetting
+  retrievability Float     @default(1.0) // FSRS: current memory strength [0, 1]
+  repetitions    Int       @default(0)
+  lapses         Int       @default(0)
+  lastReviewDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   grammarRule GrammarRule @relation(fields: [grammarRuleId], references: [id], onDelete: Cascade)

@@ -128,9 +128,10 @@
 			});
 
 			if (res.ok) {
-				gradeResult = await res.json();
+				const result = await res.json();
+				gradeResult = result;
 				// Haptic feedback based on result
-				if (gradeResult.correct) {
+				if (result.correct) {
 					haptics.success();
 				} else {
 					haptics.error();
@@ -280,8 +281,8 @@
 
 		<!-- Keyboard Shortcuts Help Modal -->
 		{#if showKeyboardHelp}
-			<div class="kbd-modal-overlay" onclick={() => showKeyboardHelp = false}>
-				<div class="kbd-modal" onclick={(e) => e.stopPropagation()}>
+			<div class="kbd-modal-overlay" role="button" tabindex="0" onclick={() => showKeyboardHelp = false} onkeydown={(e) => e.key === 'Escape' && (showKeyboardHelp = false)}>
+				<div class="kbd-modal" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 					<div class="kbd-modal-header">
 						<h3>Keyboard Shortcuts</h3>
 						<button class="kbd-modal-close" onclick={() => showKeyboardHelp = false}>×</button>

@@ -1,5 +1,7 @@
 import { prisma } from './prisma';
-import { ELO_CONFIG, CEFR_CONFIG, SM2_CONFIG, SRS_STATE_CONFIG } from './srsConfig';
+import { ELO_CONFIG, CEFR_CONFIG } from './srsConfig';
+import { reviewCard, scoreToRating, deriveSrsStateFromFsrs, DEFAULT_FSRS_PARAMETERS } from './fsrs';
+import type { FsrsCard } from './fsrs';
 
 type SrsState = 'UNSEEN' | 'LEARNING' | 'KNOWN' | 'MASTERED';
 type Vocabulary = {
@@ -303,50 +305,38 @@ function calculateNewElo(
 }
 
 /**
- * Derives SRS state from SM-2 metrics (consecutiveCorrect count).
- * This is the single source of truth for srsState.
- * MASTERED requires both a long interval AND enough consecutive correct answers.
+ * Runs FSRS review on a card loaded from the DB progress record.
+ * Returns updated FSRS fields and the next review date.
  */
-export function deriveSrsStateFromSm2(consecutiveCorrect: number, interval: number): SrsState {
-	if (consecutiveCorrect === 0) return 'LEARNING';
-	if (consecutiveCorrect >= SRS_STATE_CONFIG.KNOWN_THRESHOLD) {
-		if (interval >= SRS_STATE_CONFIG.MASTERED_INTERVAL_DAYS) return 'MASTERED';
-		return 'KNOWN';
-	}
-	return 'LEARNING';
-}
+function computeFsrsUpdate(score: number, current: {
+	difficulty: number;
+	stability: number;
+	retrievability: number;
+	repetitions: number;
+	lapses: number;
+	lastReviewDate: Date | null;
+}) {
+	const card: FsrsCard = {
+		difficulty: current.difficulty,
+		stability: current.stability,
+		retrievability: current.retrievability,
+		repetitions: current.repetitions,
+		lapses: current.lapses,
+		lastReviewDate: current.lastReviewDate ?? undefined
+	};
 
-/**
- * Core SM-2 algorithm. Computes new interval, easeFactor, consecutiveCorrect, and nextReviewDate.
- */
-function computeSm2Update(score: number, current: { interval: number; easeFactor: number; consecutiveCorrect: number }) {
-	let { interval, easeFactor, consecutiveCorrect } = current;
-	const grade = Math.round(score * 5);
+	const rating = scoreToRating(score);
+	const result = reviewCard(card, rating, new Date(), DEFAULT_FSRS_PARAMETERS);
 
-	if (grade >= SM2_CONFIG.SUCCESS_GRADE_THRESHOLD) {
-		if (consecutiveCorrect === 0) {
-			interval = SM2_CONFIG.INTERVALS.FIRST_SUCCESS;
-		} else if (consecutiveCorrect === 1) {
-			interval = SM2_CONFIG.INTERVALS.SECOND_SUCCESS;
-		} else {
-			interval = Math.round(interval * easeFactor);
-		}
-		consecutiveCorrect++;
-	} else {
-		consecutiveCorrect = 0;
-		interval = SM2_CONFIG.INTERVALS.FIRST_SUCCESS;
-	}
-
-	easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
-	if (easeFactor < SM2_CONFIG.MIN_EASE_FACTOR) easeFactor = SM2_CONFIG.MIN_EASE_FACTOR;
-	if (easeFactor > SM2_CONFIG.MAX_EASE_FACTOR) easeFactor = SM2_CONFIG.MAX_EASE_FACTOR;
-
-	if (interval > SM2_CONFIG.MAX_INTERVAL_DAYS) interval = SM2_CONFIG.MAX_INTERVAL_DAYS;
-
-	const nextReviewDate = new Date();
-	nextReviewDate.setDate(nextReviewDate.getDate() + interval);
-
-	return { interval, easeFactor, consecutiveCorrect, nextReviewDate };
+	return {
+		difficulty: result.card.difficulty,
+		stability: result.card.stability,
+		retrievability: result.card.retrievability ?? 1,
+		repetitions: result.card.repetitions,
+		lapses: result.card.lapses,
+		lastReviewDate: new Date(),
+		nextReviewDate: result.nextReviewDate
+	};
 }
 
 export async function updateSrsMetrics(userId: string, itemId: string, score: number, type: 'vocabulary' | 'grammar' = 'vocabulary') {
@@ -355,38 +345,44 @@ export async function updateSrsMetrics(userId: string, itemId: string, score: nu
 			where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } }
 		});
 
-		const sm2 = computeSm2Update(score, {
-			interval: currentProgress?.interval ?? 0,
-			easeFactor: currentProgress?.easeFactor ?? SM2_CONFIG.DEFAULT_EASE_FACTOR,
-			consecutiveCorrect: currentProgress?.consecutiveCorrect ?? 0
+		const fsrs = computeFsrsUpdate(score, {
+			difficulty: currentProgress?.difficulty ?? 5.0,
+			stability: currentProgress?.stability ?? 0.0,
+			retrievability: currentProgress?.retrievability ?? 1.0,
+			repetitions: currentProgress?.repetitions ?? 0,
+			lapses: currentProgress?.lapses ?? 0,
+			lastReviewDate: currentProgress?.lastReviewDate ?? null
 		});
 
 		await prisma.userGrammarRuleProgress.upsert({
 			where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } },
-			create: { userId, grammarRuleId: itemId, ...sm2 },
-			update: sm2
+			create: { userId, grammarRuleId: itemId, ...fsrs },
+			update: fsrs
 		});
 
-		return sm2;
+		return fsrs;
 	}
 
 	const currentProgress = await prisma.userVocabularyProgress.findUnique({
 		where: { userId_vocabularyId: { userId, vocabularyId: itemId } }
 	});
 
-	const sm2 = computeSm2Update(score, {
-		interval: currentProgress?.interval ?? 0,
-		easeFactor: currentProgress?.easeFactor ?? SM2_CONFIG.DEFAULT_EASE_FACTOR,
-		consecutiveCorrect: currentProgress?.consecutiveCorrect ?? 0
+	const fsrs = computeFsrsUpdate(score, {
+		difficulty: currentProgress?.difficulty ?? 5.0,
+		stability: currentProgress?.stability ?? 0.0,
+		retrievability: currentProgress?.retrievability ?? 1.0,
+		repetitions: currentProgress?.repetitions ?? 0,
+		lapses: currentProgress?.lapses ?? 0,
+		lastReviewDate: currentProgress?.lastReviewDate ?? null
 	});
 
 	await prisma.userVocabularyProgress.upsert({
 		where: { userId_vocabularyId: { userId, vocabularyId: itemId } },
-		create: { userId, vocabularyId: itemId, ...sm2 },
-		update: sm2
+		create: { userId, vocabularyId: itemId, ...fsrs },
+		update: fsrs
 	});
 
-	return sm2;
+	return fsrs;
 }
 
 /**
@@ -425,9 +421,9 @@ export async function updateEloRatings(
 			vocabUpdate.eloBefore = currentElo;
 			vocabUpdate.eloAfter = newElo;
 
-			// SM-2 is the single source of truth for SRS state and review scheduling
-			const sm2 = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
-			const newState = deriveSrsStateFromSm2(sm2.consecutiveCorrect, sm2.interval);
+			// FSRS is the single source of truth for SRS state and review scheduling
+			const fsrs = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
+			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
@@ -436,12 +432,12 @@ export async function updateEloRatings(
 					vocabularyId: vocab.id,
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				},
 				update: {
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				}
 			});
 		} catch (err) {
@@ -475,9 +471,9 @@ export async function updateEloRatings(
 			grammarUpdate.eloBefore = currentElo;
 			grammarUpdate.eloAfter = newElo;
 
-			// SM-2 for grammar - single source of truth for SRS state
-			const sm2 = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
-			const newState = deriveSrsStateFromSm2(sm2.consecutiveCorrect, sm2.interval);
+			// FSRS for grammar - single source of truth for SRS state
+			const fsrs = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
+			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userGrammarRule.upsert({
 				where: { userId_grammarRuleId: { userId, grammarRuleId: grammarUpdate.id } },
@@ -486,12 +482,12 @@ export async function updateEloRatings(
 					grammarRuleId: grammarUpdate.id,
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				},
 				update: {
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				}
 			});
 		} catch (err) {
@@ -520,8 +516,8 @@ export async function updateEloRatings(
 
 			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode);
 
-			const sm2 = await updateSrsMetrics(userId, vocab.id, 1.0, 'vocabulary');
-			const newState = deriveSrsStateFromSm2(sm2.consecutiveCorrect, sm2.interval);
+			const fsrs = await updateSrsMetrics(userId, vocab.id, 1.0, 'vocabulary');
+			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
@@ -530,12 +526,12 @@ export async function updateEloRatings(
 					vocabularyId: vocab.id,
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				},
 				update: {
 					eloRating: newElo,
 					srsState: newState,
-					nextReviewDate: sm2.nextReviewDate
+					nextReviewDate: fsrs.nextReviewDate
 				}
 			});
 		} catch (err) {

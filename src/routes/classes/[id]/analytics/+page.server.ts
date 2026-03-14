@@ -52,16 +52,16 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		}
 	});
 
-	// Aggregate data
+	// Aggregate data — in FSRS, difficulty is [1,10] where higher = harder
 	const aggregationMap = new Map<
 		string,
 		{
 			vocabularyId: string;
 			lemma: string;
 			meaning: string | null;
-			totalEaseFactor: number;
+			totalDifficulty: number;
 			count: number;
-			strugglingCount: number; // easeFactor < 2.5 is considered struggling
+			strugglingCount: number; // difficulty > 6 is considered struggling
 		}
 	>();
 
@@ -72,16 +72,16 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 				vocabularyId: vocabId,
 				lemma: (record as any).vocabulary.lemma,
 				meaning: (record as any).vocabulary.meanings?.[0]?.value || null,
-				totalEaseFactor: 0,
+				totalDifficulty: 0,
 				count: 0,
 				strugglingCount: 0
 			});
 		}
 
 		const data = aggregationMap.get(vocabId)!;
-		data.totalEaseFactor += record.easeFactor;
+		data.totalDifficulty += record.difficulty;
 		data.count++;
-		if (record.easeFactor < 2.5) {
+		if (record.difficulty > 6) {
 			data.strugglingCount++;
 		}
 	}
@@ -91,20 +91,19 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			vocabularyId: data.vocabularyId,
 			lemma: data.lemma,
 			meaning: data.meaning,
-			averageEaseFactor: data.totalEaseFactor / data.count,
+			averageDifficulty: data.totalDifficulty / data.count,
 			strugglePercentage: (data.strugglingCount / data.count) * 100,
 			totalStudentsLearned: data.count
 		}))
-		// Filter out words where not enough students have seen it (optional, maybe >= 1 student is fine)
 		.filter((data) => data.totalStudentsLearned > 0)
-		// Sort by lowest ease factor and highest struggle percentage
+		// Sort by highest difficulty (hardest first) then struggle percentage
 		.sort((a, b) => {
-			if (a.averageEaseFactor !== b.averageEaseFactor) {
-				return a.averageEaseFactor - b.averageEaseFactor; // lower ease factor first
+			if (a.averageDifficulty !== b.averageDifficulty) {
+				return b.averageDifficulty - a.averageDifficulty;
 			}
-			return b.strugglePercentage - a.strugglePercentage; // higher struggle percentage first
+			return b.strugglePercentage - a.strugglePercentage;
 		})
-		.slice(0, 50); // top 50 struggling words
+		.slice(0, 50);
 
 	return {
 		strugglingWords,

@@ -490,19 +490,6 @@
 		min-height: 0;
 	}
 
-	.chat-container {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		background: var(--card-bg, #ffffff);
-		border-radius: 12px;
-		box-shadow:
-			0 4px 6px -1px rgba(0, 0, 0, 0.1),
-			0 2px 4px -1px rgba(0, 0, 0, 0.06);
-		border: 1px solid var(--card-border, #e2e8f0);
-		overflow: hidden;
-	}
-
 	.level-buttons {
 		display: flex;
 		gap: 0.5rem;
@@ -591,11 +578,6 @@
 		border: 1px solid var(--card-border, #e2e8f0);
 		border-bottom-left-radius: 0.25rem;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-	}
-
-	.message-bubble.loading {
-		font-style: italic;
-		color: #94a3b8;
 	}
 
 	.chat-input-form {

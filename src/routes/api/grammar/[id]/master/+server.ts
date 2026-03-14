@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
-import { SM2_CONFIG, SRS_STATE_CONFIG } from '$lib/server/srsConfig';
+import { reviewCard, deriveSrsStateFromFsrs, DEFAULT_FSRS_PARAMETERS, initializeFsrsCard } from '$lib/server/fsrs';
 
 export async function POST(event) {
 	const { params, locals } = event;
@@ -44,22 +44,29 @@ export async function POST(event) {
 		}
 	}
 
-	// Set SM-2 progress values that correspond to MASTERED state
-	const masteredInterval = SRS_STATE_CONFIG.MASTERED_INTERVAL_DAYS;
-	const nextReviewDate = new Date();
-	nextReviewDate.setDate(nextReviewDate.getDate() + masteredInterval);
+	// Run three "Easy" (rating 4) reviews to push the card into MASTERED state
+	let card = initializeFsrsCard();
+	let lastResult = reviewCard(card, 4, new Date(), DEFAULT_FSRS_PARAMETERS);
+	card = lastResult.card;
+	lastResult = reviewCard(card, 4, new Date(), DEFAULT_FSRS_PARAMETERS);
+	card = lastResult.card;
+	lastResult = reviewCard(card, 4, new Date(), DEFAULT_FSRS_PARAMETERS);
 
-	const sm2Data = {
-		interval: masteredInterval,
-		easeFactor: SM2_CONFIG.DEFAULT_EASE_FACTOR,
-		consecutiveCorrect: SRS_STATE_CONFIG.KNOWN_THRESHOLD + 1,
+	const nextReviewDate = lastResult.nextReviewDate;
+	const fsrsData = {
+		difficulty: lastResult.card.difficulty,
+		stability: lastResult.card.stability,
+		retrievability: lastResult.card.retrievability ?? 1,
+		repetitions: lastResult.card.repetitions,
+		lapses: lastResult.card.lapses,
+		lastReviewDate: new Date(),
 		nextReviewDate
 	};
 
 	await prisma.userGrammarRuleProgress.upsert({
 		where: { userId_grammarRuleId: { userId, grammarRuleId } },
-		create: { userId, grammarRuleId, ...sm2Data },
-		update: sm2Data
+		create: { userId, grammarRuleId, ...fsrsData },
+		update: fsrsData
 	});
 
 	await prisma.userGrammarRule.upsert({
