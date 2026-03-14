@@ -165,6 +165,21 @@
 		return raw.replace(/^[«»„""\[\]()\.,!?;:'"–—]+|[«»„""\[\]()\.,!?;:'"–—]+$/g, '').trim();
 	}
 
+	const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
+
+	function isSparseMeta(vocab: any): boolean {
+		// Missing definition
+		if (!vocab?.meanings?.length) return true;
+		// Noun in a gendered language missing its gender
+		const isNoun = vocab.partOfSpeech === 'noun';
+		const langIsGendered = GENDERED_LANGUAGES.includes((language?.name || '').toLowerCase());
+		if (isNoun && langIsGendered && !vocab.gender) return true;
+		// Missing metadata enrichment
+		const meta = vocab?.metadata;
+		if (!meta) return true;
+		return !(meta.example || meta.declensions || meta.conjugations);
+	}
+
 	async function handleWordClick(e: MouseEvent | KeyboardEvent, rawWord: string) {
 		if (disableHoverTranslation || !language?.id) return;
 		const word = cleanWord(rawWord);
@@ -173,30 +188,67 @@
 
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const x = Math.min(rect.left, window.innerWidth - 290);
-		const y = rect.bottom + 6; // fixed positioning uses viewport coords
+		const y = rect.bottom + 6;
 
 		if (wordLookupCache.has(word.toLowerCase())) {
 			wordPopup = { word, x, y, loading: false, result: wordLookupCache.get(word.toLowerCase()), error: '' };
 			return;
 		}
 
+		// 1. Check DB first
 		wordPopup = { word, x, y, loading: true, result: null, error: '' };
+		let dbVocab: any = null;
+		try {
+			const dbRes = await fetch(`/api/vocabulary/search?q=${encodeURIComponent(word)}`);
+			if (dbRes.ok) {
+				const dbData = await dbRes.json();
+				// Find exact lemma match (case-insensitive)
+				dbVocab = dbData.results?.find(
+					(r: any) => r.lemma.toLowerCase() === word.toLowerCase()
+				) ?? null;
+			}
+		} catch { /* non-critical, fall through to LLM */ }
+
+		// 2. If we have a DB hit, show it immediately
+		if (dbVocab) {
+			wordPopup = { word, x, y, loading: false, result: dbVocab, error: '' };
+			// If not sparse, cache and done
+			if (!isSparseMeta(dbVocab)) {
+				wordLookupCache.set(word.toLowerCase(), dbVocab);
+				return;
+			}
+			// Sparse — enrich silently in background with existingId so server persists enrichment
+		}
+
+		// 3. Call LLM (either no DB hit, or sparse DB hit needing enrichment)
+		const enriching = !!dbVocab;
+		if (!enriching) {
+			wordPopup = { word, x, y, loading: true, result: null, error: '' };
+		}
 
 		try {
 			const res = await fetch('/api/vocabulary/llm-lookup', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ word, languageId: language.id })
+				body: JSON.stringify({ word, languageId: language.id, ...(dbVocab?.id ? { existingId: dbVocab.id } : {}) })
 			});
 			const data = await res.json();
 			if (data.success && data.data) {
 				wordLookupCache.set(word.toLowerCase(), data.data);
-				wordPopup = { word, x, y, loading: false, result: data.data, error: '' };
-			} else {
-				wordPopup = { word, x, y, loading: false, result: null, error: data.error || 'Word not found.' };
+				// Only update popup if it's still showing this word
+				if (wordPopup?.word === word) {
+					wordPopup = { word, x, y, loading: false, result: data.data, error: '' };
+				}
+			} else if (!enriching) {
+				if (wordPopup?.word === word) {
+					wordPopup = { word, x, y, loading: false, result: null, error: data.error || 'Word not found.' };
+				}
 			}
+			// If enriching and LLM fails, the popup already shows the sparse DB data — leave it
 		} catch {
-			wordPopup = { word, x, y, loading: false, result: null, error: 'Lookup failed.' };
+			if (!enriching && wordPopup?.word === word) {
+				wordPopup = { word, x, y, loading: false, result: null, error: 'Lookup failed.' };
+			}
 		}
 	}
 

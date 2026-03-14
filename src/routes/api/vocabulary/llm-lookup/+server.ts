@@ -146,9 +146,19 @@ Return the dictionary entry in the following JSON format:
 			include: { meanings: true }
 		});
 
-		// If it exists and has meanings, just return it
+		// If it exists and has meanings, check if it's sparse (missing metadata enrichment).
+		// If not sparse, return as-is. If sparse, fall through to update it with LLM data.
 		if (existingVocab && existingVocab.meanings && existingVocab.meanings.length > 0) {
-			return json({ success: true, data: existingVocab });
+			const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
+			const isNoun = existingVocab.partOfSpeech === 'noun';
+			const langIsGendered = GENDERED_LANGUAGES.includes(language.name.toLowerCase());
+			const missingGender = isNoun && langIsGendered && !existingVocab.gender;
+			const meta = existingVocab.metadata as Record<string, unknown> | null;
+			const isSparse = missingGender || !meta || !(meta.example || meta.declensions || meta.conjugations);
+			if (!isSparse) {
+				return json({ success: true, data: existingVocab });
+			}
+			// Sparse — fall through to enrich with LLM data below
 		}
 
 		// Enforce German lowercase non-noun rule programmatically just in case

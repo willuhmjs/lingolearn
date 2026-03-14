@@ -30,17 +30,69 @@
 
 	// Track selected word for modal
 	let selectedResult: any | null = null;
-	
+	let enriching = false;
+
 	// Track expanded grammar rules
 	let expandedGrammarId: string | null = null;
 	let grammarQuery = '';
 
-	function openModal(result: any) {
+	// Languages where nouns require a gender field
+	const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
+
+	function isSparse(word: any): boolean {
+		if (!word?.id) return false; // transient words can't be backfilled
+		// Missing definition
+		if (!word.meanings?.length) return true;
+		// Noun in a gendered language missing its gender
+		const isNoun = word.partOfSpeech === 'noun';
+		const langIsGendered = GENDERED_LANGUAGES.includes(currentLanguage.toLowerCase());
+		if (isNoun && langIsGendered && !word.gender) return true;
+		// Missing metadata enrichment
+		const meta = word.metadata;
+		if (!meta) return true;
+		return !(meta.example || meta.declensions || meta.conjugations);
+	}
+
+	async function openModal(result: any) {
 		selectedResult = result;
+
+		if (!isSparse(result) || !activeLanguageId) return;
+
+		enriching = true;
+		try {
+			const res = await fetch('/api/vocabulary/llm-lookup', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					word: result.lemma,
+					languageId: activeLanguageId,
+					existingId: result.id
+				})
+			});
+
+			if (res.ok) {
+				const responseData = await res.json();
+				const enriched = responseData.data || responseData;
+				// Only update if this modal is still open for the same word
+				if (selectedResult?.id === result.id) {
+					selectedResult = { ...selectedResult, ...enriched };
+					// Also update the word in the results/learningWords lists so the
+					// data is fresh if the user closes and reopens the modal
+					results = results.map((r) => (r.id === enriched.id ? { ...r, ...enriched } : r));
+					learningWords = learningWords.map((r) => (r.id === enriched.id ? { ...r, ...enriched } : r));
+				}
+			}
+		} catch (err) {
+			// Silently ignore — the modal still works with partial data
+			console.error('Background enrichment failed:', err);
+		} finally {
+			enriching = false;
+		}
 	}
 
 	function closeModal() {
 		selectedResult = null;
+		enriching = false;
 	}
 
 	function toggleGrammar(id: string) {
@@ -666,6 +718,11 @@
 						{/if}
 						{#if selectedResult.metadata?.level}
 							<span class="modal-level-badge level-{selectedResult.metadata.level.toLowerCase()}">{selectedResult.metadata.level}</span>
+						{/if}
+						{#if enriching}
+							<span class="modal-enriching-badge">
+								<span class="spinner-tiny"></span> enriching...
+							</span>
 						{/if}
 					</div>
 				</div>
@@ -1727,6 +1784,31 @@
 		border-radius: 999px;
 		background: #fef3c7;
 		color: #92400e;
+	}
+
+	.modal-enriching-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.65rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.12);
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	.spinner-tiny {
+		display: inline-block;
+		width: 0.6rem;
+		height: 0.6rem;
+		border-radius: 9999px;
+		border: 1.5px solid rgba(255, 255, 255, 0.3);
+		border-bottom-color: rgba(255, 255, 255, 0.8);
+		animation: spin 1s linear infinite;
+		flex-shrink: 0;
 	}
 
 	/* Body */
