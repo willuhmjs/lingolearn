@@ -163,6 +163,7 @@
 	let submitting = false;
 	let sessionXp = 0;
 	let sessionChallenges = 0;
+	let displayedChallengeNumber = 1;
 	let gameMode: GameMode = data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target';
 	let fillBlankAnswers: string[] = [];
 	let selectedChoice: string | null = null;
@@ -1404,6 +1405,7 @@
 			let buffer = '';
 			let idMap: Record<string, string> = {};
 
+			displayedChallengeNumber = sessionChallenges + 1;
 			challenge = {
 				challengeText: '',
 				targetSentence: '',
@@ -2106,7 +2108,7 @@
 						>
 							&larr; Change Mode
 						</button>
-						<span class="session-progress-badge">Challenge {sessionChallenges + 1}</span>
+						<span class="session-progress-badge">Challenge {displayedChallengeNumber}</span>
 					</div>
 					<div class="challenge-section">
 						{#if challenge.gameMode === 'fill-blank'}
