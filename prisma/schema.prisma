@@ -406,9 +406,10 @@ model Assignment {
   targetCefrLevel String?
   dueDate         DateTime?
   topic           String?
-  targetGrammar   String[]
-  targetVocab     String[]
-  createdAt       DateTime  @default(now())
+  targetGrammar            String[]
+  targetVocab              String[]
+  disableHoverTranslation  Boolean   @default(false)
+  createdAt                DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   class  Class             @relation(fields: [classId], references: [id], onDelete: Cascade)

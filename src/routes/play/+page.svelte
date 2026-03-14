@@ -938,6 +938,7 @@
 		isTargetedVocab: boolean,
 		stillStreaming: boolean = false
 	): string {
+		if (assignment?.disableHoverTranslation) return text;
 		const vocabMap = buildVocabMap();
 		const isDeToEn = challenge.gameMode === 'target-to-native';
 		// Whether this text is German (to enable article case tooltips)
@@ -2456,6 +2457,7 @@
 					language={lessonLanguage}
 					cefrLevel={userLevel}
 					assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
+					disableHoverTranslation={assignment?.disableHoverTranslation ?? false}
 					bind:assignmentProgress
 				/>
 			</div>

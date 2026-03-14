@@ -71,7 +71,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 				targetCefrLevel: data.targetCefrLevel || null,
 				topic: data.topic?.trim() || null,
 				targetGrammar: data.targetGrammar || [],
-				targetVocab: data.targetVocab || []
+				targetVocab: data.targetVocab || [],
+				disableHoverTranslation: !!data.disableHoverTranslation
 			}
 		});
 

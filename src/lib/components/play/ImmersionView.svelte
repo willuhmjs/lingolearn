@@ -6,12 +6,14 @@
 		language = null,
 		cefrLevel = 'A1',
 		assignmentId = null,
-		assignmentProgress = $bindable(null)
+		assignmentProgress = $bindable(null),
+		disableHoverTranslation = false
 	}: {
 		language?: { id?: string; name: string; flag?: string } | null;
 		cefrLevel?: string;
 		assignmentId?: string | null;
 		assignmentProgress?: { score: number; targetScore: number; passed: boolean } | null;
+		disableHoverTranslation?: boolean;
 	} = $props();
 
 	type MediaType =
@@ -164,7 +166,7 @@
 	}
 
 	async function handleWordClick(e: MouseEvent | KeyboardEvent, rawWord: string) {
-		if (!language?.id) return;
+		if (disableHoverTranslation || !language?.id) return;
 		const word = cleanWord(rawWord);
 		if (!word || word.length < 2 || /^\d+$/.test(word)) return;
 		e.stopPropagation();
@@ -694,7 +696,7 @@
 	{#if session && !loading}
 		<div class="session-wrapper" in:fly={{ y: 20, duration: 400 }}>
 			<!-- Media template -->
-			<div class="media-card" aria-label="Reading content">
+			<div class="media-card" class:no-word-hover={disableHoverTranslation} aria-label="Reading content">
 				<div class="media-type-badge">
 					{MEDIA_LABELS[session.mediaType].icon}
 					{MEDIA_LABELS[session.mediaType].label}
@@ -2557,6 +2559,11 @@
 	:global(html[data-theme='dark']) .w-tok:hover {
 		background: rgba(96, 165, 250, 0.15);
 		color: #93c5fd;
+	}
+
+	.no-word-hover .w-tok {
+		cursor: text;
+		pointer-events: none;
 	}
 
 	/* Word lookup popup */

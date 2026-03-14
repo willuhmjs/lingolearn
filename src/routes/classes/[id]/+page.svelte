@@ -31,6 +31,7 @@
 	let vocabInput = '';
 	let grammarSearchQuery = '';
 	let createAssignmentGameId = '';
+	let createAssignmentDisableHoverTranslation = false;
 	let titleWasAutoFilled = false;
 	let isCreatingAssignment = false;
 
@@ -92,6 +93,7 @@
 		vocabInput = '';
 		grammarSearchQuery = '';
 		createAssignmentGameId = '';
+		createAssignmentDisableHoverTranslation = false;
 		titleWasAutoFilled = false;
 	}
 
@@ -145,7 +147,8 @@
 					targetCefrLevel: createAssignmentTargetCefrLevel || undefined,
 					topic: createAssignmentTopic || undefined,
 					targetGrammar: selectedGrammarRules.length > 0 ? selectedGrammarRules : undefined,
-					targetVocab: targetVocabList.length > 0 ? targetVocabList : undefined
+					targetVocab: targetVocabList.length > 0 ? targetVocabList : undefined,
+					disableHoverTranslation: createAssignmentDisableHoverTranslation
 				})
 			});
 			const result = await res.json();
@@ -793,6 +796,11 @@
 						{/if}
 					</div>
 				</div>
+
+				<label class="toggle-row">
+					<input type="checkbox" bind:checked={createAssignmentDisableHoverTranslation} />
+					<span>Disable hover translation for students</span>
+				</label>
 
 				<div class="modal-actions">
 					<button type="button" class="btn-duo btn-secondary" onclick={closeCreateAssignmentModal}>
@@ -1947,6 +1955,25 @@
 	.btn-close:hover {
 		background: #e2e8f0;
 		color: #0f172a;
+	}
+
+	.toggle-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #475569;
+		cursor: pointer;
+		padding: 0.5rem 0;
+	}
+
+	.toggle-row input[type='checkbox'] {
+		width: 1rem;
+		height: 1rem;
+		accent-color: #3b82f6;
+		cursor: pointer;
+		flex-shrink: 0;
 	}
 
 	.modal-actions {

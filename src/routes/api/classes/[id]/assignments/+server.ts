@@ -22,7 +22,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 			dueDate,
 			topic,
 			targetGrammar,
-			targetVocab
+			targetVocab,
+			disableHoverTranslation
 		} = await request.json();
 
 		if (!title || !gamemode || !language || targetScore === undefined) {
@@ -68,7 +69,8 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 				dueDate: dueDate ? new Date(dueDate) : null,
 				topic: topic || null,
 				targetGrammar: Array.isArray(targetGrammar) ? targetGrammar : [],
-				targetVocab: Array.isArray(targetVocab) ? targetVocab : []
+				targetVocab: Array.isArray(targetVocab) ? targetVocab : [],
+				disableHoverTranslation: !!disableHoverTranslation
 			}
 		});
 
