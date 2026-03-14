@@ -10,8 +10,11 @@
 
 	$: classDetails = data.classDetails;
 	$: currentUserRole = data.currentUserRole;
-	$: currentLang = data.languages?.find((l) => l.code === createAssignmentLanguage);
+	$: currentLang = data.languages?.find((l: any) => l.code === createAssignmentLanguage);
 	$: availableRules = currentLang ? currentLang.grammarRules : [];
+	$: classLang = data.languages?.find((l: any) => l.code === classDetails.primaryLanguage);
+	$: targetFlag = classLang?.flag ?? '🎯';
+	const nativeFlag = '🇬🇧';
 
 	// Assignment Creation
 	let showCreateAssignmentModal = false;
@@ -28,7 +31,51 @@
 	let vocabInput = '';
 	let grammarSearchQuery = '';
 	let createAssignmentGameId = '';
+	let titleWasAutoFilled = false;
 	let isCreatingAssignment = false;
+
+	const MODE_DEFAULTS: Record<string, { targetScore: number; passThreshold: number }> = {
+		'multiple-choice':  { targetScore: 10, passThreshold: 80 },
+		'native-to-target': { targetScore: 10, passThreshold: 80 },
+		'target-to-native': { targetScore: 10, passThreshold: 80 },
+		'fill-blank':       { targetScore: 10, passThreshold: 80 },
+		'chat':             { targetScore: 20, passThreshold: 50 },
+		'immerse':          { targetScore: 10, passThreshold: 50 },
+		'quiz':             { targetScore: 10, passThreshold: 50 },
+	};
+
+	function applyModeDefaults(mode: string) {
+		const d = MODE_DEFAULTS[mode] ?? { targetScore: 10, passThreshold: 50 };
+		createAssignmentTargetScore = d.targetScore;
+		createAssignmentPassThreshold = d.passThreshold;
+		// Clear quiz selection and auto-title when leaving quiz mode
+		if (mode !== 'quiz') {
+			if (titleWasAutoFilled) {
+				createAssignmentTitle = '';
+				titleWasAutoFilled = false;
+			}
+			createAssignmentGameId = '';
+		}
+	}
+
+	function handleModeChange(mode: string) {
+		createAssignmentMode = mode;
+		applyModeDefaults(mode);
+	}
+
+	function handleQuizSelect(quizId: string) {
+		createAssignmentGameId = quizId;
+		const quiz = (data.teacherGames || []).find((q: any) => q.id === quizId);
+		if (quiz) {
+			// Auto-fill title if empty or was previously auto-filled
+			if (!createAssignmentTitle || titleWasAutoFilled) {
+				createAssignmentTitle = quiz.title;
+				titleWasAutoFilled = true;
+			}
+			// Default correct answers to total question count
+			createAssignmentTargetScore = quiz._count.questions || 10;
+		}
+	}
 
 	function openCreateAssignmentModal() {
 		showCreateAssignmentModal = true;
@@ -36,7 +83,7 @@
 		createAssignmentDescription = '';
 		createAssignmentMode = 'multiple-choice';
 		createAssignmentTargetScore = 10;
-		createAssignmentPassThreshold = 50;
+		createAssignmentPassThreshold = 80;
 		createAssignmentLanguage = data.classDetails.primaryLanguage;
 		createAssignmentTargetCefrLevel = '';
 		createAssignmentTopic = '';
@@ -45,6 +92,7 @@
 		vocabInput = '';
 		grammarSearchQuery = '';
 		createAssignmentGameId = '';
+		titleWasAutoFilled = false;
 	}
 
 	function closeCreateAssignmentModal() {
@@ -90,6 +138,7 @@
 					title: createAssignmentTitle,
 					description: createAssignmentDescription || undefined,
 					gamemode: createAssignmentMode,
+					gameId: createAssignmentMode === 'quiz' ? (createAssignmentGameId || undefined) : undefined,
 					targetScore: createAssignmentTargetScore,
 					passThreshold: createAssignmentPassThreshold,
 					language: createAssignmentLanguage,
@@ -526,178 +575,222 @@
 	>
 		<div class="modal-content card-duo" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h3 class="create-form-title">Create New Assignment</h3>
+				<div>
+					<h3 class="modal-title">New Assignment</h3>
+					<p class="modal-subtitle">Set up a task for your students</p>
+				</div>
 				<button class="btn-close" onclick={closeCreateAssignmentModal}>&times;</button>
 			</div>
 
 			<form onsubmit={(e) => { e.preventDefault(); handleCreateAssignment(); }} class="create-form">
-				<div class="create-form-row">
-					<div class="field">
-						<label for="title">Title <span class="required">*</span></label>
-						<input
-							type="text"
-							id="title"
-							bind:value={createAssignmentTitle}
-							placeholder="e.g. Verb practice week 3"
-							required
-						/>
-					</div>
-					<div class="field">
-						<label for="desc">Description (optional)</label>
-						<input
-							type="text"
-							id="desc"
-							bind:value={createAssignmentDescription}
-							placeholder="Any notes for students"
-						/>
+
+				<!-- Step 1: Mode selection — always shown first -->
+				<div class="form-section">
+					<p class="section-label">Mode</p>
+					<div class="mode-grid">
+						{#each [
+							{ value: 'multiple-choice', label: 'Multiple Choice', icon: '🔘' },
+							{ value: 'native-to-target', label: 'Into Target', icon: `${nativeFlag}→${targetFlag}` },
+							{ value: 'target-to-native', label: 'Into Native', icon: `${targetFlag}→${nativeFlag}` },
+							{ value: 'fill-blank', label: 'Fill in Blank', icon: '✏️' },
+							{ value: 'chat', label: 'Chat', icon: '💬' },
+							{ value: 'immerse', label: 'Immerse', icon: '📖' },
+							{ value: 'quiz', label: 'Quiz', icon: '🎯' },
+						] as m}
+							<button
+								type="button"
+								class="mode-btn"
+								class:mode-active={createAssignmentMode === m.value}
+								onclick={() => handleModeChange(m.value)}
+							>
+								<span class="mode-icon">{m.icon}</span>
+								<span class="mode-label-text">{m.label}</span>
+							</button>
+						{/each}
 					</div>
 				</div>
 
-				<div class="create-form-row">
-					<div class="field">
-						<label for="topic">Topic (optional)</label>
-						<input
-							type="text"
-							id="topic"
-							bind:value={createAssignmentTopic}
-							placeholder="e.g. Ordering food, Traveling"
-						/>
-					</div>
-					<div class="field">
-						<label for="vocab">Target Vocabulary (optional)</label>
-						<div class="vocab-input-container">
-							<div class="vocab-tags">
-								{#each targetVocabList as word}
-									<span class="vocab-tag">
-										{word}
-										<button type="button" class="remove-vocab" onclick={() => removeVocab(word)}>&times;</button>
-									</span>
-								{/each}
-								<input
-									type="text"
-									id="vocab"
-									bind:value={vocabInput}
-									onkeydown={handleVocabKeydown}
-									placeholder={targetVocabList.length === 0 ? "Type a word and press Enter" : ""}
-									class="vocab-inline-input"
-								/>
-							</div>
+				<!-- Quiz picker (quiz mode only) -->
+				{#if createAssignmentMode === 'quiz'}
+				<div class="form-section">
+					<p class="section-label">Quiz <span class="required">*</span></p>
+					{#if (data.teacherGames || []).length === 0}
+						<p class="empty-hint">You have no quizzes yet. <a href="/play/games/create" target="_blank">Create one</a> first.</p>
+					{:else}
+						<div class="quiz-list">
+							{#each data.teacherGames || [] as quiz}
+								<label class="quiz-option" class:quiz-selected={createAssignmentGameId === quiz.id}>
+									<input type="radio" name="quizPicker" value={quiz.id} checked={createAssignmentGameId === quiz.id} onchange={() => handleQuizSelect(quiz.id)} />
+									<div class="quiz-option-info">
+										<span class="quiz-option-title">{quiz.title}</span>
+										<span class="quiz-option-meta">{quiz._count.questions} questions{quiz.isPublished ? '' : ' · draft'}</span>
+									</div>
+									{#if createAssignmentGameId === quiz.id}
+										<span class="quiz-check">✓</span>
+									{/if}
+								</label>
+							{/each}
+						</div>
+					{/if}
+				</div>
+				{/if}
+
+				<!-- Basic info -->
+				<div class="form-section">
+					<p class="section-label">Details</p>
+					<div class="create-form-row">
+						<div class="field">
+							<label for="title">Title <span class="required">*</span></label>
+							<input
+								type="text"
+								id="title"
+								bind:value={createAssignmentTitle}
+								placeholder="e.g. Verb practice week 3"
+								required
+							/>
+						</div>
+						<div class="field">
+							<label for="desc">Description (optional)</label>
+							<input
+								type="text"
+								id="desc"
+								bind:value={createAssignmentDescription}
+								placeholder="Any notes for students"
+							/>
 						</div>
 					</div>
 				</div>
 
-				<div class="field grammar-rules-field">
-					<span class="field-label">Target Grammar Rules (optional)</span>
-					<div class="grammar-rules-container">
-						{#if availableRules.length > 0}
-							<div class="grammar-search">
-								<input 
-									type="text" 
-									bind:value={grammarSearchQuery} 
-									placeholder="Search grammar rules..." 
-									class="grammar-search-input"
-								/>
+				<!-- AI targeting — only for learn modes -->
+				{#if ['multiple-choice','native-to-target','target-to-native','fill-blank'].includes(createAssignmentMode)}
+				<div class="form-section">
+					<p class="section-label">AI Focus <span class="optional-label">(optional)</span></p>
+					<div class="create-form-row">
+						<div class="field">
+							<label for="topic">Topic</label>
+							<input
+								type="text"
+								id="topic"
+								bind:value={createAssignmentTopic}
+								placeholder="e.g. Ordering food, Traveling"
+							/>
+						</div>
+						<div class="field">
+							<label for="vocab">Target Vocabulary</label>
+							<div class="vocab-input-container">
+								<div class="vocab-tags">
+									{#each targetVocabList as word}
+										<span class="vocab-tag">
+											{word}
+											<button type="button" class="remove-vocab" onclick={() => removeVocab(word)}>&times;</button>
+										</span>
+									{/each}
+									<input
+										type="text"
+										id="vocab"
+										bind:value={vocabInput}
+										onkeydown={handleVocabKeydown}
+										placeholder={targetVocabList.length === 0 ? "Type a word and press Enter" : ""}
+										class="vocab-inline-input"
+									/>
+								</div>
 							</div>
-							<div class="grammar-rules-list">
+						</div>
+					</div>
+					<div class="field grammar-rules-field">
+						<span class="field-label">Target Grammar Rules</span>
+						<div class="grammar-rules-container">
+							{#if availableRules.length > 0}
+								<div class="grammar-search">
+									<input
+										type="text"
+										bind:value={grammarSearchQuery}
+										placeholder="Search grammar rules..."
+										class="grammar-search-input"
+									/>
+								</div>
+								<div class="grammar-rules-list">
 									{#each availableRules.filter((r: any) => r.title.toLowerCase().includes(grammarSearchQuery.toLowerCase())) as rule}
-									<label class="grammar-rule-item" class:selected={selectedGrammarRules.includes(rule.id)}>
-										<input 
-											type="checkbox" 
-											checked={selectedGrammarRules.includes(rule.id)}
-											onchange={() => toggleGrammarRule(rule.id)}
-										/>
-										<div class="grammar-rule-info">
-											<span class="grammar-rule-title">{rule.title}</span>
-											<span class="badge grammar-rule-badge">{rule.level}</span>
-										</div>
-									</label>
-								{/each}
-							</div>
-						{:else}
-							<p class="no-grammar-rules">No grammar rules available for this language.</p>
-						{/if}
+										<label class="grammar-rule-item" class:selected={selectedGrammarRules.includes(rule.id)}>
+											<input
+												type="checkbox"
+												checked={selectedGrammarRules.includes(rule.id)}
+												onchange={() => toggleGrammarRule(rule.id)}
+											/>
+											<div class="grammar-rule-info">
+												<span class="grammar-rule-title">{rule.title}</span>
+												<span class="badge grammar-rule-badge">{rule.level}</span>
+											</div>
+										</label>
+									{/each}
+								</div>
+							{:else}
+								<p class="no-grammar-rules">No grammar rules available for this language.</p>
+							{/if}
+						</div>
 					</div>
 				</div>
+				{/if}
 
-				<div class="create-form-bottom">
-					<div class="field">
-						<label for="gamemode">Game Mode</label>
-						<select id="gamemode" bind:value={createAssignmentMode}>
-							<option value="multiple-choice">Multiple Choice</option>
-							<option value="native-to-target">Native to Target</option>
-							<option value="target-to-native">Target to Native</option>
-							<option value="fill-blank">Fill in the Blank</option>
-							<option value="chat">Chat</option>
-							<option value="immerse">Immerse</option>
-							<option value="quiz">Quiz</option>
-						</select>
-					</div>
-					{#if createAssignmentMode === 'quiz'}
-					<div class="field quiz-picker-field">
-						<label for="quizPicker">Select Quiz <span class="required">*</span></label>
-						<select id="quizPicker" bind:value={createAssignmentGameId}>
-							<option value="">— Choose a quiz —</option>
-							{#each data.teacherGames || [] as quiz}
-								<option value={quiz.id}>{quiz.title} ({quiz._count.questions} questions){quiz.isPublished ? '' : ' (draft)'}</option>
-							{/each}
-						</select>
-					</div>
-					{/if}
-					<div class="field field-small">
-						<label for="language">Language</label>
-						<select id="language" bind:value={createAssignmentLanguage}>
-							<option value="international">International</option>
-							<option value="de">German</option>
-							<option value="es">Spanish</option>
-							<option value="fr">French</option>
-						</select>
-					</div>
-					<div class="field field-small">
-						<label for="targetCefrLevel">CEFR Level</label>
-						<select id="targetCefrLevel" bind:value={createAssignmentTargetCefrLevel}>
-							<option value="">Use Student's Level</option>
-							<option value="A1">A1</option>
-							<option value="A2">A2</option>
-							<option value="B1">B1</option>
-							<option value="B2">B2</option>
-							<option value="C1">C1</option>
-							<option value="C2">C2</option>
-						</select>
-					</div>
-					<div class="field field-small">
-						<label for="targetScore">
-							{#if createAssignmentMode === 'chat'}
-								Target Turns
-							{:else if createAssignmentMode === 'immerse'}
-								Target Questions
-							{:else if createAssignmentMode === 'quiz'}
-								Correct Answers
-							{:else}
-								Pass Score
-							{/if}
-						</label>
-						<input
-							type="number"
-							id="targetScore"
-							bind:value={createAssignmentTargetScore}
-							min="1"
-							max="100"
-						/>
-						{#if createAssignmentMode === 'chat'}
-							<span style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; display: block;">Number of turns for chat</span>
-						{:else if createAssignmentMode === 'immerse'}
-							<span style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; display: block;">Number of correct answers to pass</span>
+				<!-- Scoring & settings -->
+				<div class="form-section">
+					<p class="section-label">Settings</p>
+					<div class="settings-row">
+						{#if createAssignmentMode !== 'quiz'}
+						<div class="field">
+							<label for="language">Language</label>
+							<select id="language" bind:value={createAssignmentLanguage}>
+								<option value="international">International</option>
+								<option value="de">German</option>
+								<option value="es">Spanish</option>
+								<option value="fr">French</option>
+							</select>
+						</div>
 						{/if}
-					</div>
-					<div class="field field-small">
-						<label for="passThreshold">Threshold (%)</label>
-						<input
-							type="number"
-							id="passThreshold"
-							bind:value={createAssignmentPassThreshold}
-							min="1"
-							max="100"
-						/>
+						{#if createAssignmentMode !== 'quiz'}
+						<div class="field">
+							<label for="targetCefrLevel">CEFR Level</label>
+							<select id="targetCefrLevel" bind:value={createAssignmentTargetCefrLevel}>
+								<option value="">Student's level</option>
+								<option value="A1">A1</option>
+								<option value="A2">A2</option>
+								<option value="B1">B1</option>
+								<option value="B2">B2</option>
+								<option value="C1">C1</option>
+								<option value="C2">C2</option>
+							</select>
+						</div>
+						{/if}
+						<div class="field">
+							<label for="targetScore">
+								{#if createAssignmentMode === 'chat'}Target Turns
+								{:else if createAssignmentMode === 'immerse'}Target Questions
+								{:else if createAssignmentMode === 'quiz'}Correct Answers
+								{:else}Pass Score{/if}
+							</label>
+							<input
+								type="number"
+								id="targetScore"
+								bind:value={createAssignmentTargetScore}
+								min="1"
+								max="100"
+							/>
+						</div>
+						{#if createAssignmentMode !== 'chat' && createAssignmentMode !== 'quiz'}
+						<div class="field">
+							<label for="passThreshold">Pass Threshold</label>
+							<div class="threshold-input">
+								<input
+									type="number"
+									id="passThreshold"
+									bind:value={createAssignmentPassThreshold}
+									min="1"
+									max="100"
+								/>
+								<span class="threshold-pct">%</span>
+							</div>
+						</div>
+						{/if}
 					</div>
 				</div>
 
@@ -955,57 +1048,251 @@
 		padding-bottom: 0.5rem;
 	}
 
-	/* Create Assignment Form */
-	.create-form-title {
-		font-size: 1rem;
+	/* Create Assignment Modal */
+	.modal-title {
+		font-size: 1.1rem;
+		font-weight: 800;
 		color: var(--text-color, #1e293b);
-		margin: 0 0 1rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		margin: 0 0 0.15rem;
+	}
+
+	.modal-subtitle {
+		font-size: 0.8rem;
+		color: #94a3b8;
+		margin: 0;
+		font-weight: 600;
 	}
 
 	.create-form {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0;
 	}
 
+	.form-section {
+		padding: 1.25rem 0;
+		border-bottom: 1px solid var(--card-border, #f1f5f9);
+	}
+
+	.form-section:last-of-type {
+		border-bottom: none;
+	}
+
+	.section-label {
+		font-size: 0.7rem;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: #94a3b8;
+		margin: 0 0 0.75rem;
+	}
+
+	.optional-label {
+		font-weight: 600;
+		text-transform: none;
+		letter-spacing: 0;
+		color: #cbd5e1;
+	}
+
+	/* Mode selector */
+	.mode-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.5rem;
+	}
+
+	@media (max-width: 520px) {
+		.mode-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.mode-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.6rem 0.4rem;
+		border-radius: 0.75rem;
+		border: 2px solid var(--card-border, #e5e7eb);
+		background: var(--input-bg, #f8fafc);
+		cursor: pointer;
+		transition: all 0.15s;
+		font-family: inherit;
+	}
+
+	.mode-btn:hover {
+		border-color: #94a3b8;
+		background: var(--card-bg, #fff);
+	}
+
+	.mode-btn.mode-active {
+		border-color: #22c55e;
+		background: #f0fdf4;
+		box-shadow: 0 2px 0 #16a34a22;
+	}
+
+	:global(html[data-theme='dark']) .mode-btn.mode-active {
+		background: #14532d44;
+	}
+
+	.mode-icon {
+		font-size: 1.2rem;
+		line-height: 1;
+	}
+
+	.mode-label-text {
+		font-size: 0.68rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-color, #475569);
+		text-align: center;
+		line-height: 1.2;
+	}
+
+	/* Quiz picker */
+	.empty-hint {
+		font-size: 0.85rem;
+		color: #64748b;
+		margin: 0;
+	}
+
+	.empty-hint a {
+		color: #3b82f6;
+		font-weight: 700;
+	}
+
+	.quiz-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		max-height: 180px;
+		overflow-y: auto;
+	}
+
+	.quiz-option {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.65rem 0.9rem;
+		border-radius: 0.75rem;
+		border: 2px solid var(--card-border, #e5e7eb);
+		cursor: pointer;
+		transition: all 0.15s;
+		background: var(--input-bg, #f8fafc);
+	}
+
+	.quiz-option input[type='radio'] {
+		display: none;
+	}
+
+	.quiz-option:hover {
+		border-color: #94a3b8;
+	}
+
+	.quiz-option.quiz-selected {
+		border-color: #22c55e;
+		background: #f0fdf4;
+	}
+
+	.quiz-option-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.quiz-option-title {
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: var(--text-color, #1e293b);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.quiz-option-meta {
+		font-size: 0.72rem;
+		color: #94a3b8;
+		font-weight: 600;
+	}
+
+	.quiz-check {
+		color: #16a34a;
+		font-weight: 900;
+		font-size: 1rem;
+		flex-shrink: 0;
+	}
+
+	/* Settings row */
+	.settings-row {
+		display: flex;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		align-items: flex-end;
+	}
+
+	.settings-row .field {
+		flex: 1;
+		min-width: 100px;
+	}
+
+	.threshold-input {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		border: 2px solid var(--card-border, #e5e7eb);
+		border-radius: 1rem;
+		overflow: hidden;
+		background: var(--input-bg, #fff);
+		transition: border-color 0.2s;
+	}
+
+	.threshold-input:focus-within {
+		border-color: #22c55e;
+	}
+
+	.threshold-input input {
+		border: none !important;
+		border-radius: 0 !important;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.threshold-pct {
+		padding: 0 0.75rem;
+		font-size: 0.9rem;
+		font-weight: 800;
+		color: #94a3b8;
+		background: var(--input-bg, #f8fafc);
+		border-left: 2px solid var(--card-border, #e5e7eb);
+		height: 100%;
+		display: flex;
+		align-items: center;
+	}
+
+	/* Shared field styles */
 	.create-form-row {
 		display: grid;
 		grid-template-columns: 1fr;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 
-	@media (min-width: 640px) {
+	@media (min-width: 560px) {
 		.create-form-row {
 			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	.create-form-bottom {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		align-items: stretch;
-	}
-
-	@media (min-width: 640px) {
-		.create-form-bottom {
-			flex-direction: row;
-			align-items: flex-end;
-		}
-		.create-form-bottom .field {
-			flex: 1;
 		}
 	}
 
 	.field label,
 	.field-label {
 		display: block;
-		font-size: 0.75rem;
+		font-size: 0.72rem;
 		font-weight: 800;
-		color: #475569;
-		margin-bottom: 0.4rem;
+		color: #64748b;
+		margin-bottom: 0.35rem;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 	}
@@ -1017,13 +1304,13 @@
 	.field input,
 	.field select {
 		width: 100%;
-		padding: 0.7rem 1rem;
-		border-radius: 1rem;
+		padding: 0.65rem 0.9rem;
+		border-radius: 0.75rem;
 		border: 2px solid var(--card-border, #e5e7eb);
 		background-color: var(--input-bg, #ffffff);
 		color: var(--text-color, #1e293b);
 		font-family: inherit;
-		font-size: 0.95rem;
+		font-size: 0.9rem;
 		font-weight: 700;
 		transition: border-color 0.2s;
 		box-sizing: border-box;
@@ -1035,24 +1322,16 @@
 		border-color: #22c55e;
 	}
 
-
-	.quiz-picker-field {
-		grid-column: 1 / -1;
-	}
-	.field-small {
-		max-width: 140px;
-	}
-
 	.vocab-input-container {
 		background-color: var(--input-bg, #ffffff);
 		border: 2px solid var(--card-border, #e5e7eb);
-		border-radius: 1rem;
-		padding: 0.5rem;
-		min-height: 44px;
+		border-radius: 0.75rem;
+		padding: 0.4rem 0.6rem;
+		min-height: 42px;
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: 0.4rem;
 		transition: border-color 0.2s;
 	}
 
@@ -1063,16 +1342,16 @@
 	.vocab-tags {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: 0.4rem;
 		width: 100%;
 	}
 
 	.vocab-tag {
 		background-color: #e0f2fe;
 		color: #0369a1;
-		padding: 0.25rem 0.5rem;
+		padding: 0.2rem 0.5rem;
 		border-radius: 0.5rem;
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		font-weight: 700;
 		display: flex;
 		align-items: center;
@@ -1098,10 +1377,10 @@
 
 	.vocab-inline-input {
 		flex: 1;
-		min-width: 120px;
+		min-width: 100px;
 		border: none !important;
-		padding: 0.25rem !important;
-		font-size: 0.95rem !important;
+		padding: 0.2rem !important;
+		font-size: 0.9rem !important;
 		border-radius: 0 !important;
 		background: transparent !important;
 	}
@@ -1111,31 +1390,31 @@
 	}
 
 	.grammar-rules-field {
-		margin-top: 1rem;
+		margin-top: 0.75rem;
 	}
 
 	.grammar-rules-container {
 		border: 2px solid var(--card-border, #e5e7eb);
-		border-radius: 1rem;
+		border-radius: 0.75rem;
 		overflow: hidden;
 		background: var(--input-bg, #ffffff);
 	}
 
 	.grammar-search {
-		padding: 0.5rem;
+		padding: 0.4rem;
 		border-bottom: 1px solid var(--card-border, #e5e7eb);
 	}
 
 	.grammar-search-input {
 		width: 100%;
-		padding: 0.5rem 1rem !important;
+		padding: 0.4rem 0.75rem !important;
 		border: 1px solid var(--card-border, #e5e7eb) !important;
 		border-radius: 0.5rem !important;
 		font-size: 0.85rem !important;
 	}
 
 	.grammar-rules-list {
-		max-height: 200px;
+		max-height: 180px;
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
@@ -1144,7 +1423,7 @@
 	.grammar-rule-item {
 		display: flex;
 		align-items: center;
-		padding: 0.75rem 1rem;
+		padding: 0.6rem 0.9rem;
 		gap: 0.75rem;
 		cursor: pointer;
 		border-bottom: 1px solid #f1f5f9;
@@ -1176,7 +1455,7 @@
 	}
 
 	.grammar-rule-title {
-		font-size: 0.9rem;
+		font-size: 0.85rem;
 		font-weight: 600;
 		color: #1e293b;
 	}
@@ -1596,62 +1875,64 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(15, 23, 42, 0.6);
-		backdrop-filter: blur(4px);
+		background: rgba(15, 23, 42, 0.65);
+		backdrop-filter: blur(6px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 1000;
 		padding: 1rem;
+		box-sizing: border-box;
 	}
 
 	.modal-content {
 		width: 100%;
-		max-width: 600px;
-		max-height: 90vh;
+		max-width: 580px;
+		max-height: 88vh;
 		overflow-y: auto;
 		background: var(--card-bg, #ffffff);
-		padding: 2rem;
+		padding: 1.5rem;
 		border-radius: 1.5rem;
 		position: relative;
 		box-shadow:
-			0 10px 25px -5px rgba(0, 0, 0, 0.1),
-			0 8px 10px -6px rgba(0, 0, 0, 0.1);
+			0 20px 60px -10px rgba(0, 0, 0, 0.25),
+			0 4px 0 var(--card-border, #e2e8f0);
 	}
 
 	.modal-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.5rem;
-	}
-
-	.modal-header .create-form-title {
+		align-items: flex-start;
+		padding-bottom: 1.25rem;
+		border-bottom: 1px solid var(--card-border, #f1f5f9);
 		margin-bottom: 0;
 	}
 
 	.btn-close {
-		background: none;
+		background: var(--input-bg, #f1f5f9);
 		border: none;
-		font-size: 1.5rem;
+		font-size: 1.1rem;
 		line-height: 1;
-		color: #94a3b8;
+		color: #64748b;
 		cursor: pointer;
-		padding: 0.5rem;
-		transition: color 0.2s;
+		padding: 0.35rem 0.55rem;
+		border-radius: 0.5rem;
+		transition: all 0.15s;
+		flex-shrink: 0;
 	}
 
 	.btn-close:hover {
+		background: #e2e8f0;
 		color: #0f172a;
 	}
 
 	.modal-actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: 1rem;
-		margin-top: 2rem;
-		padding-top: 1rem;
-		border-top: 2px solid var(--card-border, #e2e8f0);
+		gap: 0.75rem;
+		padding-top: 1.25rem;
+		margin-top: 0.25rem;
+		border-top: 1px solid var(--card-border, #f1f5f9);
 	}
 
 	@media (max-width: 768px) {
