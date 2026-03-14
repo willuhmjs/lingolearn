@@ -284,7 +284,8 @@ function calculateNewElo(
 	currentElo: number,
 	score: number,
 	baseDifficulty: number,
-	gameMode: string
+	gameMode: string,
+	repetitions: number = 0
 ): number {
 	const expectedScore = 1 / (1 + Math.pow(10, (baseDifficulty - currentElo) / 400));
 
@@ -295,7 +296,10 @@ function calculateNewElo(
 	else if (gameMode === 'native-to-target') kMultiplier = ELO_CONFIG.K_MULTIPLIERS.NATIVE_TO_TARGET;
 	else if (gameMode === 'fill-blank') kMultiplier = ELO_CONFIG.K_MULTIPLIERS.FILL_BLANK;
 
-	const effectiveK = ELO_CONFIG.K_FACTOR * kMultiplier;
+	// Decay K-factor as the user accumulates repetitions on this item, keeping
+	// new learners highly responsive while stabilising experienced users.
+	const decayedK = Math.max(ELO_CONFIG.K_MIN, ELO_CONFIG.K_FACTOR - repetitions * ELO_CONFIG.K_DECAY_PER_REP);
+	const effectiveK = decayedK * kMultiplier;
 	return currentElo + effectiveK * (score - expectedScore);
 }
 
@@ -411,13 +415,15 @@ export async function updateEloRatings(
 
 			const currentElo = userVocab?.eloRating ?? baseDifficulty;
 
-			const newElo = calculateNewElo(currentElo, vocabUpdate.score, baseDifficulty, gameMode);
+			// FSRS is the single source of truth for SRS state and review scheduling.
+			// Run it first so we have the prior repetition count for K-factor decay.
+			const fsrs = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
+			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+
+			const newElo = calculateNewElo(currentElo, vocabUpdate.score, baseDifficulty, gameMode, priorRepetitions);
 
 			vocabUpdate.eloBefore = currentElo;
 			vocabUpdate.eloAfter = newElo;
-
-			// FSRS is the single source of truth for SRS state and review scheduling
-			const fsrs = await updateSrsMetrics(userId, vocabUpdate.id, vocabUpdate.score, 'vocabulary');
 			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userVocabulary.upsert({
@@ -461,13 +467,14 @@ export async function updateEloRatings(
 
 			const currentElo = userGrammar?.eloRating ?? baseDifficulty;
 
-			const newElo = calculateNewElo(currentElo, grammarUpdate.score, baseDifficulty, gameMode);
+			// FSRS for grammar — run first to get prior repetition count for K-factor decay.
+			const fsrs = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
+			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+
+			const newElo = calculateNewElo(currentElo, grammarUpdate.score, baseDifficulty, gameMode, priorRepetitions);
 
 			grammarUpdate.eloBefore = currentElo;
 			grammarUpdate.eloAfter = newElo;
-
-			// FSRS for grammar - single source of truth for SRS state
-			const fsrs = await updateSrsMetrics(userId, grammarUpdate.id, grammarUpdate.score, 'grammar');
 			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userGrammarRule.upsert({
@@ -509,9 +516,10 @@ export async function updateEloRatings(
 
 			const currentElo = userVocab?.eloRating ?? baseDifficulty;
 
-			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode);
-
 			const fsrs = await updateSrsMetrics(userId, vocab.id, 1.0, 'vocabulary');
+			const priorRepetitions = Math.max(0, fsrs.repetitions - 1);
+
+			const newElo = calculateNewElo(currentElo, 1.0, baseDifficulty, gameMode, priorRepetitions);
 			const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
 			await prisma.userVocabulary.upsert({

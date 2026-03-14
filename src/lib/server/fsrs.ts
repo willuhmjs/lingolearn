@@ -162,11 +162,12 @@ function nextStabilityAfterLapse(
 }
 
 /**
- * Calculate the interval until next review based on stability and desired retention
+ * Calculate the interval until next review based on stability and desired retention.
+ * Formula per FSRS-4.5 spec: I = 9 * S * (R^(-1/9) - 1)
  */
 function calculateInterval(stability: number, requestRetention: number): number {
 	if (stability === 0) return 0.1;
-	const interval = (9 * stability / requestRetention) * (Math.pow(requestRetention, 1 / 9) - 1);
+	const interval = 9 * stability * (Math.pow(requestRetention, -1 / 9) - 1);
 	return Math.max(1, Math.round(interval));
 }
 
@@ -230,15 +231,9 @@ export function reviewCard(
 		newCard.repetitions += 1;
 	}
 
-	// Calculate interval
+	// Calculate interval — hard/easy modifiers are already encoded in nextStability()
+	// via hardPenalty (w[15]) and easyBonus (w[16]), so no extra multiplier is applied here.
 	let interval = calculateInterval(newCard.stability, params.requestRetention);
-
-	// Apply rating-specific modifiers
-	if (rating === 2) {
-		interval = Math.round(interval * params.hardInterval);
-	} else if (rating === 4) {
-		interval = Math.round(interval * params.easyBonus);
-	}
 
 	// Cap interval at maximum
 	interval = Math.min(interval, params.maximumInterval);
@@ -281,16 +276,20 @@ export function getSchedulingInfo(
 }
 
 /**
- * Derive SRS state from FSRS metrics
+ * Derive SRS state from FSRS metrics.
+ * Uses stability (days until 90% retention drops) as the authoritative signal:
+ *   UNSEEN    — never reviewed
+ *   LEARNING  — stability < 7 days (still consolidating)
+ *   KNOWN     — stability 7–20 days (reliably recalled but not automatic)
+ *   MASTERED  — stability ≥ 21 days (long-term retention established)
  */
 export function deriveSrsStateFromFsrs(
 	repetitions: number,
 	stability: number,
-	lapses: number
+	_lapses: number
 ): 'UNSEEN' | 'LEARNING' | 'KNOWN' | 'MASTERED' {
 	if (repetitions === 0) return 'UNSEEN';
-	if (lapses > 0 && repetitions < 3) return 'LEARNING';
-	if (repetitions >= 3 && stability >= 21) return 'MASTERED';
-	if (repetitions >= 2) return 'KNOWN';
+	if (stability >= 21) return 'MASTERED';
+	if (stability >= 7) return 'KNOWN';
 	return 'LEARNING';
 }

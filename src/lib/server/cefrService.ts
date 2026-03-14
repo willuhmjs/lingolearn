@@ -28,48 +28,50 @@ export class CefrService {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - CEFR_CONFIG.DECAY.THRESHOLD_DAYS);
 
-    // Decay stale vocabulary
-    const staleVocab = await prisma.userVocabulary.findMany({
-      where: {
-        userId,
-        vocabulary: { languageId },
-        srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
-        nextReviewDate: { lt: cutoff }
-      },
-      include: { vocabulary: { select: { cefrLevel: true } } }
-    });
+    // Fetch stale vocab and grammar in parallel
+    const [staleVocab, staleGrammar] = await Promise.all([
+      prisma.userVocabulary.findMany({
+        where: {
+          userId,
+          vocabulary: { languageId },
+          srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
+          nextReviewDate: { lt: cutoff }
+        },
+        select: { id: true, eloRating: true, vocabulary: { select: { cefrLevel: true } } }
+      }),
+      prisma.userGrammarRule.findMany({
+        where: {
+          userId,
+          grammarRule: { languageId },
+          srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
+          nextReviewDate: { lt: cutoff }
+        },
+        select: { id: true, eloRating: true, grammarRule: { select: { level: true } } }
+      })
+    ]);
 
-    for (const item of staleVocab) {
-      const baseline = CEFR_CONFIG.BASE_ELO[item.vocabulary.cefrLevel as keyof typeof CEFR_CONFIG.BASE_ELO] || CEFR_CONFIG.BASE_ELO.A1;
-      if (item.eloRating > baseline) {
+    // Build batched update transactions — one write per decayed item
+    const vocabUpdates = staleVocab
+      .map(item => {
+        const baseline = CEFR_CONFIG.BASE_ELO[item.vocabulary.cefrLevel as keyof typeof CEFR_CONFIG.BASE_ELO] ?? CEFR_CONFIG.BASE_ELO.A1;
+        if (item.eloRating <= baseline) return null;
         const decayedElo = item.eloRating - (item.eloRating - baseline) * CEFR_CONFIG.DECAY.RATE;
-        await prisma.userVocabulary.update({
-          where: { id: item.id },
-          data: { eloRating: decayedElo }
-        });
-      }
-    }
+        return prisma.userVocabulary.update({ where: { id: item.id }, data: { eloRating: decayedElo } });
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    // Decay stale grammar
-    const staleGrammar = await prisma.userGrammarRule.findMany({
-      where: {
-        userId,
-        grammarRule: { languageId },
-        srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
-        nextReviewDate: { lt: cutoff }
-      },
-      include: { grammarRule: { select: { level: true } } }
-    });
-
-    for (const item of staleGrammar) {
-      const baseline = CEFR_CONFIG.BASE_ELO[item.grammarRule.level as keyof typeof CEFR_CONFIG.BASE_ELO] || CEFR_CONFIG.BASE_ELO.A1;
-      if (item.eloRating > baseline) {
+    const grammarUpdates = staleGrammar
+      .map(item => {
+        const baseline = CEFR_CONFIG.BASE_ELO[item.grammarRule.level as keyof typeof CEFR_CONFIG.BASE_ELO] ?? CEFR_CONFIG.BASE_ELO.A1;
+        if (item.eloRating <= baseline) return null;
         const decayedElo = item.eloRating - (item.eloRating - baseline) * CEFR_CONFIG.DECAY.RATE;
-        await prisma.userGrammarRule.update({
-          where: { id: item.id },
-          data: { eloRating: decayedElo }
-        });
-      }
+        return prisma.userGrammarRule.update({ where: { id: item.id }, data: { eloRating: decayedElo } });
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    // Execute all updates in a single transaction
+    if (vocabUpdates.length + grammarUpdates.length > 0) {
+      await prisma.$transaction([...vocabUpdates, ...grammarUpdates]);
     }
   }
 
@@ -306,16 +308,20 @@ export class CefrService {
 
     const targetElo = CEFR_CONFIG.ELO_TARGETS[currentLevel as keyof typeof CEFR_CONFIG.ELO_TARGETS];
 
-    // Vocab: user-relative denominator (only words they've encountered)
-    // Grammar: full DB count (100% required, curated content)
-    const [encounteredVocab, totalGrammar] = await Promise.all([
+    // Fetch all counts, mastery tallies, ELO averages, and grammar exposure in one round.
+    const [
+      encounteredVocab,
+      totalGrammar,
+      masteredVocab,
+      masteredGrammar,
+      interactedGrammar,
+      vocabElos,
+      grammarElos
+    ] = await Promise.all([
       prisma.userVocabulary.count({
         where: { userId, vocabulary: { languageId, cefrLevel: currentLevel } }
       }),
-      prisma.grammarRule.count({ where: { languageId, level: currentLevel } })
-    ]);
-
-    const [masteredVocab, masteredGrammar] = await Promise.all([
+      prisma.grammarRule.count({ where: { languageId, level: currentLevel } }),
       prisma.userVocabulary.count({
         where: {
           userId,
@@ -329,23 +335,10 @@ export class CefrService {
           grammarRule: { languageId, level: currentLevel },
           srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
         }
-      })
-    ]);
-
-    // vocabMastery: % of encountered words that are KNOWN/MASTERED
-    const vocabMastery = encounteredVocab > 0 ? masteredVocab / encounteredVocab : 0;
-    // grammarMastery: % of all grammar rules that are KNOWN/MASTERED (100% required)
-    const grammarMastery = totalGrammar > 0 ? masteredGrammar / totalGrammar : 1.0;
-    // vocabExposure: progress toward the minimum encountered-word floor
-    const vocabExposure = Math.min(1, encounteredVocab / CEFR_CONFIG.MIN_ENCOUNTERED_VOCAB);
-    // grammarExposure: fraction of grammar rules the user has interacted with at all
-    const grammarExposure = totalGrammar > 0
-      ? (await prisma.userGrammarRule.count({
-          where: { userId, grammarRule: { languageId, level: currentLevel } }
-        })) / totalGrammar
-      : 1.0;
-
-    const [vocabElos, grammarElos] = await Promise.all([
+      }),
+      prisma.userGrammarRule.count({
+        where: { userId, grammarRule: { languageId, level: currentLevel } }
+      }),
       prisma.userVocabulary.findMany({
         where: {
           userId,
@@ -363,6 +356,15 @@ export class CefrService {
         select: { eloRating: true }
       })
     ]);
+
+    // vocabMastery: % of encountered words that are KNOWN/MASTERED
+    const vocabMastery = encounteredVocab > 0 ? masteredVocab / encounteredVocab : 0;
+    // grammarMastery: % of all grammar rules that are KNOWN/MASTERED (100% required)
+    const grammarMastery = totalGrammar > 0 ? masteredGrammar / totalGrammar : 1.0;
+    // vocabExposure: progress toward the minimum encountered-word floor
+    const vocabExposure = Math.min(1, encounteredVocab / CEFR_CONFIG.MIN_ENCOUNTERED_VOCAB);
+    // grammarExposure: fraction of grammar rules the user has interacted with at all
+    const grammarExposure = totalGrammar > 0 ? interactedGrammar / totalGrammar : 1.0;
 
     const allElos = [...vocabElos.map(v => v.eloRating), ...grammarElos.map(g => g.eloRating)];
     const averageElo = allElos.length > 0

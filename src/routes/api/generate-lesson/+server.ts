@@ -5,6 +5,7 @@ import { generateLessonRateLimiter } from '$lib/server/ratelimit';
 import { buildLessonPrompt, type GameMode } from '$lib/server/promptBuilder';
 import { generateLessonStream } from '$lib/server/lessonLlmService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
+import { LESSON_CONFIG } from '$lib/server/srsConfig';
 
 export async function POST(event) {
 	const { request, locals } = event;
@@ -83,9 +84,9 @@ export async function POST(event) {
 			include: { vocabulary: { include: { meanings: true } } }
 		});
 
-		// 2. If pool < 3, replenish to 6
-		if (learningPool.length < 3) {
-			const needed = 6 - learningPool.length;
+		// 2. If pool < minimum, replenish to max
+		if (learningPool.length < LESSON_CONFIG.LEARNING_POOL_MIN) {
+			const needed = LESSON_CONFIG.LEARNING_POOL_MAX - learningPool.length;
 
 			const knownVocabIds = await prisma.userVocabulary.findMany({
 				where: { userId },
@@ -93,7 +94,8 @@ export async function POST(event) {
 			});
 			const knownIdsArray = knownVocabIds.map((v) => v.vocabularyId);
 
-			// Try to find level-appropriate words, prioritizing beginner words first if at A1
+			// Try to find level-appropriate words, prioritizing beginner words first if at A1.
+			// Order by cefrLevel ASC so foundational words are introduced before harder ones.
 			let unseenVocabs: any[] = [];
 			if (targetCefrLevel === 'A1') {
 				unseenVocabs = await prisma.vocabulary.findMany({
@@ -104,6 +106,7 @@ export async function POST(event) {
 						cefrLevel: { in: allowedLevels },
 						isBeginner: true
 					} as any,
+					orderBy: { cefrLevel: 'asc' },
 					take: needed
 				});
 			}
@@ -116,6 +119,7 @@ export async function POST(event) {
 						languageId: activeLanguageId,
 						cefrLevel: { in: allowedLevels }
 					} as any,
+					orderBy: { cefrLevel: 'asc' },
 					take: needed - unseenVocabs.length
 				});
 				unseenVocabs = [...unseenVocabs, ...additionalUnseen];
@@ -154,8 +158,19 @@ export async function POST(event) {
 			selectedLearning = learningPool;
 		}
 
-		// Final selection for the lesson (shuffled)
-		const learningVocabDb = selectedLearning.sort(() => 0.5 - Math.random()).slice(0, 6);
+		// Final selection for the lesson — most overdue items first (lowest nextReviewDate),
+		// then apply a Fisher-Yates shuffle within the top candidates so lessons feel varied.
+		selectedLearning.sort((a, b) => {
+			const aTime = a.nextReviewDate ? a.nextReviewDate.getTime() : 0;
+			const bTime = b.nextReviewDate ? b.nextReviewDate.getTime() : 0;
+			return aTime - bTime;
+		});
+		const topCandidates = selectedLearning.slice(0, LESSON_CONFIG.LESSON_VOCAB_MAX * 2);
+		for (let i = topCandidates.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]];
+		}
+		const learningVocabDb = topCandidates.slice(0, LESSON_CONFIG.LESSON_VOCAB_MAX);
 
 		// 4. Fetch Mastered Vocabulary and Grammar
 		let masteredGrammarDb: any[];

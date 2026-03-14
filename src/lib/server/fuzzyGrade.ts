@@ -1,10 +1,26 @@
 /**
  * Fuzzy matching helpers for pre-checking answers before calling the LLM.
- * Uses token Jaccard similarity (handles word reordering/paraphrasing) and
- * normalized Levenshtein distance (catches near-identical strings with minor typos).
+ * Uses token Jaccard similarity (multiset/bag-of-words, handles word reordering/paraphrasing)
+ * and normalized Levenshtein distance (catches near-identical strings with minor typos).
  *
  * Only returns true when confidence is high — conservative thresholds to avoid false positives.
  */
+
+/**
+ * Strip common German inflectional suffixes to reduce words to an approximate stem.
+ * This lets "gehen" and "geht" compare as similar without a full morphological analyser.
+ */
+function stripGermanSuffixes(word: string): string {
+	// Order matters: try longest suffixes first
+	const suffixes = ['ungen', 'ieren', 'heit', 'keit', 'ung', 'lich', 'isch', 'est', 'ten', 'tet', 'ste', 'end', 'en', 'er', 'em', 'es', 'et', 'te', 'st', 'e', 't'];
+	for (const suffix of suffixes) {
+		// Only strip if the remaining stem is at least 3 characters
+		if (word.endsWith(suffix) && word.length - suffix.length >= 3) {
+			return word.slice(0, word.length - suffix.length);
+		}
+	}
+	return word;
+}
 
 function normalizeForFuzzy(text: string): string {
 	return text
@@ -19,15 +35,28 @@ function normalizeForFuzzy(text: string): string {
 		.trim();
 }
 
+function tokenize(text: string): string[] {
+	return text.split(' ').filter(Boolean).map(stripGermanSuffixes);
+}
+
+/**
+ * Multiset (bag-of-words) Jaccard similarity.
+ * Unlike set-based Jaccard, duplicate tokens are counted, so "ich ich" ≠ "ich".
+ */
 function jaccardSimilarity(a: string[], b: string[]): number {
 	if (a.length === 0 && b.length === 0) return 1;
-	const setA = new Set(a);
-	const setB = new Set(b);
+	if (a.length === 0 || b.length === 0) return 0;
+
+	const countA = new Map<string, number>();
+	const countB = new Map<string, number>();
+	for (const w of a) countA.set(w, (countA.get(w) ?? 0) + 1);
+	for (const w of b) countB.set(w, (countB.get(w) ?? 0) + 1);
+
 	let intersection = 0;
-	for (const word of setA) {
-		if (setB.has(word)) intersection++;
+	for (const [w, ca] of countA) {
+		intersection += Math.min(ca, countB.get(w) ?? 0);
 	}
-	const union = setA.size + setB.size - intersection;
+	const union = a.length + b.length - intersection;
 	return intersection / union;
 }
 
@@ -56,7 +85,7 @@ function levenshteinSimilarity(a: string, b: string): number {
 /**
  * Returns true if the user's answer is clearly correct without needing LLM grading.
  * - Exact match after normalization → true
- * - Token Jaccard ≥ 0.85 (≥85% word overlap, order-independent) → true
+ * - Multiset token Jaccard ≥ 0.85 (≥85% word overlap, order-independent, with German stemming) → true
  * - Normalized Levenshtein similarity ≥ 0.92 (near-identical strings) → true
  */
 export function isClearlyCorrect(userAnswer: string, referenceAnswer: string): boolean {
@@ -65,8 +94,8 @@ export function isClearlyCorrect(userAnswer: string, referenceAnswer: string): b
 
 	if (normUser === normRef) return true;
 
-	const userTokens = normUser.split(' ').filter(Boolean);
-	const refTokens = normRef.split(' ').filter(Boolean);
+	const userTokens = tokenize(normUser);
+	const refTokens = tokenize(normRef);
 
 	if (jaccardSimilarity(userTokens, refTokens) >= 0.85) return true;
 	if (levenshteinSimilarity(normUser, normRef) >= 0.92) return true;

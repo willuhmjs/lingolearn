@@ -16,6 +16,12 @@ export const ELO_CONFIG = {
 		FILL_BLANK: 1.0, // Default multiplier
 	},
 
+	// K-factor decay: reduces sensitivity as the user accumulates repetitions.
+	// Effective K = max(K_MIN, K_FACTOR - repetitions * K_DECAY_PER_REP)
+	// This keeps new learners responsive while stabilising experienced users.
+	K_DECAY_PER_REP: 1.5,
+	K_MIN: 24,
+
 	// Default starting ELO ratings
 	DEFAULT_ELO: 1000,
 } as const;
@@ -71,6 +77,16 @@ export const XP_CONFIG = {
 
 	// Minimum score threshold to earn XP
 	SCORE_THRESHOLD: 0.8, // 80% or higher
+} as const;
+
+// Lesson Generation Configuration
+export const LESSON_CONFIG = {
+	// Maximum size of the LEARNING vocabulary pool
+	LEARNING_POOL_MAX: 6,
+	// Replenish pool when it drops below this count
+	LEARNING_POOL_MIN: 3,
+	// How many words to surface per lesson from the learning pool
+	LESSON_VOCAB_MAX: 6,
 } as const;
 
 // Gamification Configuration

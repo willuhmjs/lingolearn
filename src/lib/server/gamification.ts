@@ -54,11 +54,16 @@ export async function updateGamification(userId: string, xpToAdd: number) {
 			// Consecutive day - increment streak
 			newStreak += 1;
 		} else if (diffDays > 1) {
-			// Streak would break — consume freeze if available (#11)
-			if (user.streakFreezes > 0 && diffDays === 2) {
-				// One missed day: use a freeze to preserve streak
-				freezesUsed = 1;
+			// Streak would break — consume one freeze per missed day if available.
+			const missedDays = diffDays - 1;
+			if (user.streakFreezes >= missedDays) {
+				// User has enough freezes to cover every missed day
+				freezesUsed = missedDays;
 				newStreak = user.currentStreak + 1;
+			} else if (user.streakFreezes > 0) {
+				// Partial coverage: freezes run out, streak resets
+				freezesUsed = user.streakFreezes;
+				newStreak = 1;
 			} else {
 				newStreak = 1;
 			}
