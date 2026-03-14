@@ -73,7 +73,7 @@ export const actions: Actions = {
 		const parsed = usernameSchema.safeParse(data);
 
 		if (!parsed.success) {
-			const message = parsed.error.errors[0]?.message ?? 'Invalid username';
+			const message = parsed.error.issues[0]?.message ?? 'Invalid username';
 			return fail(400, { usernameError: message });
 		}
 

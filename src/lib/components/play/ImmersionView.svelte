@@ -8,7 +8,7 @@
 		assignmentId = null,
 		assignmentProgress = $bindable(null)
 	}: {
-		language?: { name: string; flag?: string } | null;
+		language?: { id?: string; name: string; flag?: string } | null;
 		cefrLevel?: string;
 		assignmentId?: string | null;
 		assignmentProgress?: { score: number; targetScore: number; passed: boolean } | null;
@@ -93,6 +93,8 @@
 		answers = {};
 		totalXpEarned = 0;
 		sessionComplete = false;
+		wordPopup = null;
+		wordLookupCache.clear();
 
 		try {
 			const res = await fetch('/api/immersion/generate', {
@@ -111,6 +113,69 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	// Word lookup popup
+	type WordPopup = {
+		word: string;
+		x: number;
+		y: number;
+		loading: boolean;
+		result: any | null;
+		error: string;
+	};
+	let wordPopup = $state<WordPopup | null>(null);
+	let wordLookupCache = new Map<string, any>();
+
+	function extractClickedWord(e: MouseEvent): string {
+		const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+		if (!range) return '';
+		const sel = window.getSelection();
+		if (!sel) return '';
+		sel.removeAllRanges();
+		sel.addRange(range);
+		sel.modify('expand', 'backward', 'word');
+		sel.modify('extend', 'forward', 'word');
+		const word = sel.toString().trim().replace(/[«»„""\[\]()\.,!?;:'"–—]/g, '').trim();
+		sel.removeAllRanges();
+		return word;
+	}
+
+	async function handleTemplateClick(e: MouseEvent) {
+		if (!language?.id) return;
+		const word = extractClickedWord(e);
+		if (!word || word.length < 2 || /^\d+$/.test(word)) return;
+
+		const x = Math.min(e.clientX, window.innerWidth - 290);
+		const y = e.clientY + 16;
+
+		if (wordLookupCache.has(word.toLowerCase())) {
+			wordPopup = { word, x, y, loading: false, result: wordLookupCache.get(word.toLowerCase()), error: '' };
+			return;
+		}
+
+		wordPopup = { word, x, y, loading: true, result: null, error: '' };
+
+		try {
+			const res = await fetch('/api/vocabulary/llm-lookup', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ word, languageId: language.id })
+			});
+			const data = await res.json();
+			if (data.success && data.data) {
+				wordLookupCache.set(word.toLowerCase(), data.data);
+				wordPopup = { word, x, y, loading: false, result: data.data, error: '' };
+			} else {
+				wordPopup = { word, x, y, loading: false, result: null, error: data.error || 'Word not found.' };
+			}
+		} catch {
+			wordPopup = { word, x, y, loading: false, result: null, error: 'Lookup failed.' };
+		}
+	}
+
+	function closeWordPopup() {
+		wordPopup = null;
 	}
 
 	function handleMcqSelect(questionId: string, optionIndex: number, question: Question) {
@@ -266,6 +331,19 @@
 		try {
 			bookmarks = JSON.parse(localStorage.getItem(BOOKMARK_KEY) || '[]');
 		} catch { bookmarks = []; }
+
+		function handleOutsideClick(e: MouseEvent) {
+			if (!wordPopup) return;
+			const popup = document.querySelector('.word-popup');
+			if (popup && !popup.contains(e.target as Node)) {
+				const mediaCard = document.querySelector('.media-card');
+				// If clicking inside the media card, let handleTemplateClick handle it
+				if (mediaCard && mediaCard.contains(e.target as Node)) return;
+				wordPopup = null;
+			}
+		}
+		document.addEventListener('click', handleOutsideClick);
+		return () => document.removeEventListener('click', handleOutsideClick);
 	});
 
 	const isBookmarked = $derived(session ? bookmarks.some((b) => b.id === sessionId(session!)) : false);
@@ -312,6 +390,41 @@
 		localStorage.setItem(BOOKMARK_KEY, JSON.stringify(bookmarks));
 	}
 </script>
+
+<!-- Word lookup popup (fixed to viewport to avoid overflow:hidden clipping) -->
+{#if wordPopup}
+	<div
+		class="word-popup"
+		role="dialog"
+		aria-label="Word lookup"
+		tabindex="-1"
+		style="left:{wordPopup.x}px;top:{wordPopup.y}px"
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.stopPropagation()}
+	>
+		<div class="word-popup-header">
+			<span class="word-popup-word">{wordPopup.word}</span>
+			<button class="word-popup-close" onclick={closeWordPopup} aria-label="Close">×</button>
+		</div>
+		{#if wordPopup.loading}
+			<div class="word-popup-loading">
+				<span class="spinner"></span>
+				Looking up...
+			</div>
+		{:else if wordPopup.result}
+			{@const r = wordPopup.result}
+			<div class="word-popup-lemma">{r.lemma}{r.gender === 'MASCULINE' ? ' (der)' : r.gender === 'FEMININE' ? ' (die)' : r.gender === 'NEUTER' ? ' (das)' : ''}</div>
+			{#each (r.meanings || []).slice(0, 3) as m}
+				<div class="word-popup-meaning">
+					{#if m.partOfSpeech}<span class="word-popup-pos">{m.partOfSpeech}</span>{/if}
+					{m.value}
+				</div>
+			{/each}
+		{:else if wordPopup.error}
+			<div class="word-popup-error">{wordPopup.error}</div>
+		{/if}
+	</div>
+{/if}
 
 <div class="immersion-root">
 	<!-- Controls -->
@@ -423,13 +536,17 @@
 	{#if session && !loading}
 		<div class="session-wrapper" in:fly={{ y: 20, duration: 400 }}>
 			<!-- Media template -->
-			<div class="media-card">
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+			<div class="media-card" onclick={handleTemplateClick} role="button" tabindex="0" aria-label="Reading content">
 				<div class="media-type-badge">
 					{MEDIA_LABELS[session.mediaType].icon}
 					{MEDIA_LABELS[session.mediaType].label}
+					{#if language?.id}
+						<span class="word-click-hint">· tap a word to look it up</span>
+					{/if}
 				</div>
 
-				<!-- NEWS ARTICLE -->
+					<!-- NEWS ARTICLE -->
 				{#if session.mediaType === 'news_article'}
 					<div class="template news-template">
 						<div class="news-source-bar">
@@ -1012,6 +1129,7 @@
 		border: 1.5px solid var(--card-border, #e2e8f0);
 		border-radius: 1.25rem;
 		overflow: hidden;
+		cursor: text;
 	}
 
 	:global(html[data-theme='dark']) .media-card {
@@ -2025,5 +2143,118 @@
 
 	.summary-xp strong {
 		color: #16a34a;
+	}
+
+	/* Word click hint */
+	.word-click-hint {
+		font-size: 0.72rem;
+		font-weight: 500;
+		color: #94a3b8;
+		margin-left: 0.4rem;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	/* Word lookup popup */
+	.word-popup {
+		position: fixed;
+		z-index: 200;
+		background: #fff;
+		border: 1.5px solid #e2e8f0;
+		border-radius: 0.75rem;
+		padding: 0.75rem 1rem;
+		min-width: 200px;
+		max-width: 280px;
+		box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	:global(html[data-theme='dark']) .word-popup {
+		background: #1e293b;
+		border-color: #475569;
+		box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+	}
+
+	.word-popup-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.word-popup-word {
+		font-size: 1rem;
+		font-weight: 800;
+		color: #0f172a;
+	}
+
+	:global(html[data-theme='dark']) .word-popup-word {
+		color: #f1f5f9;
+	}
+
+	.word-popup-close {
+		background: none;
+		border: none;
+		font-size: 1.2rem;
+		line-height: 1;
+		color: #94a3b8;
+		cursor: pointer;
+		padding: 0 0.2rem;
+		flex-shrink: 0;
+	}
+
+	.word-popup-close:hover { color: #475569; }
+
+	.word-popup-lemma {
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: #7c3aed;
+	}
+
+	:global(html[data-theme='dark']) .word-popup-lemma {
+		color: #a78bfa;
+	}
+
+	.word-popup-meaning {
+		font-size: 0.88rem;
+		color: #334155;
+		line-height: 1.4;
+		display: flex;
+		gap: 0.35rem;
+		align-items: baseline;
+	}
+
+	:global(html[data-theme='dark']) .word-popup-meaning {
+		color: #cbd5e1;
+	}
+
+	.word-popup-pos {
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: #94a3b8;
+		background: #f1f5f9;
+		padding: 0.05rem 0.35rem;
+		border-radius: 0.25rem;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .word-popup-pos {
+		background: #0f172a;
+		color: #64748b;
+	}
+
+	.word-popup-loading {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+		color: #64748b;
+	}
+
+	.word-popup-error {
+		font-size: 0.82rem;
+		color: #94a3b8;
 	}
 </style>
