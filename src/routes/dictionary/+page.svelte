@@ -466,122 +466,167 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div class="modal-backdrop" onclick={closeModal} transition:fade={{ duration: 200 }}>
 		<div class="modal-content" onclick={(e) => e.stopPropagation()} transition:fly={{ y: 20, duration: 200 }}>
-			<button class="modal-close" onclick={closeModal}>&times;</button>
-			<div class="modal-header">
-				<h2 class="modal-title">
-					{selectedResult.lemma}
-					{#if selectedResult.gender}
-						<span class="result-gender">
-							{selectedResult.gender.toLowerCase()}
-						</span>
-					{/if}
-				</h2>
-				<p class="modal-pos">{selectedResult.partOfSpeech || 'Word'}</p>
+			<!-- Header band -->
+			<div class="modal-header" class:gender-feminine={selectedResult.gender?.toLowerCase() === 'feminine'} class:gender-masculine={selectedResult.gender?.toLowerCase() === 'masculine'} class:gender-neuter={selectedResult.gender?.toLowerCase() === 'neuter'}>
+				<button class="modal-close" onclick={closeModal} aria-label="Close">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+				</button>
+				<div class="modal-header-main">
+					<h2 class="modal-title">{selectedResult.lemma}</h2>
+					<div class="modal-header-meta">
+						{#if selectedResult.partOfSpeech}
+							<span class="modal-pos-badge">{selectedResult.partOfSpeech}</span>
+						{/if}
+						{#if selectedResult.gender}
+							<span class="modal-gender-badge gender-badge-{selectedResult.gender.toLowerCase()}">
+								{selectedResult.gender.toLowerCase()}
+							</span>
+						{/if}
+						{#if selectedResult.metadata?.level}
+							<span class="modal-level-badge level-{selectedResult.metadata.level.toLowerCase()}">{selectedResult.metadata.level}</span>
+						{/if}
+					</div>
+				</div>
 			</div>
 
 			<div class="modal-body">
-				<div class="modal-section">
-					<h3 class="modal-section-title">Meaning</h3>
-					<p class="modal-meaning">{selectedResult.meanings?.[0]?.value || 'No meaning provided'}</p>
+				<!-- Meaning -->
+				<div class="dict-entry">
+					<span class="dict-entry-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+					</span>
+					<div class="dict-entry-body">
+						<span class="dict-label">meaning</span>
+						<p class="dict-meaning">{selectedResult.meanings?.[0]?.value || 'No meaning provided'}</p>
+					</div>
 				</div>
 
 				{#if selectedResult.plural}
-					<div class="modal-section">
-						<h3 class="modal-section-title">Plural</h3>
-						<p class="modal-plural">{selectedResult.plural}</p>
+					<div class="dict-entry">
+						<span class="dict-entry-icon">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="8" height="14" rx="1"/><rect x="14" y="3" width="8" height="18" rx="1"/></svg>
+						</span>
+						<div class="dict-entry-body">
+							<span class="dict-label">plural</span>
+							<p class="dict-value">{selectedResult.plural}</p>
+						</div>
 					</div>
 				{/if}
 
 				{#if selectedResult.metadata}
-					{#if selectedResult.metadata.conjugations}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Conjugations</h3>
-							<div class="modal-conjugations">
-								{#each Object.entries(selectedResult.metadata.conjugations) as [tense, forms]}
-									<div class="conjugation-tense">
-										<h4 class="tense-title">{tense}</h4>
-										<ul class="conjugation-list">
-											{#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
-												<li><span class="person">{person}:</span> {conjugation}</li>
-											{/each}
-										</ul>
-									</div>
-								{/each}
+					{#if selectedResult.metadata.declensions}
+						<div class="dict-entry dict-entry-block">
+							<span class="dict-entry-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+							</span>
+							<div class="dict-entry-body">
+								<span class="dict-label">declensions</span>
+								<table class="declension-table">
+									<thead>
+										<tr>
+											<th>case</th>
+											{#if typeof Object.values(selectedResult.metadata.declensions)[0] === 'object'}
+												{#each Object.keys(Object.values(selectedResult.metadata.declensions)[0] as Record<string,string>) as col}
+													<th>{col}</th>
+												{/each}
+											{:else}
+												<th>form</th>
+											{/if}
+										</tr>
+									</thead>
+									<tbody>
+										{#each Object.entries(selectedResult.metadata.declensions) as [caseName, forms]}
+											<tr>
+												<td class="case-name">{caseName}</td>
+												{#if typeof forms === 'string'}
+													<td>{forms}</td>
+												{:else}
+													{#each Object.values(forms as Record<string, string>) as val}
+														<td>{val}</td>
+													{/each}
+												{/if}
+											</tr>
+										{/each}
+									</tbody>
+								</table>
 							</div>
 						</div>
 					{/if}
 
-					{#if selectedResult.metadata.declensions}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Declensions</h3>
-							<div class="modal-declensions">
-								{#each Object.entries(selectedResult.metadata.declensions) as [caseName, forms]}
-									<div class="declension-case">
-										<h4 class="case-title">{caseName}</h4>
-										{#if typeof forms === 'string'}
-											<p class="declension-value">{forms}</p>
-										{:else}
-											<ul class="declension-list">
-												{#each Object.entries(forms as Record<string, string>) as [gender, declension]}
-													<li><span class="gender">{gender}:</span> {declension}</li>
-												{/each}
-											</ul>
-										{/if}
-									</div>
+					{#if selectedResult.metadata.conjugations}
+						<div class="dict-entry dict-entry-block">
+							<span class="dict-entry-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+							</span>
+							<div class="dict-entry-body">
+								<span class="dict-label">conjugations</span>
+								{#each Object.entries(selectedResult.metadata.conjugations) as [tense, forms]}
+									<p class="conj-tense-label">{tense}</p>
+									<table class="declension-table">
+										<tbody>
+											{#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
+												<tr>
+													<td class="case-name">{person}</td>
+													<td>{conjugation}</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
 								{/each}
 							</div>
 						</div>
 					{/if}
 
 					{#if selectedResult.metadata.example}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Example</h3>
-							<p class="modal-example">"{selectedResult.metadata.example}"</p>
-							{#if selectedResult.metadata.exampleTranslation}
-								<p class="modal-example-translation">
-									{selectedResult.metadata.exampleTranslation}
-								</p>
-							{/if}
-						</div>
-					{/if}
-
-					{#if selectedResult.metadata.synonyms && selectedResult.metadata.synonyms.length > 0}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Synonyms</h3>
-							<div class="modal-tags">
-								{#each selectedResult.metadata.synonyms as synonym}
-									<span class="tag">{synonym}</span>
-								{/each}
+						<div class="dict-entry dict-entry-example">
+							<span class="dict-entry-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+							</span>
+							<div class="dict-entry-body">
+								<span class="dict-label">example</span>
+								<p class="example-sentence">&#8220;{selectedResult.metadata.example}&#8221;</p>
+								{#if selectedResult.metadata.exampleTranslation}
+									<p class="example-translation">{selectedResult.metadata.exampleTranslation}</p>
+								{/if}
 							</div>
 						</div>
 					{/if}
 
-					{#if selectedResult.metadata.antonyms && selectedResult.metadata.antonyms.length > 0}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Antonyms</h3>
-							<div class="modal-tags">
-								{#each selectedResult.metadata.antonyms as antonym}
-									<span class="tag">{antonym}</span>
-								{/each}
+					{#if selectedResult.metadata.synonyms?.length > 0 || selectedResult.metadata.antonyms?.length > 0}
+						<div class="dict-entry">
+							<span class="dict-entry-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+							</span>
+							<div class="dict-entry-body">
+								{#if selectedResult.metadata.synonyms?.length > 0}
+									<span class="dict-label">synonyms</span>
+									<div class="word-tags">
+										{#each selectedResult.metadata.synonyms as word}
+											<span class="word-tag word-tag-syn">{word}</span>
+										{/each}
+									</div>
+								{/if}
+								{#if selectedResult.metadata.antonyms?.length > 0}
+									<span class="dict-label" style="margin-top:0.5rem">antonyms</span>
+									<div class="word-tags">
+										{#each selectedResult.metadata.antonyms as word}
+											<span class="word-tag word-tag-ant">{word}</span>
+										{/each}
+									</div>
+								{/if}
 							</div>
-						</div>
-					{/if}
-
-					{#if selectedResult.metadata.level}
-						<div class="modal-section">
-							<h3 class="modal-section-title">CEFR Level</h3>
-							<p class="modal-level">
-								<span class="level-badge level-{selectedResult.metadata.level.toLowerCase()}">
-									{selectedResult.metadata.level}
-								</span>
-							</p>
 						</div>
 					{/if}
 
 					{#if !selectedResult.metadata.conjugations && !selectedResult.metadata.declensions && !selectedResult.metadata.example && !selectedResult.metadata.synonyms && !selectedResult.metadata.antonyms && !selectedResult.metadata.level && Object.keys(selectedResult.metadata).length > 0}
-						<div class="modal-section">
-							<h3 class="modal-section-title">Details</h3>
-							<pre class="modal-metadata">{JSON.stringify(selectedResult.metadata, null, 2)}</pre>
+						<div class="dict-entry">
+							<span class="dict-entry-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+							</span>
+							<div class="dict-entry-body">
+								<span class="dict-label">details</span>
+								<pre class="modal-metadata">{JSON.stringify(selectedResult.metadata, null, 2)}</pre>
+							</div>
 						</div>
 					{/if}
 				{/if}
@@ -589,7 +634,10 @@
 
 			<div class="modal-footer">
 				{#if addedWords.includes(selectedResult.id)}
-					<button disabled class="btn-added"> Added to List </button>
+					<button disabled class="btn-added">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><polyline points="20 6 9 17 4 12"/></svg>
+						Added to List
+					</button>
 				{:else}
 					<button
 						onclick={() => {
@@ -598,6 +646,7 @@
 						}}
 						class="btn-add"
 					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 						Add to My List
 					</button>
 				{/if}
@@ -850,19 +899,29 @@
 		background-color: #3b82f6;
 		color: white;
 		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 0.375rem;
+		padding: 0.5rem 1.125rem;
+		border-radius: 0.5rem;
 		font-weight: 600;
 		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		transition: background-color 0.15s, transform 0.1s;
 	}
+
+	.btn-add:hover { background-color: #2563eb; transform: translateY(-1px); }
+	.btn-add:active { transform: translateY(0); }
 
 	.btn-added {
 		background-color: #dcfce7;
 		color: #166534;
 		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 0.375rem;
+		padding: 0.5rem 1.125rem;
+		border-radius: 0.5rem;
 		font-weight: 600;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
 	}
 
 	/* Grammar Library */
@@ -1012,27 +1071,28 @@
 		margin: 1.5rem 0;
 	}
 
-	/* Modal Styles (kept from original) */
+	/* Modal Styles */
 	.modal-backdrop {
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.5);
+		background-color: rgba(0, 0, 0, 0.55);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 50;
 		padding: 1rem;
+		backdrop-filter: blur(2px);
 	}
 
 	.modal-content {
 		background-color: var(--card-bg, #ffffff);
 		border: 1px solid var(--card-border, #e5e7eb);
-		border-radius: 0.5rem;
-		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-		max-width: 32rem;
+		border-radius: 0.875rem;
+		box-shadow: 0 24px 48px -8px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0,0,0,0.04);
+		max-width: 34rem;
 		width: 100%;
 		max-height: 90vh;
 		display: flex;
@@ -1041,72 +1101,261 @@
 		overflow: hidden;
 	}
 
+	/* Header band */
+	.modal-header {
+		padding: 1.25rem 1.5rem 1.125rem;
+		flex-shrink: 0;
+		border-bottom: 1px solid var(--card-border, #e5e7eb);
+		position: relative;
+	}
+
+	.modal-header::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		width: 4px;
+		background: #9ca3af;
+		border-radius: 0.875rem 0 0 0;
+	}
+
+	.modal-header.gender-feminine::before { background: #ec4899; }
+	.modal-header.gender-masculine::before { background: #3b82f6; }
+	.modal-header.gender-neuter::before { background: #10b981; }
+
 	.modal-close {
 		position: absolute;
 		top: 1rem;
 		right: 1rem;
 		background: transparent;
 		border: none;
-		font-size: 1.5rem;
+		width: 1.75rem;
+		height: 1.75rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.375rem;
 		color: var(--text-color, #9ca3af);
 		opacity: 0.6;
 		cursor: pointer;
+		transition: opacity 0.15s, background 0.15s;
+		padding: 0;
 	}
 
+	.modal-close svg { width: 1rem; height: 1rem; }
+	.modal-close:hover { opacity: 1; background: var(--link-hover-bg, #f3f4f6); }
+
+	.modal-header-main {
+		padding-left: 0.5rem;
+	}
+
+	.modal-title {
+		font-size: 1.875rem;
+		font-weight: 800;
+		margin: 0 2rem 0.375rem 0;
+		line-height: 1.1;
+		color: var(--text-color, #111827);
+		letter-spacing: -0.02em;
+	}
+
+	.modal-header-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.modal-pos-badge {
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-color, #6b7280);
+		background: var(--link-hover-bg, #f3f4f6);
+		border: 1px solid var(--card-border, #e5e7eb);
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+	}
+
+	.modal-gender-badge {
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+	}
+
+	.gender-badge-feminine  { background: #fce7f3; color: #be185d; }
+	.gender-badge-masculine { background: #dbeafe; color: #1d4ed8; }
+	.gender-badge-neuter    { background: #d1fae5; color: #065f46; }
+
+	.modal-level-badge {
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+		background: #fef3c7;
+		color: #92400e;
+	}
+
+	/* Body */
 	.modal-body {
-		padding: 1.5rem;
+		padding: 0.75rem 0;
 		overflow-y: auto;
 		flex: 1;
 		min-height: 0;
 	}
 
-	.modal-header {
-		padding: 1.5rem 1.5rem 0;
-		flex-shrink: 0;
-	}
-
-	.modal-title {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin: 0;
+	/* Dictionary entry rows */
+	.dict-entry {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: var(--text-color, #111827);
+		gap: 0.875rem;
+		padding: 0.875rem 1.5rem;
+		border-bottom: 1px solid var(--card-border, #f3f4f6);
+		align-items: flex-start;
 	}
 
-	.modal-pos {
-		color: var(--text-color, #6b7280);
-		opacity: 0.7;
-		font-size: 0.875rem;
-		margin-top: 0.25rem;
-		margin-bottom: 0;
+	.dict-entry:last-child { border-bottom: none; }
+
+	.dict-entry-icon {
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
+		margin-top: 0.125rem;
+		color: var(--text-color, #9ca3af);
+		opacity: 0.5;
 	}
 
-	.modal-section {
-		margin-bottom: 1.5rem;
+	.dict-entry-icon svg { width: 100%; height: 100%; }
+
+	.dict-entry-body {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
 	}
 
-	.modal-section:last-child {
-		margin-bottom: 0;
-	}
-
-	.modal-section-title {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--text-color, #4b5563);
-		opacity: 0.7;
+	.dict-label {
+		font-size: 0.65rem;
+		font-weight: 700;
 		text-transform: uppercase;
-		margin-bottom: 0.5rem;
+		letter-spacing: 0.08em;
+		color: var(--text-color, #9ca3af);
+		opacity: 0.8;
 	}
 
-	.modal-meaning, .modal-plural, .modal-example, .modal-example-translation {
-		margin: 0;
+	.dict-meaning {
+		font-size: 1.0625rem;
+		font-weight: 500;
 		color: var(--text-color, #111827);
+		margin: 0;
+		line-height: 1.4;
+	}
+
+	.dict-value {
+		font-size: 0.9375rem;
+		color: var(--text-color, #374151);
+		margin: 0;
+	}
+
+	/* Declension / conjugation table */
+	.dict-entry-block { align-items: flex-start; }
+
+	.declension-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+	}
+
+	.declension-table th {
+		text-align: left;
+		font-size: 0.65rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-color, #9ca3af);
+		padding: 0.25rem 0.625rem 0.375rem 0;
+		border-bottom: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.declension-table td {
+		padding: 0.3rem 0.625rem 0.3rem 0;
+		color: var(--text-color, #374151);
+		border-bottom: 1px solid var(--card-border, #f3f4f6);
+	}
+
+	.declension-table tr:last-child td { border-bottom: none; }
+
+	.case-name {
+		font-weight: 600;
+		color: var(--text-color, #6b7280) !important;
+		font-size: 0.75rem;
+		text-transform: lowercase;
+		width: 6rem;
+	}
+
+	.conj-tense-label {
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-color, #6b7280);
+		margin: 0.75rem 0 0.125rem;
+	}
+
+	/* Example block */
+	.dict-entry-example { background: var(--link-hover-bg, #f9fafb); }
+
+	.example-sentence {
+		font-size: 0.9375rem;
+		font-style: italic;
+		color: var(--text-color, #111827);
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	.example-translation {
+		font-size: 0.8125rem;
+		color: var(--text-color, #6b7280);
+		margin: 0.25rem 0 0;
+	}
+
+	/* Word tags */
+	.word-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin-top: 0.125rem;
+	}
+
+	.word-tag {
+		font-size: 0.8rem;
+		padding: 0.2rem 0.625rem;
+		border-radius: 999px;
+		font-weight: 500;
+	}
+
+	.word-tag-syn { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+	.word-tag-ant { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+
+	.modal-metadata {
+		font-size: 0.75rem;
+		background: var(--link-hover-bg, #f9fafb);
+		border-radius: 0.375rem;
+		padding: 0.75rem;
+		overflow-x: auto;
+		color: var(--text-color, #374151);
+		margin: 0;
 	}
 
 	.modal-footer {
-		padding: 1.5rem;
+		padding: 1rem 1.5rem;
 		border-top: 1px solid var(--card-border, #e5e7eb);
 		display: flex;
 		justify-content: flex-start;
