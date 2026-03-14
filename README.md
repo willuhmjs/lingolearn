@@ -1,49 +1,71 @@
 # LingoLearn
 
-A language learning app with spaced repetition, AI-powered lesson generation, and grammar tracking. Built with SvelteKit, Prisma, and PostgreSQL.
+An AI-powered language learning platform. Practice German, Spanish, and French through personalized lessons, spaced repetition, AI conversation, and classroom tools.
 
-## Features
+## What it does
 
-- **Spaced Repetition (SRS)** — vocabulary and grammar rules are scheduled for review using an Elo-based rating system
-- **AI Lesson Generation** — lessons are generated via any OpenAI-compatible LLM endpoint
-- **CEFR Levels** — content scales from A1 to C2
-- **Auth** — local credentials and Google OAuth via Auth.js
-- **Admin Panel** — manage users and site settings
+- **AI lessons** — Exercises generated on the fly and tailored to your current CEFR level (A1–C2)
+- **Spaced repetition** — Vocabulary and grammar reviews scheduled with the FSRS algorithm so you review right before you forget
+- **AI conversation** — Chat with an AI persona in your target language; every message is graded and corrected in real time
+- **Classroom tools** — Teachers can create classes, set assignments with due dates and pass thresholds, and run live quiz sessions with a live leaderboard
+- **Progress tracking** — XP, daily streaks, streak freezes, and a per-language CEFR progress card
+- **Flexible LLM backend** — Points to any OpenAI-compatible endpoint; each user can also plug in their own API key and model
 
-## Environment Variables
+## Deploy
 
-| Variable               | Required | Description                                                           |
-| ---------------------- | -------- | --------------------------------------------------------------------- |
-| `DATABASE_URL`         | Yes      | PostgreSQL connection string                                          |
-| `AUTH_SECRET`          | Yes      | Secret used to sign Auth.js session tokens                            |
-| `AUTH_GOOGLE_ID`       | No       | Google OAuth client ID                                                |
-| `AUTH_GOOGLE_SECRET`   | No       | Google OAuth client secret                                            |
-| `DEFAULT_LLM_BASE_URL` | No       | Base URL for the OpenAI-compatible API (users can also set their own) |
-| `DEFAULT_LLM_API_KEY`  | No       | API key for the default LLM endpoint                                  |
-| `DEFAULT_LLM_MODEL`    | No       | Model name (defaults to `gpt-3.5-turbo`)                              |
+### Docker Compose
 
-## Deployment
+The easiest way to run LingoLearn. Starts the app and a Postgres database together.
 
-### Docker
-
-The image is published to GitHub Container Registry on every push to `main` for `linux/amd64` and `linux/arm64`:
-
-```
-ghcr.io/willuhmjs/lingolearn:latest
-```
-
-Run with Docker Compose (includes PostgreSQL):
-
-```sh
+```bash
+cp .env.example .env
+# fill in AUTH_SECRET, LLM_BASE_URL, LLM_API_KEY, and optionally Google OAuth
 docker compose up -d
 ```
 
-Or pull and run the image directly:
+```yaml
+services:
+  db:
+    image: postgres:18
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lingolearn
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql
 
-```sh
-docker run -d \
-  -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@host:5432/lingolearn" \
-  -e AUTH_SECRET="your-secret" \
-  ghcr.io/willuhmjs/lingolearn:latest
+  app:
+    build: .
+    restart: always
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
 ```
+
+The app will be available at `http://localhost:3000`.
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `AUTH_SECRET` | Yes | Auth.js secret, minimum 32 characters |
+| `LLM_BASE_URL` | Yes | Base URL of an OpenAI-compatible API (e.g. `https://api.openai.com/v1`) |
+| `LLM_API_KEY` | Yes | API key for the LLM provider |
+| `AUTH_GOOGLE_ID` | No | Google OAuth client ID — enables Sign in with Google |
+| `AUTH_GOOGLE_SECRET` | No | Google OAuth client secret |
+
+`LLM_BASE_URL` can point to OpenAI, Ollama, LM Studio, or any other OpenAI-compatible endpoint.
+
+## License
+
+MIT

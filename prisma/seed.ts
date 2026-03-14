@@ -1487,7 +1487,7 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 }
 
 async function main() {
-	await runSeed(prisma, true);
+	await runSeed(prisma);
 }
 
 import { fileURLToPath } from 'url';
