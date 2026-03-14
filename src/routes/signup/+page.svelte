@@ -8,11 +8,14 @@
 	let isGoogleSigningIn = $state(false);
 	let isSubmitting = $state(false);
 	let password = $state('');
+	let username = $state('');
 	let passwordStrength = $derived(calculatePasswordStrength(password));
 
-	// Show error as toast notification
+	let usernameSuggestion = $derived((form as any)?.usernameSuggestion ?? null);
+
+	// Show error as toast (but not when we have a suggestion — that's shown inline)
 	$effect(() => {
-		if (form?.error) {
+		if (form?.error && !usernameSuggestion) {
 			toastError(form.error);
 		}
 	});
@@ -114,10 +117,22 @@
 						type="text"
 						required
 						disabled={isSubmitting}
+						bind:value={username}
 						placeholder="Enter your username"
 						aria-label="Username"
 						class=""
 					/>
+					{#if form?.error && usernameSuggestion}
+						<p class="field-error">{form.error}</p>
+						<p class="username-suggestion">
+							How about <strong>{usernameSuggestion}</strong>?
+							<button
+								type="button"
+								class="use-suggestion-btn"
+								onclick={() => { username = usernameSuggestion; }}
+							>Use this</button>
+						</p>
+					{/if}
 				</div>
 
 				<div class="form-group">
@@ -459,6 +474,35 @@
 	.auth-footer a:hover {
 		color: #1d4ed8;
 		text-decoration: underline;
+	}
+
+	.field-error {
+		margin: 0.25rem 0 0;
+		font-size: 0.8rem;
+		color: #ef4444;
+		font-weight: 500;
+	}
+
+	.username-suggestion {
+		margin: 0.375rem 0 0;
+		font-size: 0.8rem;
+		color: #6b7280;
+	}
+
+	.use-suggestion-btn {
+		background: none;
+		border: none;
+		color: #22c55e;
+		font-weight: 700;
+		cursor: pointer;
+		font-size: 0.8rem;
+		padding: 0;
+		margin-left: 0.2rem;
+		text-decoration: underline;
+	}
+
+	.use-suggestion-btn:hover {
+		color: #16a34a;
 	}
 
 	/* Password strength indicator */

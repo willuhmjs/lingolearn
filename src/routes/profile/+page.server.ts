@@ -3,7 +3,9 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { getSiteSettings } from '$lib/server/settings';
+import { checkUsernameAppropriate } from '$lib/server/llm';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -44,12 +46,67 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
+const usernameSchema = z.object({
+	username: z
+		.string()
+		.min(3, 'Username must be at least 3 characters')
+		.max(31, 'Username must be at most 31 characters')
+		.regex(
+			/^[a-zA-Z0-9_\-]+$/,
+			'Username may only contain letters, numbers, underscores, and hyphens'
+		)
+});
+
 const passwordSchema = z.object({
 	currentPassword: z.string().optional(),
 	newPassword: z.string().min(8).max(128)
 });
 
 export const actions: Actions = {
+	updateUsername: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
+
+		const formData = await request.formData();
+		const data = Object.fromEntries(formData);
+		const parsed = usernameSchema.safeParse(data);
+
+		if (!parsed.success) {
+			const message = parsed.error.errors[0]?.message ?? 'Invalid username';
+			return fail(400, { usernameError: message });
+		}
+
+		const { username } = parsed.data;
+
+		if (username === locals.user.username) {
+			return fail(400, { usernameError: 'That is already your username' });
+		}
+
+		// Check classroom-friendliness via LLM
+		const check = await checkUsernameAppropriate(username);
+		if (!check.approved) {
+			const message = check.reason
+				? `Username not allowed: ${check.reason}`
+				: 'That username is not appropriate for a classroom environment.';
+			return fail(400, { usernameError: message, usernameSuggestion: check.suggestion || null });
+		}
+
+		try {
+			await prisma.user.update({
+				where: { id: locals.user.id },
+				data: { username }
+			});
+		} catch (error) {
+			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+				return fail(400, { usernameError: 'That username is already taken' });
+			}
+			throw error;
+		}
+
+		return { usernameSuccess: 'Username updated successfully' };
+	},
+
 	updatePassword: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(303, '/login');

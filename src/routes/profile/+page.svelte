@@ -8,11 +8,19 @@
 	let { data, form }: { data: PageData; form: any } = $props();
 
 	// Form submission states
+	let isUpdatingUsername = $state(false);
 	let isUpdatingTheme = $state(false);
 	let isUpdatingLLM = $state(false);
 	let isUpdatingPassword = $state(false);
 	let isUpdatingLanguage = $state(false);
 	let isDeletingAccount = $state(false);
+
+	// Username change
+	let newUsername = $state('');
+	let usernameSuggestion = $state<string | null>(null);
+	$effect(() => {
+		usernameSuggestion = (form as any)?.usernameSuggestion ?? null;
+	});
 
 	// Streak freeze (#11)
 	let isBuyingFreeze = $state(false);
@@ -61,10 +69,12 @@
 
 	// Show success/error messages as toasts
 	$effect(() => {
+		if ((form as any)?.usernameSuccess) toastSuccess((form as any).usernameSuccess);
 		if (form?.themeSuccess) toastSuccess(form.themeSuccess);
 		if (form?.llmSuccess) toastSuccess(form.llmSuccess);
 		if (form?.passwordSuccess) toastSuccess(form.passwordSuccess);
 		if (form?.languageSuccess) toastSuccess(form.languageSuccess);
+		if ((form as any)?.usernameError && !(form as any)?.usernameSuggestion) toastError((form as any).usernameError);
 		if (form?.themeError) toastError(form.themeError);
 		if (form?.llmError) toastError(form.llmError);
 		if (form?.passwordError) toastError(form.passwordError);
@@ -156,6 +166,54 @@
 				<span class="info-value">{data.user?.role}</span>
 			</div>
 		</div>
+	</section>
+
+	<section class="username-card" in:fly={{ y: 20, duration: 400, delay: 120 }}>
+		<h2>Change Username</h2>
+
+		<form
+			method="POST"
+			action="?/updateUsername"
+			use:enhance={() => {
+				isUpdatingUsername = true;
+				usernameSuggestion = null;
+				return async ({ update }) => {
+					await update();
+					isUpdatingUsername = false;
+					newUsername = '';
+				};
+			}}
+		>
+			<div class="form-group">
+				<label for="username">New Username</label>
+				<input
+					type="text"
+					id="username"
+					name="username"
+					bind:value={newUsername}
+					placeholder={data.user?.username}
+					minlength="3"
+					maxlength="31"
+					required
+				/>
+				{#if (form as any)?.usernameError}
+					<p class="field-error">{(form as any).usernameError}</p>
+				{/if}
+				{#if usernameSuggestion}
+					<p class="username-suggestion">
+						How about <strong>{usernameSuggestion}</strong>?
+						<button
+							type="button"
+							class="use-suggestion-btn"
+							onclick={() => { newUsername = usernameSuggestion!; }}
+						>Use this</button>
+					</p>
+				{/if}
+			</div>
+			<button type="submit" class="submit-btn" disabled={isUpdatingUsername}>
+				{isUpdatingUsername ? 'Checking...' : 'Update Username'}
+			</button>
+		</form>
 	</section>
 
 	<!-- Streak Freeze (#11) -->
@@ -458,6 +516,7 @@
 	}
 
 	.info-card,
+	.username-card,
 	.password-card,
 	.theme-card,
 	.llm-card {
@@ -469,6 +528,7 @@
 	}
 
 	.info-card h2,
+	.username-card h2,
 	.password-card h2,
 	.theme-card h2,
 	.llm-card h2 {
@@ -672,6 +732,39 @@
 		cursor: pointer;
 		margin: 0;
 		user-select: none;
+	}
+
+	.field-error {
+		margin: 0.375rem 0 0;
+		font-size: 0.8rem;
+		color: #ef4444;
+		font-weight: 500;
+	}
+
+	.username-suggestion {
+		margin: 0.5rem 0 0;
+		font-size: 0.85rem;
+		color: #6b7280;
+	}
+
+	:global(html[data-theme='dark']) .username-suggestion {
+		color: #94a3b8;
+	}
+
+	.use-suggestion-btn {
+		background: none;
+		border: none;
+		color: #22c55e;
+		font-weight: 700;
+		cursor: pointer;
+		font-size: 0.85rem;
+		padding: 0;
+		margin-left: 0.25rem;
+		text-decoration: underline;
+	}
+
+	.use-suggestion-btn:hover {
+		color: #16a34a;
 	}
 
 	.submit-btn {

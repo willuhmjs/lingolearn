@@ -5,9 +5,14 @@ import type { Actions, PageServerLoad } from './$types';
 import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { getSiteSettings } from '$lib/server/settings';
+import { checkUsernameAppropriate } from '$lib/server/llm';
 
 const signupSchema = z.object({
-	username: z.string().min(3).max(31),
+	username: z
+		.string()
+		.min(3, 'Username must be at least 3 characters')
+		.max(31, 'Username must be at most 31 characters')
+		.regex(/^[a-zA-Z0-9_\-]+$/, 'Username may only contain letters, numbers, underscores, and hyphens'),
 	email: z.email().max(128),
 	password: z.string().max(128)
 });
@@ -33,6 +38,16 @@ export const actions = {
 		}
 
 		const { username, email, password } = parsed.data;
+
+		// Check username is classroom-friendly via LLM
+		const usernameCheck = await checkUsernameAppropriate(username);
+		if (!usernameCheck.approved) {
+			const suggestion = usernameCheck.suggestion || null;
+			const message = usernameCheck.reason
+				? `Username not allowed: ${usernameCheck.reason}`
+				: 'That username is not appropriate for a classroom environment.';
+			return fail(400, { error: message, usernameSuggestion: suggestion });
+		}
 
 		// Hash password
 		const passwordHash = await bcrypt.hash(password, 10);

@@ -230,6 +230,87 @@ export async function generateChatCompletion({
 }
 
 /**
+ * Checks whether a username is classroom-friendly using the site's global LLM.
+ * Does NOT require a userId — uses the site-level LLM config only.
+ * Returns { approved: boolean, reason: string }.
+ */
+export async function checkUsernameAppropriate(
+	username: string
+): Promise<{ approved: boolean; reason: string; suggestion: string }> {
+	const [settings] = await Promise.all([getSiteSettings()]);
+
+	const rawBaseUrl = (settings.llmEndpoint || env.DEFAULT_LLM_BASE_URL || '').replace(
+		/^["']|["']$/g,
+		''
+	);
+	const apiKey = (settings.llmApiKey || env.DEFAULT_LLM_API_KEY || '').replace(
+		/^["']|["']$/g,
+		''
+	);
+	const resolvedModel = (settings.llmModel || env.DEFAULT_LLM_MODEL || 'gpt-3.5-turbo').replace(
+		/^["']|["']$/g,
+		''
+	);
+
+	if (!rawBaseUrl || !apiKey) {
+		// If LLM is not configured, allow the username through
+		return { approved: true, reason: '', suggestion: '' };
+	}
+
+	let baseUrl = rawBaseUrl.replace(/\/$/, '');
+	if (!baseUrl.endsWith('/v1') && !baseUrl.endsWith('/openai')) {
+		baseUrl += '/v1';
+	}
+
+	const openai = new OpenAI({ baseURL: baseUrl, apiKey });
+
+	const systemPrompt = `You are a classroom safety moderator for a language-learning app used by students of all ages.
+Your job is to decide if a username is appropriate for a classroom environment.
+
+Rules — reject if the username:
+- Contains profanity, slurs, or offensive language (in any language)
+- References violence, drugs, sexual content, or hate speech
+- Impersonates a real person, teacher, or staff member (e.g. "MrSmith", "TeacherJohn")
+- Is otherwise clearly inappropriate for a school setting
+
+Allow creative, playful, or fun usernames that are harmless.
+
+If the username is NOT approved, also suggest a fun, classroom-friendly alternative (e.g. "HappyFox42", "BluePenguin7", "StarLearner").
+
+Respond ONLY with valid JSON in this exact format:
+{"approved": true} or {"approved": false, "reason": "brief reason", "suggestion": "AlternativeUsername"}`;
+
+	try {
+		const response = await openai.chat.completions.create({
+			model: resolvedModel,
+			messages: [
+				{ role: 'system', content: systemPrompt },
+				{ role: 'user', content: `Username to review: "${username}"` }
+			],
+			temperature: 0.1
+		});
+
+		const content = response.choices?.[0]?.message?.content ?? '';
+		const firstBrace = content.indexOf('{');
+		const lastBrace = content.lastIndexOf('}');
+		const json =
+			firstBrace !== -1 && lastBrace > firstBrace
+				? content.substring(firstBrace, lastBrace + 1)
+				: content;
+
+		const result = JSON.parse(json);
+		return {
+			approved: result.approved === true,
+			reason: result.reason ?? '',
+			suggestion: result.suggestion ?? ''
+		};
+	} catch {
+		// On any failure (LLM down, parse error) allow through — don't block signup
+		return { approved: true, reason: '', suggestion: '' };
+	}
+}
+
+/**
  * Normalizes an array of words to their absolute dictionary form (lemma) based on the user's active language.
  * E.g., infinitives for verbs, nominative singular for nouns, base form for adjectives.
  */
