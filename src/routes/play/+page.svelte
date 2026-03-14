@@ -2097,13 +2097,16 @@
 					class="card card-duo challenge-card"
 					in:fly={{ y: 20, duration: 400 }}
 				>
-					<button
-						type="button"
-						class="change-mode-link"
-						onclick={() => { challenge = null; feedback = null; showGrammarRef = false; }}
-					>
-						&larr; Change Mode
-					</button>
+					<div class="challenge-card-top">
+						<button
+							type="button"
+							class="change-mode-link"
+							onclick={() => { challenge = null; feedback = null; showGrammarRef = false; }}
+						>
+							&larr; Change Mode
+						</button>
+						<span class="session-progress-badge">Challenge {sessionChallenges + 1}</span>
+					</div>
 					<div class="challenge-section">
 						{#if challenge.gameMode === 'fill-blank'}
 							<h3 class="">Fill in the blanks:</h3>
@@ -4656,6 +4659,27 @@
 	}
 
 	/* Fix 4 - Change Mode link */
+	.challenge-card-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	.session-progress-badge {
+		font-size: 0.78rem;
+		font-weight: 700;
+		background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+		color: #1e40af;
+		padding: 0.25rem 0.65rem;
+		border-radius: 999px;
+	}
+
+	:global(html[data-theme='dark']) .session-progress-badge {
+		background: rgba(30, 58, 138, 0.35);
+		color: #bfdbfe;
+	}
+
 	.change-mode-link {
 		display: inline-flex;
 		align-items: center;
@@ -4667,7 +4691,7 @@
 		color: #64748b;
 		cursor: pointer;
 		padding: 0;
-		margin-bottom: 1rem;
+		margin-bottom: 0;
 		transition: color 0.15s;
 	}
 

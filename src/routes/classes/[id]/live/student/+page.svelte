@@ -105,7 +105,21 @@
 	onDestroy(() => {
 		if (interval) clearInterval(interval);
 	});
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (hasAnswered || session?.status !== 'active' || !currentQuestionData) return;
+		const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+		if (tag === 'input' || tag === 'textarea') return;
+		const keyMap: Record<string, number> = { '1': 0, 'a': 0, '2': 1, 'b': 1, '3': 2, 'c': 2, '4': 3, 'd': 3 };
+		const idx = keyMap[e.key.toLowerCase()];
+		if (idx !== undefined && idx < shuffledOptions.length) {
+			e.preventDefault();
+			submitAnswer(shuffledOptions[idx].text);
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="live-container">
 	<h1 class="battle-title pulse">Classroom Battle</h1>
@@ -136,6 +150,13 @@
 					<p class="score-text">My Score: <span class="score-value">{myScore}</span></p>
 				</div>
 
+				{#if session.game?.questions?.length > 1}
+					<div class="live-progress-bar">
+						<div class="live-progress-fill" style="width: {(((session.currentQuestionIndex || 0)) / session.game.questions.length) * 100}%"></div>
+					</div>
+					<p class="live-progress-label">Question {(session.currentQuestionIndex || 0) + 1} of {session.game.questions.length}</p>
+				{/if}
+
 				<h2 class="question-title">
 					{currentQuestionData?.question || 'Get Ready!'}
 				</h2>
@@ -162,6 +183,7 @@
 								disabled={hasAnswered}
 								aria-label="Answer option: {opt.text}"
 							>
+								{#if !hasAnswered}<span class="live-key-hint">{i + 1}</span>{/if}
 								{opt.text}
 							</button>
 						{/each}
@@ -329,6 +351,43 @@
 		.options-grid {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	.live-progress-bar {
+		height: 4px;
+		background: rgba(255, 255, 255, 0.2);
+		border-radius: 999px;
+		overflow: hidden;
+		margin-bottom: 0.25rem;
+	}
+
+	.live-progress-fill {
+		height: 100%;
+		background: rgba(255, 255, 255, 0.8);
+		border-radius: 999px;
+		transition: width 0.4s ease;
+	}
+
+	.live-progress-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.7);
+		text-align: center;
+		margin: 0 0 0.5rem;
+	}
+
+	.live-key-hint {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.4rem;
+		height: 1.4rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 0.3rem;
+		flex-shrink: 0;
+		margin-right: 0.5rem;
 	}
 
 	.option-btn {

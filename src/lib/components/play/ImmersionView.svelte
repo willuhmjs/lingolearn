@@ -825,7 +825,13 @@
 
 			<!-- Questions -->
 			<div class="questions-section">
-				<h3 class="questions-title">Comprehension Questions</h3>
+				<div class="questions-header">
+					<h3 class="questions-title">Comprehension Questions</h3>
+					<span class="questions-progress">{session.questions.filter(q => { const s = answers[q.id] || {}; return s.mcqSubmitted || s.frSubmitted; }).length} / {session.questions.length}</span>
+				</div>
+				<div class="questions-progress-bar">
+					<div class="questions-progress-fill" style="width: {session.questions.length > 0 ? (session.questions.filter(q => { const s = answers[q.id] || {}; return s.mcqSubmitted || s.frSubmitted; }).length / session.questions.length) * 100 : 0}%"></div>
+				</div>
 				<p class="questions-subtitle">Answer in English based on what you read.</p>
 
 				{#each session.questions as question, i}
@@ -2010,6 +2016,46 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+	}
+
+	.questions-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: -0.25rem;
+	}
+
+	.questions-progress {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #64748b;
+		background: #f1f5f9;
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+	}
+
+	:global(html[data-theme='dark']) .questions-progress {
+		background: #1e293b;
+		color: #94a3b8;
+	}
+
+	.questions-progress-bar {
+		height: 4px;
+		background: #e2e8f0;
+		border-radius: 999px;
+		overflow: hidden;
+		margin-bottom: 0.25rem;
+	}
+
+	.questions-progress-fill {
+		height: 100%;
+		background: linear-gradient(90deg, #1cb0f6, #7c3aed);
+		border-radius: 999px;
+		transition: width 0.4s ease;
+	}
+
+	:global(html[data-theme='dark']) .questions-progress-bar {
+		background: #334155;
 	}
 
 	.questions-title {

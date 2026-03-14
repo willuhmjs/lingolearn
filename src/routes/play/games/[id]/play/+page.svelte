@@ -88,7 +88,21 @@
 			isQuizOver = true;
 		}
 	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (showResult || isQuizOver) return;
+		const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+		if (tag === 'input' || tag === 'textarea') return;
+		const keyMap: Record<string, number> = { '1': 0, 'a': 0, '2': 1, 'b': 1, '3': 2, 'c': 2, '4': 3, 'd': 3 };
+		const idx = keyMap[e.key.toLowerCase()];
+		if (idx !== undefined && idx < options.length) {
+			e.preventDefault();
+			selectOption(options[idx]);
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="learn-container">
 	<nav class="breadcrumb">
@@ -134,17 +148,21 @@
 			<h1>{game.title}</h1>
 			<div class="progress-badge">Question {currentQuestionIndex + 1} of {questions.length}</div>
 		</div>
+		<div class="quiz-progress-bar">
+			<div class="quiz-progress-fill" style="width: {((currentQuestionIndex) / questions.length) * 100}%"></div>
+		</div>
 
 		<div class="card-duo question-card">
 			<h2 class="question-text">{currentQuestion.question}</h2>
 
 			<div class="options-grid">
-				{#each options as option}
+				{#each options as option, i}
 					<button
 						class="option-btn {showResult && option === currentQuestion.answer ? 'correct-btn' : showResult && option === selectedOption && option !== currentQuestion.answer ? 'incorrect-btn' : ''}"
 						onclick={() => selectOption(option)}
 						disabled={showResult}
 					>
+						{#if !showResult}<span class="option-key-hint">{i + 1}</span>{/if}
 						{option}
 					</button>
 				{/each}
@@ -346,6 +364,25 @@
 		font-weight: bold;
 	}
 
+	.quiz-progress-bar {
+		height: 5px;
+		background: #e2e8f0;
+		border-radius: 999px;
+		overflow: hidden;
+		margin-bottom: 1rem;
+	}
+
+	.quiz-progress-fill {
+		height: 100%;
+		background: linear-gradient(90deg, #1cb0f6, #7c3aed);
+		border-radius: 999px;
+		transition: width 0.4s ease;
+	}
+
+	:global(html[data-theme='dark']) .quiz-progress-bar {
+		background: #334155;
+	}
+
 	.question-card {
 		padding: 1.5rem;
 	}
@@ -387,6 +424,28 @@
 		cursor: pointer;
 		transition: all 0.2s;
 		box-shadow: 0 2px 0 #cbd5e1;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.option-key-hint {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.4rem;
+		height: 1.4rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		background: #e2e8f0;
+		color: #64748b;
+		border-radius: 0.3rem;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .option-key-hint {
+		background: #334155;
+		color: #94a3b8;
 	}
 
 	.option-btn:not(:disabled):hover {
