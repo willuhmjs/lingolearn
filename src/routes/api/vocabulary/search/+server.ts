@@ -41,14 +41,25 @@ export const GET = async ({ url, locals }: RequestEvent) => {
 		whereClause.languageId = activeLanguageId;
 	}
 
-	// Very simple search implementation
+	const userId = locals.user.id;
+
 	const results = await prisma.vocabulary.findMany({
 		where: whereClause,
 		take: 20,
 		include: {
-			meanings: true
+			meanings: true,
+			users: {
+				where: { userId },
+				select: { srsState: true }
+			}
 		}
 	});
 
-	return json({ results });
+	// Flatten userSrsState onto each result
+	const enriched = results.map((r) => ({
+		...r,
+		userSrsState: r.users?.[0]?.srsState ?? null
+	}));
+
+	return json({ results: enriched });
 };

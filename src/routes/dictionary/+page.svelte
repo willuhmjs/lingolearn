@@ -336,6 +336,9 @@
 												{result.partOfSpeech}
 											</p>
 										{/if}
+										{#if result.userSrsState}
+											<span class="srs-badge srs-{result.userSrsState.toLowerCase()}">{result.userSrsState.charAt(0) + result.userSrsState.slice(1).toLowerCase()}</span>
+										{/if}
 									</div>
 								</div>
 
@@ -953,6 +956,27 @@
 		text-transform: uppercase;
 		font-weight: 600;
 	}
+
+	.srs-badge {
+		display: inline-block;
+		margin-top: 0.4rem;
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.15rem 0.5rem;
+		border-radius: 999px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.srs-unseen  { background: #e2e8f0; color: #475569; }
+	.srs-learning { background: #fef9c3; color: #854d0e; }
+	.srs-known   { background: #d1fae5; color: #065f46; }
+	.srs-mastered { background: #a7f3d0; color: #064e3b; }
+
+	:global(html[data-theme='dark']) .srs-unseen   { background: #334155; color: #94a3b8; }
+	:global(html[data-theme='dark']) .srs-learning { background: #422006; color: #fde68a; }
+	:global(html[data-theme='dark']) .srs-known    { background: #064e3b; color: #6ee7b7; }
+	:global(html[data-theme='dark']) .srs-mastered { background: #022c22; color: #34d399; }
 
 	.btn-add {
 		background-color: #3b82f6;
