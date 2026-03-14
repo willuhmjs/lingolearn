@@ -148,27 +148,30 @@
 		}
 	}
 
-	function extractClickedWord(e: MouseEvent): string {
-		const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
-		if (!range) return '';
-		const sel = window.getSelection();
-		if (!sel) return '';
-		sel.removeAllRanges();
-		sel.addRange(range);
-		sel.modify('expand', 'backward', 'word');
-		sel.modify('extend', 'forward', 'word');
-		const word = sel.toString().trim().replace(/[«»„""\[\]()\.,!?;:'"–—]/g, '').trim();
-		sel.removeAllRanges();
-		return word;
+	// Split text into alternating word/non-word tokens for per-word click handling
+	type Token = { word: true; value: string } | { word: false; value: string };
+	function tokenize(text: string): Token[] {
+		if (!text) return [];
+		const parts = text.split(/(\s+)/);
+		return parts.map((p) =>
+			/^\s+$/.test(p) ? { word: false, value: p } : { word: true, value: p }
+		);
 	}
 
-	async function handleTemplateClick(e: MouseEvent) {
-		if (!language?.id) return;
-		const word = extractClickedWord(e);
-		if (!word || word.length < 2 || /^\d+$/.test(word)) return;
+	// Strip punctuation to get the lookup word
+	function cleanWord(raw: string): string {
+		return raw.replace(/^[«»„""\[\]()\.,!?;:'"–—]+|[«»„""\[\]()\.,!?;:'"–—]+$/g, '').trim();
+	}
 
-		const x = Math.min(e.clientX, window.innerWidth - 290);
-		const y = e.clientY + 16;
+	async function handleWordClick(e: MouseEvent | KeyboardEvent, rawWord: string) {
+		if (!language?.id) return;
+		const word = cleanWord(rawWord);
+		if (!word || word.length < 2 || /^\d+$/.test(word)) return;
+		e.stopPropagation();
+
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const x = Math.min(rect.left, window.innerWidth - 290);
+		const y = rect.bottom + 6; // fixed positioning uses viewport coords
 
 		if (wordLookupCache.has(word.toLowerCase())) {
 			wordPopup = { word, x, y, loading: false, result: wordLookupCache.get(word.toLowerCase()), error: '' };
@@ -691,8 +694,7 @@
 	{#if session && !loading}
 		<div class="session-wrapper" in:fly={{ y: 20, duration: 400 }}>
 			<!-- Media template -->
-			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-			<div class="media-card" onclick={handleTemplateClick} role="button" tabindex="0" aria-label="Reading content">
+			<div class="media-card" aria-label="Reading content">
 				<div class="media-type-badge">
 					{MEDIA_LABELS[session.mediaType].icon}
 					{MEDIA_LABELS[session.mediaType].label}
@@ -708,23 +710,23 @@
 							<span class="news-source">{session.templateData.source}</span>
 							<span class="news-date">{session.templateData.date}</span>
 						</div>
-						<h1 class="news-headline">{session.templateData.headline}</h1>
-						<p class="news-byline">{session.templateData.byline}</p>
+						<h1 class="news-headline">{#each tokenize(session.templateData.headline || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</h1>
+						<p class="news-byline">{#each tokenize(session.templateData.byline || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
 						<hr class="news-rule" />
-						<p class="news-lead">{session.templateData.lead}</p>
-						<p class="news-body">{session.templateData.body}</p>
+						<p class="news-lead">{#each tokenize(session.templateData.lead || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
+						<p class="news-body">{#each tokenize(session.templateData.body || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
 					</div>
 
 				<!-- ADVERTISEMENT -->
 				{:else if session.mediaType === 'advertisement'}
 					<div class="template ad-template">
 						<div class="ad-brand">{session.templateData.brand}</div>
-						<h2 class="ad-product">{session.templateData.product}</h2>
-						<p class="ad-slogan">"{session.templateData.slogan}"</p>
+						<h2 class="ad-product">{#each tokenize(session.templateData.product || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</h2>
+						<p class="ad-slogan">"{#each tokenize(session.templateData.slogan || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}"</p>
 						{#if session.templateData.features?.length}
 							<ul class="ad-features">
 								{#each session.templateData.features as feat}
-									<li>{feat}</li>
+									<li>{#each tokenize(feat || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</li>
 								{/each}
 							</ul>
 						{/if}
@@ -750,8 +752,8 @@
 								{#each (section.items || []) as item}
 									<div class="menu-item">
 										<div class="menu-item-info">
-											<span class="menu-item-name">{item.name}</span>
-											<span class="menu-item-desc">{item.description}</span>
+											<span class="menu-item-name">{#each tokenize(item.name || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</span>
+											<span class="menu-item-desc">{#each tokenize(item.description || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</span>
 										</div>
 										<span class="menu-item-price">{item.price}</span>
 									</div>
@@ -771,7 +773,7 @@
 							</div>
 							<span class="social-timestamp">{session.templateData.timestamp}</span>
 						</div>
-						<p class="social-content">{session.templateData.content}</p>
+						<p class="social-content">{#each tokenize(session.templateData.content || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
 						{#if session.templateData.hashtags?.length}
 							<p class="social-hashtags">
 								{session.templateData.hashtags.join(' ')}
@@ -798,7 +800,7 @@
 								<h3>Zutaten</h3>
 								<ul>
 									{#each (session.templateData.ingredients || []) as ing}
-										<li>{ing}</li>
+										<li>{#each tokenize(ing || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</li>
 									{/each}
 								</ul>
 							</div>
@@ -806,7 +808,7 @@
 								<h3>Zubereitung</h3>
 								<ol>
 									{#each (session.templateData.steps || []) as step}
-										<li>{step}</li>
+										<li>{#each tokenize(step || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</li>
 									{/each}
 								</ol>
 							</div>
@@ -831,9 +833,9 @@
 								<span class="review-date">{session.templateData.date}</span>
 							</div>
 						</div>
-						<p class="review-body">{session.templateData.body}</p>
+						<p class="review-body">{#each tokenize(session.templateData.body || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
 						<div class="review-verdict">
-							<strong>Fazit:</strong> {session.templateData.verdict}
+							<strong>Fazit:</strong> {#each tokenize(session.templateData.verdict || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}
 						</div>
 					</div>
 
@@ -843,9 +845,9 @@
 						<div class="letter-location-date">
 							{session.templateData.location}, {session.templateData.date}
 						</div>
-						<p class="letter-salutation">{session.templateData.salutation}</p>
-						<p class="letter-body">{session.templateData.body}</p>
-						<p class="letter-closing">{session.templateData.closing}</p>
+						<p class="letter-salutation">{#each tokenize(session.templateData.salutation || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
+						<p class="letter-body">{#each tokenize(session.templateData.body || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
+						<p class="letter-closing">{#each tokenize(session.templateData.closing || '') as tok}{#if tok.word}<span class="w-tok" role="button" tabindex="0" onclick={(e) => handleWordClick(e, tok.value)} onkeydown={(e) => e.key === "Enter" && handleWordClick(e, tok.value)}>{tok.value}</span>{:else}{tok.value}{/if}{/each}</p>
 						<p class="letter-signature">{session.templateData.signature}</p>
 					</div>
 				{/if}
@@ -2536,6 +2538,25 @@
 		margin-left: 0.4rem;
 		letter-spacing: 0;
 		text-transform: none;
+	}
+
+	/* Clickable word tokens */
+	.w-tok {
+		cursor: pointer;
+		border-radius: 2px;
+		transition: background 0.1s, color 0.1s;
+		display: inline;
+	}
+
+	.w-tok:hover {
+		background: rgba(59, 130, 246, 0.12);
+		color: #1d4ed8;
+		border-radius: 3px;
+	}
+
+	:global(html[data-theme='dark']) .w-tok:hover {
+		background: rgba(96, 165, 250, 0.15);
+		color: #93c5fd;
 	}
 
 	/* Word lookup popup */
