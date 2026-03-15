@@ -106,8 +106,8 @@ export async function POST(event) {
 			});
 			const knownIdsArray = knownVocabIds.map((v) => v.vocabularyId);
 
-			// Try to find level-appropriate words, prioritizing beginner words first if at A1.
-			// Order by cefrLevel ASC so foundational words are introduced before harder ones.
+			// Prioritize high-frequency words within each CEFR level.
+			// frequency ASC = most common first; nulls last (unranked words introduced after ranked ones).
 			let unseenVocabs: any[] = [];
 			if (targetCefrLevel === 'A1') {
 				unseenVocabs = await prisma.vocabulary.findMany({
@@ -118,7 +118,7 @@ export async function POST(event) {
 						cefrLevel: { in: allowedLevels },
 						isBeginner: true
 					} as any,
-					orderBy: { cefrLevel: 'asc' },
+					orderBy: [{ cefrLevel: 'asc' }, { frequency: { sort: 'asc', nulls: 'last' } }],
 					take: needed
 				});
 			}
@@ -131,7 +131,7 @@ export async function POST(event) {
 						languageId: activeLanguageId,
 						cefrLevel: { in: allowedLevels }
 					} as any,
-					orderBy: { cefrLevel: 'asc' },
+					orderBy: [{ cefrLevel: 'asc' }, { frequency: { sort: 'asc', nulls: 'last' } }],
 					take: needed - unseenVocabs.length
 				});
 				unseenVocabs = [...unseenVocabs, ...additionalUnseen];

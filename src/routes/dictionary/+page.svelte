@@ -719,6 +719,12 @@
 						{#if selectedResult.metadata?.level}
 							<span class="modal-level-badge level-{selectedResult.metadata.level.toLowerCase()}">{selectedResult.metadata.level}</span>
 						{/if}
+						{#if selectedResult.frequency != null}
+							{@const rank = selectedResult.frequency}
+							<span class="modal-freq-badge" title="Corpus frequency rank #{rank} — lower = more common">
+								#{rank.toLocaleString()}
+							</span>
+						{/if}
 						{#if enriching}
 							<span class="modal-enriching-badge">
 								<span class="spinner-tiny"></span> enriching...
@@ -1764,6 +1770,23 @@
 		border: 1px solid var(--card-border, #e5e7eb);
 		padding: 0.125rem 0.5rem;
 		border-radius: 999px;
+	}
+
+	.modal-freq-badge {
+		font-size: 0.7rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: #6366f1;
+		background: #eef2ff;
+		border: 1px solid #c7d2fe;
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+	}
+
+	:global(html[data-theme='dark']) .modal-freq-badge {
+		color: #a5b4fc;
+		background: #1e1b4b;
+		border-color: #3730a3;
 	}
 
 	.modal-gender-badge {

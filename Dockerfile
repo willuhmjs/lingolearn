@@ -39,11 +39,12 @@ RUN npm install -g pnpm tsx
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy the built app, prisma schema, and config
+# Copy the built app, prisma schema, config, and runtime source deps
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/src/lib/frequency ./src/lib/frequency
 
 # Generate Prisma client using locally installed prisma (fast, no download)
 RUN pnpm prisma generate

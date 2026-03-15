@@ -101,11 +101,6 @@ export const pronouns = [
 		isBeginner: true
 	},
 	{
-		lemma: 'ihr',
-		meaning: 'her, their, your',
-		partOfSpeech: 'pronoun' as const
-	},
-	{
 		lemma: 'mein',
 		meaning: 'my',
 		partOfSpeech: 'pronoun' as const

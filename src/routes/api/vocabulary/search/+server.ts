@@ -46,6 +46,7 @@ export const GET = async ({ url, locals }: RequestEvent) => {
 	const results = await prisma.vocabulary.findMany({
 		where: whereClause,
 		take: 20,
+		orderBy: [{ frequency: 'asc' }],
 		include: {
 			meanings: true,
 			users: {

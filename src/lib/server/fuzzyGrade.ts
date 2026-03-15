@@ -94,18 +94,29 @@ export function isClearlyCorrect(userAnswer: string, referenceAnswer: string): b
 	const normUser = normalizeForFuzzy(userAnswer);
 	const normRef = normalizeForFuzzy(referenceAnswer);
 
-	if (normUser === normRef) return true;
+	if (normUser === normRef) {
+		console.log('[fuzzyGrade] isClearlyCorrect: exact match');
+		return true;
+	}
 
 	const userTokens = tokenize(normUser);
 	const refTokens = tokenize(normRef);
 
-	// Scale Jaccard threshold down for longer sentences:
-	// ≤3 tokens → 0.90, 4–6 tokens → 0.85, 7+ tokens → 0.80
 	const len = refTokens.length;
 	const jaccardThreshold = len <= 3 ? 0.90 : len <= 6 ? 0.85 : 0.80;
+	const jaccard = jaccardSimilarity(userTokens, refTokens);
+	const levenshtein = levenshteinSimilarity(normUser, normRef);
 
-	if (jaccardSimilarity(userTokens, refTokens) >= jaccardThreshold) return true;
-	if (levenshteinSimilarity(normUser, normRef) >= 0.92) return true;
+	console.log(`[fuzzyGrade] isClearlyCorrect: jaccard=${jaccard.toFixed(3)} (threshold ${jaccardThreshold}), levenshtein=${levenshtein.toFixed(3)}`);
+
+	if (jaccard >= jaccardThreshold) {
+		console.log('[fuzzyGrade] isClearlyCorrect: approved via jaccard');
+		return true;
+	}
+	if (levenshtein >= 0.92) {
+		console.log('[fuzzyGrade] isClearlyCorrect: approved via levenshtein');
+		return true;
+	}
 
 	return false;
 }

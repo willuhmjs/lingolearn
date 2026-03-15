@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import 'dotenv/config';
+import { getFrequencyRank, estimateFrequencyRank } from '../src/lib/frequency/index.ts';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -1231,14 +1232,16 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		});
 
 		const { meaning, partOfSpeech, ...vocabData } = vocab as any;
+		const frequency = getFrequencyRank(vocab.lemma, 'German') ?? estimateFrequencyRank(vocab.lemma);
 
 		if (existing) {
 			await client.vocabulary.update({
 				where: { id: existing.id },
-				data: { 
-					...vocabData, 
+				data: {
+					...vocabData,
 					gender,
 					partOfSpeech,
+					frequency,
 					meanings: {
 						create: meaning ? [{ value: meaning, partOfSpeech }] : []
 					}
@@ -1246,10 +1249,11 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 			});
 		} else {
 			await client.vocabulary.create({
-				data: { 
-					...vocabData, 
-					gender, 
+				data: {
+					...vocabData,
+					gender,
 					partOfSpeech,
+					frequency,
 					languageId: german.id,
 					meanings: {
 						create: meaning ? [{ value: meaning, partOfSpeech }] : []
@@ -1269,14 +1273,16 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		});
 
 		const { meaning, partOfSpeech, ...vocabData } = vocab as any;
+		const frequency = getFrequencyRank(vocab.lemma, 'Spanish') ?? estimateFrequencyRank(vocab.lemma);
 
 		if (existing) {
 			await client.vocabulary.update({
 				where: { id: existing.id },
-				data: { 
-					...vocabData, 
+				data: {
+					...vocabData,
 					gender,
 					partOfSpeech,
+					frequency,
 					meanings: {
 						create: meaning ? [{ value: meaning, partOfSpeech }] : []
 					}
@@ -1284,10 +1290,11 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 			});
 		} else {
 			await client.vocabulary.create({
-				data: { 
-					...vocabData, 
-					gender, 
+				data: {
+					...vocabData,
+					gender,
 					partOfSpeech,
+					frequency,
 					languageId: spanish.id,
 					meanings: {
 						create: meaning ? [{ value: meaning, partOfSpeech }] : []
@@ -1301,17 +1308,22 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 	console.log('Seeding French vocabulary...');
 	for (const vocab of frenchVocabulary) {
 		let gender: any = (vocab as any).gender;
+		const lemma = (vocab as any).word;
 
 		const existing = await client.vocabulary.findFirst({
-			where: { lemma: (vocab as any).word, languageId: french.id }
+			where: { lemma, languageId: french.id }
 		});
+
+		const frequency = getFrequencyRank(lemma, 'French') ?? estimateFrequencyRank(lemma);
+
 		if (existing) {
 			await client.vocabulary.update({
 				where: { id: existing.id },
 				data: {
-					lemma: (vocab as any).word,
+					lemma,
 					isBeginner: (vocab as any).isBeginner,
 					gender,
+					frequency,
 					meanings: {
 						create: (vocab as any).translation ? [{ value: (vocab as any).translation }] : []
 					}
@@ -1320,9 +1332,10 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		} else {
 			await client.vocabulary.create({
 				data: {
-					lemma: (vocab as any).word,
+					lemma,
 					isBeginner: (vocab as any).isBeginner,
 					gender,
+					frequency,
 					languageId: french.id,
 					meanings: {
 						create: (vocab as any).translation ? [{ value: (vocab as any).translation }] : []
@@ -1484,6 +1497,34 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 	console.log('Connected grammar rule dependencies.');
 
 	console.log('Seeding finished.');
+
+	// Apply frequency ranks to all vocabulary
+	console.log('Applying frequency ranks...');
+	const LANG_NAME_MAP: Record<string, string> = { German: 'German', Spanish: 'Spanish', French: 'French' };
+	const languages = await client.language.findMany({ select: { id: true, name: true } });
+	for (const lang of languages) {
+		const freqLang = LANG_NAME_MAP[lang.name];
+		if (!freqLang) continue;
+		console.log(`  Processing ${lang.name}...`);
+		const vocab = await client.vocabulary.findMany({ where: { languageId: lang.id }, select: { id: true, lemma: true } });
+		const BATCH = 500;
+		let updated = 0;
+		for (let i = 0; i < vocab.length; i += BATCH) {
+			const batch = vocab.slice(i, i + BATCH);
+			await Promise.all(
+				batch.map((v) =>
+					client.vocabulary.update({
+						where: { id: v.id },
+						data: { frequency: getFrequencyRank(v.lemma, freqLang) ?? estimateFrequencyRank(v.lemma) }
+					})
+				)
+			);
+			updated += batch.length;
+			process.stdout.write(`\r    Updated ${updated}/${vocab.length}`);
+		}
+		console.log(`\n    Done.`);
+	}
+	console.log('Frequency ranks applied.');
 }
 
 async function main() {
