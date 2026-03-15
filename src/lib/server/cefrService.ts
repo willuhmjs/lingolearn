@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { SrsState } from '@prisma/client';
 import { CEFR_CONFIG } from './srsConfig';
+import { deriveSrsStateFromFsrs } from './fsrs';
 
 export interface LevelUpdate {
   oldLevel: string;
@@ -23,12 +24,18 @@ export class CefrService {
   /**
    * Apply ELO decay to items that haven't been reviewed recently.
    * Gradually moves ELO back toward the baseline for the item's CEFR level.
+   *
+   * Also re-derives srsState from FSRS stability after decay so that
+   * UserVocabulary.srsState stays in sync with UserVocabularyProgress —
+   * preventing a word from staying MASTERED in the lesson selector while
+   * its FSRS record shows it should be KNOWN or LEARNING.
    */
   static async applyEloDecay(userId: string, languageId: string): Promise<void> {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - CEFR_CONFIG.DECAY.THRESHOLD_DAYS);
 
-    // Fetch stale vocab and grammar in parallel
+    // Fetch stale vocab and grammar, including the foreign-key IDs needed to
+    // join to the FSRS progress tables.
     const [staleVocab, staleGrammar] = await Promise.all([
       prisma.userVocabulary.findMany({
         where: {
@@ -37,7 +44,12 @@ export class CefrService {
           srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
           nextReviewDate: { lt: cutoff }
         },
-        select: { id: true, eloRating: true, vocabulary: { select: { cefrLevel: true } } }
+        select: {
+          id: true,
+          eloRating: true,
+          vocabularyId: true,
+          vocabulary: { select: { cefrLevel: true } }
+        }
       }),
       prisma.userGrammarRule.findMany({
         where: {
@@ -46,17 +58,53 @@ export class CefrService {
           srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] },
           nextReviewDate: { lt: cutoff }
         },
-        select: { id: true, eloRating: true, grammarRule: { select: { level: true } } }
+        select: {
+          id: true,
+          eloRating: true,
+          grammarRuleId: true,
+          grammarRule: { select: { level: true } }
+        }
       })
     ]);
 
-    // Build batched update transactions — one write per decayed item
+    // Batch-fetch FSRS progress for all stale items so we can re-derive srsState.
+    const staleVocabIds = staleVocab.map(v => v.vocabularyId);
+    const staleGrammarIds = staleGrammar.map(g => g.grammarRuleId);
+
+    const [vocabProgress, grammarProgress] = await Promise.all([
+      staleVocabIds.length > 0
+        ? prisma.userVocabularyProgress.findMany({
+            where: { userId, vocabularyId: { in: staleVocabIds } },
+            select: { vocabularyId: true, stability: true, repetitions: true, lapses: true }
+          })
+        : Promise.resolve([] as { vocabularyId: string; stability: number; repetitions: number; lapses: number }[]),
+      staleGrammarIds.length > 0
+        ? prisma.userGrammarRuleProgress.findMany({
+            where: { userId, grammarRuleId: { in: staleGrammarIds } },
+            select: { grammarRuleId: true, stability: true, repetitions: true, lapses: true }
+          })
+        : Promise.resolve([] as { grammarRuleId: string; stability: number; repetitions: number; lapses: number }[])
+    ]);
+
+    const vocabProgressMap = new Map(vocabProgress.map(p => [p.vocabularyId, p]));
+    const grammarProgressMap = new Map(grammarProgress.map(p => [p.grammarRuleId, p]));
+
+    // Build batched update operations — one write per decayed item.
+    // Each update includes both the decayed eloRating and the re-derived srsState.
     const vocabUpdates = staleVocab
       .map(item => {
         const baseline = CEFR_CONFIG.BASE_ELO[item.vocabulary.cefrLevel as keyof typeof CEFR_CONFIG.BASE_ELO] ?? CEFR_CONFIG.BASE_ELO.A1;
         if (item.eloRating <= baseline) return null;
         const decayedElo = item.eloRating - (item.eloRating - baseline) * CEFR_CONFIG.DECAY.RATE;
-        return prisma.userVocabulary.update({ where: { id: item.id }, data: { eloRating: decayedElo } });
+        // Re-derive srsState from FSRS stability so both tables agree.
+        const progress = vocabProgressMap.get(item.vocabularyId);
+        const newState = progress
+          ? deriveSrsStateFromFsrs(progress.repetitions, progress.stability, progress.lapses)
+          : undefined;
+        return prisma.userVocabulary.update({
+          where: { id: item.id },
+          data: { eloRating: decayedElo, ...(newState ? { srsState: newState } : {}) }
+        });
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
@@ -65,7 +113,14 @@ export class CefrService {
         const baseline = CEFR_CONFIG.BASE_ELO[item.grammarRule.level as keyof typeof CEFR_CONFIG.BASE_ELO] ?? CEFR_CONFIG.BASE_ELO.A1;
         if (item.eloRating <= baseline) return null;
         const decayedElo = item.eloRating - (item.eloRating - baseline) * CEFR_CONFIG.DECAY.RATE;
-        return prisma.userGrammarRule.update({ where: { id: item.id }, data: { eloRating: decayedElo } });
+        const progress = grammarProgressMap.get(item.grammarRuleId);
+        const newState = progress
+          ? deriveSrsStateFromFsrs(progress.repetitions, progress.stability, progress.lapses)
+          : undefined;
+        return prisma.userGrammarRule.update({
+          where: { id: item.id },
+          data: { eloRating: decayedElo, ...(newState ? { srsState: newState } : {}) }
+        });
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
