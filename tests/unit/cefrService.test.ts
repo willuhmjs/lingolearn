@@ -6,7 +6,9 @@ import { CEFR_CONFIG } from '../../src/lib/server/srsConfig';
 const mockPrisma = {
 	userProgress: { findUnique: vi.fn(), update: vi.fn() },
 	userVocabulary: { findMany: vi.fn(), count: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+	userVocabularyProgress: { findMany: vi.fn() },
 	userGrammarRule: { findMany: vi.fn(), count: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+	userGrammarRuleProgress: { findMany: vi.fn() },
 	grammarRule: { findMany: vi.fn() },
 	$transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops))
 };
@@ -128,6 +130,10 @@ describe('CefrService.applyEloDecay', () => {
 			{ id: 'uv-1', eloRating: currentElo, vocabulary: { cefrLevel: 'A1' } }
 		]);
 		mockPrisma.userGrammarRule.findMany.mockResolvedValue([]);
+		mockPrisma.userVocabularyProgress.findMany.mockResolvedValue([
+			{ vocabularyId: 'uv-1', stability: 5, repetitions: 3, lapses: 0 }
+		]);
+		mockPrisma.userGrammarRuleProgress.findMany.mockResolvedValue([]);
 		mockPrisma.userVocabulary.update.mockResolvedValue({});
 
 		await CefrService.applyEloDecay('user-1', 'lang-1');
@@ -144,6 +150,8 @@ describe('CefrService.applyEloDecay', () => {
 			{ id: 'uv-1', eloRating: baseline, vocabulary: { cefrLevel: 'A1' } }
 		]);
 		mockPrisma.userGrammarRule.findMany.mockResolvedValue([]);
+		mockPrisma.userVocabularyProgress.findMany.mockResolvedValue([]);
+		mockPrisma.userGrammarRuleProgress.findMany.mockResolvedValue([]);
 
 		await CefrService.applyEloDecay('user-1', 'lang-1');
 
