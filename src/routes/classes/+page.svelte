@@ -322,18 +322,18 @@
 
 <style>
 	:global(.btn-join) {
-		background-color: #a855f7;
+		background-color: #f97316;
 		color: white;
 		border-color: transparent;
-		box-shadow: 0 4px 0 #9333ea;
+		box-shadow: 0 4px 0 #c2410c;
 	}
 	:global(.btn-join:hover:not(:disabled)) {
-		background-color: #c084fc;
+		background-color: #fb923c;
 		transform: scale(1.02);
 	}
 	:global(.btn-join:active:not(:disabled)) {
 		transform: scale(0.98) translateY(2px);
-		box-shadow: 0 2px 0 #9333ea;
+		box-shadow: 0 2px 0 #c2410c;
 	}
 	:global(.btn-join:disabled) {
 		background-color: #e5e7eb;
@@ -459,7 +459,7 @@
 	}
 
 	.join-card {
-		border-top: 6px solid #a855f7;
+		border-top: 6px solid #f97316;
 	}
 
 	.card-header {
@@ -491,8 +491,8 @@
 	}
 
 	.join-icon {
-		background-color: #f3e8ff;
-		color: #9333ea;
+		background-color: #ffedd5;
+		color: #ea580c;
 	}
 
 	.form-card h2 {
@@ -568,8 +568,8 @@
 	}
 
 	.join-card .field input:focus {
-		border-color: #a855f7;
-		box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
+		border-color: #f97316;
+		box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
 	}
 
 	.field textarea {
@@ -608,13 +608,13 @@
 		letter-spacing: 0.3em;
 		text-transform: uppercase;
 		padding: 1rem !important;
-		color: #7e22ce !important;
-		background-color: #faf5ff !important;
-		border-color: #e9d5ff !important;
+		color: #c2410c !important;
+		background-color: #fff7ed !important;
+		border-color: #fed7aa !important;
 	}
 
 	.invite-code-input::placeholder {
-		color: #d8b4fe;
+		color: #fdba74;
 		letter-spacing: 0.3em;
 	}
 
@@ -779,19 +779,20 @@
 	.empty-cta:hover { background: #2563eb; }
 
 	.empty-cta-secondary {
-		background: var(--card-bg, #ffffff);
-		color: #475569;
-		border: 2px solid var(--card-border, #e2e8f0);
+		background: #f97316;
+		color: white;
+		border: none;
 		border-radius: 0.75rem;
 		padding: 0.65rem 1.25rem;
 		font-size: 0.875rem;
 		font-weight: 800;
 		cursor: pointer;
+		box-shadow: 0 3px 0 #c2410c;
 		font-family: inherit;
-		transition: border-color 0.15s;
+		transition: background 0.15s;
 	}
 
-	.empty-cta-secondary:hover { border-color: #94a3b8; }
+	.empty-cta-secondary:hover { background: #ea6c00; }
 
 	.empty-desc {
 		color: #94a3b8;
