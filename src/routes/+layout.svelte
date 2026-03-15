@@ -555,12 +555,11 @@
 		</header>
 
 		<header class="desktop-topbar">
-			<div class="spacer"></div>
 			<button
 				class="nav-item theme-toggle-btn"
 				onclick={cycleTheme}
 				aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-				style="margin-right: 1rem; border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;"
+				style="border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;"
 			>
 				{#if theme === 'light'}
 					<svg
@@ -1098,11 +1097,9 @@
 	.desktop-topbar {
 		display: flex;
 		justify-content: flex-end;
-		padding: 1rem 2rem;
-	}
-
-	.desktop-topbar .spacer {
-		flex: 1;
+		align-items: center;
+		padding: 0.5rem 1.5rem;
+		gap: 0.5rem;
 	}
 
 	.mobile-header {

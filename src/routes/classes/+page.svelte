@@ -377,7 +377,7 @@
 	}
 
 	.classes-header {
-		text-align: center;
+		text-align: left;
 		margin-bottom: 2.5rem;
 	}
 
