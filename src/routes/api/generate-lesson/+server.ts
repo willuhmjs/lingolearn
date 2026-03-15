@@ -6,7 +6,6 @@ import { buildLessonPrompt, type GameMode } from '$lib/server/promptBuilder';
 import { generateLessonStream } from '$lib/server/lessonLlmService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 import { LESSON_CONFIG } from '$lib/server/srsConfig';
-import { CefrService } from '$lib/server/cefrService';
 
 export async function POST(event) {
 	const { request, locals } = event;
@@ -168,9 +167,15 @@ export async function POST(event) {
 			selectedLearning = [...selectedLearning, ...nearDueLearning];
 		}
 
-		// If still too few, just take anything from the pool to ensure we have content
+		// If still too few, include all pool items as early reviews.
+		// FSRS handles this correctly: reviewing a card before its due date produces
+		// a smaller stability gain than an on-time review (high retrievability →
+		// less room to grow). We surface this to the metadata stream so the client
+		// can inform the user and the submit-answer handler can reduce XP accordingly.
+		let isEarlyReview = false;
 		if (selectedLearning.length < 3) {
 			selectedLearning = learningPool;
+			isEarlyReview = learningPool.length > 0;
 		}
 
 		// Fetch lastErrorType for all selected items so we can boost items with recent errors.
@@ -385,6 +390,27 @@ export async function POST(event) {
 				eloRating: uv.eloRating ?? 1000,
 				srsState: uv.srsState ?? 'UNSEEN'
 			}));
+
+		// Interleaved review: pull a small number of due MASTERED items and inject them
+		// as active targets alongside learning vocabulary. Mixed practice (Kornell & Bjork
+		// 2008) improves long-term retention over blocked (same-state-only) practice.
+		// These items are due by their FSRS nextReviewDate so reviewing them now is on-time.
+		// We take from masteredVocabDb (already filtered to lte:now above) rather than
+		// adding a new DB query. Shuffle for variety, then cap at the configured count.
+		const interleavedVocabDb = [...masteredVocabDb]
+			.filter((uv: any) => !EXCLUDED_POS.has(uv.vocabulary?.partOfSpeech))
+			.sort(() => Math.random() - 0.5)
+			.slice(0, LESSON_CONFIG.INTERLEAVE_MASTERED_COUNT);
+		const interleavedVocab = interleavedVocabDb.map((uv: any) => ({
+			...uv.vocabulary,
+			eloRating: uv.eloRating ?? 1000,
+			srsState: 'MASTERED' as const
+		}));
+		// Remove interleaved items from the background mastered list so they aren't
+		// listed twice in the prompt (they'll appear in the learning section instead).
+		const interleavedIds = new Set(interleavedVocab.map((v: any) => v.id));
+		const masteredVocabBackground = masteredVocab.filter((v: any) => !interleavedIds.has(v.id));
+
 		const learningVocab = learningVocabDb
 			.filter((uv: any) => !EXCLUDED_POS.has(uv.vocabulary?.partOfSpeech))
 			.map((uv: any) => ({
@@ -407,7 +433,7 @@ export async function POST(event) {
 		// encountered them yet (e.g. Akkusativ, Dativ used implicitly in sentences).
 		const allLanguageGrammarDb = await prisma.grammarRule.findMany({
 			where: { languageId: activeLanguageId, level: { in: allowedLevels } },
-			select: { id: true, title: true, description: true, guide: true, level: true }
+			select: { id: true, title: true, description: true, level: true }
 		});
 
 		// Build short ID maps for LLM (saves tokens & prevents UUID garbling)
@@ -418,6 +444,10 @@ export async function POST(event) {
 		const learnOffset = learningVocab.length;
 		knownVocab.forEach((v, i) => {
 			idMap[`v${learnOffset + i}`] = v.id;
+		});
+		const knownOffset = learnOffset + knownVocab.length;
+		interleavedVocab.forEach((v: any, i: number) => {
+			idMap[`v${knownOffset + i}`] = v.id;
 		});
 		// Use allLanguageGrammarDb for the idMap so all grammar rules get short IDs
 		allLanguageGrammarDb.forEach((g, i) => {
@@ -432,14 +462,23 @@ export async function POST(event) {
 			plural?: string | null;
 		}) =>
 			`- ${v.gender ? v.gender + ' ' : ''}${v.lemma}${v.plural ? ' (pl: ' + v.plural + ')' : ''} (${v.meanings?.[0]?.value || ''})`;
-		const masteredVocabList = masteredVocab
+		// Background mastered list excludes interleaved items (they appear in the learning section)
+		const masteredVocabList = masteredVocabBackground
 			.map((v) => formatVocab(v as unknown as Parameters<typeof formatVocab>[0]))
 			.join('\n');
-		const learningVocabList = learningVocab
+		// Interleaved mastered items are added to the learning list tagged [review] so the LLM
+		// knows these are reinforcement targets that must be used, not just background context.
+		const interleavedVocabLines = interleavedVocab
 			.map(
-				(v, i) => `${formatVocab(v as unknown as Parameters<typeof formatVocab>[0])} - ID: v${i}`
+				(v: any, i: number) => `${formatVocab(v as unknown as Parameters<typeof formatVocab>[0])} - ID: v${knownOffset + i} [review]`
 			)
 			.join('\n');
+		const learningVocabList = [
+			...learningVocab.map(
+				(v, i) => `${formatVocab(v as unknown as Parameters<typeof formatVocab>[0])} - ID: v${i}`
+			),
+			...(interleavedVocabLines ? [interleavedVocabLines] : [])
+		].join('\n');
 		const knownVocabList = knownVocab
 			.map(
 				(v, i) => `${formatVocab(v as unknown as Parameters<typeof formatVocab>[0])} - ID: v${learnOffset + i}`
@@ -451,10 +490,12 @@ export async function POST(event) {
 		const learningGrammarList = learningGrammar
 			.map((g: { title: string; description: string; id: string }) => `- ${g.title} (${g.description}) - ID: ${Object.keys(idMap).find(k => idMap[k] === g.id)}`)
 			.join('\n');
-		// All grammar rules the LLM can identify (excludes ones already in mastered/learning to avoid duplication)
+		// Grammar rules the LLM can identify if used implicitly (excludes mastered/learning to avoid duplication).
+		// Capped at 25 — enough coverage for identification without bloating the prompt.
 		const trackedGrammarIds = new Set([...masteredGrammar, ...learningGrammar].map((g: any) => g.id));
 		const additionalGrammarList = allLanguageGrammarDb
 			.filter(g => !trackedGrammarIds.has(g.id))
+			.slice(0, 25)
 			.map(g => `- ${g.title} (${g.description}) - ID: ${Object.keys(idMap).find(k => idMap[k] === g.id)}`)
 			.join('\n');
 
@@ -481,27 +522,23 @@ export async function POST(event) {
 			systemPrompt,
 			jsonSchemaObj,
 			requestSignal: request.signal,
-			targetedVocabulary: [...learningVocab, ...knownVocab],
+			targetedVocabulary: [...learningVocab, ...knownVocab, ...interleavedVocab],
 			targetedGrammar: allLanguageGrammarDb, // full list so client filter can resolve any returned ID
-			allVocabulary: [...masteredVocab, ...learningVocab, ...knownVocab],
+			allVocabulary: [...masteredVocabBackground, ...learningVocab, ...knownVocab, ...interleavedVocab],
 			gameMode,
 			idMap,
 			userLevel,
 			isAbsoluteBeginner,
+			isEarlyReview,
 			activeLangName,
 			activeLanguageId,
-			masteredVocab,
+			masteredVocab: masteredVocabBackground,
 			learningVocab,
 			useLocalLlm: user?.useLocalLlm ?? false,
 			onUsage: user?.useLocalLlm ? undefined : ({ totalTokens }) => {
 				recordTokenUsage(userId, totalTokens);
 			}
 		});
-
-		// Fire-and-forget ELO decay — runs in background, never blocks the response.
-		CefrService.applyEloDecay(userId, activeLanguageId).catch(err =>
-			console.error('[ELO Decay] Background decay failed:', err)
-		);
 
 		return new Response(stream, {
 			headers: {

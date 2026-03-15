@@ -448,6 +448,108 @@
 		</div>
 	</section>
 
+	{#if data.retentionStats && data.retentionStats.totalReviewed > 0}
+		{@const rs = data.retentionStats}
+		<section class="retention-section">
+			<h2>Memory Health</h2>
+
+			<div class="retention-kpi-row">
+				<div class="retention-kpi">
+					<span class="retention-kpi-value">{rs.avgRetentionPct}%</span>
+					<span class="retention-kpi-label">Avg. Retention</span>
+				</div>
+				<div class="retention-kpi">
+					<span class="retention-kpi-value">{rs.avgStabilityDays}d</span>
+					<span class="retention-kpi-label">Avg. Stability</span>
+				</div>
+				<div class="retention-kpi">
+					<span class="retention-kpi-value">{rs.totalReviewed}</span>
+					<span class="retention-kpi-label">Words Reviewed</span>
+				</div>
+				<div class="retention-kpi">
+					<span class="retention-kpi-value">{rs.totalLapses}</span>
+					<span class="retention-kpi-label">Total Lapses</span>
+				</div>
+			</div>
+
+			<div class="retention-charts-row">
+				<div class="retention-chart-card">
+					<h3>Retention Distribution</h3>
+					<div class="bar-chart" aria-label="Retention distribution">
+						{#each rs.retentionBuckets as bucket}
+							{@const maxCount = Math.max(...rs.retentionBuckets.map(b => b.count), 1)}
+							<div class="bar-row">
+								<span class="bar-label">{bucket.label}</span>
+								<div class="bar-track">
+									<div
+										class="bar-fill retention-fill"
+										style="width: {Math.round(bucket.count / maxCount * 100)}%"
+									></div>
+								</div>
+								<span class="bar-count">{bucket.count}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+
+				<div class="retention-chart-card">
+					<h3>Stability Distribution</h3>
+					<div class="bar-chart" aria-label="Stability distribution">
+						{#each rs.stabilityBuckets as bucket}
+							{@const maxCount = Math.max(...rs.stabilityBuckets.map(b => b.count), 1)}
+							<div class="bar-row">
+								<span class="bar-label">{bucket.label}</span>
+								<div class="bar-track">
+									<div
+										class="bar-fill stability-fill"
+										style="width: {Math.round(bucket.count / maxCount * 100)}%"
+									></div>
+								</div>
+								<span class="bar-count">{bucket.count}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+
+				<div class="retention-chart-card">
+					<h3>Forgetting Curve <span class="chart-subtitle">(median item)</span></h3>
+					<div class="bar-chart" aria-label="Predicted retention over time">
+						{#each rs.forgettingCurve as point}
+							<div class="bar-row">
+								<span class="bar-label">{point.days}d</span>
+								<div class="bar-track">
+									<div
+										class="bar-fill forgetting-fill"
+										style="width: {point.retentionPct}%"
+									></div>
+								</div>
+								<span class="bar-count">{point.retentionPct}%</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
+
+			<div class="upcoming-reviews">
+				<h3>Upcoming Reviews</h3>
+				<div class="upcoming-row">
+					<div class="upcoming-chip">
+						<span class="upcoming-count">{rs.upcomingReviews.in1Day}</span>
+						<span class="upcoming-label">due today</span>
+					</div>
+					<div class="upcoming-chip">
+						<span class="upcoming-count">{rs.upcomingReviews.in7Days}</span>
+						<span class="upcoming-label">due in 7 days</span>
+					</div>
+					<div class="upcoming-chip">
+						<span class="upcoming-count">{rs.upcomingReviews.in30Days}</span>
+						<span class="upcoming-label">due in 30 days</span>
+					</div>
+				</div>
+			</div>
+		</section>
+	{/if}
+
 	<div class="dashboard-content">
 		<section class="vocabulary-section">
 			<h2 class="">Vocabulary Heatmap</h2>
@@ -2922,5 +3024,173 @@
 
 	.test-out-section {
 		margin-top: 1.5rem;
+	}
+
+	/* ── Retention Analytics ─────────────────────────────────────────────── */
+	.retention-section {
+		margin-bottom: 3rem;
+	}
+
+	.retention-section h2 {
+		margin-bottom: 1.5rem;
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--text-color, #0f172a);
+	}
+
+	.retention-kpi-row {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.retention-kpi-row { grid-template-columns: repeat(4, 1fr); }
+	}
+
+	.retention-kpi {
+		background: var(--card-bg, #fff);
+		border-radius: 0.75rem;
+		padding: 1.25rem 1rem;
+		text-align: center;
+		border: 1px solid rgba(0,0,0,0.05);
+		box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+	}
+
+	.retention-kpi-value {
+		display: block;
+		font-size: 1.75rem;
+		font-weight: 800;
+		color: var(--primary, #4f46e5);
+		line-height: 1;
+		margin-bottom: 0.35rem;
+	}
+
+	.retention-kpi-label {
+		font-size: 0.78rem;
+		color: var(--text-muted, #64748b);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.retention-charts-row {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.25rem;
+		margin-bottom: 1.5rem;
+	}
+
+	@media (min-width: 768px) {
+		.retention-charts-row { grid-template-columns: repeat(3, 1fr); }
+	}
+
+	.retention-chart-card {
+		background: var(--card-bg, #fff);
+		border-radius: 0.75rem;
+		padding: 1.25rem;
+		border: 1px solid rgba(0,0,0,0.05);
+		box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+	}
+
+	.retention-chart-card h3 {
+		margin: 0 0 1rem;
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--text-color, #0f172a);
+	}
+
+	.chart-subtitle {
+		font-weight: 400;
+		font-size: 0.8rem;
+		color: var(--text-muted, #64748b);
+	}
+
+	.bar-chart {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.bar-row {
+		display: grid;
+		grid-template-columns: 4.5rem 1fr 2.5rem;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.bar-label {
+		font-size: 0.75rem;
+		color: var(--text-muted, #64748b);
+		text-align: right;
+		white-space: nowrap;
+	}
+
+	.bar-track {
+		background: var(--surface-2, #f1f5f9);
+		border-radius: 99px;
+		height: 0.6rem;
+		overflow: hidden;
+	}
+
+	.bar-fill {
+		height: 100%;
+		border-radius: 99px;
+		transition: width 0.4s ease;
+		min-width: 2px;
+	}
+
+	.retention-fill  { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+	.stability-fill  { background: linear-gradient(90deg, #10b981, #34d399); }
+	.forgetting-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+	.bar-count {
+		font-size: 0.75rem;
+		color: var(--text-muted, #64748b);
+		text-align: left;
+	}
+
+	.upcoming-reviews {
+		background: var(--card-bg, #fff);
+		border-radius: 0.75rem;
+		padding: 1.25rem;
+		border: 1px solid rgba(0,0,0,0.05);
+		box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+	}
+
+	.upcoming-reviews h3 {
+		margin: 0 0 1rem;
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--text-color, #0f172a);
+	}
+
+	.upcoming-row {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.upcoming-chip {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		background: var(--surface-2, #f1f5f9);
+		border-radius: 0.5rem;
+		padding: 0.75rem 1.5rem;
+		min-width: 6rem;
+	}
+
+	.upcoming-count {
+		font-size: 1.5rem;
+		font-weight: 800;
+		color: var(--primary, #4f46e5);
+		line-height: 1;
+	}
+
+	.upcoming-label {
+		font-size: 0.75rem;
+		color: var(--text-muted, #64748b);
+		margin-top: 0.25rem;
 	}
 </style>

@@ -103,6 +103,10 @@ export const LESSON_CONFIG = {
 	// Maximum number of brand-new (UNSEEN) words that can be introduced per calendar day.
 	// Prevents working-memory overload for motivated users doing many lessons in a row.
 	NEW_WORDS_PER_DAY_CAP: 10,
+	// Number of due MASTERED vocab items to interleave into each lesson.
+	// Research (Kornell & Bjork 2008) shows mixed practice improves long-term retention
+	// over blocked (same-state-only) practice. Kept small so new learning isn't crowded out.
+	INTERLEAVE_MASTERED_COUNT: 2,
 } as const;
 
 // Gamification Configuration

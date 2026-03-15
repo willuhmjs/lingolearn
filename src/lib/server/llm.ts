@@ -57,6 +57,9 @@ export interface GenerateChatCompletionOptions {
 	temperature?: number;
 	stream?: boolean;
 	signal?: AbortSignal;
+	/** When true, appends a native-language proofreader constraint to the system prompt.
+	 *  Only relevant for lesson generation — not grading or enrichment. Defaults to false. */
+	addLanguageConstraint?: boolean;
 	/** Called once with total token counts after the completion finishes. Not called for streaming responses — use the stream's final usage chunk instead. */
 	onUsage?: (usage: { promptTokens: number; completionTokens: number; totalTokens: number }) => void;
 }
@@ -75,6 +78,7 @@ export async function generateChatCompletion({
 	temperature = 0.3,
 	stream = false,
 	signal,
+	addLanguageConstraint = false,
 	onUsage
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: GenerateChatCompletionOptions): Promise<any> {
@@ -152,19 +156,21 @@ export async function generateChatCompletion({
 	const languageName = user?.activeLanguage?.name || 'German';
 
 	let constraintPrompt = '';
-	if (languageName === 'German') {
-		constraintPrompt =
-			"Agieren Sie als erfahrener deutscher Lektor. Schreiben Sie den Text in fehlerfreiem Hochdeutsch (Duden-Konform) und vermeiden Sie Anglizismen oder englische Schreibweisen bei verwandten Begriffen. Achten Sie besonders darauf, keine englischen Schreibweisen für deutsche Wörter zu verwenden (z.B. 'oft' statt 'often', 'kollektiv' statt 'collective').";
-	} else if (languageName === 'French') {
-		constraintPrompt =
-			"Agissez en tant que relecteur français expérimenté. Écrivez le texte dans un français impeccable (conforme à l'Académie française) et évitez les anglicismes ou les orthographes anglaises pour les termes apparentés. Veillez particulièrement à ne pas utiliser l'orthographe anglaise pour les mots français.";
-	} else if (languageName === 'Spanish') {
-		constraintPrompt =
-			'Actúe como un revisor de español experimentado. Escriba el texto en un español impecable (conforme a la RAE) y evite los anglicismos o la ortografía inglesa para términos relacionados. Tenga especial cuidado en no utilizar la ortografía inglesa para palabras españolas.';
+	if (addLanguageConstraint) {
+		if (languageName === 'German') {
+			constraintPrompt =
+				"Agieren Sie als erfahrener deutscher Lektor. Schreiben Sie den Text in fehlerfreiem Hochdeutsch (Duden-Konform) und vermeiden Sie Anglizismen oder englische Schreibweisen bei verwandten Begriffen. Achten Sie besonders darauf, keine englischen Schreibweisen für deutsche Wörter zu verwenden (z.B. 'oft' statt 'often', 'kollektiv' statt 'collective').";
+		} else if (languageName === 'French') {
+			constraintPrompt =
+				"Agissez en tant que relecteur français expérimenté. Écrivez le texte dans un français impeccable (conforme à l'Académie française) et évitez les anglicismes ou les orthographes anglaises pour les termes apparentés. Veillez particulièrement à ne pas utiliser l'orthographe anglaise pour les mots français.";
+		} else if (languageName === 'Spanish') {
+			constraintPrompt =
+				'Actúe como un revisor de español experimentado. Escriba el texto en un español impecable (conforme a la RAE) y evite los anglicismos o la ortografía inglesa para términos relacionados. Tenga especial cuidado en no utilizar la ortografía inglesa para palabras españolas.';
+		}
 	}
 
 	if (systemPrompt) {
-		payloadMessages.unshift({ role: 'system', content: `${systemPrompt}\n\n${constraintPrompt}` });
+		payloadMessages.unshift({ role: 'system', content: constraintPrompt ? `${systemPrompt}\n\n${constraintPrompt}` : systemPrompt });
 	} else if (constraintPrompt) {
 		payloadMessages.unshift({ role: 'system', content: constraintPrompt });
 	}

@@ -1275,10 +1275,16 @@
 	}
 
 	$: parsedChallengeText = (() => {
-		console.log('challengeText is:', challenge?.challengeText);
 		if (!challenge?.challengeText) return '';
 		try {
-			return parseTextWithTooltips(challenge.challengeText, true, isStreaming);
+			// Capitalize the first character when the challenge text is in the target language
+			// (not native-to-target, where challengeText is English).
+			const isTargetLangText = challenge.gameMode !== 'native-to-target';
+			let text = challenge.challengeText;
+			if (isTargetLangText && text.length > 0) {
+				text = text.charAt(0).toUpperCase() + text.slice(1);
+			}
+			return parseTextWithTooltips(text, true, isStreaming);
 		} catch (e) {
 			console.error('Error in parseTextWithTooltips for challengeText:', e);
 			return challenge.challengeText;
@@ -1286,7 +1292,6 @@
 	})();
 
 	$: parsedTargetSentence = (() => {
-		console.log('targetSentence is:', challenge?.targetSentence);
 		if (!challenge?.targetSentence) return '';
 		try {
 			return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);

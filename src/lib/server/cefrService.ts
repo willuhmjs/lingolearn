@@ -318,6 +318,50 @@ export class CefrService {
       });
     }
 
+    // Seed FSRS progress records for auto-mastered rules that don't yet have one.
+    // We assign a reduced initial stability (7 days) rather than leaving the record
+    // absent entirely. This schedules a light "check-in" review within a week so the
+    // lesson generator can surface assumed-but-potentially-weak grammar for confirmation,
+    // catching gaps that pure auto-mastery would otherwise silently miss.
+    if (rulesToMaster.length > 0) {
+      const AUTO_MASTERY_STABILITY = 7; // days — triggers review within ~1 week
+      const now = new Date();
+      const checkInDate = new Date(now.getTime() + AUTO_MASTERY_STABILITY * 24 * 60 * 60 * 1000);
+
+      // Only create progress records for rules that don't already have one
+      // (existing records from prior real study sessions must not be overwritten).
+      const existingProgress = await prisma.userGrammarRuleProgress.findMany({
+        where: { userId, grammarRuleId: { in: rulesToMaster.map(r => r.id) } },
+        select: { grammarRuleId: true }
+      });
+      const alreadyHasProgress = new Set(existingProgress.map(p => p.grammarRuleId));
+
+      const progressOps = rulesToMaster
+        .filter(rule => !alreadyHasProgress.has(rule.id))
+        .map(rule =>
+          prisma.userGrammarRuleProgress.create({
+            data: {
+              userId,
+              grammarRuleId: rule.id,
+              stability: AUTO_MASTERY_STABILITY,
+              difficulty: 5.0,
+              retrievability: 1.0,
+              repetitions: 1, // counts as one "review" so FSRS treats it as a known card
+              lapses: 0,
+              lastReviewDate: now,
+              nextReviewDate: checkInDate
+            }
+          })
+        );
+
+      if (progressOps.length > 0) {
+        await prisma.$transaction(progressOps);
+        console.log(
+          `[Grammar Mastery] Seeded FSRS check-in records for ${progressOps.length} auto-mastered rule(s) (stability=${AUTO_MASTERY_STABILITY}d)`
+        );
+      }
+    }
+
     console.log(
       `[Grammar Mastery] User ${userId}: mastered ${levelsToMaster.length} prior level(s), reverted ${levelsToRevert.length} level(s) → placed at ${newLevel}`
     );

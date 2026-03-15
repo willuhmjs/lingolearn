@@ -189,6 +189,7 @@ Return your response as a JSON object with the following structure:
   "message": "Your response as the persona in ${currentSession.language}",
   "feedback": "Brief English feedback on the user's grammar/vocabulary usage strictly in their MOST RECENT message",
   "correctionType": "correction" | "feedback",
+  "globalScore": <number (0.0 to 1.0) — holistic quality score for the user's MOST RECENT message. 0.0 = no attempt or help request, 0.5 = significant errors, 0.85+ = correct with minor issues>,
   "vocabularyUpdates": [ { "id": "<vocabulary ID from the list>", "score": <number (0.0 to 1.0)> } ],
   "grammarUpdates": [ { "id": "<grammar ID from the list>", "score": <number (0.0 to 1.0)> } ],
   "extraVocabLemmas": ["<lemma1>", "<lemma2>"]${('assignmentId' in currentSession && currentSession.assignmentId) ? ',\n  "assignmentCompleted": <boolean>' : ''}
@@ -278,16 +279,22 @@ Return your response as a JSON object with the following structure:
 					parsedResponse.vocabularyUpdates = mappedVocabUpdates;
 					parsedResponse.grammarUpdates = mappedGrammarUpdates;
 
+					// Prefer the LLM's own holistic globalScore (matches lesson grader behaviour).
+					// Fall back to the mean of item scores only when the LLM omits it, to avoid
+					// the previous bug where a single 0-scored item could tank a globally correct answer.
 					const allItemScores = [
 						...mappedVocabUpdates.map((u: { score: number }) => u.score),
 						...mappedGrammarUpdates.map((u: { score: number }) => u.score)
 					];
-					const derivedGlobalScore = allItemScores.length > 0
+					const fallbackScore = allItemScores.length > 0
 						? allItemScores.reduce((a: number, b: number) => a + b, 0) / allItemScores.length
 						: 1.0;
+					const globalScore = typeof parsedResponse.globalScore === 'number'
+						? Math.max(0, Math.min(1, parsedResponse.globalScore))
+						: fallbackScore;
 
 					const evaluationPayload = {
-						globalScore: derivedGlobalScore,
+						globalScore,
 						vocabularyUpdates: mappedVocabUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						grammarUpdates: mappedGrammarUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						extraVocabLemmas: parsedResponse.extraVocabLemmas || [],

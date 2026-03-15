@@ -9,14 +9,6 @@ import { XP_CONFIG, computeAnswerXp, levelUpXp } from '$lib/server/srsConfig';
 import { isClearlyCorrect, isClearlyWrong } from '$lib/server/fuzzyGrade';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 
-/** Fire-and-forget ELO decay — runs in background, never blocks the response. */
-function fireEloDecay(userId: string, languageId: string | undefined) {
-	if (!languageId) return;
-	CefrService.applyEloDecay(userId, languageId).catch(err =>
-		console.error('[ELO Decay] Background decay failed:', err)
-	);
-}
-
 /** Track a correct/incorrect answer against an assignment score record. */
 async function updateAssignmentScore(assignmentId: string, userId: string, isCorrect: boolean) {
 	const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
@@ -105,7 +97,8 @@ export async function POST(event) {
 
 		// Fetch the full objects for the targeted IDs, preserving client's order
 		const targetedVocabRaw = await prisma.vocabulary.findMany({
-			where: { id: { in: targetedVocabularyIds || [] } }
+			where: { id: { in: targetedVocabularyIds || [] } },
+			include: { meanings: true }
 		});
 		const targetedVocabulary = (targetedVocabularyIds || [])
 			.map((id: string) => targetedVocabRaw.find((v) => v.id === id))
@@ -164,7 +157,6 @@ export async function POST(event) {
 				await updateGamification(userId, answerXp + bonusXp);
 			}
 
-			fireEloDecay(userId, locals.user.activeLanguage?.id);
 			return json({ ...remappedEvaluation, assignmentProgress, levelUp });
 		}
 
@@ -206,7 +198,6 @@ export async function POST(event) {
 					await updateGamification(userId, answerXp + bonusXp);
 				}
 
-				fireEloDecay(userId, locals.user.activeLanguage?.id);
 				return json({ ...remappedEvaluation, assignmentProgress, levelUp });
 			}
 
@@ -341,8 +332,6 @@ export async function POST(event) {
 						const bonusXp = levelUp ? levelUpXp(levelUp.newLevel) : 0;
 						await updateGamification(userId, answerXp + bonusXp);
 					}
-
-					fireEloDecay(userId, activeLanguageId);
 
 					// Send the final evaluation payload before closing the stream
 					// We return the remapped evaluation so the client gets real UUIDs back with eloAfter

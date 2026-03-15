@@ -14,6 +14,7 @@ export async function generateLessonStream({
 	idMap,
 	userLevel,
 	isAbsoluteBeginner,
+	isEarlyReview,
 	activeLangName,
 	activeLanguageId,
 	masteredVocab,
@@ -32,6 +33,7 @@ export async function generateLessonStream({
 	idMap: Record<string, string>;
 	userLevel: string;
 	isAbsoluteBeginner: boolean;
+	isEarlyReview: boolean;
 	activeLangName: string;
 	activeLanguageId: string;
 	masteredVocab: any[];
@@ -46,6 +48,7 @@ export async function generateLessonStream({
 		jsonSchema: jsonSchemaObj,
 		stream: false,
 		signal: requestSignal,
+		addLanguageConstraint: true,
 		onUsage
 	});
 
@@ -67,6 +70,12 @@ export async function generateLessonStream({
 		throw new Error('LLM response was not valid JSON. Please try again.');
 	}
 
+	// Tracks whether the client has cancelled the stream. Used to guard controller
+	// calls after cancellation — calling enqueue/close/error on a cancelled
+	// ReadableStream controller throws synchronously and can produce an unhandled
+	// rejection that crashes the Node.js process.
+	let streamCancelled = false;
+
 	const stream = new ReadableStream({
 		async start(controller) {
 			// Send metadata first
@@ -82,7 +91,8 @@ export async function generateLessonStream({
 							gameMode,
 							idMap,
 							userLevel,
-							isAbsoluteBeginner
+							isAbsoluteBeginner,
+							isEarlyReview
 						}
 					}) + '\n'
 				)
@@ -96,16 +106,16 @@ export async function generateLessonStream({
 				}
 
 				// Vocab enrichment: look up words from generated text in the full Vocabulary table.
-				// Run as a fire-and-forget promise so a client disconnect (stream cancel) never
-				// interrupts enrichment — it must always complete because it writes to the shared
-				// DB and records good-will token usage for the user.
+				// Must always complete even after a client disconnect — it writes to the shared DB
+				// and records good-will token usage. The outer .catch() is a final safety net that
+				// prevents any error escaping to the process-level unhandledRejection handler.
 				const enrichmentPromise = (async () => {
 					try {
 						let cleaned = fullContent;
-						const firstBrace = cleaned.indexOf('{');
-						const lastBrace = cleaned.lastIndexOf('}');
-						if (firstBrace !== -1 && lastBrace !== -1) {
-							cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+						const fb = cleaned.indexOf('{');
+						const lb = cleaned.lastIndexOf('}');
+						if (fb !== -1 && lb !== -1) {
+							cleaned = cleaned.slice(fb, lb + 1);
 						}
 
 						if (!cleaned) {
@@ -137,12 +147,13 @@ export async function generateLessonStream({
 							activeLanguageId,
 							masteredVocab,
 							learningVocab,
-							(data) => {
-								// Enqueue enrichment chunks — safe to ignore errors if stream already closed
-								try {
-									controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
-								} catch {
-									// Stream already closed (client disconnected); enrichment still ran
+							(chunkData) => {
+								if (!streamCancelled) {
+									try {
+										controller.enqueue(new TextEncoder().encode(JSON.stringify(chunkData) + '\n'));
+									} catch {
+										// Stream closed between the guard check and the enqueue; safe to ignore.
+									}
 								}
 							},
 							useLocalLlm,
@@ -155,16 +166,23 @@ export async function generateLessonStream({
 							console.error('Vocab enrichment failed:', enrichErr);
 						}
 					}
-				})();
+				})().catch((err) => {
+					console.error('Vocab enrichment unhandled error:', err);
+				});
 
 				await enrichmentPromise;
-				controller.close();
+
+				if (!streamCancelled) {
+					try { controller.close(); } catch { /* already closed or cancelled */ }
+				}
 			} catch (e) {
-				controller.error(e);
+				if (!streamCancelled) {
+					try { controller.error(e); } catch { /* already errored or cancelled */ }
+				}
 			}
 		},
 		cancel() {
-			// Stream cancelled by client — enrichment already running independently above
+			streamCancelled = true;
 		}
 	});
 

@@ -54,13 +54,23 @@ export const DEFAULT_FSRS_PARAMETERS: FsrsParameters = {
 export type Rating = 1 | 2 | 3 | 4;
 
 /**
- * Converts a 0-1 score to FSRS rating
+ * Converts a 0-1 score to FSRS rating.
+ *
+ * Thresholds are calibrated to the LLM grader's actual score distribution:
+ *   - 0.0      → total failure / help request (Again)
+ *   - 0.01–0.49 → meaningful errors present (Hard)
+ *   - 0.5–0.84  → partially correct or minor errors (Good)
+ *   - 0.85–1.0  → correct with at most trivial issues (Easy)
+ *
+ * Using 0 as the sole "Again" trigger (rather than < 0.3) prevents
+ * LLM partial-credit scores like 0.2 or 0.25 from being penalised as
+ * complete failures — the LLM awards these for genuine partial knowledge.
  */
 export function scoreToRating(score: number): Rating {
-	if (score < 0.3) return 1; // Again
-	if (score < 0.6) return 2; // Hard
-	if (score < 0.9) return 3; // Good
-	return 4; // Easy
+	if (score === 0) return 1;  // Again  — total failure
+	if (score < 0.5) return 2;  // Hard   — significant errors
+	if (score < 0.85) return 3; // Good   — partial/minor errors
+	return 4;                   // Easy   — correct
 }
 
 /**

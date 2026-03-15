@@ -401,8 +401,15 @@ export const GERMAN_STRONG_VERB_LOOKUP: Record<string, string> = {
 	vergaß: 'vergessen', vergaßen: 'vergessen',
 	vergass: 'vergessen', vergassen: 'vergessen',
 	vergisst: 'vergessen',
-	// anfangen
+	// anfangen (past: fing; present umlaut 2nd/3rd person: fängst/fängt)
 	fing: 'anfangen', fingen: 'anfangen', fingst: 'anfangen',
+	fängst: 'anfangen', faengst: 'anfangen', fängt: 'anfangen', faengt: 'anfangen',
+	// einladen (umlaut forms unique to this verb)
+	lädst: 'einladen', laedst: 'einladen', lädt: 'einladen', laedt: 'einladen',
+	// abfahren 2nd/3rd person umlaut forms (fährst/fährt) — note: these are
+	// already mapped to "fahren" via the fahren entry above; we leave them there
+	// since bare "fahren" is the correct fallback and the AI prompt will resolve
+	// the separable prefix from context when needed.
 };
 
 /**
@@ -594,6 +601,10 @@ async function upsertAiVocabEntry(
 	return null;
 }
 
+// Module-level flag: only one AI enrichment call at a time to avoid overwhelming
+// providers with low concurrency limits (e.g. university proxies).
+let enrichmentLlmInFlight = false;
+
 export async function processVocabEnrichment(
 	userId: string,
 	targetLanguageText: string,
@@ -666,100 +677,80 @@ export async function processVocabEnrichment(
 				: [];
 		const fullSentence = targetLanguageText.replace(/<[^>]+>/g, '').trim();
 
-		if (unknownContentWords.length > 0 || ambiguousInSentence.length > 0) {
-			// Signal start of AI lookup
+		if ((unknownContentWords.length > 0 || ambiguousInSentence.length > 0) && !enrichmentLlmInFlight) {
 			enqueue({ type: 'vocab_enrichment', data: [], status: 'searching' });
-
-			const aiTasks: Promise<void>[] = [];
-
-			if (unknownContentWords.length > 0) {
-				aiTasks.push(
-					(async () => {
-						try {
-							const aiRes = await generateChatCompletion({
-								userId,
-								messages: [
-									{
-										role: 'user',
-										content: `Provide vocabulary dictionary entries for these ${activeLangName} words or inflected forms: ${JSON.stringify(unknownContentWords)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"... (in ${activeLangName})","meaning":"... (in English)","partOfSpeech":"noun|verb|adjective|adverb|preposition|conjunction|pronoun|article|particle|interjection|other","gender":"MASCULINE|FEMININE|NEUTER or null for non-nouns","plural":"plural form or null"}]}`
-									}
-								],
-								systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given (which may be an inflected form), output its base-form (lemma) dictionary entry in ${activeLangName} with an English meaning. Output ONLY valid JSON matching the requested schema, no markdown or extra text.`,
-								jsonMode: true,
-								temperature: 0.1,
-								// Good-will: these calls create/enrich shared vocabulary in the DB
-								onUsage: chargeQuota ? ({ totalTokens }) => {
-									recordTokenUsage(userId, totalTokens, true);
-								} : undefined
-							});
-							let aiResultRaw: string;
-							if (typeof aiRes.choices?.[0]?.message?.content === 'string') {
-								aiResultRaw = aiRes.choices[0].message.content;
-							} else {
-								aiResultRaw = JSON.stringify(aiRes);
-							}
-							const aiResult = JSON.parse(aiResultRaw);
-							if (aiResult?.vocabulary?.length > 0) {
-								// Process all entries in parallel — no sequential awaits.
-								const aiVocabEntries = (await Promise.all(
-									aiResult.vocabulary.map((v: any) =>
-										upsertAiVocabEntry(v, activeLangName, activeLanguageId, skipDbWrite, 'other')
-									)
-								)).filter(Boolean);
-								enqueue({ type: 'vocab_enrichment', data: aiVocabEntries });
-							}
-						} catch (aiFallbackErr) {
-							console.error('AI vocab fallback failed:', aiFallbackErr);
+			enrichmentLlmInFlight = true;
+			try {
+				if (unknownContentWords.length > 0) {
+					try {
+						const aiRes = await generateChatCompletion({
+							userId,
+							messages: [
+								{
+									role: 'user',
+									content: `Provide vocabulary dictionary entries for these ${activeLangName} words or inflected forms: ${JSON.stringify(unknownContentWords)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"... (in ${activeLangName})","meaning":"... (in English)","partOfSpeech":"noun|verb|adjective|adverb|preposition|conjunction|pronoun|article|particle|interjection|other","gender":"MASCULINE|FEMININE|NEUTER or null for non-nouns","plural":"plural form or null"}]}`
+								}
+							],
+							systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given (which may be an inflected or conjugated form), output its canonical dictionary lemma in ${activeLangName} with an English meaning. CRITICAL: The lemma must be the full canonical infinitive or base form as it appears in a dictionary — including any separable or inseparable prefix. For example, if given "fange" (from "anfangen"), return lemma "anfangen", not "fangen". If given "rufe" (from "anrufen"), return lemma "anrufen". If given "kommt" (from "ankommen"), return lemma "ankommen". For nouns, return the nominative singular form with correct capitalisation. Output ONLY valid JSON matching the requested schema, no markdown or extra text.`,
+							jsonMode: true,
+							temperature: 0.1,
+							onUsage: chargeQuota ? ({ totalTokens }) => {
+								recordTokenUsage(userId, totalTokens, true);
+							} : undefined
+						});
+						const aiResultRaw = typeof aiRes.choices?.[0]?.message?.content === 'string'
+							? aiRes.choices[0].message.content
+							: JSON.stringify(aiRes);
+						const aiResult = JSON.parse(aiResultRaw);
+						if (aiResult?.vocabulary?.length > 0) {
+							const aiVocabEntries = (await Promise.all(
+								aiResult.vocabulary.map((v: any) =>
+									upsertAiVocabEntry(v, activeLangName, activeLanguageId, skipDbWrite, 'other')
+								)
+							)).filter(Boolean);
+							enqueue({ type: 'vocab_enrichment', data: aiVocabEntries });
 						}
-					})()
-				);
-			}
+					} catch (aiFallbackErr) {
+						console.error('AI vocab fallback failed:', aiFallbackErr);
+					}
+				}
 
-			if (ambiguousInSentence.length > 0 && fullSentence) {
-				aiTasks.push(
-					(async () => {
-						try {
-							const ctxRes = await generateChatCompletion({
-								userId,
-								messages: [
-									{
-										role: 'user',
-										content: `Sentence: "${fullSentence}"\nWords to explain: ${JSON.stringify(ambiguousInSentence)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"the word as it appears (in ${activeLangName})","meaning":"precise contextual English meaning/role in this sentence","partOfSpeech":"verb|pronoun|particle|other"}]}`
-									}
-								],
-								systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given, provide a generic, dictionary-style definition and its grammatical role. DO NOT provide a definition that is tied to a specific context or sentence. Output ONLY valid JSON, no markdown.`,
-								jsonMode: true,
-								temperature: 0.1,
-								// Good-will: these calls create/enrich shared vocabulary in the DB
-								onUsage: chargeQuota ? ({ totalTokens }) => {
-									recordTokenUsage(userId, totalTokens, true);
-								} : undefined
-							});
-							let ctxRaw: string;
-							if (typeof ctxRes.choices?.[0]?.message?.content === 'string') {
-								ctxRaw = ctxRes.choices[0].message.content;
-							} else {
-								ctxRaw = JSON.stringify(ctxRes);
-							}
-							const ctxResult = JSON.parse(ctxRaw);
-							if (ctxResult?.vocabulary?.length > 0) {
-								// Process all entries in parallel — no sequential awaits.
-								const ctxEntries = (await Promise.all(
-									ctxResult.vocabulary.map((v: any) =>
-										upsertAiVocabEntry(v, activeLangName, activeLanguageId, skipDbWrite, 'pronoun')
-									)
-								)).filter(Boolean);
-								enqueue({ type: 'vocab_enrichment', data: ctxEntries });
-							}
-						} catch (ctxErr) {
-							console.error('Contextual word AI lookup failed:', ctxErr);
+				if (ambiguousInSentence.length > 0 && fullSentence) {
+					try {
+						const ctxRes = await generateChatCompletion({
+							userId,
+							messages: [
+								{
+									role: 'user',
+									content: `Sentence: "${fullSentence}"\nWords to explain: ${JSON.stringify(ambiguousInSentence)}\n\nRespond with JSON in this exact shape:\n{"vocabulary":[{"lemma":"canonical dictionary base form (infinitive for verbs, nominative singular for nouns) in ${activeLangName}","meaning":"precise contextual English meaning/role in this sentence","partOfSpeech":"verb|pronoun|particle|other"}]}`
+								}
+							],
+							systemPrompt: `You are an expert ${activeLangName} lexicographer. For each word given, provide a generic, dictionary-style definition and its grammatical role. DO NOT provide a definition that is tied to a specific context or sentence. Output ONLY valid JSON, no markdown.`,
+							jsonMode: true,
+							temperature: 0.1,
+							onUsage: chargeQuota ? ({ totalTokens }) => {
+								recordTokenUsage(userId, totalTokens, true);
+							} : undefined
+						});
+						const ctxRaw = typeof ctxRes.choices?.[0]?.message?.content === 'string'
+							? ctxRes.choices[0].message.content
+							: JSON.stringify(ctxRes);
+						const ctxResult = JSON.parse(ctxRaw);
+						if (ctxResult?.vocabulary?.length > 0) {
+							const ctxEntries = (await Promise.all(
+								ctxResult.vocabulary.map((v: any) =>
+									upsertAiVocabEntry(v, activeLangName, activeLanguageId, skipDbWrite, 'pronoun')
+								)
+							)).filter(Boolean);
+							enqueue({ type: 'vocab_enrichment', data: ctxEntries });
 						}
-					})()
-				);
+					} catch (ctxErr) {
+						console.error('Contextual word AI lookup failed:', ctxErr);
+					}
+				}
+			} finally {
+				enrichmentLlmInFlight = false;
 			}
-
-			// Await all AI tasks so the stream stays open and tooltips show "AI analyzing"
-			await Promise.allSettled(aiTasks);
 		}
 	} catch (err) {
 		console.error('Vocab enrichment setup failed', err);

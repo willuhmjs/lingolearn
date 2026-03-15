@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { redirect } from '@sveltejs/kit';
 import { CefrService } from '$lib/server/cefrService';
+import { loadRetentionStats } from '$lib/server/retentionStats';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -110,9 +111,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const dueReviewCount = dueVocabReviewCount + dueGrammarReviewCount;
 
-	const cefrProgress = user.activeLanguage?.id 
-		? await CefrService.getCefrProgress(user.id, user.activeLanguage.id)
-		: null;
+	const [cefrProgress, retentionStats] = await Promise.all([
+		user.activeLanguage?.id
+			? CefrService.getCefrProgress(user.id, user.activeLanguage.id)
+			: Promise.resolve(null),
+		loadRetentionStats(user.id)
+	]);
 
 	return {
 		vocabularies,
@@ -120,6 +124,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		allGrammarRules,
 		dueReviewCount,
 		cefrProgress,
+		retentionStats,
 		dueSoonAssignments,
 		activeLiveSessions
 	};

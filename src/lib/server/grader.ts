@@ -87,149 +87,99 @@ export function buildEvaluationPrompt(
 		idMap[`g${i}`] = g.id;
 	});
 
-	const vocabList = targetedVocabulary.map((v, i) => `- ${v.lemma} (ID: v${i})`).join('\n');
+	const vocabList = targetedVocabulary.map((v, i) => {
+		const meanings = (v.meanings as { value: string }[] | undefined)
+			?.map((m) => m.value)
+			.filter(Boolean)
+			.join(' / ');
+		return `- ${v.lemma} (ID: v${i})${meanings ? ` — accepted meanings: ${meanings}` : ''}`;
+	}).join('\n');
 	const grammarList = targetedGrammar.map((g, i) => `- ${g.title} (ID: g${i})`).join('\n');
 
 	const isAbsoluteBeginner = userLevel === 'A1';
-	const beginnerEncouragement = isAbsoluteBeginner
-		? `\nIMPORTANT BEGINNER CONTEXT: This student is at A1 level and may be just starting out. Be extra encouraging in your feedback. Celebrate what they got right before mentioning errors. Use simple language in feedback. If they attempted something even partially correct, give partial credit (at least 0.3). The goal is to build confidence while learning.\n`
+	const beginnerNote = isAbsoluteBeginner
+		? `\nBEGINNER (A1): Be extra encouraging. Celebrate correct parts before errors. Give partial credit (≥0.3) for genuine attempts. Build confidence.\n`
 		: '';
 
-	if (gameMode === 'fill-blank') {
-		const systemPrompt = `You are an expert language tutor evaluating a student's fill-in-the-blank answers.
-You must output ONLY strictly valid JSON. Do not include markdown formatting or extra text.
-${beginnerEncouragement}
+	// Shared rules injected into every grader prompt
+	const sharedRules = `
+SCORING RULES (apply to all modes):
+- Output ONLY valid JSON. "feedback" MUST be the first key.
+- Score each vocab/grammar item INDEPENDENTLY (0.0–1.0). Do not penalize one item for errors in another.
+- ASCII special-character equivalents are fully correct (ss=ß, ae=ä, oe=ö, ue=ü, Ae=Ä, Oe=Ö, Ue=Ü) — score 1.0.
+- Capitalization-only errors: score ≥0.8, never 0.
+- Consistency: if globalScore ≥0.8, no correctly-attempted item should score below 0.5.
+- ACCEPTED MEANINGS: accept ANY meaning listed on the student's flashcard as fully correct (score 1.0), even if a different synonym appears in the target sentence.
+- If the user asks for help or makes no real attempt (e.g. "?", "I don't know"), globalScore MUST be 0.0 — beginner encouragement does NOT apply.
+- errorType: set to the best-fit category if score < 0.8, else null. Categories: wrong_case | wrong_tense | wrong_gender | spelling | word_order | vocabulary_gap`;
 
-Your task:
-The student was given a ${activeLanguageName} sentence with blanks for targeted vocabulary words. They provided answers for each blank.
-Compare their answers against the expected complete ${activeLanguageName} sentence.
-Calculate a global accuracy score between 0.0 and 1.0. Be forgiving of minor typos and capitalization errors.
-Note: Do not penalize the user if they use ASCII equivalents for ${activeLanguageName} special characters (e.g., 'ss' instead of 'ß', 'ae' instead of 'ä', 'oe' instead of 'ö', 'ue' instead of 'ü', or their uppercase equivalents like 'Ae' for 'Ä', 'Ue' for 'Ü', etc.). Treat these as ENTIRELY correct — they MUST receive a score of 1.0 for that vocabulary item.
-IMPORTANT: Capitalization errors (e.g., writing "Gluecklich" instead of "glücklich") are MINOR issues. If the student wrote the correct word with only a capitalization difference, the vocabulary score for that word MUST be at least 0.8. Do NOT give a score of 0 for capitalization-only errors.
-SCORING CONSISTENCY: Each vocabulary/grammar item score must be consistent with the global score. If the global score is above 0.8, no individual item that the student attempted correctly (even with minor issues) should receive a score below 0.5.
-Provide helpful, concise feedback in ${nativeLanguage} ("feedback").
-For vocabularyUpdates and grammarUpdates, provide a score between 0.0 and 1.0 depending on how well they used the item. Score each item INDEPENDENTLY.
-If the user correctly used any OTHER ${activeLanguageName} words by coincidence that are not in the targeted list, output their base forms (lemmas) with proper capitalization (e.g. nouns capitalized in German) in the "extraVocabLemmas" array.
+	const jsonFormat = `
+{
+  "feedback": "<${nativeLanguage} feedback>",
+  "globalScore": <0.0–1.0>,
+  "vocabularyUpdates": [{"id": "<vocab ID>", "score": <0.0–1.0>, "errorType": "<category|null>"}],
+  "grammarUpdates": [{"id": "<grammar ID>", "score": <0.0–1.0>, "errorType": "<category|null>"}],
+  "extraVocabLemmas": ["<${activeLanguageName} lemma>"]
+}`;
 
-IMPORTANT: "feedback" MUST be the very first key in your JSON response.
-
+	const listsBlock = `
 Targeted Vocabulary:
 ${vocabList}
 
 Targeted Grammar Rules:
-${grammarList}
+${grammarList}`;
 
-JSON format:
-{
-  "feedback": "<string (${nativeLanguage} feedback)>",
-  "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "extraVocabLemmas": ["<lemma1>", "<lemma2>"]
-}
-For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
+	if (gameMode === 'fill-blank') {
+		const systemPrompt = `You are an expert language tutor grading a fill-in-the-blank exercise. Output ONLY valid JSON.
+${beginnerNote}${sharedRules}
 
-		const userMessage = `Complete ${activeLanguageName} sentence: ${normalizeText(targetSentence)}\nUser's blank answers: ${normalizeText(userInput)}`;
+Task: The student filled blanks in a ${activeLanguageName} sentence. Compare their answers to the complete sentence. Score each blank independently. Provide concise ${nativeLanguage} feedback. List any incidental correct ${activeLanguageName} words (not in targets) in extraVocabLemmas.
+${listsBlock}
+
+JSON format:${jsonFormat}`;
+
+		const userMessage = `Complete sentence: ${normalizeText(targetSentence)}\nStudent's answers: ${normalizeText(userInput)}`;
 		return { systemPrompt, userMessage, idMap };
 	}
 
 	if (gameMode === 'multiple-choice') {
-		const systemPrompt = `You are an expert language tutor evaluating a student's multiple choice answer.
-You must output ONLY strictly valid JSON. Do not include markdown formatting or extra text.
-${beginnerEncouragement}
+		const systemPrompt = `You are an expert language tutor grading a multiple-choice translation question. Output ONLY valid JSON.
+${beginnerNote}${sharedRules}
 
-Your task:
-The student was shown a ${activeLanguageName} sentence and chose a ${nativeLanguage} translation from multiple options.
-Compare their chosen answer to the correct translation.
-If they chose correctly, score 1.0. If wrong, score 0.0.
-Provide brief feedback in ${nativeLanguage} ("feedback") explaining why the correct answer is right.
-For vocabularyUpdates and grammarUpdates, provide a score of 1.0 or 0.0 based on whether they got the question right.
-If the user correctly recognized any OTHER ${activeLanguageName} words by coincidence that are not in the targeted list, output their base forms (lemmas) with proper capitalization (e.g. nouns capitalized in German) in the "extraVocabLemmas" array.
+Task: The student chose a ${nativeLanguage} translation for a ${activeLanguageName} sentence. Score 1.0 if correct, 0.0 if wrong. Explain briefly why the correct answer is right. List any incidental correct ${activeLanguageName} words in extraVocabLemmas.
+${listsBlock}
 
-IMPORTANT: "feedback" MUST be the very first key in your JSON response.
+JSON format:${jsonFormat}`;
 
-Targeted Vocabulary:
-${vocabList}
-
-Targeted Grammar Rules:
-${grammarList}
-
-JSON format:
-{
-  "feedback": "<string (${nativeLanguage} feedback)>",
-  "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "extraVocabLemmas": ["<lemma1>", "<lemma2>"]
-}
-For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
-
-		const userMessage = `Correct ${nativeLanguage} translation: ${targetSentence}\nUser's chosen answer: ${userInput}`;
+		const userMessage = `Correct answer: ${targetSentence}\nStudent's choice: ${userInput}`;
 		return { systemPrompt, userMessage, idMap };
 	}
 
 	// Translation modes (native-to-target, target-to-native)
 	const isNativeToTarget = gameMode === 'native-to-target';
-	const userLanguage = isNativeToTarget ? '${activeLanguageName}' : nativeLanguage;
-	const targetLanguage = isNativeToTarget ? '${activeLanguageName}' : nativeLanguage;
 
-	const asciiNote = isNativeToTarget
-		? `Note: Do not penalize the user if they use ASCII equivalents for ${activeLanguageName} special characters (e.g., 'ss' instead of 'ß', 'ae' instead of 'ä', 'oe' instead of 'ö', 'ue' instead of 'ü', or their uppercase equivalents like 'Ae' for 'Ä'). Treat these as entirely correct.`
-		: `IMPORTANT: When ${activeLanguageName} does not grammatically distinguish between certain ${nativeLanguage} verb forms (e.g., simple vs. progressive vs. continuous aspect), accept ALL equivalent ${nativeLanguage} verb forms as fully correct. For example, if ${activeLanguageName} uses a single present tense form where ${nativeLanguage} has "I come" / "I am coming" / "I do come", all must receive a score of 1.0. Only penalize verb form differences when ${activeLanguageName} itself makes that distinction (e.g., separate past tenses like preterite vs. perfect, if applicable).`;
+	const modeNotes = isNativeToTarget
+		? `- The student is writing in ${activeLanguageName}. Accept ASCII equivalents as correct.
+- If they provide a ${nativeLanguage} translation instead of attempting, score 0.0 and give the correct answer in feedback.
+- extraVocabLemmas: list other ${activeLanguageName} words used correctly (not in targets).`
+		: `- The student is translating INTO ${nativeLanguage}. They will not write ${activeLanguageName} words — check whether each targeted word's meaning is correctly conveyed.
+- Accept all equivalent ${nativeLanguage} verb forms when ${activeLanguageName} does not distinguish them (e.g. "I come" / "I am coming" / "I do come" are all correct for a single ${activeLanguageName} present tense).
+- Score grammar rules based on whether the translation reflects understanding of the rule (e.g. past tense → did they translate into past tense?).
+- extraVocabLemmas: list other ${activeLanguageName} words whose meaning the student correctly translated. Output ${activeLanguageName} lemmas only, not ${nativeLanguage} words.`;
 
-	const grammarNote = isNativeToTarget
-		? ''
-		: `Note: Since this is a ${activeLanguageName}-to-${nativeLanguage} translation, evaluate whether the user's ${nativeLanguage} translation accurately reflects an understanding of the targeted grammar rules (e.g. if the target grammar is "Past Tense", did they translate it into the past tense?). Score each targeted grammar rule in "grammarUpdates".`;
+	const systemPrompt = `You are an expert language tutor grading a translation exercise. Output ONLY valid JSON.
+${beginnerNote}${sharedRules}
 
-	const vocabScoringNote = isNativeToTarget
-		? ''
-		: `IMPORTANT: For vocabulary scoring in ${activeLanguageName}-to-${nativeLanguage} mode, score each targeted vocabulary word INDEPENDENTLY based solely on whether the user correctly conveyed its meaning in ${nativeLanguage}. Do NOT penalize a vocabulary word for unrelated errors elsewhere in the sentence. The user is translating INTO ${nativeLanguage}, so they will not write the ${activeLanguageName} words themselves — instead, check whether the ${nativeLanguage} translation accurately reflects the meaning of each targeted ${activeLanguageName} vocabulary word. For example, if "die Klasse" is targeted and the user writes "the class", that vocabulary word MUST receive a score of 1.0, even if other parts of the sentence contain errors (like writing "Ist" instead of "Is"). Each vocabulary score should reflect ONLY whether that specific word's meaning was correctly translated.`;
+Task: Evaluate the student's translation against the expected output. Be forgiving of minor typos and word-order issues that don't change meaning. Score each vocab and grammar item independently. Provide concise, helpful ${nativeLanguage} feedback.
+${modeNotes}
+${listsBlock}
 
-	const helpNote = isNativeToTarget
-		? `Note: The user is allowed to ask for a ${nativeLanguage} translation, or provide a ${nativeLanguage} translation of the sentence alongside their answer. If they ask for a translation or provide a ${nativeLanguage} translation because they are stuck, do not penalize them for it. Provide the translation in the feedback and give a score of 0.0, since no real attempt was made. OVERRIDE: If the user is asking for help (e.g. "What?", "I don't know", "help", "?"), their globalScore MUST be 0.0 regardless of their level — the beginner encouragement rule does NOT apply when no real attempt was made.`
-		: `Note: The user is allowed to ask for help or a ${activeLanguageName} translation. If they do, provide the translation in the feedback and give a score of 0.0, since no real attempt was made. OVERRIDE: If the user is asking for help (e.g. "What?", "I don't know", "help", "?"), their globalScore MUST be 0.0 regardless of their level — the beginner encouragement rule does NOT apply when no real attempt was made.`;
-
-	const extraVocabNote = isNativeToTarget
-		? `If the user correctly used any OTHER ${activeLanguageName} words by coincidence that are not in the targeted list, output their base forms (lemmas) with proper capitalization (e.g. nouns capitalized in German) in the "extraVocabLemmas" array.`
-		: `If the user demonstrated understanding of any OTHER ${activeLanguageName} words from the original sentence (by translating them correctly), output the ORIGINAL ${activeLanguageName} base forms (lemmas) with proper capitalization (e.g. nouns capitalized in German) in the "extraVocabLemmas" array. Do NOT output ${nativeLanguage} words in this array.`;
-
-	const systemPrompt = `You are an expert language tutor evaluating a student's ${userLanguage} translation.
-You must output ONLY strictly valid JSON. Do not include markdown formatting or extra text.
-${beginnerEncouragement}
-
-Your task:
-Evaluate the user's ${userLanguage} input against the target expected ${targetLanguage} output.
-Calculate a global accuracy score between 0.0 and 1.0. Be forgiving of minor mistakes like slight typos, capitalization errors, or minor word order issues that do not change the core meaning. Do not penalize minor errors harshly; keep the score proportional to the overall understanding shown.
-Assess if the user correctly used the targeted vocabulary and grammar rules. Give a decimal score between 0.0 and 1.0 for each item in vocabularyUpdates and grammarUpdates. Score each vocabulary and grammar item INDEPENDENTLY — do not penalize one item for errors related to a different item.
-Provide helpful, concise feedback in ${nativeLanguage} ("feedback").
-${extraVocabNote}
-${asciiNote}
-${grammarNote}
-${vocabScoringNote}
-${helpNote}
-
-IMPORTANT: "feedback" MUST be the very first key in your JSON response.
-
-Targeted Vocabulary:
-${vocabList}
-
-Targeted Grammar Rules:
-${grammarList}
-
-JSON format:
-{
-  "feedback": "<string (${nativeLanguage} feedback)>",
-  "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
-  "extraVocabLemmas": ["<${activeLanguageName} lemma 1>", "<${activeLanguageName} lemma 2>"]
-}
-For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
+JSON format:${jsonFormat}`;
 
 	const normalizedTarget = isNativeToTarget ? normalizeText(targetSentence) : targetSentence;
 	const normalizedInput = isNativeToTarget ? normalizeText(userInput) : userInput;
 
-	const userMessage = `Target Expected Output: ${normalizedTarget}\nUser Input: ${normalizedInput}`;
+	const userMessage = `Expected output: ${normalizedTarget}\nStudent input: ${normalizedInput}`;
 	return { systemPrompt, userMessage, idMap };
 }
 
@@ -286,17 +236,26 @@ export function parseEvaluationResponse(content: string): EvaluationPayload {
 	// match the global signal (e.g. capitalize-only errors scored at 0 despite 95% global).
 	if (result.globalScore >= 0.8) {
 		const minItemScore = 0.5;
-		result.vocabularyUpdates = result.vocabularyUpdates.map((u) => ({
-			...u,
-			score: Math.max(u.score, minItemScore),
-			// Clear errorType when score is bumped up — the error was likely minor/false-positive
-			errorType: u.score < minItemScore ? null : u.errorType
-		}));
-		result.grammarUpdates = result.grammarUpdates.map((u) => ({
-			...u,
-			score: Math.max(u.score, minItemScore),
-			errorType: u.score < minItemScore ? null : u.errorType
-		}));
+		result.vocabularyUpdates = result.vocabularyUpdates.map((u) => {
+			const wasBumped = u.score < minItemScore;
+			return {
+				...u,
+				score: Math.max(u.score, minItemScore),
+				// Only clear errorType when the score was actually bumped from below the
+				// minimum — a bumped-up score means the LLM was inconsistently harsh,
+				// so the error tag is a false positive. If the score was already ≥ 0.5
+				// the errorType was set deliberately and must be preserved.
+				errorType: wasBumped ? null : u.errorType
+			};
+		});
+		result.grammarUpdates = result.grammarUpdates.map((u) => {
+			const wasBumped = u.score < minItemScore;
+			return {
+				...u,
+				score: Math.max(u.score, minItemScore),
+				errorType: wasBumped ? null : u.errorType
+			};
+		});
 	}
 
 	return result;
