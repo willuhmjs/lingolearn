@@ -11,13 +11,13 @@
 	import TranslationView from '$lib/components/play/TranslationView.svelte';
 	import ImmersionView from '$lib/components/play/ImmersionView.svelte';
 
-	export let data: PageData;
+	let { data } = $props<{ data: PageData }>();
 
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	let activeTab: 'learn' | 'games' = 'learn';
+	let activeTab = $state<'learn' | 'games'>('learn');
 
-	$: {
+	$effect(() => {
 		const tabParam = $page.url.searchParams.get('tab');
 		if (tabParam === 'games') {
 			activeTab = 'games';
@@ -29,16 +29,16 @@
 		} else {
 			activeTab = 'learn';
 		}
-	}
-	let myGames = data.myGames;
-	let communityGames = data.communityGames;
-	let totalCommunityGames = data.totalCommunityGames || 0;
-	let teacherClasses = data.teacherClasses;
+	});
+	let myGames = $state(data.myGames);
+	let communityGames = $state(data.communityGames);
+	let totalCommunityGames = $state(data.totalCommunityGames || 0);
+	let teacherClasses = $state(data.teacherClasses);
 
-	let currentCategory = 'All';
+	let currentCategory = $state('All');
 	const categories = ['All', 'Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
-	let currentPage = 1;
-	let loadingMore = false;
+	let currentPage = $state(1);
+	let loadingMore = $state(false);
 
 	async function loadGames(page = 1, append = false) {
 		loadingMore = true;
@@ -71,11 +71,11 @@
 	}
 
 	// Modal state for selecting a class
-	let showClassModal = false;
-	let selectedGameIdForLive: string | null = null;
+	let showClassModal = $state(false);
+	let selectedGameIdForLive = $state<string | null>(null);
 
 	// No longer dependent on classId in the URL
-	$: canPlayLive = data.userRole === 'ADMIN' || data.userRole === 'TEACHER';
+	let canPlayLive = $derived(data.userRole === 'ADMIN' || data.userRole === 'TEACHER');
 
 	async function startLiveSession(gameId: string, targetClassId: string) {
 		try {
@@ -116,10 +116,10 @@
 		}
 	}
 
-	$: {
+	$effect(() => {
 		myGames = data.myGames;
 		communityGames = data.communityGames;
-	}
+	});
 
 	function getFlagEmoji(language: string) {
 		if (!language) return '🌍';
@@ -145,7 +145,7 @@
 		| 'chat'
 		| 'immerse';
 
-	let englishFlag = '🇬🇧';
+	let englishFlag = $state('🇬🇧');
 
 	onMount(async () => {
 		try {
@@ -166,18 +166,20 @@
 		}
 	});
 
-	let challenge: any = null;
-	let loading = false;
-	let isStreaming = false;
-	let userInput = '';
-	let feedback: any = null;
-	let submitting = false;
-	let challengeStartMs: number | null = null; // timestamp when challenge became ready for input
-	let sessionXp = 0;
-	let sessionChallenges = 0;
-	let displayedChallengeNumber = 1;
-	let gameMode: GameMode = data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target';
-	let showingImmerse = false; // true when immerse mode is active inline
+	let challenge = $state<any>(null);
+	let loading = $state(false);
+	let isStreaming = $state(false);
+	let userInput = $state('');
+	let feedback = $state<any>(null);
+	let submitting = $state(false);
+	let challengeStartMs = $state<number | null>(null); // timestamp when challenge became ready for input
+	let sessionXp = $state(0);
+	let sessionChallenges = $state(0);
+	let displayedChallengeNumber = $state(1);
+	let gameMode: GameMode = $state(data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target');
+	let showingImmerse = $state(false); // true when immerse mode is active inline
+	// null = adaptive (algorithm picks each round); set = user has pinned a specific cycle mode
+	let pinnedMode = $state(new Set<CyclableMode>());
 
 	// ── Adaptive mode selection ──────────────────────────────────────────────
 	// Modes ordered from easiest (0) to hardest (3).
@@ -241,13 +243,13 @@
 		return ALL_CYCLE_MODES[ALL_CYCLE_MODES.length - 1];
 	}
 
-	let fillBlankAnswers: string[] = [];
-	let selectedChoice: string | null = null;
-	let shuffledChoices: string[] = [];
-	let hasSubmittedMc = false;
+	let fillBlankAnswers = $state<string[]>([]);
+	let selectedChoice = $state<string | null>(null);
+	let shuffledChoices = $state<string[]>([]);
+	let hasSubmittedMc = $state(false);
 
-	let currentLessonLanguage: any = null;
-	$: lessonLanguage = currentLessonLanguage || data.language;
+	let currentLessonLanguage = $state<any>(null);
+	let lessonLanguage = $derived(currentLessonLanguage || data.language);
 
 	// ---------------------------------------------------------------------------
 	// Leitner within-session retry queue
@@ -265,7 +267,7 @@
 
 	// Assignment context
 	const assignment = data.assignment ?? null;
-	let assignmentProgress = data.assignmentScore
+	let assignmentProgress = $state(data.assignmentScore
 		? {
 				score: data.assignmentScore.score,
 				targetScore: assignment?.targetScore ?? 0,
@@ -273,7 +275,7 @@
 			}
 		: assignment
 			? { score: 0, targetScore: assignment.targetScore, passed: false }
-			: null;
+			: null);
 	// Lock game mode to assignment's required mode when in assignment context
 	if (assignment) {
 		if (assignment.gamemode === 'immerse') {
@@ -285,14 +287,14 @@
 	}
 
 	// Loading progress & cycling tips
-	let loadProgressPct = 0;
-	let loadTipIndex = 0;
+	let loadProgressPct = $state(0);
+	let loadTipIndex = $state(0);
 	let estimatedLoadMs = 9000;
-	let isLocalMode = false;
+	let isLocalMode = $state(false);
 	let _loadProgressInterval: ReturnType<typeof setInterval> | null = null;
 	let _loadTipInterval: ReturnType<typeof setInterval> | null = null;
-	let expandedGrammarId: string | null = null;
-	let showGrammarRef = false;
+	let expandedGrammarId = $state<string | null>(null);
+	let showGrammarRef = $state(false);
 
 	function toggleGrammar(id: string) {
 		expandedGrammarId = expandedGrammarId === id ? null : id;
@@ -371,20 +373,20 @@
 		]
 	};
 
-	let loadingTips: string[] = [];
+	let loadingTips = $state<string[]>([]);
 
-	$: {
+	$effect(() => {
 		const langName = lessonLanguage?.name;
 		const specificTips = langName && LANG_TIPS[langName] ? LANG_TIPS[langName] : [];
 		loadingTips = [...specificTips, ...GENERAL_TIPS];
-	}
+	});
 
 	// User level tracking (populated from page data and updated from lesson metadata)
-	let userLevel = data.cefrLevel || 'A1';
-	let isAbsoluteBeginner = data.cefrLevel === 'A1';
+	let userLevel = $state(data.cefrLevel || 'A1');
+	let isAbsoluteBeginner = $state(data.cefrLevel === 'A1');
 	// Sentence difficulty: set from lesson metadata, cleared on each new challenge
-	let sentenceTooComplex = false;
-	let sentenceEstimatedLevel: string | null = null;
+	let sentenceTooComplex = $state(false);
+	let sentenceEstimatedLevel = $state<string | null>(null);
 
 	// AbortControllers for in-flight API requests
 	let generateController: AbortController | null = null;
@@ -1371,7 +1373,7 @@
 		return text;
 	}
 
-	$: parsedChallengeText = (() => {
+	let parsedChallengeText = $derived((() => {
 		if (!challenge?.challengeText) return '';
 		try {
 			// Capitalize the first character when the challenge text is in the target language
@@ -1386,9 +1388,9 @@
 			console.error('Error in parseTextWithTooltips for challengeText:', e);
 			return challenge.challengeText;
 		}
-	})();
+	})());
 
-	$: parsedTargetSentence = (() => {
+	let parsedTargetSentence = $derived((() => {
 		if (!challenge?.targetSentence) return '';
 		try {
 			return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);
@@ -1396,9 +1398,9 @@
 			console.error('Error in parseTextWithTooltips for targetSentence:', e);
 			return challenge.targetSentence;
 		}
-	})();
+	})());
 
-	let showAfterElo = false;
+	let showAfterElo = $state(false);
 
 	function calculateEloProgress(elo: number) {
 		const level = elo < 1050 ? 'LEARNING' : elo < 1150 ? 'KNOWN' : 'MASTERED';
@@ -1430,14 +1432,16 @@
 	}
 
 	/* eslint-disable svelte/infinite-reactive-loop */
-	$: if (feedback) {
-		// Delay to start animation after feedback is displayed
-		setTimeout(() => {
-			showAfterElo = true;
-		}, 100);
-	} else {
-		showAfterElo = false;
-	}
+	$effect(() => {
+		if (feedback) {
+			// Delay to start animation after feedback is displayed
+			setTimeout(() => {
+				showAfterElo = true;
+			}, 100);
+		} else {
+			showAfterElo = false;
+		}
+	});
 	/* eslint-enable svelte/infinite-reactive-loop */
 
 	async function generateChallenge(retryVocabIds: string[] = [], retryGrammarIds: string[] = []) {
@@ -2240,30 +2244,44 @@
 									</p>
 								{:else}
 									<div class="mode-buttons">
-										<div class="mode-btn active" class:mode-favoured={localEma < 0.55}>
+										<button
+											class="mode-btn"
+											class:active={pinnedMode.has('multiple-choice')}
+											class:mode-favoured={pinnedMode.size === 0 && gameMode !== 'chat' && gameMode !== 'immerse' && localEma < 0.55}
+											onclick={() => { const s = new Set(pinnedMode); s.has('multiple-choice') ? s.delete('multiple-choice') : s.add('multiple-choice'); pinnedMode = s; }}
+										>
 											🔘 Multiple Choice
 											<span class="mode-difficulty easy">Easiest</span>
-										</div>
-										<div
-											class="mode-btn active"
-											class:mode-favoured={localEma >= 0.4 && localEma < 0.7}
+										</button>
+										<button
+											class="mode-btn"
+											class:active={pinnedMode.has('target-to-native')}
+											class:mode-favoured={pinnedMode.size === 0 && gameMode !== 'chat' && gameMode !== 'immerse' && localEma >= 0.4 && localEma < 0.7}
+											onclick={() => { const s = new Set(pinnedMode); s.has('target-to-native') ? s.delete('target-to-native') : s.add('target-to-native'); pinnedMode = s; }}
 										>
 											{lessonLanguage?.flag || '🏁'} → {englishFlag}
 											{lessonLanguage?.name || 'Target'} to English
 											<span class="mode-difficulty easy">Easy</span>
-										</div>
-										<div
-											class="mode-btn active"
-											class:mode-favoured={localEma >= 0.55 && localEma < 0.85}
+										</button>
+										<button
+											class="mode-btn"
+											class:active={pinnedMode.has('fill-blank')}
+											class:mode-favoured={pinnedMode.size === 0 && gameMode !== 'chat' && gameMode !== 'immerse' && localEma >= 0.55 && localEma < 0.85}
+											onclick={() => { const s = new Set(pinnedMode); s.has('fill-blank') ? s.delete('fill-blank') : s.add('fill-blank'); pinnedMode = s; }}
 										>
 											✏️ Fill in the Blank
 											<span class="mode-difficulty medium">Medium</span>
-										</div>
-										<div class="mode-btn active" class:mode-favoured={localEma >= 0.7}>
+										</button>
+										<button
+											class="mode-btn"
+											class:active={pinnedMode.has('native-to-target')}
+											class:mode-favoured={pinnedMode.size === 0 && gameMode !== 'chat' && gameMode !== 'immerse' && localEma >= 0.7}
+											onclick={() => { const s = new Set(pinnedMode); s.has('native-to-target') ? s.delete('native-to-target') : s.add('native-to-target'); pinnedMode = s; }}
+										>
 											{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
 												'Target'}
 											<span class="mode-difficulty hard">Hardest</span>
-										</div>
+										</button>
 									</div>
 
 									<div class="chat-separator">
@@ -2275,7 +2293,7 @@
 									<button
 										class="chat-cta-btn"
 										class:active={gameMode === 'chat'}
-										onclick={() => (gameMode = 'chat')}
+										onclick={() => { gameMode = gameMode === 'chat' ? 'native-to-target' : 'chat'; }}
 									>
 										💬 AI Chat Practice
 										<span class="chat-cta-subtitle">Practice conversation with an AI tutor</span>
@@ -2286,7 +2304,7 @@
 									<button
 										class="chat-cta-btn immerse-cta-btn"
 										class:active={gameMode === 'immerse'}
-										onclick={() => (gameMode = 'immerse')}
+										onclick={() => { gameMode = gameMode === 'immerse' ? 'native-to-target' : 'immerse'; }}
 									>
 										✈️ World Immersion
 										<span class="chat-cta-subtitle"
@@ -2305,8 +2323,8 @@
 										showingImmerse = true;
 										return;
 									}
-									// Pick next mode from the cycle
-									gameMode = getNextCycleMode();
+									// Use pinned mode if set, otherwise pick adaptively
+									gameMode = pinnedMode.size > 0 ? [...pinnedMode][Math.floor(Math.random() * pinnedMode.size)] : getNextCycleMode();
 									const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
 									leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
 									const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
@@ -4327,11 +4345,42 @@
 		box-shadow: 0 3px 0 #0369a1;
 	}
 
+	/* "AI recommended" tooltip on hover for favoured mode buttons */
+	.mode-btn.mode-favoured {
+		position: relative;
+	}
+	.mode-btn.mode-favoured::after {
+		content: '✨ AI recommended';
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 50%;
+		transform: translateX(-50%);
+		background: #0ea5e9;
+		color: #fff;
+		font-size: 0.7rem;
+		font-weight: 600;
+		padding: 0.2rem 0.55rem;
+		border-radius: 0.5rem;
+		white-space: nowrap;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+		z-index: 10;
+	}
+	.mode-btn.mode-favoured:hover::after {
+		opacity: 1;
+	}
+	:global(html[data-theme='dark']) .mode-btn.mode-favoured::after {
+		background: #38bdf8;
+		color: #0f172a;
+	}
+
 	.mode-buttons {
 		display: flex;
 		gap: 0.75rem;
 		justify-content: center;
 		flex-wrap: wrap;
+		overflow: visible;
 	}
 
 	.mode-btn {
@@ -4341,6 +4390,7 @@
 		background: var(--card-bg, #ffffff);
 		color: var(--text-color, #475569);
 		font-size: 0.95rem;
+		font-family: inherit;
 		font-weight: 700;
 		cursor: pointer;
 		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
