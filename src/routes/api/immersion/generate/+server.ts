@@ -110,7 +110,8 @@ function buildImmersionPrompt(
 	cefrLevel: string,
 	languageName: string,
 	vocabHints: string[],
-	grammarHints: string[]
+	grammarHints: string[],
+	destination: { city: string; country: string; emoji: string; description: string } | null
 ): string {
 	const schema = MEDIA_TYPE_SCHEMAS[mediaType];
 	const isLowerLevel = cefrLevel === 'A1' || cefrLevel === 'A2';
@@ -124,6 +125,10 @@ function buildImmersionPrompt(
 	if (grammarHints.length > 0) {
 		grammarSection = `\nThe learner is practicing these grammar concepts. Where it feels natural, use sentence structures that demonstrate some of them:\n${grammarHints.map((g) => `- ${g}`).join('\n')}\n`;
 	}
+
+	const destinationSection = destination
+		? `\nSETTING: The learner is virtually visiting ${destination.city}, ${destination.country} ${destination.emoji}. Ground the content in this location — use it as the real-world setting for the ${schema.description.toLowerCase()}. References to local places, food, culture, and customs from ${destination.city} are encouraged where natural.\n`
+		: '';
 
 	return `You are a language learning content generator. Generate an authentic, realistic ${schema.description.toLowerCase()} written entirely in ${languageName}, appropriate for a ${cefrLevel} language learner.
 
@@ -139,8 +144,8 @@ ${
 					? '- Use complex sentences. Wider vocabulary. Natural tense usage.'
 					: '- Use sophisticated, native-level language.'
 }
-
-Make the content feel authentic — like something that would actually appear in the real world. Choose a realistic topic relevant to everyday life, culture, or current events.
+${destinationSection}
+Make the content feel authentic — like something that would actually appear in the real world in ${destination ? `${destination.city}, ${destination.country}` : 'an everyday context'}.
 ${vocabSection}${grammarSection}
 
 Generate a JSON response with this EXACT structure:
@@ -228,6 +233,19 @@ export async function POST(event) {
 		const languageName = locals.user.activeLanguage?.name || 'German';
 		const activeLanguageId = locals.user.activeLanguage?.id;
 
+		// Pick a random travel destination for this session
+		let destination: { city: string; country: string; emoji: string; description: string } | null =
+			null;
+		if (activeLanguageId) {
+			const destinations = await prisma.immersionDestination.findMany({
+				where: { languageId: activeLanguageId },
+				select: { city: true, country: true, emoji: true, description: true }
+			});
+			if (destinations.length > 0) {
+				destination = destinations[Math.floor(Math.random() * destinations.length)];
+			}
+		}
+
 		let vocabHints: string[] = [];
 		let vocabIds: string[] = [];
 		let grammarHints: string[] = [];
@@ -262,7 +280,8 @@ export async function POST(event) {
 			cefrLevel,
 			languageName,
 			vocabHints,
-			grammarHints
+			grammarHints,
+			destination
 		);
 
 		const userId = locals.user.id;
@@ -352,7 +371,13 @@ export async function POST(event) {
 		// The grade endpoint will call updateSrsMetrics for all of them.
 		const allVocabIds = [...vocabIds, ...textVocabIds];
 
-		return json({ mediaType, templateData: result.templateData, questions, vocabIds: allVocabIds });
+		return json({
+			mediaType,
+			templateData: result.templateData,
+			questions,
+			vocabIds: allVocabIds,
+			destination
+		});
 	} catch (error) {
 		console.error('Immersion generate error:', error);
 		const message = error instanceof Error ? error.message : 'Unknown error';

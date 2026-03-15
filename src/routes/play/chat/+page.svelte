@@ -498,15 +498,11 @@
 	{/if}
 
 	<div class="chat-header-main" in:fly={{ y: 20, duration: 400 }}>
-		<a
-			href="/play"
-			class="back-link"
-			style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;"
-		>
+		<a href="/play" class="back-nav">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
+				width="16"
+				height="16"
 				viewBox="0 0 24 24"
 				fill="none"
 				stroke="currentColor"

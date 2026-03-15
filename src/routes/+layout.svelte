@@ -764,6 +764,34 @@
 		box-shadow: 0 0 0 #ea2b2b;
 	}
 
+	/* ── Standardized back-navigation button ──────────────────────────── */
+	:global(.back-nav) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		margin-bottom: 1rem;
+		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e2e8f0);
+		border-radius: 0.5rem;
+		color: var(--text-color, #334155);
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		text-decoration: none;
+	}
+
+	:global(.back-nav:hover) {
+		background: #f1f5f9;
+		border-color: #94a3b8;
+	}
+
+	:global(html[data-theme='dark'] .back-nav:hover) {
+		background: #2a303c;
+		border-color: #64748b;
+	}
+
 	:global(.card-duo) {
 		background-color: var(--card-bg, #ffffff);
 		border: 2px solid var(--card-border, #e5e7eb);

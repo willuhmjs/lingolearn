@@ -454,6 +454,57 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
 		console.log(`\n    Done.`);
 	}
 	console.log('Frequency ranks applied.');
+
+	// ── Immersion Destinations (world travel theme) ──────────────────────────
+	console.log('Seeding immersion destinations...');
+
+	const existingDestCount = await client.immersionDestination.count({
+		where: { languageId: german.id }
+	});
+
+	if (existingDestCount === 0) {
+		const destinations = [
+			// German-speaking world
+			{ languageId: german.id, city: 'Berlin', country: 'Germany', emoji: '🇩🇪', description: "Germany's vibrant, history-rich capital" },
+			{ languageId: german.id, city: 'Munich', country: 'Germany', emoji: '🇩🇪', description: "Bavaria's beer gardens and Alpine backdrop" },
+			{ languageId: german.id, city: 'Hamburg', country: 'Germany', emoji: '🇩🇪', description: "Germany's gateway to the sea" },
+			{ languageId: german.id, city: 'Vienna', country: 'Austria', emoji: '🇦🇹', description: 'Imperial palaces, coffee houses, and classical music' },
+			{ languageId: german.id, city: 'Salzburg', country: 'Austria', emoji: '🇦🇹', description: "Mozart's birthplace in the Austrian Alps" },
+			{ languageId: german.id, city: 'Zurich', country: 'Switzerland', emoji: '🇨🇭', description: "Switzerland's cosmopolitan financial hub" },
+			{ languageId: german.id, city: 'Bern', country: 'Switzerland', emoji: '🇨🇭', description: 'Charming medieval arcades and the Swiss capital' },
+			{ languageId: german.id, city: 'Cologne', country: 'Germany', emoji: '🇩🇪', description: 'Cathedral city on the Rhine with legendary Karneval' },
+			{ languageId: german.id, city: 'Frankfurt', country: 'Germany', emoji: '🇩🇪', description: "Europe's financial heartbeat and Goethe's hometown" },
+			{ languageId: german.id, city: 'Dresden', country: 'Germany', emoji: '🇩🇪', description: 'Baroque masterpieces on the banks of the Elbe' },
+
+			// Spanish-speaking world
+			{ languageId: spanish.id, city: 'Madrid', country: 'Spain', emoji: '🇪🇸', description: 'Vibrant capital of flamenco, tapas, and football' },
+			{ languageId: spanish.id, city: 'Barcelona', country: 'Spain', emoji: '🇪🇸', description: "Gaudi's city of art, beaches, and Catalan culture" },
+			{ languageId: spanish.id, city: 'Mexico City', country: 'Mexico', emoji: '🇲🇽', description: 'Ancient Aztec heart meets modern Latin metropolis' },
+			{ languageId: spanish.id, city: 'Buenos Aires', country: 'Argentina', emoji: '🇦🇷', description: 'The Paris of South America — tango and steak capital' },
+			{ languageId: spanish.id, city: 'Bogota', country: 'Colombia', emoji: '🇨🇴', description: 'High-altitude city of emeralds and magical realism' },
+			{ languageId: spanish.id, city: 'Lima', country: 'Peru', emoji: '🇵🇪', description: "South America's culinary capital by the Pacific" },
+			{ languageId: spanish.id, city: 'Havana', country: 'Cuba', emoji: '🇨🇺', description: 'Classic cars, salsa rhythms, and colorful colonial streets' },
+			{ languageId: spanish.id, city: 'Santiago', country: 'Chile', emoji: '🇨🇱', description: "Andean peaks frame Chile's modern, dynamic capital" },
+			{ languageId: spanish.id, city: 'Seville', country: 'Spain', emoji: '🇪🇸', description: "Flamenco's birthplace amid orange trees and tapas bars" },
+			{ languageId: spanish.id, city: 'Cartagena', country: 'Colombia', emoji: '🇨🇴', description: 'Walled Caribbean gem of cobblestones and bougainvillea' },
+
+			// French-speaking world
+			{ languageId: french.id, city: 'Paris', country: 'France', emoji: '🇫🇷', description: 'The City of Light — fashion, cuisine, and the Eiffel Tower' },
+			{ languageId: french.id, city: 'Lyon', country: 'France', emoji: '🇫🇷', description: "France's gastronomic capital and UNESCO heritage city" },
+			{ languageId: french.id, city: 'Marseille', country: 'France', emoji: '🇫🇷', description: 'Sun-drenched port city of bouillabaisse and calanques' },
+			{ languageId: french.id, city: 'Montreal', country: 'Canada', emoji: '🇨🇦', description: "North America's French heart — festivals and poutine" },
+			{ languageId: french.id, city: 'Quebec City', country: 'Canada', emoji: '🇨🇦', description: 'Fortified old town with a distinctly European feel' },
+			{ languageId: french.id, city: 'Brussels', country: 'Belgium', emoji: '🇧🇪', description: "Chocolate, waffles, and the EU's administrative capital" },
+			{ languageId: french.id, city: 'Geneva', country: 'Switzerland', emoji: '🇨🇭', description: 'International diplomacy on the shores of Lake Leman' },
+			{ languageId: french.id, city: 'Dakar', country: 'Senegal', emoji: '🇸🇳', description: "West Africa's vibrant gateway to the Francophone world" },
+			{ languageId: french.id, city: 'Abidjan', country: 'Cote d\'Ivoire', emoji: '🇨🇮', description: "Cote d'Ivoire's dynamic economic powerhouse" },
+			{ languageId: french.id, city: 'Casablanca', country: 'Morocco', emoji: '🇲🇦', description: 'Atlantic port city where French and Arabic cultures meet' }
+		];
+		await client.immersionDestination.createMany({ data: destinations });
+		console.log(`Seeded ${destinations.length} immersion destinations.`);
+	} else {
+		console.log(`Immersion destinations already seeded (${existingDestCount} found). Skipping.`);
+	}
 }
 
 async function main() {

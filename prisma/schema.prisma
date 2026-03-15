@@ -23,10 +23,27 @@ model Language {
   name String // e.g., 'German', 'Spanish'
   flag String // e.g., '🇩🇪', '🇪🇸'
 
-  vocabularies Vocabulary[]
-  grammarRules GrammarRule[]
-  userProgress UserProgress[]
-  activeUsers  User[]         @relation("ActiveLanguage")
+  vocabularies         Vocabulary[]
+  grammarRules         GrammarRule[]
+  userProgress         UserProgress[]
+  activeUsers          User[]                @relation("ActiveLanguage")
+  immersionDestinations ImmersionDestination[]
+}
+
+// World-travel themed destinations for the Immersive Reading mode.
+// Each destination gives the LLM a cultural + geographic anchor so generated
+// content feels like authentic material from that place.
+model ImmersionDestination {
+  id          String   @id @default(uuid())
+  languageId  String
+  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  city        String   // e.g., "Berlin"
+  country     String   // e.g., "Germany"
+  emoji       String   // flag emoji e.g., "🇩🇪"
+  description String   // short cultural note shown in the UI, e.g., "Germany's vibrant capital"
+  createdAt   DateTime @default(now())
+
+  @@index([languageId])
 }
 
 model User {

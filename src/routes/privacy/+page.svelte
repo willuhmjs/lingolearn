@@ -8,21 +8,21 @@
 
 <div class="legal-page">
 	<div class="legal-card">
-		<h1 class="">Privacy Policy</h1>
+		<h1>Privacy Policy</h1>
 		<p class="effective-date">Effective Date: March 5, 2026</p>
 
-		<p class="">
+		<p>
 			LingoLearn ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy
 			explains how we collect, use, disclose, and safeguard your information when you use our
 			AI-powered language learning platform.
 		</p>
 
 		<section>
-			<h2 class="">1. Information We Collect</h2>
+			<h2>1. Information We Collect</h2>
 
-			<h3 class="">Account Information</h3>
-			<p class="">When you create an account, we collect:</p>
-			<ul class="">
+			<h3>Account Information</h3>
+			<p>When you create an account, we collect:</p>
+			<ul>
 				<li><strong>Email address</strong> — used for authentication and account recovery.</li>
 				<li><strong>Username</strong> — your chosen display name on the platform.</li>
 				<li>
@@ -34,16 +34,16 @@
 				</li>
 			</ul>
 
-			<h3 class="">Google Sign-In</h3>
-			<p class="">
+			<h3>Google Sign-In</h3>
+			<p>
 				If you choose to sign in with Google, we receive your name, email address, and profile
 				picture from Google. We do not access your Google contacts, calendar, or any other Google
 				services.
 			</p>
 
-			<h3 class="">Learning Data</h3>
-			<p class="">As you use LingoLearn, we collect and store:</p>
-			<ul class="">
+			<h3>Learning Data</h3>
+			<p>As you use LingoLearn, we collect and store:</p>
+			<ul>
 				<li>
 					<strong>Language preferences</strong> — which languages you are learning (e.g., German, Spanish,
 					French).
@@ -64,15 +64,15 @@
 				</li>
 			</ul>
 
-			<h3 class="">Usage Data</h3>
-			<ul class="">
+			<h3>Usage Data</h3>
+			<ul>
 				<li><strong>Last active timestamp</strong> — when you last used the platform.</li>
 				<li><strong>Theme preference</strong> — your chosen visual theme (default or dark).</li>
 				<li><strong>Session data</strong> — session tokens used to keep you logged in.</li>
 			</ul>
 
-			<h3 class="">Optional Data</h3>
-			<ul class="">
+			<h3>Optional Data</h3>
+			<ul>
 				<li>
 					<strong>Custom LLM configuration</strong> — if you provide your own AI model endpoint and API
 					key, these are stored to enable personalized lesson generation. Your API key is stored server-side
@@ -82,9 +82,9 @@
 		</section>
 
 		<section>
-			<h2 class="">2. How We Use Your Information</h2>
-			<p class="">We use the information we collect to:</p>
-			<ul class="">
+			<h2>2. How We Use Your Information</h2>
+			<p>We use the information we collect to:</p>
+			<ul>
 				<li>Provide, operate, and maintain the LingoLearn platform.</li>
 				<li>Authenticate your identity and manage your account.</li>
 				<li>Generate AI-powered lessons tailored to your proficiency level.</li>
@@ -99,8 +99,8 @@
 		</section>
 
 		<section>
-			<h2 class="">3. AI-Powered Features</h2>
-			<p class="">
+			<h2>3. AI-Powered Features</h2>
+			<p>
 				LingoLearn uses artificial intelligence to generate lessons, grade answers, and provide
 				feedback. Your lesson responses may be processed by AI models to deliver real-time
 				corrections and explanations. We do not use your personal data to train AI models.
@@ -108,12 +108,12 @@
 		</section>
 
 		<section>
-			<h2 class="">4. Data Sharing</h2>
-			<p class="">
+			<h2>4. Data Sharing</h2>
+			<p>
 				We do not sell, rent, or trade your personal information. We may share limited data in the
 				following circumstances:
 			</p>
-			<ul class="">
+			<ul>
 				<li>
 					<strong>Classroom context</strong> — if you join a class, your teacher may see your username,
 					assignment scores, and progress within that class.
@@ -130,25 +130,23 @@
 		</section>
 
 		<section>
-			<h2 class="">5. Data Security</h2>
-			<p class="">
-				We implement industry-standard security measures to protect your data, including:
-			</p>
-			<ul class="">
+			<h2>5. Data Security</h2>
+			<p>We implement industry-standard security measures to protect your data, including:</p>
+			<ul>
 				<li>Passwords are hashed using bcrypt before storage.</li>
 				<li>Sessions are managed with secure, unique tokens.</li>
 				<li>Database access is restricted and encrypted in transit.</li>
 				<li>OAuth tokens are stored securely and scoped to minimum necessary permissions.</li>
 			</ul>
-			<p class="">
+			<p>
 				While we strive to protect your information, no method of electronic transmission or storage
 				is 100% secure. We cannot guarantee absolute security.
 			</p>
 		</section>
 
 		<section>
-			<h2 class="">6. Data Retention</h2>
-			<p class="">
+			<h2>6. Data Retention</h2>
+			<p>
 				We retain your account data and learning progress for as long as your account is active. If
 				you delete your account, your personal data and associated learning records will be
 				permanently removed from our systems. Some anonymized, aggregated data may be retained for
@@ -157,31 +155,29 @@
 		</section>
 
 		<section>
-			<h2 class="">7. Your Rights</h2>
-			<p class="">You have the right to:</p>
-			<ul class="">
+			<h2>7. Your Rights</h2>
+			<p>You have the right to:</p>
+			<ul>
 				<li><strong>Access</strong> your personal data stored on LingoLearn.</li>
 				<li><strong>Correct</strong> inaccurate information in your profile.</li>
 				<li><strong>Delete</strong> your account and all associated data.</li>
 				<li><strong>Export</strong> your learning data upon request.</li>
 				<li><strong>Withdraw consent</strong> for optional data processing at any time.</li>
 			</ul>
-			<p class="">
-				To exercise any of these rights, please contact us using the information below.
-			</p>
+			<p>To exercise any of these rights, please contact us using the information below.</p>
 		</section>
 
 		<section>
-			<h2 class="">8. Cookies and Sessions</h2>
-			<p class="">
+			<h2>8. Cookies and Sessions</h2>
+			<p>
 				LingoLearn uses session cookies to keep you logged in and maintain your preferences. We do
 				not use advertising or third-party tracking cookies.
 			</p>
 		</section>
 
 		<section>
-			<h2 class="">9. Children's Privacy</h2>
-			<p class="">
+			<h2>9. Children's Privacy</h2>
+			<p>
 				LingoLearn is intended for users aged 13 and older. We do not knowingly collect personal
 				information from children under 13. If we become aware that we have collected data from a
 				child under 13, we will take steps to delete that information promptly.
@@ -189,8 +185,8 @@
 		</section>
 
 		<section>
-			<h2 class="">10. Changes to This Policy</h2>
-			<p class="">
+			<h2>10. Changes to This Policy</h2>
+			<p>
 				We may update this Privacy Policy from time to time. Changes will be posted on this page
 				with an updated effective date. Your continued use of LingoLearn after changes are posted
 				constitutes acceptance of the revised policy.
@@ -198,15 +194,28 @@
 		</section>
 
 		<section>
-			<h2 class="">11. Contact Us</h2>
-			<p class="">
+			<h2>11. Contact Us</h2>
+			<p>
 				If you have questions or concerns about this Privacy Policy or your data, please reach out
 				to us at <strong>support@lingolearn.app</strong>.
 			</p>
 		</section>
 
-		<div class="back-link">
-			<a href="/">← Back to Home</a>
+		<div class="legal-back">
+			<a href="/" class="back-nav">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg
+				>
+				Back to Home
+			</a>
 		</div>
 	</div>
 </div>
@@ -281,23 +290,10 @@
 		color: #1e40af;
 	}
 
-	.back-link {
+	.legal-back {
 		margin-top: 3rem;
 		padding-top: 1.5rem;
 		border-top: 1px solid #e5e7eb;
-	}
-
-	.back-link a {
-		color: #2563eb;
-		text-decoration: none;
-		font-weight: 600;
-		font-size: 0.95rem;
-		transition: color 0.15s;
-	}
-
-	.back-link a:hover {
-		color: #1d4ed8;
-		text-decoration: underline;
 	}
 
 	@media (max-width: 640px) {

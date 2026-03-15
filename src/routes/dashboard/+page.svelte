@@ -331,8 +331,8 @@
 
 <div class="dashboard-container">
 	<header class="dashboard-header" in:fly={{ y: 20, duration: 400 }}>
-		<h1 class="">Proficiency Dashboard</h1>
-		<p class="">Track your language learning progress.</p>
+		<h1>Proficiency Dashboard</h1>
+		<p>Track your language learning progress.</p>
 
 		{#if (data as any).cefrProgress}
 			{@const cp = (data as any).cefrProgress}
@@ -483,10 +483,10 @@
 	</header>
 
 	<section class="summary-section">
-		<h2 class="">Summary Statistics</h2>
+		<h2>Summary Statistics</h2>
 		<div class="summary-grid">
 			<div class="summary-card">
-				<h3 class="">Vocabulary</h3>
+				<h3>Vocabulary</h3>
 				<div class="stat-row">
 					<span class="stat-label">Total Terms:</span>
 					<span class="stat-value">{totalVocab}</span>
@@ -496,20 +496,20 @@
 					<span class="stat-value">{avgVocabElo}</span>
 				</div>
 				<div class="srs-breakdown">
-					<h4 class="">SRS State Breakdown</h4>
+					<h4>SRS State Breakdown</h4>
 					{#each Object.entries(srsColors) as [state, color]}
 						<div class="breakdown-row">
 							<div class="breakdown-label">
 								<span class="color-box" style="background-color: {color}"></span>
 								{state}
 							</div>
-							<span class="">{vocabSrsBreakdown[state] || 0}</span>
+							<span>{vocabSrsBreakdown[state] || 0}</span>
 						</div>
 					{/each}
 				</div>
 			</div>
 			<div class="summary-card">
-				<h3 class="">Grammar</h3>
+				<h3>Grammar</h3>
 				<div class="stat-row">
 					<span class="stat-label">Total Rules:</span>
 					<span class="stat-value">{totalGrammar}</span>
@@ -519,14 +519,14 @@
 					<span class="stat-value">{avgGrammarElo}</span>
 				</div>
 				<div class="srs-breakdown">
-					<h4 class="">SRS State Breakdown</h4>
+					<h4>SRS State Breakdown</h4>
 					{#each Object.entries(srsColors) as [state, color]}
 						<div class="breakdown-row">
 							<div class="breakdown-label">
 								<span class="color-box" style="background-color: {color}"></span>
 								{state}
 							</div>
-							<span class="">{grammarSrsBreakdown[state] || 0}</span>
+							<span>{grammarSrsBreakdown[state] || 0}</span>
 						</div>
 					{/each}
 				</div>
@@ -1054,7 +1054,7 @@
 
 	<div class="dashboard-content">
 		<section class="vocabulary-section">
-			<h2 class="">Vocabulary Heatmap</h2>
+			<h2>Vocabulary Heatmap</h2>
 			<div class="heatmap-legend">
 				<div class="legend-item">
 					<span class="color-box" style="background-color: {srsColors.UNSEEN}"></span> Unseen
@@ -1156,11 +1156,11 @@
 
 		<section class="grammar-section">
 			<div class="grammar-header-row">
-				<h2 class="">Grammar Web</h2>
+				<h2>Grammar Web</h2>
 				<div class="grammar-header-controls">
 					<div class="sort-control">
-						<label for="grammar-sort" class="">Sort by:</label>
-						<select id="grammar-sort" bind:value={grammarSortOrder} class="">
+						<label for="grammar-sort">Sort by:</label>
+						<select id="grammar-sort" bind:value={grammarSortOrder}>
 							<option value="easiest">Easiest to Hardest</option>
 							<option value="hardest">Hardest to Easiest</option>
 						</select>
@@ -1394,7 +1394,7 @@
 					{#if !isUnseen}
 						<div class="modal-elo-section">
 							<div class="modal-elo-header">
-								<span class="">Mastery: {levelText}</span>
+								<span>Mastery: {levelText}</span>
 								<span class="modal-elo-score" style="color: {selectedModalItem.color}"
 									>ELO {elo}</span
 								>
@@ -1408,7 +1408,7 @@
 						</div>
 					{:else}
 						<div class="modal-elo-section">
-							<div class="modal-elo-header"><span class="">Status: {levelText}</span></div>
+							<div class="modal-elo-header"><span>Status: {levelText}</span></div>
 						</div>
 					{/if}
 
@@ -1464,7 +1464,7 @@
 					<div class="modal-body">
 						<div class="modal-elo-section">
 							<div class="modal-elo-header">
-								<span class="">Status: {rule.srsState}</span>
+								<span>Status: {rule.srsState}</span>
 								{#if !rule.isLocked}
 									<span class="modal-elo-score" style="color: {selectedModalItem.color}"
 										>ELO {Math.ceil(rule.eloRating)}</span

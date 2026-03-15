@@ -8,17 +8,17 @@
 
 <div class="legal-page">
 	<div class="legal-card">
-		<h1 class="">Terms of Service</h1>
+		<h1>Terms of Service</h1>
 		<p class="effective-date">Effective Date: March 5, 2026</p>
 
-		<p class="">
+		<p>
 			Welcome to LingoLearn. By accessing or using our platform, you agree to be bound by these
 			Terms of Service ("Terms"). If you do not agree to these Terms, please do not use LingoLearn.
 		</p>
 
 		<section>
-			<h2 class="">1. Acceptance of Terms</h2>
-			<p class="">
+			<h2>1. Acceptance of Terms</h2>
+			<p>
 				By creating an account or using LingoLearn in any way, you confirm that you have read,
 				understood, and agree to be bound by these Terms and our
 				<a href="/privacy">Privacy Policy</a>. These Terms constitute a legally binding agreement
@@ -27,8 +27,8 @@
 		</section>
 
 		<section>
-			<h2 class="">2. Eligibility</h2>
-			<p class="">
+			<h2>2. Eligibility</h2>
+			<p>
 				You must be at least 13 years of age to use LingoLearn. If you are under 18, you represent
 				that you have obtained parental or guardian consent to use the platform. By using
 				LingoLearn, you represent and warrant that you meet these eligibility requirements.
@@ -36,8 +36,8 @@
 		</section>
 
 		<section>
-			<h2 class="">3. Account Registration</h2>
-			<ul class="">
+			<h2>3. Account Registration</h2>
+			<ul>
 				<li>
 					You may register using your email address and a password, or by signing in with Google.
 				</li>
@@ -49,9 +49,9 @@
 		</section>
 
 		<section>
-			<h2 class="">4. Acceptable Use</h2>
-			<p class="">You agree not to:</p>
-			<ul class="">
+			<h2>4. Acceptable Use</h2>
+			<p>You agree not to:</p>
+			<ul>
 				<li>Use LingoLearn for any unlawful purpose or in violation of any applicable laws.</li>
 				<li>
 					Attempt to gain unauthorized access to any part of the platform, other users' accounts, or
@@ -76,12 +76,12 @@
 		</section>
 
 		<section>
-			<h2 class="">5. Classroom Features</h2>
-			<p class="">
+			<h2>5. Classroom Features</h2>
+			<p>
 				LingoLearn includes classroom functionality where teachers can create classes, assign work,
 				and view student progress. By joining a class:
 			</p>
-			<ul class="">
+			<ul>
 				<li>
 					You consent to your teacher viewing your username, assignment scores, and learning
 					progress within that class.
@@ -95,8 +95,8 @@
 		</section>
 
 		<section>
-			<h2 class="">6. AI-Generated Content</h2>
-			<p class="">
+			<h2>6. AI-Generated Content</h2>
+			<p>
 				LingoLearn uses artificial intelligence to generate lessons, exercises, and feedback. While
 				we strive for accuracy, AI-generated content may occasionally contain errors. LingoLearn
 				does not guarantee the accuracy, completeness, or reliability of AI-generated materials. You
@@ -105,12 +105,12 @@
 		</section>
 
 		<section>
-			<h2 class="">7. Custom LLM Configuration</h2>
-			<p class="">
+			<h2>7. Custom LLM Configuration</h2>
+			<p>
 				LingoLearn allows users to configure a custom AI model endpoint and API key. If you choose
 				to use this feature:
 			</p>
-			<ul class="">
+			<ul>
 				<li>You are solely responsible for any costs incurred through your custom AI provider.</li>
 				<li>
 					You are responsible for ensuring your use of third-party AI services complies with their
@@ -123,8 +123,8 @@
 		</section>
 
 		<section>
-			<h2 class="">8. Intellectual Property</h2>
-			<p class="">
+			<h2>8. Intellectual Property</h2>
+			<p>
 				All content, design, code, and branding of LingoLearn, including but not limited to the
 				platform interface, vocabulary databases, grammar guides, and AI lesson frameworks, are the
 				intellectual property of LingoLearn and are protected by applicable copyright and
@@ -134,8 +134,8 @@
 		</section>
 
 		<section>
-			<h2 class="">9. Account Termination</h2>
-			<p class="">
+			<h2>9. Account Termination</h2>
+			<p>
 				We reserve the right to suspend or terminate your account at our sole discretion, without
 				prior notice, for conduct that we determine violates these Terms, is harmful to other users,
 				or is otherwise objectionable. You may delete your account at any time through your profile
@@ -144,8 +144,8 @@
 		</section>
 
 		<section>
-			<h2 class="">10. Disclaimer of Warranties</h2>
-			<p class="">
+			<h2>10. Disclaimer of Warranties</h2>
+			<p>
 				LingoLearn is provided on an "as is" and "as available" basis without warranties of any
 				kind, either express or implied. We do not warrant that the platform will be uninterrupted,
 				error-free, or free of harmful components. We disclaim all warranties, including but not
@@ -155,8 +155,8 @@
 		</section>
 
 		<section>
-			<h2 class="">11. Limitation of Liability</h2>
-			<p class="">
+			<h2>11. Limitation of Liability</h2>
+			<p>
 				To the fullest extent permitted by applicable law, LingoLearn and its operators shall not be
 				liable for any indirect, incidental, special, consequential, or punitive damages, or any
 				loss of profits, data, or goodwill, arising out of or in connection with your use of the
@@ -165,8 +165,8 @@
 		</section>
 
 		<section>
-			<h2 class="">12. Changes to These Terms</h2>
-			<p class="">
+			<h2>12. Changes to These Terms</h2>
+			<p>
 				We may revise these Terms from time to time. The most current version will always be
 				available on this page with an updated effective date. By continuing to use LingoLearn after
 				changes are posted, you agree to be bound by the revised Terms. We encourage you to review
@@ -175,23 +175,36 @@
 		</section>
 
 		<section>
-			<h2 class="">13. Governing Law</h2>
-			<p class="">
+			<h2>13. Governing Law</h2>
+			<p>
 				These Terms shall be governed by and construed in accordance with the laws of the
 				jurisdiction in which LingoLearn operates, without regard to its conflict of law provisions.
 			</p>
 		</section>
 
 		<section>
-			<h2 class="">14. Contact Us</h2>
-			<p class="">
+			<h2>14. Contact Us</h2>
+			<p>
 				If you have any questions about these Terms, please contact us at
 				<strong>support@lingolearn.app</strong>.
 			</p>
 		</section>
 
-		<div class="back-link">
-			<a href="/">← Back to Home</a>
+		<div class="legal-back">
+			<a href="/" class="back-nav">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg
+				>
+				Back to Home
+			</a>
 		</div>
 	</div>
 </div>
@@ -266,14 +279,10 @@
 		text-decoration: underline;
 	}
 
-	.back-link {
+	.legal-back {
 		margin-top: 3rem;
 		padding-top: 1.5rem;
 		border-top: 1px solid #e5e7eb;
-	}
-
-	.back-link a {
-		font-size: 0.95rem;
 	}
 
 	@media (max-width: 640px) {

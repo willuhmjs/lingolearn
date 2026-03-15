@@ -39,14 +39,17 @@
 
 <div class="create-container">
 	<div class="header-section">
-		<a href="/play?tab=games" class="back-link">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M10 19l-7-7m0 0l7-7m-7 7h18"
-				/></svg
+		<a href="/play?tab=games" class="back-nav">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg
 			>
 			Back to Quizzes
 		</a>
@@ -130,25 +133,6 @@
 
 	.header-section {
 		margin-bottom: 2rem;
-	}
-
-	.back-link {
-		color: #3b82f6;
-		font-weight: bold;
-		text-decoration: none;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		margin-bottom: 1rem;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
-	.back-link svg {
-		width: 1rem;
-		height: 1rem;
 	}
 
 	.header-section h1 {
