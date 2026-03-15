@@ -273,19 +273,11 @@ export async function POST({ request, locals }: RequestEvent) {
 		let currentPrompt = getSystemPrompt(activeLangName, availableGrammarTitles);
 		currentPrompt += '\n\nIMPORTANT: "message" MUST be the very first key in your JSON response.';
 
-		const llmResponse = await generateChatCompletion({
-			userId,
-			messages,
-			systemPrompt: currentPrompt,
-			jsonMode: true,
-			stream: true
-		});
-
-		const processWords = async (
+		async function processWords(
 			words: string[],
 			state: 'MASTERED' | 'KNOWN' | 'LEARNING',
 			userLevel: string
-		) => {
+		) {
 			if (!Array.isArray(words) || words.length === 0) return;
 			if (isRefining) {
 				console.log(
@@ -359,13 +351,13 @@ export async function POST({ request, locals }: RequestEvent) {
 			} catch (wordError) {
 				console.error(`Error processing ${state} words:`, wordError);
 			}
-		};
+		}
 
-		const processGrammar = async (
+		async function processGrammar(
 			rules: string[],
 			state: 'MASTERED' | 'KNOWN' | 'LEARNING',
 			userLevel: string
-		) => {
+		) {
 			if (!Array.isArray(rules) || rules.length === 0) return;
 			if (isRefining) {
 				console.log(
@@ -423,7 +415,15 @@ export async function POST({ request, locals }: RequestEvent) {
 			} catch (ruleError) {
 				console.error(`Error processing ${state} grammar rules:`, ruleError);
 			}
-		};
+		}
+
+		const llmResponse = await generateChatCompletion({
+			userId,
+			messages,
+			systemPrompt: currentPrompt,
+			jsonMode: true,
+			stream: true
+		});
 
 		const stream = new ReadableStream({
 			async start(controller) {
