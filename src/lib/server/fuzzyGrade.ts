@@ -6,20 +6,19 @@
  * Only returns true when confidence is high — conservative thresholds to avoid false positives.
  */
 
+import { stemmer as germanStemmer } from '@orama/stemmers/german';
+
 /**
- * Strip common German inflectional suffixes to reduce words to an approximate stem.
- * This lets "gehen" and "geht" compare as similar without a full morphological analyser.
+ * Reduce a normalised (already ASCII-lowercased by normalizeForFuzzy) word to
+ * its approximate stem for token comparison.
+ *
+ * normalizeForFuzzy has already converted ß→ss, ä→ae, ö→oe, ü→ue, so both
+ * the user input and the reference are in the same ASCII space before we reach
+ * here. Snowball operates on that same ASCII space, so stems from user and
+ * reference are directly comparable without umlaut restoration.
  */
-function stripGermanSuffixes(word: string): string {
-	// Order matters: try longest suffixes first
-	const suffixes = ['ungen', 'ieren', 'heit', 'keit', 'ung', 'lich', 'isch', 'est', 'ten', 'tet', 'ste', 'end', 'en', 'er', 'em', 'es', 'et', 'te', 'st', 'e', 't'];
-	for (const suffix of suffixes) {
-		// Only strip if the remaining stem is at least 3 characters
-		if (word.endsWith(suffix) && word.length - suffix.length >= 3) {
-			return word.slice(0, word.length - suffix.length);
-		}
-	}
-	return word;
+function stemForComparison(word: string): string {
+	return germanStemmer(word);
 }
 
 function normalizeForFuzzy(text: string): string {
@@ -36,7 +35,7 @@ function normalizeForFuzzy(text: string): string {
 }
 
 function tokenize(text: string): string[] {
-	return text.split(' ').filter(Boolean).map(stripGermanSuffixes);
+	return text.split(' ').filter(Boolean).map(stemForComparison);
 }
 
 /**

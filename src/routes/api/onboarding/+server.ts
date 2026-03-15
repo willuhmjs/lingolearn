@@ -120,11 +120,31 @@ export async function POST({ request, locals }: RequestEvent) {
 			});
 		}
 
-		// Handle end-early: use the client-provided lastLevelGuess instead of calling the LLM again
+		// Handle end-early: derive the level from the server-received message history.
+		// We parse assistant messages in reverse to find the most recent currentLevelGuess
+		// emitted by the LLM. This ignores the client-supplied lastLevelGuess entirely,
+		// preventing a user from manipulating their own placement.
 		if (endEarly) {
-			const lastLevelGuess = body.lastLevelGuess || 'A1';
 			const validLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-			const level = validLevels.includes(lastLevelGuess) ? lastLevelGuess : 'A1';
+			let level = 'A1';
+			for (let i = messages.length - 1; i >= 0; i--) {
+				const msg = messages[i];
+				if (msg.role === 'assistant') {
+					try {
+						const parsed = JSON.parse(msg.content);
+						if (parsed.currentLevelGuess && validLevels.includes(parsed.currentLevelGuess)) {
+							level = parsed.currentLevelGuess;
+							break;
+						}
+						if (parsed.level && validLevels.includes(parsed.level)) {
+							level = parsed.level;
+							break;
+						}
+					} catch {
+						// assistant message not yet valid JSON (e.g. streaming artifact) — skip
+					}
+				}
+			}
 
 			try {
 				const langId = user.activeLanguage.id;

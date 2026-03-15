@@ -232,6 +232,7 @@ export async function POST(event) {
 		const activeLanguageId = locals.user.activeLanguage?.id;
 
 		let vocabHints: string[] = [];
+		let vocabIds: string[] = [];
 		let grammarHints: string[] = [];
 
 		if (activeLanguageId) {
@@ -245,6 +246,7 @@ export async function POST(event) {
 				orderBy: { nextReviewDate: 'asc' }
 			});
 			vocabHints = userVocabs.map((uv) => uv.vocabulary.lemma);
+			vocabIds = userVocabs.map((uv) => uv.vocabularyId);
 
 			const userGrammars = await prisma.userGrammarRule.findMany({
 				where: {
@@ -286,7 +288,7 @@ export async function POST(event) {
 			(q: Record<string, unknown>, i: number) => ({ ...q, id: `q${i}` })
 		);
 
-		return json({ mediaType, templateData: result.templateData, questions });
+		return json({ mediaType, templateData: result.templateData, questions, vocabIds });
 	} catch (error) {
 		console.error('Immersion generate error:', error);
 		const message = error instanceof Error ? error.message : 'Unknown error';

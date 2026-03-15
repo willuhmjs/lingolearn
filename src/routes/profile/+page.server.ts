@@ -25,7 +25,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 				llmModel: true,
 				theme: true,
 				totalXp: true,
-				streakFreezes: true
+				streakFreezes: true,
+				fsrsRetention: true
 			}
 		}),
 		getSiteSettings(),
@@ -219,6 +220,24 @@ export const actions: Actions = {
 			console.error('Error updating LLM settings:', error);
 			return fail(500, { llmError: 'Failed to update LLM settings' });
 		}
+	},
+
+	updateFsrsRetention: async ({ request, locals }) => {
+		if (!locals.user) throw redirect(303, '/login');
+
+		const formData = await request.formData();
+		const raw = formData.get('fsrsRetention');
+		const value = parseFloat(raw?.toString() ?? '');
+		if (isNaN(value) || value < 0.7 || value > 0.97) {
+			return fail(400, { fsrsRetentionError: 'Retention must be between 0.70 and 0.97' });
+		}
+
+		await prisma.user.update({
+			where: { id: locals.user.id },
+			data: { fsrsRetention: value }
+		});
+
+		return { fsrsRetentionSuccess: 'Review frequency updated' };
 	},
 
 	deleteAccount: async ({ locals, cookies }) => {

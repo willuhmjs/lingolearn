@@ -64,6 +64,17 @@
 		llmApiKey = data.user?.llmApiKey ?? '';
 		llmModel = data.user?.llmModel ?? '';
 	});
+
+	// FSRS retention
+	let fsrsRetention = $state(0.9);
+	let isUpdatingFsrs = $state(false);
+	$effect(() => {
+		fsrsRetention = (data.user as any)?.fsrsRetention ?? 0.9;
+	});
+	$effect(() => {
+		if ((form as any)?.fsrsRetentionSuccess) toastSuccess((form as any).fsrsRetentionSuccess);
+		if ((form as any)?.fsrsRetentionError) toastError((form as any).fsrsRetentionError);
+	});
 	let availableModels = $state<string[]>([]);
 	let isFetchingModels = $state(false);
 
@@ -436,6 +447,43 @@
 
 					<button type="submit" class="submit-btn" disabled={isUpdatingLLM}>
 						{isUpdatingLLM ? 'Saving...' : 'Save LLM Settings'}
+					</button>
+				</form>
+			</section>
+
+		<section class="card">
+				<h2>Review Frequency (FSRS)</h2>
+				<p class="card-desc">
+					Controls how well you must remember an item before it's scheduled further out. Higher retention means more frequent reviews and stronger recall. Lower retention means fewer reviews but you may forget more.
+				</p>
+				<form
+					method="POST"
+					action="?/updateFsrsRetention"
+					use:enhance={() => {
+						isUpdatingFsrs = true;
+						return async ({ update }) => { await update(); isUpdatingFsrs = false; };
+					}}
+				>
+					<div class="form-group">
+						<label for="fsrsRetention">Target Retention: <strong>{Math.round(fsrsRetention * 100)}%</strong></label>
+						<input
+							type="range"
+							id="fsrsRetention"
+							name="fsrsRetention"
+							min="0.70"
+							max="0.97"
+							step="0.01"
+							bind:value={fsrsRetention}
+							style="width: 100%; margin-top: 0.5rem;"
+						/>
+						<div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">
+							<span>70% (fewer reviews)</span>
+							<span>90% (default)</span>
+							<span>97% (more reviews)</span>
+						</div>
+					</div>
+					<button type="submit" class="submit-btn" disabled={isUpdatingFsrs}>
+						{isUpdatingFsrs ? 'Saving...' : 'Save'}
 					</button>
 				</form>
 			</section>

@@ -313,7 +313,7 @@ function computeFsrsUpdate(score: number, current: {
 	repetitions: number;
 	lapses: number;
 	lastReviewDate: Date | null;
-}) {
+}, requestRetention: number = DEFAULT_FSRS_PARAMETERS.requestRetention) {
 	const card: FsrsCard = {
 		difficulty: current.difficulty,
 		stability: current.stability,
@@ -323,8 +323,9 @@ function computeFsrsUpdate(score: number, current: {
 		lastReviewDate: current.lastReviewDate ?? undefined
 	};
 
+	const params = { ...DEFAULT_FSRS_PARAMETERS, requestRetention };
 	const rating = scoreToRating(score);
-	const result = reviewCard(card, rating, new Date(), DEFAULT_FSRS_PARAMETERS);
+	const result = reviewCard(card, rating, new Date(), params);
 
 	return {
 		difficulty: result.card.difficulty,
@@ -338,6 +339,12 @@ function computeFsrsUpdate(score: number, current: {
 }
 
 export async function updateSrsMetrics(userId: string, itemId: string, score: number, type: 'vocabulary' | 'grammar' = 'vocabulary') {
+	// Fetch user's FSRS retention preference once
+	const userRetention = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { fsrsRetention: true }
+	}).then(u => u?.fsrsRetention ?? DEFAULT_FSRS_PARAMETERS.requestRetention);
+
 	if (type === 'grammar') {
 		const currentProgress = await prisma.userGrammarRuleProgress.findUnique({
 			where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } }
@@ -350,7 +357,7 @@ export async function updateSrsMetrics(userId: string, itemId: string, score: nu
 			repetitions: currentProgress?.repetitions ?? 0,
 			lapses: currentProgress?.lapses ?? 0,
 			lastReviewDate: currentProgress?.lastReviewDate ?? null
-		});
+		}, userRetention);
 
 		await prisma.userGrammarRuleProgress.upsert({
 			where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } },
@@ -372,7 +379,7 @@ export async function updateSrsMetrics(userId: string, itemId: string, score: nu
 		repetitions: currentProgress?.repetitions ?? 0,
 		lapses: currentProgress?.lapses ?? 0,
 		lastReviewDate: currentProgress?.lastReviewDate ?? null
-	});
+	}, userRetention);
 
 	await prisma.userVocabularyProgress.upsert({
 		where: { userId_vocabularyId: { userId, vocabularyId: itemId } },

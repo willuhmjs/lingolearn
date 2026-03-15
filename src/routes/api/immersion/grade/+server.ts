@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { generateChatCompletion } from '$lib/server/llm';
 import { updateGamification } from '$lib/server/gamification';
 import { isClearlyCorrect } from '$lib/server/fuzzyGrade';
+import { updateSrsMetrics } from '$lib/server/grader';
 import { prisma } from '$lib/server/prisma';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 
@@ -45,7 +46,7 @@ export async function POST({ request, locals }) {
 	const useLocalLlm = dbUser?.useLocalLlm ?? false;
 
 	try {
-		const { question, userAnswer, sampleAnswer, awardXp, directXp, assignmentId, correctCount } = await request.json();
+		const { question, userAnswer, sampleAnswer, awardXp, directXp, assignmentId, correctCount, vocabIds } = await request.json();
 
 		// directXp: skip LLM grading, just award this XP amount directly (used for MCQ batches)
 		if (typeof directXp === 'number' && (directXp > 0 || assignmentId)) {
@@ -72,6 +73,9 @@ export async function POST({ request, locals }) {
 			let assignmentProgress = null;
 			if (assignmentId) {
 				assignmentProgress = await updateAssignmentScore(assignmentId, locals.user.id, 1);
+			}
+			if (Array.isArray(vocabIds) && vocabIds.length > 0) {
+				await Promise.allSettled(vocabIds.map((id: string) => updateSrsMetrics(userId, id, 1.0)));
 			}
 			return json({ score: 1, feedback: '', assignmentProgress });
 		}
@@ -117,6 +121,11 @@ Student's answer: ${userAnswer}`;
 		let assignmentProgress = null;
 		if (assignmentId && score >= 0.5) {
 			assignmentProgress = await updateAssignmentScore(assignmentId, locals.user.id, 1);
+		}
+
+		// Feed immersion comprehension score back into SRS for the vocab seen in this session
+		if (Array.isArray(vocabIds) && vocabIds.length > 0) {
+			await Promise.allSettled(vocabIds.map((id: string) => updateSrsMetrics(userId, id, score)));
 		}
 
 		return json({ score, feedback: result.feedback || '', assignmentProgress });

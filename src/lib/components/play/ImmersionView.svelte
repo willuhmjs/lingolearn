@@ -40,6 +40,7 @@
 		mediaType: MediaType;
 		templateData: Record<string, any>;
 		questions: Question[];
+		vocabIds: string[];
 	};
 
 	const MEDIA_LABELS: Record<MediaType, { label: string; icon: string }> = {
@@ -304,7 +305,8 @@
 					userAnswer: state.frText,
 					sampleAnswer: question.sampleAnswer,
 					awardXp: question.points,
-					assignmentId
+					assignmentId,
+					vocabIds: session?.vocabIds ?? []
 				})
 			});
 			const result = await res.json();

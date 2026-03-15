@@ -276,8 +276,16 @@ Return your response as a JSON object with the following structure:
 					parsedResponse.vocabularyUpdates = mappedVocabUpdates;
 					parsedResponse.grammarUpdates = mappedGrammarUpdates;
 
+					const allItemScores = [
+						...mappedVocabUpdates.map((u: { score: number }) => u.score),
+						...mappedGrammarUpdates.map((u: { score: number }) => u.score)
+					];
+					const derivedGlobalScore = allItemScores.length > 0
+						? allItemScores.reduce((a: number, b: number) => a + b, 0) / allItemScores.length
+						: 1.0;
+
 					const evaluationPayload = {
-						globalScore: 1.0,
+						globalScore: derivedGlobalScore,
 						vocabularyUpdates: mappedVocabUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						grammarUpdates: mappedGrammarUpdates.map((u: { id: string; score: number }) => ({ id: u.id, score: u.score })),
 						extraVocabLemmas: parsedResponse.extraVocabLemmas || [],

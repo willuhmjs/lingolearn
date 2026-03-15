@@ -14,6 +14,9 @@ importers:
       '@auth/sveltekit':
         specifier: ^1.11.1
         version: 1.11.1(@sveltejs/kit@2.53.4(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.53.6)(vite@7.3.1(@types/node@20.19.35)(jiti@2.6.1)(tsx@4.21.0)))(svelte@5.53.6)(typescript@5.9.3)(vite@7.3.1(@types/node@20.19.35)(jiti@2.6.1)(tsx@4.21.0)))(svelte@5.53.6)
+      '@orama/stemmers':
+        specifier: ^3.1.18
+        version: 3.1.18
       '@prisma/adapter-pg':
         specifier: ^7.4.2
         version: 7.4.2
@@ -460,6 +463,10 @@ packages:
   '@mrleebo/prisma-ast@0.13.1':
     resolution: {integrity: sha512-XyroGQXcHrZdvmrGJvsA9KNeOOgGMg1Vg9OlheUsBOSKznLMDl+YChxbkboRHvtFYJEMRYmlV3uoo/njCw05iw==}
     engines: {node: '>=16'}
+
+  '@orama/stemmers@3.1.18':
+    resolution: {integrity: sha512-xXs5fpiUvBs4jJZtnayJmUSomdxxiwwwvTbAzPHSyI6geLM7bxXHgpVlYz4JeMBycHX8bHF7j9m7F35BxhuZ8g==}
+    engines: {node: '>= 20.0.0'}
 
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
@@ -2227,6 +2234,8 @@ snapshots:
     dependencies:
       chevrotain: 10.5.0
       lilconfig: 2.1.0
+
+  '@orama/stemmers@3.1.18': {}
 
   '@panva/hkdf@1.2.1': {}
 
