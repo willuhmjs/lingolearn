@@ -63,6 +63,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}
 	}
 
+	const userRecord = await prisma.user.findUnique({
+		where: { id: locals.user.id },
+		select: { sessionSuccessEma: true }
+	});
+	const sessionSuccessEma = userRecord?.sessionSuccessEma ?? 0.75;
+
 	let cefrLevel = 'A1';
 
 	if (activeLanguage?.id) {
@@ -130,6 +136,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		cefrLevel,
+		sessionSuccessEma,
 		language: activeLanguage,
 		assignment,
 		assignmentScore,

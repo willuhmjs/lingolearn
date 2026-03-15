@@ -179,21 +179,66 @@
 	let gameMode: GameMode = data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target';
 	let showingImmerse = false; // true when immerse mode is active inline
 
-	// ── Mode cycle ──────────────────────────────────────────────────────────
-	// All 4 learn modes are in the cycle by default; chat and immerse are standalone.
+	// ── Adaptive mode selection ──────────────────────────────────────────────
+	// Modes ordered from easiest (0) to hardest (3).
+	// The selection algorithm uses a Gaussian-weighted probability distribution
+	// centered at a "target difficulty" derived from the user's recent performance.
+	//
+	// Target difficulty = blend(sessionSuccessEma, sessionCorrectRate) × 3
+	//   - Low performance → target near 0 → favours multiple-choice
+	//   - High performance → target near 3 → favours native-to-target
+	//
+	// Gaussian kernel: weight[i] = exp(-((i - target)^2) / (2σ²))
+	// σ = 1.2 gives reasonable spread so no mode is ever fully excluded.
 	type CyclableMode = 'multiple-choice' | 'target-to-native' | 'fill-blank' | 'native-to-target';
 	const ALL_CYCLE_MODES: CyclableMode[] = [
-		'multiple-choice',
-		'target-to-native',
-		'fill-blank',
-		'native-to-target'
+		'multiple-choice', // difficulty index 0
+		'target-to-native', // difficulty index 1
+		'fill-blank', // difficulty index 2
+		'native-to-target' // difficulty index 3
 	];
-	let cycleIndex = 0;
+	const EMA_ALPHA = 0.2; // matches server-side SESSION_SUCCESS_EMA_ALPHA
+	const GAUSS_SIGMA = 1.2; // spread of the Gaussian; higher = more mode variety
+
+	// Local EMA — starts from last-known server value, updated after each answer
+	let localEma = $state(data.sessionSuccessEma ?? 0.75);
+
+	// Per-session tracking for immediate feedback within a session
+	let sessionCorrectCount = $state(0);
+	let sessionAnsweredCount = $state(0);
+
+	function recordModeOutcome(wasCorrect: boolean) {
+		// Update per-session counters
+		sessionAnsweredCount++;
+		if (wasCorrect) sessionCorrectCount++;
+		// Update local EMA using the same rule as the server
+		localEma = localEma + EMA_ALPHA * ((wasCorrect ? 1.0 : 0.0) - localEma);
+	}
 
 	function getNextCycleMode(): CyclableMode {
-		const mode = ALL_CYCLE_MODES[cycleIndex % ALL_CYCLE_MODES.length];
-		cycleIndex = (cycleIndex + 1) % ALL_CYCLE_MODES.length;
-		return mode;
+		// Blend global EMA with session-local rate (session rate weighted more as session grows)
+		const sessionRate =
+			sessionAnsweredCount > 0 ? sessionCorrectCount / sessionAnsweredCount : localEma;
+		const sessionWeight = Math.min(0.5, sessionAnsweredCount * 0.05); // grows to 0.5 after 10 answers
+		const effectiveScore = localEma * (1 - sessionWeight) + sessionRate * sessionWeight;
+
+		// Map [0,1] score to a target difficulty index [0,3]
+		const targetDifficulty = effectiveScore * 3;
+
+		// Gaussian weights centered at targetDifficulty
+		const weights = ALL_CYCLE_MODES.map((_, i) => {
+			const dist = i - targetDifficulty;
+			return Math.exp(-(dist * dist) / (2 * GAUSS_SIGMA * GAUSS_SIGMA));
+		});
+
+		// Weighted random sample
+		const total = weights.reduce((a, b) => a + b, 0);
+		let rand = Math.random() * total;
+		for (let i = 0; i < weights.length; i++) {
+			rand -= weights[i];
+			if (rand <= 0) return ALL_CYCLE_MODES[i];
+		}
+		return ALL_CYCLE_MODES[ALL_CYCLE_MODES.length - 1];
 	}
 
 	let fillBlankAnswers: string[] = [];
@@ -1933,6 +1978,8 @@
 				sessionChallenges += 1;
 				const xpEarned = Math.round((data.globalScore ?? 0) * 10);
 				sessionXp += xpEarned;
+				// Update local EMA for adaptive mode selection
+				recordModeOutcome((data.globalScore ?? 0) >= 0.5);
 
 				// Leitner queue: enqueue any items answered incorrectly (score < 0.5).
 				// Items are re-presented after LEITNER_BOX_INTERVALS[box] more challenges.
@@ -2172,7 +2219,20 @@
 							<h2>Ready to test your skills?</h2>
 
 							<div class="mode-selector">
-								<span class="mode-label">Mode Cycle</span>
+								<div class="mode-label-row">
+									<span class="mode-label">Adaptive Mode</span>
+									<span class="mode-ema-hint">
+										{#if localEma < 0.45}
+											Building confidence with easier modes
+										{:else if localEma < 0.65}
+											Mixing easy and medium modes
+										{:else if localEma < 0.82}
+											Balanced mix across all modes
+										{:else}
+											Favouring harder modes — you're on a roll!
+										{/if}
+									</span>
+								</div>
 								{#if assignment}
 									<p class="text-blue-600 capitalize">
 										{assignment.gamemode.replace(/-/g, ' ')}
@@ -2180,20 +2240,26 @@
 									</p>
 								{:else}
 									<div class="mode-buttons">
-										<div class="mode-btn active">
+										<div class="mode-btn active" class:mode-favoured={localEma < 0.55}>
 											🔘 Multiple Choice
 											<span class="mode-difficulty easy">Easiest</span>
 										</div>
-										<div class="mode-btn active">
+										<div
+											class="mode-btn active"
+											class:mode-favoured={localEma >= 0.4 && localEma < 0.7}
+										>
 											{lessonLanguage?.flag || '🏁'} → {englishFlag}
 											{lessonLanguage?.name || 'Target'} to English
 											<span class="mode-difficulty easy">Easy</span>
 										</div>
-										<div class="mode-btn active">
+										<div
+											class="mode-btn active"
+											class:mode-favoured={localEma >= 0.55 && localEma < 0.85}
+										>
 											✏️ Fill in the Blank
 											<span class="mode-difficulty medium">Medium</span>
 										</div>
-										<div class="mode-btn active">
+										<div class="mode-btn active" class:mode-favoured={localEma >= 0.7}>
 											{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
 												'Target'}
 											<span class="mode-difficulty hard">Hardest</span>
@@ -4221,14 +4287,44 @@
 		margin-bottom: 1.5rem;
 	}
 
+	.mode-label-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-bottom: 0.75rem;
+		flex-wrap: wrap;
+	}
+
 	.mode-label {
-		display: block;
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: #64748b;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		margin-bottom: 0.25rem;
+		flex-shrink: 0;
+	}
+
+	.mode-ema-hint {
+		font-size: 0.78rem;
+		color: #94a3b8;
+		font-style: italic;
+	}
+
+	:global(html[data-theme='dark']) .mode-ema-hint {
+		color: #64748b;
+	}
+
+	/* Highlights the mode(s) that the algorithm currently favours */
+	.mode-favoured {
+		border-color: #1cb0f6;
+		border-width: 2px;
+		box-shadow: 0 3px 0 #1899d6;
+	}
+
+	:global(html[data-theme='dark']) .mode-favoured {
+		border-color: #38bdf8;
+		box-shadow: 0 3px 0 #0369a1;
 	}
 
 	.mode-buttons {
