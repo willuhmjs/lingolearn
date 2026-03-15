@@ -326,6 +326,9 @@
 					<a href="/play?tab=games&classId={classDetails.id}" class="btn-duo btn-primary live-btn"
 						>Start Live Session</a
 					>
+					<a href="/classes/{classDetails.id}/analytics" class="btn-duo btn-secondary live-btn"
+						>View Analytics</a
+					>
 					<div class="action-row">
 						<button onclick={handleLeaveClass} class="btn-duo btn-leave">Leave Class</button>
 						<button onclick={handleDeleteClass} class="btn-duo btn-delete-class"

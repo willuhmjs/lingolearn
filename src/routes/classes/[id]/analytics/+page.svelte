@@ -8,6 +8,23 @@
 	let creating = false;
 	let dropdownOpen = false;
 
+	const errorLabels: Record<string, string> = {
+		wrong_case: 'Wrong Case',
+		wrong_tense: 'Wrong Tense',
+		wrong_gender: 'Wrong Gender',
+		spelling: 'Spelling',
+		word_order: 'Word Order',
+		vocabulary_gap: 'Vocabulary Gap'
+	};
+
+	$: sortedStudents = [...((data as any).studentSummaries ?? [])].sort(
+		(a: any, b: any) => (b.totalXp ?? 0) - (a.totalXp ?? 0)
+	);
+	$: errorEntries = Object.entries((data as any).errorTypeCounts ?? {}).sort(
+		(a, b) => (b[1] as number) - (a[1] as number)
+	);
+	$: totalErrors = errorEntries.reduce((s, [, v]) => s + (v as number), 0);
+
 	async function createRemediationAssignment(limit: number) {
 		creating = true;
 
@@ -63,12 +80,117 @@
 		<p class="subtitle">Struggling Concepts Dashboard</p>
 	</div>
 
-	<div class="analytics-card">
+	<!-- CEFR Distribution + Error Breakdown row -->
+	<div class="analytics-top-row">
+		{#if (data as any).cefrDistributionOrdered?.some((d: any) => d.count > 0)}
+			{@const cefrDist = (data as any).cefrDistributionOrdered ?? []}
+			{@const maxCefr = Math.max(...cefrDist.map((d: any) => d.count), 1)}
+			<div class="analytics-card half-card">
+				<div class="card-header">
+					<div>
+						<h2>CEFR Distribution</h2>
+						<p class="card-desc">Current level spread across all students.</p>
+					</div>
+				</div>
+				<div class="cefr-chart">
+					{#each cefrDist as d}
+						<div class="cefr-bar-group">
+							<div class="cefr-bar-wrap">
+								<div
+									class="cefr-bar-col"
+									style="height:{Math.round((d.count / maxCefr) * 100)}%;background:{d.count > 0 ? '#3b82f6' : 'var(--card-border,#e2e8f0)'}"
+								>
+									{#if d.count > 0}<span class="cefr-bar-count">{d.count}</span>{/if}
+								</div>
+							</div>
+							<span class="cefr-bar-label">{d.level}</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		{#if errorEntries.length > 0}
+			<div class="analytics-card half-card">
+				<div class="card-header">
+					<div>
+						<h2>Error Breakdown</h2>
+						<p class="card-desc">Most common error types across all student answers.</p>
+					</div>
+				</div>
+				<div class="error-section">
+					{#each errorEntries as [type, count]}
+						<div class="error-bar-row">
+							<span class="error-label">{errorLabels[type] ?? type}</span>
+							<div class="error-track">
+								<div
+									class="error-fill"
+									style="width:{Math.round(((count as number) / totalErrors) * 100)}%"
+								></div>
+							</div>
+							<span class="error-count">{count as number}</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Student Summary Table -->
+	{#if sortedStudents.length > 0}
+		<div class="analytics-card" style="margin-bottom:1.5rem;">
+			<div class="card-header">
+				<div>
+					<h2>Student Overview</h2>
+					<p class="card-desc">Per-student level, retention, and activity summary.</p>
+				</div>
+			</div>
+			<div class="table-wrap">
+				<table class="analytics-table">
+					<thead>
+						<tr>
+							<th>Student</th>
+							<th class="center">Level</th>
+							<th class="center">XP</th>
+							<th class="center">Streak</th>
+							<th class="center">Words Reviewed</th>
+							<th class="center">Avg Retention</th>
+							<th class="center">Total Lapses</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each sortedStudents as s}
+							<tr>
+								<td class="word-cell">{s.name}</td>
+								<td class="center">
+									<span class="cefr-badge">{s.cefrLevel}</span>
+								</td>
+								<td class="center mono">{s.totalXp.toLocaleString()}</td>
+								<td class="center mono">{s.currentStreak}d</td>
+								<td class="center mono">{s.wordsReviewed}</td>
+								<td class="center">
+									{#if s.avgRetentionPct !== null}
+										<span class="mono" style="color:{s.avgRetentionPct >= 80 ? '#22c55e' : s.avgRetentionPct >= 60 ? '#f97316' : '#ef4444'}">{s.avgRetentionPct}%</span>
+									{:else}
+										<span class="meaning-cell">–</span>
+									{/if}
+								</td>
+								<td class="center mono">{s.totalLapses}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Struggling Words -->
+	<div class="analytics-card" style="margin-bottom:1.5rem;">
 		<div class="card-header">
 			<div>
-				<h2>Struggling Words</h2>
+				<h2>Struggling Vocabulary</h2>
 				<p class="card-desc">
-					Words with the highest average difficulty and highest struggle rate across all students.
+					Words with the highest average difficulty and struggle rate across all students.
 				</p>
 			</div>
 			<div class="remediation-dropdown" class:open={dropdownOpen}>
@@ -80,44 +202,15 @@
 					onblur={() => setTimeout(() => (dropdownOpen = false), 150)}
 				>
 					{creating ? 'Creating...' : 'Create Remediation'}
-					<svg
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						width="14"
-						height="14"
-						aria-hidden="true"
-					>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 					</svg>
 				</button>
 				{#if dropdownOpen}
 					<ul class="dropdown-menu">
-						<li>
-							<button
-								onclick={() => {
-									dropdownOpen = false;
-									createRemediationAssignment(10);
-								}}>Top 10 Words</button
-							>
-						</li>
-						<li>
-							<button
-								onclick={() => {
-									dropdownOpen = false;
-									createRemediationAssignment(20);
-								}}>Top 20 Words</button
-							>
-						</li>
-						<li>
-							<button
-								onclick={() => {
-									dropdownOpen = false;
-									createRemediationAssignment(50);
-								}}>Top 50 Words</button
-							>
-						</li>
+						<li><button onclick={() => { dropdownOpen = false; createRemediationAssignment(10); }}>Top 10 Words</button></li>
+						<li><button onclick={() => { dropdownOpen = false; createRemediationAssignment(20); }}>Top 20 Words</button></li>
+						<li><button onclick={() => { dropdownOpen = false; createRemediationAssignment(50); }}>Top 50 Words</button></li>
 					</ul>
 				{/if}
 			</div>
@@ -127,9 +220,7 @@
 			<div class="analytics-empty">
 				<div class="analytics-empty-icon" aria-hidden="true">📊</div>
 				<p class="analytics-empty-title">No data yet</p>
-				<p class="analytics-empty-desc">
-					Students need to start learning vocabulary before struggles can be tracked.
-				</p>
+				<p class="analytics-empty-desc">Students need to start learning vocabulary before struggles can be tracked.</p>
 			</div>
 		{:else}
 			<div class="table-wrap">
@@ -138,7 +229,7 @@
 						<tr>
 							<th>Word</th>
 							<th>Meaning</th>
-							<th class="center">Students Seen</th>
+							<th class="center">Students</th>
 							<th class="center">Avg Difficulty</th>
 							<th class="center">Struggle Rate</th>
 						</tr>
@@ -152,32 +243,14 @@
 								<td class="center">
 									<div class="ease-cell">
 										<span class="mono">{word.averageDifficulty.toFixed(2)}</span>
-										<span
-											class="difficulty-dot"
-											style="background:{word.averageDifficulty > 7
-												? '#ef4444'
-												: word.averageDifficulty > 5
-													? '#f97316'
-													: '#22c55e'}"
-											title={word.averageDifficulty > 7
-												? 'Very Difficult'
-												: word.averageDifficulty > 5
-													? 'Difficult'
-													: 'Okay'}
-										></span>
+										<span class="difficulty-dot" style="background:{word.averageDifficulty > 7 ? '#ef4444' : word.averageDifficulty > 5 ? '#f97316' : '#22c55e'}" title={word.averageDifficulty > 7 ? 'Very Difficult' : word.averageDifficulty > 5 ? 'Difficult' : 'Okay'}></span>
 									</div>
 								</td>
 								<td class="center">
 									<div class="struggle-cell">
 										<span class="mono">{word.strugglePercentage.toFixed(0)}%</span>
 										<div class="struggle-bar-track">
-											<div
-												class="struggle-bar-fill"
-												style="width:{word.strugglePercentage}%;background:{word.strugglePercentage >
-												50
-													? '#ef4444'
-													: '#f97316'}"
-											></div>
+											<div class="struggle-bar-fill" style="width:{word.strugglePercentage}%;background:{word.strugglePercentage > 50 ? '#ef4444' : '#f97316'}"></div>
 										</div>
 									</div>
 								</td>
@@ -188,6 +261,54 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Struggling Grammar -->
+	{#if (data as any).strugglingGrammar?.length > 0}
+		<div class="analytics-card">
+			<div class="card-header">
+				<div>
+					<h2>Struggling Grammar</h2>
+					<p class="card-desc">Grammar rules with the highest average difficulty across students.</p>
+				</div>
+			</div>
+			<div class="table-wrap">
+				<table class="analytics-table">
+					<thead>
+						<tr>
+							<th>Rule</th>
+							<th class="center">Level</th>
+							<th class="center">Students</th>
+							<th class="center">Avg Difficulty</th>
+							<th class="center">Struggle Rate</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each (data as any).strugglingGrammar as rule}
+							<tr>
+								<td class="word-cell">{rule.title}</td>
+								<td class="center"><span class="cefr-badge">{rule.level}</span></td>
+								<td class="center">{rule.totalStudents}</td>
+								<td class="center">
+									<div class="ease-cell">
+										<span class="mono">{rule.averageDifficulty.toFixed(2)}</span>
+										<span class="difficulty-dot" style="background:{rule.averageDifficulty > 7 ? '#ef4444' : rule.averageDifficulty > 5 ? '#f97316' : '#22c55e'}"></span>
+									</div>
+								</td>
+								<td class="center">
+									<div class="struggle-cell">
+										<span class="mono">{rule.strugglePercentage.toFixed(0)}%</span>
+										<div class="struggle-bar-track">
+											<div class="struggle-bar-fill" style="width:{rule.strugglePercentage}%;background:{rule.strugglePercentage > 50 ? '#ef4444' : '#f97316'}"></div>
+										</div>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -458,5 +579,109 @@
 	.struggle-bar-fill {
 		height: 100%;
 		border-radius: 9999px;
+	}
+
+	.analytics-top-row {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.half-card {
+		margin-bottom: 0;
+	}
+
+	/* CEFR bar chart */
+	.cefr-chart {
+		display: flex;
+		align-items: flex-end;
+		gap: 0.5rem;
+		padding: 1.25rem 1.25rem 0.75rem;
+		height: 140px;
+	}
+	.cefr-bar-group {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		flex: 1;
+		height: 100%;
+	}
+	.cefr-bar-wrap {
+		flex: 1;
+		width: 100%;
+		display: flex;
+		align-items: flex-end;
+	}
+	.cefr-bar-col {
+		width: 100%;
+		border-radius: 0.375rem 0.375rem 0 0;
+		min-height: 4px;
+		position: relative;
+		transition: height 0.3s;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+	}
+	.cefr-bar-count {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: white;
+		padding-top: 3px;
+	}
+	.cefr-bar-label {
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: #64748b;
+		margin-top: 0.3rem;
+	}
+
+	/* Error bars */
+	.error-section {
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.error-bar-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.82rem;
+	}
+	.error-label {
+		width: 110px;
+		flex-shrink: 0;
+		color: var(--text-color, #475569);
+	}
+	.error-track {
+		flex: 1;
+		height: 0.5rem;
+		background: var(--card-border, #e2e8f0);
+		border-radius: 9999px;
+		overflow: hidden;
+	}
+	.error-fill {
+		height: 100%;
+		background: #f97316;
+		border-radius: 9999px;
+	}
+	.error-count {
+		font-family: ui-monospace, monospace;
+		font-size: 0.8rem;
+		color: #64748b;
+		width: 24px;
+		text-align: right;
+	}
+
+	/* Student table extras */
+	.cefr-badge {
+		display: inline-block;
+		padding: 0.1rem 0.45rem;
+		border-radius: 0.4rem;
+		background: var(--card-border, #e2e8f0);
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-color, #1e293b);
 	}
 </style>

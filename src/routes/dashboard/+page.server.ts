@@ -119,6 +119,95 @@ export const load: PageServerLoad = async ({ locals }) => {
 		loadRetentionStats(user.id)
 	]);
 
+	// --- Enhanced analytics ---
+
+	// Fetch all vocab progress records for in-depth analysis
+	const vocabProgressRecords = await prisma.userVocabularyProgress.findMany({
+		where: { userId: user.id },
+		select: {
+			vocabularyId: true,
+			stability: true,
+			retrievability: true,
+			lastReviewDate: true,
+			repetitions: true,
+			lapses: true,
+			lastErrorType: true,
+			overrideCount: true
+		}
+	});
+
+	const now = new Date();
+
+	// Re-compute current retrievability (stored value is stale since last review)
+	// R(t) = (1 + t / (9 * S))^-1
+	type UrgentItem = { vocabularyId: string; retrievabilityPct: number; lapses: number };
+	const urgentVocab: UrgentItem[] = [];
+	const errorTypeCounts: Record<string, number> = {};
+	let totalOverrides = 0;
+
+	for (const rec of vocabProgressRecords) {
+		if (rec.repetitions === 0) continue;
+		let currentRet = 1;
+		if (rec.stability > 0 && rec.lastReviewDate) {
+			const elapsedDays = (now.getTime() - rec.lastReviewDate.getTime()) / (1000 * 60 * 60 * 24);
+			currentRet = Math.max(0, Math.min(1, Math.pow(1 + elapsedDays / (9 * rec.stability), -1)));
+		}
+		if (currentRet < 0.7) {
+			urgentVocab.push({
+				vocabularyId: rec.vocabularyId,
+				retrievabilityPct: Math.round(currentRet * 100),
+				lapses: rec.lapses
+			});
+		}
+		if (rec.lastErrorType) {
+			errorTypeCounts[rec.lastErrorType] = (errorTypeCounts[rec.lastErrorType] ?? 0) + 1;
+		}
+		totalOverrides += rec.overrideCount;
+	}
+	urgentVocab.sort((a, b) => a.retrievabilityPct - b.retrievabilityPct);
+
+	// Resolve lemmas for top urgent items
+	const topUrgentIds = urgentVocab.slice(0, 10).map((u) => u.vocabularyId);
+	const urgentVocabDetails =
+		topUrgentIds.length > 0
+			? await prisma.vocabulary.findMany({
+					where: { id: { in: topUrgentIds } },
+					select: { id: true, lemma: true, meanings: { select: { value: true }, take: 1 } }
+				})
+			: [];
+	const urgentVocabMap = new Map(urgentVocabDetails.map((v) => [v.id, v]));
+
+	const urgentItems = urgentVocab.slice(0, 10).map((u) => ({
+		...u,
+		lemma: urgentVocabMap.get(u.vocabularyId)?.lemma ?? u.vocabularyId,
+		meaning: urgentVocabMap.get(u.vocabularyId)?.meanings[0]?.value ?? null
+	}));
+
+	// Grammar coverage: how many total grammar rules exist vs. how many the user has interacted with
+	const totalGrammarRuleCount = allGrammarRules.length;
+	const interactedGrammarCount = grammarRules.length;
+	const masteredGrammarCount = grammarRules.filter(
+		(r) => r.srsState === 'MASTERED' || r.srsState === 'KNOWN'
+	).length;
+	const lockedGrammarCount = allGrammarRules.filter((rule) => {
+		const userRule = grammarRules.find((r) => r.grammarRuleId === rule.id);
+		if (userRule) return false; // interacted, not locked
+		return rule.dependencies.some(
+			(dep) =>
+				!grammarRules.find(
+					(r) => r.grammarRuleId === dep.id && (r.srsState === 'MASTERED' || r.srsState === 'KNOWN')
+				)
+		);
+	}).length;
+
+	const grammarCoverage = {
+		total: totalGrammarRuleCount,
+		interacted: interactedGrammarCount,
+		mastered: masteredGrammarCount,
+		locked: lockedGrammarCount,
+		available: totalGrammarRuleCount - interactedGrammarCount - lockedGrammarCount
+	};
+
 	return {
 		vocabularies,
 		grammarRules,
@@ -127,6 +216,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		cefrProgress,
 		retentionStats,
 		dueSoonAssignments,
-		activeLiveSessions
+		activeLiveSessions,
+		urgentItems,
+		errorTypeCounts,
+		totalOverrides,
+		grammarCoverage
 	};
 };

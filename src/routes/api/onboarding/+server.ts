@@ -3,6 +3,7 @@ import { generateChatCompletion, normalizeWords } from '$lib/server/llm';
 import { prisma } from '$lib/server/prisma';
 import { CefrService } from '$lib/server/cefrService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
+import { stemWord } from '$lib/server/vocabProcessor';
 
 import type { RequestEvent } from './$types';
 
@@ -233,8 +234,20 @@ export async function POST({ request, locals }: RequestEvent) {
 				};
 				const startingElo = levels[userLevel.toUpperCase()] || 1000;
 
+				// Expand each word into candidate lemmas via stemWord so inflected forms
+				// (e.g. "ging", "hatte", "schönen") match DB entries stored as base forms.
+				const candidateLemmas = new Set<string>();
+				for (const word of normalizedWords) {
+					for (const candidate of stemWord(word, activeLangName)) {
+						candidateLemmas.add(candidate);
+					}
+				}
+
 				const vocabularies = await prisma.vocabulary.findMany({
-					where: { languageId: activeLangId, lemma: { in: normalizedWords, mode: 'insensitive' } },
+					where: {
+						languageId: activeLangId,
+						lemma: { in: Array.from(candidateLemmas), mode: 'insensitive' }
+					},
 					include: { meanings: true }
 				});
 

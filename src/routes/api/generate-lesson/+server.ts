@@ -178,23 +178,40 @@ export async function POST(event) {
 			isEarlyReview = learningPool.length > 0;
 		}
 
-		// Fetch lastErrorType for all selected items so we can boost items with recent errors.
+		// Fetch lastErrorType and FSRS stability/lastReviewDate for retrievability scoring.
 		const selectedVocabIds = selectedLearning.map((uv) => uv.vocabularyId);
-		const errorTypeRows =
+		const progressRows =
 			selectedVocabIds.length > 0
 				? await prisma.userVocabularyProgress.findMany({
 						where: { userId, vocabularyId: { in: selectedVocabIds } },
-						select: { vocabularyId: true, lastErrorType: true }
+						select: { vocabularyId: true, lastErrorType: true, stability: true, lastReviewDate: true }
 					})
 				: [];
-		const errorTypeMap = new Map(errorTypeRows.map((r) => [r.vocabularyId, r.lastErrorType]));
+		const errorTypeMap = new Map(progressRows.map((r) => [r.vocabularyId, r.lastErrorType]));
 
-		// Final selection for the lesson — items with a recent error come first (they need
-		// more practice), then most overdue, then apply Fisher-Yates shuffle within candidates.
+		// Compute current retrievability R(t) = (1 + t/(9*S))^-1 for each item.
+		// Items with lowest retrievability (most forgotten) are most urgent.
+		const retrievabilityMap = new Map<string, number>();
+		for (const row of progressRows) {
+			if (row.stability > 0 && row.lastReviewDate) {
+				const elapsedDays =
+					(now.getTime() - row.lastReviewDate.getTime()) / (1000 * 60 * 60 * 24);
+				const r = Math.max(0, Math.min(1, Math.pow(1 + elapsedDays / (9 * row.stability), -1)));
+				retrievabilityMap.set(row.vocabularyId, r);
+			} else {
+				retrievabilityMap.set(row.vocabularyId, 1); // unseen/no history → treat as fully retained
+			}
+		}
+
+		// Final selection: items with a recent error come first, then sorted by lowest
+		// retrievability (most forgotten), then by most overdue review date as tiebreaker.
 		selectedLearning.sort((a, b) => {
 			const aHasError = !!errorTypeMap.get(a.vocabularyId);
 			const bHasError = !!errorTypeMap.get(b.vocabularyId);
 			if (aHasError !== bHasError) return aHasError ? -1 : 1;
+			const aRet = retrievabilityMap.get(a.vocabularyId) ?? 1;
+			const bRet = retrievabilityMap.get(b.vocabularyId) ?? 1;
+			if (Math.abs(aRet - bRet) > 0.01) return aRet - bRet; // lower ret = more urgent
 			const aTime = a.nextReviewDate ? a.nextReviewDate.getTime() : 0;
 			const bTime = b.nextReviewDate ? b.nextReviewDate.getTime() : 0;
 			return aTime - bTime;
@@ -268,14 +285,31 @@ export async function POST(event) {
 			}
 		});
 
-		// Separate rules with all prerequisites met from those with unmet prerequisites.
-		// For rules with unmet prerequisites, collect those prerequisite rule IDs to surface them.
+		// Full transitive prerequisite resolution via DFS. Fetches the full dep graph
+		// for this language so we can walk chains of arbitrary depth (not just one hop).
+		const allGrammarForDeps = await prisma.grammarRule.findMany({
+			where: { languageId: activeLanguageId },
+			select: { id: true, dependencies: { select: { id: true } } }
+		});
+		const depMap = new Map(allGrammarForDeps.map((g) => [g.id, g.dependencies.map((d) => d.id)]));
+
+		// Returns the shallowest unmet prerequisite in the full dep chain, or null if all met.
+		function findDeepestUnmetPrereq(ruleId: string, visited = new Set<string>()): string | null {
+			if (visited.has(ruleId)) return null; // cycle guard
+			visited.add(ruleId);
+			for (const depId of depMap.get(ruleId) ?? []) {
+				if (!masteredGrammarIds.has(depId)) {
+					return findDeepestUnmetPrereq(depId, visited) ?? depId;
+				}
+			}
+			return null;
+		}
+
+		// Collect all transitively-unmet prerequisite IDs across candidate learning rules.
 		const unmetPrereqIds = new Set<string>();
 		for (const ug of learningGrammarDbQuery) {
-			const unmet = ug.grammarRule.dependencies.filter((dep) => !masteredGrammarIds.has(dep.id));
-			for (const dep of unmet) {
-				unmetPrereqIds.add(dep.id);
-			}
+			const unmet = findDeepestUnmetPrereq(ug.grammarRule.id);
+			if (unmet) unmetPrereqIds.add(unmet);
 		}
 
 		// If there are unmet prerequisites, find their UserGrammarRule records (or UNSEEN GrammarRules)
@@ -309,10 +343,8 @@ export async function POST(event) {
 			}
 
 			prereqGrammarDb = [...prereqUserRules, ...unseenPrereqRules]
-				// Only include prereqs whose own prerequisites are mastered (no multi-hop skipping)
-				.filter((ug) =>
-					ug.grammarRule.dependencies.every((dep: any) => masteredGrammarIds.has(dep.id))
-				)
+				// Only surface prereqs whose own full dep chain is now satisfied
+				.filter((ug) => findDeepestUnmetPrereq(ug.grammarRule.id) === null)
 				.slice(0, 1);
 		}
 
@@ -321,9 +353,7 @@ export async function POST(event) {
 			prereqGrammarDb.length > 0
 				? prereqGrammarDb
 				: learningGrammarDbQuery
-						.filter((ug) => {
-							return ug.grammarRule.dependencies.every((dep) => masteredGrammarIds.has(dep.id));
-						})
+						.filter((ug) => findDeepestUnmetPrereq(ug.grammarRule.id) === null)
 						.slice(0, 1);
 
 		// Grammar fallback logic
@@ -335,7 +365,7 @@ export async function POST(event) {
 				take: 20
 			});
 			const eligibleGrammars = potentialNewGrammars.filter((rule) =>
-				rule.dependencies.every((dep) => masteredGrammarIds.has(dep.id))
+				findDeepestUnmetPrereq(rule.id) === null
 			);
 			if (eligibleGrammars.length > 0) {
 				masteredGrammarDb = eligibleGrammars
@@ -371,7 +401,7 @@ export async function POST(event) {
 			});
 
 			const eligibleGrammars = potentialNewGrammars.filter((rule) =>
-				rule.dependencies.every((dep) => masteredGrammarIds.has(dep.id))
+				findDeepestUnmetPrereq(rule.id) === null
 			);
 
 			if (eligibleGrammars.length > 0) {
