@@ -173,9 +173,22 @@ export async function POST(event) {
 			selectedLearning = learningPool;
 		}
 
-		// Final selection for the lesson — most overdue items first (lowest nextReviewDate),
-		// then apply a Fisher-Yates shuffle within the top candidates so lessons feel varied.
+		// Fetch lastErrorType for all selected items so we can boost items with recent errors.
+		const selectedVocabIds = selectedLearning.map((uv) => uv.vocabularyId);
+		const errorTypeRows = selectedVocabIds.length > 0
+			? await prisma.userVocabularyProgress.findMany({
+				where: { userId, vocabularyId: { in: selectedVocabIds } },
+				select: { vocabularyId: true, lastErrorType: true }
+			})
+			: [];
+		const errorTypeMap = new Map(errorTypeRows.map((r) => [r.vocabularyId, r.lastErrorType]));
+
+		// Final selection for the lesson — items with a recent error come first (they need
+		// more practice), then most overdue, then apply Fisher-Yates shuffle within candidates.
 		selectedLearning.sort((a, b) => {
+			const aHasError = !!errorTypeMap.get(a.vocabularyId);
+			const bHasError = !!errorTypeMap.get(b.vocabularyId);
+			if (aHasError !== bHasError) return aHasError ? -1 : 1;
 			const aTime = a.nextReviewDate ? a.nextReviewDate.getTime() : 0;
 			const bTime = b.nextReviewDate ? b.nextReviewDate.getTime() : 0;
 			return aTime - bTime;

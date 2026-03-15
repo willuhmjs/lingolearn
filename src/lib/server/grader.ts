@@ -35,10 +35,20 @@ type GrammarRule = {
 
 export type GameMode = 'native-to-target' | 'target-to-native' | 'fill-blank' | 'multiple-choice';
 
+// Structured error categories reported per item by the LLM grader.
+// Used to power targeted remediation in the lesson generator.
+export type ErrorType =
+	| 'wrong_case'       // wrong grammatical case (Akkusativ, Dativ, etc.)
+	| 'wrong_tense'      // wrong verb tense or aspect
+	| 'wrong_gender'     // wrong article gender (der/die/das)
+	| 'spelling'         // misspelling not covered by ASCII equivalence
+	| 'word_order'       // incorrect sentence word order
+	| 'vocabulary_gap';  // wrong or missing word — meaning not conveyed
+
 export interface EvaluationPayload {
 	globalScore: number;
-	vocabularyUpdates: { id: string; score: number; eloBefore?: number; eloAfter?: number }[];
-	grammarUpdates: { id: string; score: number; eloBefore?: number; eloAfter?: number }[];
+	vocabularyUpdates: { id: string; score: number; errorType?: ErrorType | null; eloBefore?: number; eloAfter?: number }[];
+	grammarUpdates: { id: string; score: number; errorType?: ErrorType | null; eloBefore?: number; eloAfter?: number }[];
 	extraVocabLemmas?: string[];
 	feedback: string;
 }
@@ -113,10 +123,11 @@ JSON format:
 {
   "feedback": "<string (${nativeLanguage} feedback)>",
   "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)> } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)> } ],
+  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
+  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
   "extraVocabLemmas": ["<lemma1>", "<lemma2>"]
-}`;
+}
+For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
 
 		const userMessage = `Complete ${activeLanguageName} sentence: ${normalizeText(targetSentence)}\nUser's blank answers: ${normalizeText(userInput)}`;
 		return { systemPrompt, userMessage, idMap };
@@ -147,10 +158,11 @@ JSON format:
 {
   "feedback": "<string (${nativeLanguage} feedback)>",
   "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)> } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)> } ],
+  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
+  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
   "extraVocabLemmas": ["<lemma1>", "<lemma2>"]
-}`;
+}
+For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
 
 		const userMessage = `Correct ${nativeLanguage} translation: ${targetSentence}\nUser's chosen answer: ${userInput}`;
 		return { systemPrompt, userMessage, idMap };
@@ -208,10 +220,11 @@ JSON format:
 {
   "feedback": "<string (${nativeLanguage} feedback)>",
   "globalScore": <number>,
-  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)> } ],
-  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)> } ],
+  "vocabularyUpdates": [ { "id": "<vocabulary ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
+  "grammarUpdates": [ { "id": "<grammar ID>", "score": <number (0.0 to 1.0)>, "errorType": "<wrong_case|wrong_tense|wrong_gender|spelling|word_order|vocabulary_gap|null>" } ],
   "extraVocabLemmas": ["<${activeLanguageName} lemma 1>", "<${activeLanguageName} lemma 2>"]
-}`;
+}
+For errorType: set to the most applicable error category if score < 0.8, otherwise null.`;
 
 	const normalizedTarget = isNativeToTarget ? normalizeText(targetSentence) : targetSentence;
 	const normalizedInput = isNativeToTarget ? normalizeText(userInput) : userInput;
@@ -249,10 +262,13 @@ export function parseEvaluationResponse(content: string): EvaluationPayload {
 		}
 	}
 
+	const VALID_ERROR_TYPES = new Set(['wrong_case', 'wrong_tense', 'wrong_gender', 'spelling', 'word_order', 'vocabulary_gap']);
+
 	// Ensure backwards compatibility if LLM returns "success" (boolean) instead of "score"
-	const mapItem = (item: { id: string; score?: number; success?: boolean }) => ({
+	const mapItem = (item: { id: string; score?: number; success?: boolean; errorType?: string | null }) => ({
 		id: item.id,
-		score: typeof item.score === 'number' ? item.score : item.success ? 1.0 : 0.0
+		score: typeof item.score === 'number' ? item.score : item.success ? 1.0 : 0.0,
+		errorType: (item.errorType && VALID_ERROR_TYPES.has(item.errorType) ? item.errorType : null) as ErrorType | null
 	});
 
 	const result: EvaluationPayload = {
@@ -272,11 +288,14 @@ export function parseEvaluationResponse(content: string): EvaluationPayload {
 		const minItemScore = 0.5;
 		result.vocabularyUpdates = result.vocabularyUpdates.map((u) => ({
 			...u,
-			score: Math.max(u.score, minItemScore)
+			score: Math.max(u.score, minItemScore),
+			// Clear errorType when score is bumped up — the error was likely minor/false-positive
+			errorType: u.score < minItemScore ? null : u.errorType
 		}));
 		result.grammarUpdates = result.grammarUpdates.map((u) => ({
 			...u,
-			score: Math.max(u.score, minItemScore)
+			score: Math.max(u.score, minItemScore),
+			errorType: u.score < minItemScore ? null : u.errorType
 		}));
 	}
 
@@ -499,11 +518,14 @@ export async function updateEloRatings(
 		vocabUpdate.eloAfter = newElo;
 		const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
+		// Persist errorType: set on incorrect answers, clear on correct ones.
+		const errorType = vocabUpdate.score < 0.8 ? (vocabUpdate.errorType ?? null) : null;
+
 		await Promise.all([
 			prisma.userVocabularyProgress.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-				create: { userId, vocabularyId: vocab.id, ...fsrs },
-				update: fsrs
+				create: { userId, vocabularyId: vocab.id, ...fsrs, lastErrorType: errorType },
+				update: { ...fsrs, lastErrorType: errorType }
 			}),
 			prisma.userVocabulary.upsert({
 				where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
@@ -540,11 +562,13 @@ export async function updateEloRatings(
 		grammarUpdate.eloAfter = newElo;
 		const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
+		const errorType = grammarUpdate.score < 0.8 ? (grammarUpdate.errorType ?? null) : null;
+
 		await Promise.all([
 			prisma.userGrammarRuleProgress.upsert({
 				where: { userId_grammarRuleId: { userId, grammarRuleId: grammar.id } },
-				create: { userId, grammarRuleId: grammar.id, ...fsrs },
-				update: fsrs
+				create: { userId, grammarRuleId: grammar.id, ...fsrs, lastErrorType: errorType },
+				update: { ...fsrs, lastErrorType: errorType }
 			}),
 			prisma.userGrammarRule.upsert({
 				where: { userId_grammarRuleId: { userId, grammarRuleId: grammar.id } },
