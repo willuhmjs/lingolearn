@@ -24,6 +24,7 @@
 
 import { prisma } from './prisma';
 import type { ErrorType } from './grader';
+import { parseErrorCounts, getDominantErrors } from './errorCounts';
 
 export type CoMatrix = Partial<Record<ErrorType, Partial<Record<ErrorType, number>>>>;
 
@@ -75,26 +76,39 @@ export function getRelatedErrorTypes(matrix: CoMatrix, errorType: ErrorType): Er
  * approximation — it over-counts slightly but requires no session-level data.
  */
 export async function buildErrorCoMatrix(): Promise<CoMatrix> {
-	// Fetch all non-null lastErrorType values per user from both tables.
+	// Fetch all rows that have either a lastErrorType or a non-null errorCounts vector.
+	// errorCounts gives us persistent, decayed evidence across all past sessions —
+	// far richer than lastErrorType which only captures the most recent review.
 	const [vocabErrors, grammarErrors] = await Promise.all([
 		prisma.userVocabularyProgress.findMany({
-			where: { lastErrorType: { not: null } },
-			select: { userId: true, lastErrorType: true }
+			where: { OR: [{ lastErrorType: { not: null } }, { errorCounts: { not: null } }] },
+			select: { userId: true, lastErrorType: true, errorCounts: true }
 		}),
 		prisma.userGrammarRuleProgress.findMany({
-			where: { lastErrorType: { not: null } },
-			select: { userId: true, lastErrorType: true }
+			where: { OR: [{ lastErrorType: { not: null } }, { errorCounts: { not: null } }] },
+			select: { userId: true, lastErrorType: true, errorCounts: true }
 		})
 	]);
 
-	// Group error types by user
+	// Group error types by user, preferring the richer errorCounts vector when available.
+	// getDominantErrors returns types whose decayed count exceeds 0.5 (≈1 error within
+	// the last half-life), so stale ancient errors don't permanently inflate the matrix.
 	const userErrors = new Map<string, Set<ErrorType>>();
 	for (const row of [...vocabErrors, ...grammarErrors]) {
-		if (!row.lastErrorType) continue;
-		const et = row.lastErrorType as ErrorType;
-		if (!ERROR_TYPES.includes(et)) continue;
+		const counts = parseErrorCounts(row.errorCounts);
+		const dominant = getDominantErrors(counts);
+
+		// Use errorCounts if we have any dominant errors; fall back to lastErrorType.
+		const types: ErrorType[] =
+			dominant.length > 0
+				? dominant
+				: row.lastErrorType && ERROR_TYPES.includes(row.lastErrorType as ErrorType)
+					? [row.lastErrorType as ErrorType]
+					: [];
+
+		if (types.length === 0) continue;
 		if (!userErrors.has(row.userId)) userErrors.set(row.userId, new Set());
-		userErrors.get(row.userId)!.add(et);
+		for (const et of types) userErrors.get(row.userId)!.add(et);
 	}
 
 	// Build symmetric co-occurrence counts

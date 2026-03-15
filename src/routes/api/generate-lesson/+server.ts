@@ -14,6 +14,7 @@ import {
 import { pfaPredictCorrect } from '$lib/server/pfa';
 import { loadHlrWeights, hlrInitialStability } from '$lib/server/hlr';
 import { loadErrorCoMatrix, getRelatedErrorTypes } from '$lib/server/errorCoMatrix';
+import { parseErrorCounts, getDominantErrors } from '$lib/server/errorCounts';
 import type { ErrorType } from '$lib/server/grader';
 
 export async function POST(event) {
@@ -375,25 +376,41 @@ export async function POST(event) {
 		const coMatrix = await loadErrorCoMatrix();
 
 		// Collect the user's current active error types across vocab and grammar progress.
+		// Prefer the persistent decayed errorCounts vector over lastErrorType — it captures
+		// patterns across all sessions, not just the most recent review.
 		const [recentVocabErrors, recentGrammarErrors] = await Promise.all([
 			prisma.userVocabularyProgress.findMany({
-				where: { userId, lastErrorType: { not: null } },
-				select: { lastErrorType: true },
+				where: {
+					userId,
+					OR: [{ lastErrorType: { not: null } }, { errorCounts: { not: null } }]
+				},
+				select: { lastErrorType: true, errorCounts: true },
 				take: 20,
 				orderBy: { updatedAt: 'desc' }
 			}),
 			prisma.userGrammarRuleProgress.findMany({
-				where: { userId, lastErrorType: { not: null } },
-				select: { lastErrorType: true },
+				where: {
+					userId,
+					OR: [{ lastErrorType: { not: null } }, { errorCounts: { not: null } }]
+				},
+				select: { lastErrorType: true, errorCounts: true },
 				take: 20,
 				orderBy: { updatedAt: 'desc' }
 			})
 		]);
 
-		// Build a set of error types to boost (user's own errors + their top co-occurring partners)
+		// Build a set of error types to boost (user's own errors + their top co-occurring partners).
+		// For each item, use getDominantErrors from the decayed count vector when available;
+		// fall back to lastErrorType for items that predate the errorCounts field.
 		const activeErrorTypes = new Set<ErrorType>();
 		for (const row of [...recentVocabErrors, ...recentGrammarErrors]) {
-			if (row.lastErrorType) activeErrorTypes.add(row.lastErrorType as ErrorType);
+			const counts = parseErrorCounts(row.errorCounts);
+			const dominant = getDominantErrors(counts);
+			if (dominant.length > 0) {
+				for (const et of dominant) activeErrorTypes.add(et);
+			} else if (row.lastErrorType) {
+				activeErrorTypes.add(row.lastErrorType as ErrorType);
+			}
 		}
 		const boostedErrorTypes = new Set<ErrorType>(activeErrorTypes);
 		for (const et of activeErrorTypes) {

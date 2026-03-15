@@ -233,6 +233,7 @@ model UserVocabularyProgress {
   lapses         Int       @default(0)
   overrideCount      Int       @default(0) // times user overrode an incorrect grade to correct
   lastErrorType      String?   // most recent structured error category, null when last answer was correct
+  errorCounts        String?   // JSON: decayed error-type count vector {wrong_case:1.2, spelling:0.7, ...}
   lastReviewDate     DateTime?
   medianResponseMs   Int?      // running median response time in ms (updated each review)
   reviewCount        Int       @default(0) // total reviews — used to update running median
@@ -275,6 +276,7 @@ model UserGrammarRuleProgress {
   repetitions    Int       @default(0)
   lapses         Int       @default(0)
   lastErrorType    String?   // most recent structured error category, null when last answer was correct
+  errorCounts      String?   // JSON: decayed error-type count vector {wrong_case:1.2, spelling:0.7, ...}
   lastReviewDate   DateTime?
   medianResponseMs Int?      // running median response time in ms
   reviewCount      Int       @default(0)

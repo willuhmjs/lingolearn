@@ -181,6 +181,20 @@
 	let currentLessonLanguage: any = null;
 	$: lessonLanguage = currentLessonLanguage || data.language;
 
+	// ---------------------------------------------------------------------------
+	// Leitner within-session retry queue
+	// When the user answers incorrectly, failed items are enqueued to be shown
+	// again after an expanding interval: box 1 = 2 challenges later, box 2 = 5.
+	// ---------------------------------------------------------------------------
+	interface LeitnerItem {
+		vocabIds: string[]; // vocabulary IDs that were wrong
+		grammarIds: string[]; // grammar rule IDs that were wrong
+		dueAtChallenge: number; // show again when sessionChallenges reaches this value
+		box: 1 | 2; // Leitner box; items advance to box 2 on a second failure
+	}
+	let leitnerQueue: LeitnerItem[] = [];
+	const LEITNER_BOX_INTERVALS = { 1: 2, 2: 5 } as const;
+
 	// Assignment context
 	const assignment = data.assignment ?? null;
 	let assignmentProgress = data.assignmentScore
@@ -299,6 +313,9 @@
 	// User level tracking (populated from page data and updated from lesson metadata)
 	let userLevel = data.cefrLevel || 'A1';
 	let isAbsoluteBeginner = data.cefrLevel === 'A1';
+	// Sentence difficulty: set from lesson metadata, cleared on each new challenge
+	let sentenceTooComplex = false;
+	let sentenceEstimatedLevel: string | null = null;
 
 	// AbortControllers for in-flight API requests
 	let generateController: AbortController | null = null;
@@ -1354,7 +1371,7 @@
 	}
 	/* eslint-enable svelte/infinite-reactive-loop */
 
-	async function generateChallenge() {
+	async function generateChallenge(retryVocabIds: string[] = [], retryGrammarIds: string[] = []) {
 		// Cancel any in-flight requests before starting a new one
 		cancelAllRequests();
 
@@ -1368,6 +1385,8 @@
 		selectedChoice = null;
 		shuffledChoices = [];
 		hasSubmittedMc = false;
+		sentenceTooComplex = false;
+		sentenceEstimatedLevel = null;
 
 		// Fetch average load time for accurate progress bar
 		try {
@@ -1409,7 +1428,9 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					gameMode,
-					assignmentId: assignment?.id ?? undefined
+					assignmentId: assignment?.id ?? undefined,
+					...(retryVocabIds.length > 0 ? { retryVocabIds } : {}),
+					...(retryGrammarIds.length > 0 ? { retryGrammarIds } : {})
 				}),
 				signal: generateController.signal
 			});
@@ -1459,6 +1480,10 @@
 							idMap = msg.data.idMap || {};
 							userLevel = msg.data.userLevel || 'A1';
 							isAbsoluteBeginner = msg.data.isAbsoluteBeginner || false;
+							if (msg.data.sentenceDifficulty) {
+								sentenceTooComplex = msg.data.sentenceDifficulty.tooComplex || false;
+								sentenceEstimatedLevel = msg.data.sentenceDifficulty.estimatedLevel || null;
+							}
 						} else if (msg.type === 'vocab_enrichment') {
 							if (msg.status === 'searching') {
 								toast.success('AI generating vocabulary... 🤖');
@@ -1885,6 +1910,59 @@
 				const xpEarned = Math.round((data.globalScore ?? 0) * 10);
 				sessionXp += xpEarned;
 
+				// Leitner queue: enqueue any items answered incorrectly (score < 0.5).
+				// Items are re-presented after LEITNER_BOX_INTERVALS[box] more challenges.
+				// A second failure on the same item promotes it to box 2 (longer delay).
+				const wrongVocabIds = (data.vocabularyUpdates || [])
+					.filter((u: any) => u.score < 0.5)
+					.map((u: any) => u.id)
+					.filter(Boolean);
+				const wrongGrammarIds = (data.grammarUpdates || [])
+					.filter((u: any) => u.score < 0.5)
+					.map((u: any) => u.id)
+					.filter(Boolean);
+				if (wrongVocabIds.length > 0 || wrongGrammarIds.length > 0) {
+					const surviving = leitnerQueue.filter((item) => {
+						const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
+						const grammarHit = item.grammarIds.some((id: string) =>
+							wrongGrammarIds.includes(id)
+						);
+						return !vocabHit && !grammarHit;
+					});
+					const repeated = leitnerQueue.filter((item) => {
+						const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
+						const grammarHit = item.grammarIds.some((id: string) =>
+							wrongGrammarIds.includes(id)
+						);
+						return vocabHit || grammarHit;
+					});
+					// Re-queue items that were already in box 1 → promote to box 2
+					for (const existing of repeated) {
+						surviving.push({
+							vocabIds: existing.vocabIds,
+							grammarIds: existing.grammarIds,
+							dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[2],
+							box: 2
+						});
+					}
+					// Enqueue brand-new failures at box 1
+					const freshVocab = wrongVocabIds.filter(
+						(id: string) => !repeated.some((q) => q.vocabIds.includes(id))
+					);
+					const freshGrammar = wrongGrammarIds.filter(
+						(id: string) => !repeated.some((q) => q.grammarIds.includes(id))
+					);
+					if (freshVocab.length > 0 || freshGrammar.length > 0) {
+						surviving.push({
+							vocabIds: freshVocab,
+							grammarIds: freshGrammar,
+							dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[1],
+							box: 1
+						});
+					}
+					leitnerQueue = surviving;
+				}
+
 				// Level Up Celebration
 				if (data.levelUp) {
 					userLevel = data.levelUp.newLevel;
@@ -2086,7 +2164,14 @@
 							{/if}
 						</div>
 						<button
-							onclick={() => (gameMode === 'chat' ? goto('/play/chat') : generateChallenge())}
+							onclick={() => {
+							if (gameMode === 'chat') { goto('/play/chat'); return; }
+							const due = leitnerQueue.filter(q => q.dueAtChallenge <= sessionChallenges);
+							leitnerQueue = leitnerQueue.filter(q => q.dueAtChallenge > sessionChallenges);
+							const retryV = [...new Set(due.flatMap(q => q.vocabIds))];
+							const retryG = [...new Set(due.flatMap(q => q.grammarIds))];
+							generateChallenge(retryV, retryG);
+						}}
 							class="btn-duo btn-ai"
 							style="margin-top: 1.5rem; width: 100%;"
 						>
@@ -2171,6 +2256,11 @@
 							</button>
 							<span class="session-progress-badge">Challenge {displayedChallengeNumber}</span>
 						</div>
+						{#if sentenceTooComplex && sentenceEstimatedLevel}
+							<div class="difficulty-notice" title="This sentence uses {sentenceEstimatedLevel}-level structures — a good stretch!">
+								⚡ Advanced structure ({sentenceEstimatedLevel})
+							</div>
+						{/if}
 						<div class="challenge-section">
 							{#if challenge.gameMode === 'fill-blank'}
 								<h3 class="">Fill in the blanks:</h3>
@@ -2470,7 +2560,13 @@
 						</div>
 
 						<button
-							onclick={generateChallenge}
+							onclick={() => {
+								const due = leitnerQueue.filter(q => q.dueAtChallenge <= sessionChallenges);
+								leitnerQueue = leitnerQueue.filter(q => q.dueAtChallenge > sessionChallenges);
+								const retryV = [...new Set(due.flatMap(q => q.vocabIds))];
+								const retryG = [...new Set(due.flatMap(q => q.grammarIds))];
+								generateChallenge(retryV, retryG);
+							}}
 							class="btn-duo btn-ai next-btn"
 							style="margin-top: 1.5rem; width: 100%;"
 						>
@@ -4781,6 +4877,26 @@
 		color: #1e40af;
 		padding: 0.25rem 0.65rem;
 		border-radius: 999px;
+	}
+
+	.difficulty-notice {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: #92400e;
+		background: #fef3c7;
+		border: 1px solid #fcd34d;
+		padding: 0.2rem 0.55rem;
+		border-radius: 999px;
+		margin-bottom: 0.5rem;
+		cursor: default;
+	}
+	:global(html[data-theme='dark']) .difficulty-notice {
+		background: rgba(120, 53, 15, 0.3);
+		color: #fcd34d;
+		border-color: rgba(252, 211, 77, 0.3);
 	}
 
 	:global(html[data-theme='dark']) .session-progress-badge {

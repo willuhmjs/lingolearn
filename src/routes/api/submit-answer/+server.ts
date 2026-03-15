@@ -64,16 +64,37 @@ export async function POST(event) {
 			})
 		: null;
 
-	/** Fire-and-forget EMA + bandit posterior update — must not block grading. */
-	function updateEmaAsync(userId: string, wasCorrect: boolean, arm: number | null): void {
+	/**
+	 * Fire-and-forget EMA + bandit posterior update — must not block grading.
+	 *
+	 * @param wasCorrect   Global session-level correctness (for EMA)
+	 * @param arm          Interleave arm used for this lesson
+	 * @param itemOutcomes Per-item boolean outcomes for richer bandit feedback.
+	 *                     Each item produces one Beta posterior update on the arm,
+	 *                     giving the bandit ~6× more signal per session than a
+	 *                     single global update.
+	 */
+	function updateEmaAsync(
+		userId: string,
+		wasCorrect: boolean,
+		arm: number | null,
+		itemOutcomes: boolean[] = []
+	): void {
 		const currentEma = user?.sessionSuccessEma ?? 0.75;
 		const newEma = updateSessionSuccessEma(currentEma, wasCorrect);
 
 		const banditUpdate: Record<string, unknown> = { sessionSuccessEma: newEma };
 		if (arm !== null) {
-			const banditState = parseBanditState(user?.interleaveBanditState ?? null);
-			const newBanditState = updateBandit(banditState, arm, wasCorrect);
-			banditUpdate.interleaveBanditState = JSON.stringify(newBanditState);
+			// Apply one posterior update per item rather than one per session.
+			// All items share the same arm (interleave count chosen at lesson generation).
+			// Using item-level outcomes lets the bandit converge faster: a session where
+			// the user aces 5/6 items is stronger evidence than one boolean.
+			const outcomes = itemOutcomes.length > 0 ? itemOutcomes : [wasCorrect];
+			let banditState = parseBanditState(user?.interleaveBanditState ?? null);
+			for (const outcome of outcomes) {
+				banditState = updateBandit(banditState, arm, outcome);
+			}
+			banditUpdate.interleaveBanditState = JSON.stringify(banditState);
 		}
 
 		prisma.user
@@ -369,7 +390,13 @@ export async function POST(event) {
 					// Track assignment score if applicable
 					let assignmentProgress = null;
 					const isCorrect = (evaluation.globalScore ?? 0) >= 0.5;
-					updateEmaAsync(userId, isCorrect, interleavedArm);
+					// Collect per-item outcomes for richer bandit posterior updates.
+					// Each vocab and grammar item contributes one boolean outcome.
+					const itemOutcomes: boolean[] = [
+						...(evaluation.vocabularyUpdates || []).map((u) => (u.score ?? 0) >= 0.5),
+						...(evaluation.grammarUpdates || []).map((u) => (u.score ?? 0) >= 0.5)
+					];
+					updateEmaAsync(userId, isCorrect, interleavedArm, itemOutcomes);
 					if (assignmentId) {
 						try {
 							assignmentProgress = await updateAssignmentScore(assignmentId, userId, isCorrect);

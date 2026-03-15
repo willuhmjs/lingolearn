@@ -65,6 +65,7 @@ import type {
 	UserGrammarRule as PrismaUserGrammarRule,
 	UserGrammarRuleProgress as PrismaUserGrammarRuleProgress
 } from '@prisma/client';
+import { parseErrorCounts, updateErrorCounts } from './errorCounts';
 
 type Vocabulary = {
 	id: string;
@@ -773,6 +774,14 @@ export async function updateEloRatings(
 		// Persist errorType: set on incorrect answers, clear on correct ones.
 		const errorType = vocabUpdate.score < 0.8 ? (vocabUpdate.errorType ?? null) : null;
 
+		// Update the persistent decayed error-count vector.
+		const currentVocabErrorCounts = parseErrorCounts(currentProgress?.errorCounts ?? null);
+		const newVocabErrorCounts = updateErrorCounts(
+			currentVocabErrorCounts,
+			priorVocabState.lastReviewDate,
+			errorType
+		);
+
 		const vocabMedianMs =
 			responseTimeMs !== null
 				? updateRunningMedian(priorVocabState.medianResponseMs, responseTimeMs)
@@ -786,12 +795,14 @@ export async function updateEloRatings(
 					vocabularyId: vocab.id,
 					...fsrs,
 					lastErrorType: errorType,
+					errorCounts: newVocabErrorCounts,
 					reviewCount: 1,
 					...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
 				},
 				update: {
 					...fsrs,
 					lastErrorType: errorType,
+					errorCounts: newVocabErrorCounts,
 					reviewCount: { increment: 1 },
 					...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
 				}
@@ -870,6 +881,14 @@ export async function updateEloRatings(
 
 		const errorType = grammarUpdate.score < 0.8 ? (grammarUpdate.errorType ?? null) : null;
 
+		// Update the persistent decayed error-count vector.
+		const currentGrammarErrorCounts = parseErrorCounts(currentProgress?.errorCounts ?? null);
+		const newGrammarErrorCounts = updateErrorCounts(
+			currentGrammarErrorCounts,
+			priorGrammarState.lastReviewDate,
+			errorType
+		);
+
 		const grammarMedianMs =
 			responseTimeMs !== null
 				? updateRunningMedian(priorGrammarState.medianResponseMs, responseTimeMs)
@@ -883,12 +902,14 @@ export async function updateEloRatings(
 					grammarRuleId: grammar.id,
 					...fsrs,
 					lastErrorType: errorType,
+					errorCounts: newGrammarErrorCounts,
 					reviewCount: 1,
 					...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
 				},
 				update: {
 					...fsrs,
 					lastErrorType: errorType,
+					errorCounts: newGrammarErrorCounts,
 					reviewCount: { increment: 1 },
 					...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
 				}

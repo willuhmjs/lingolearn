@@ -1,5 +1,6 @@
 import { generateChatCompletion } from '$lib/server/llm';
 import { processVocabEnrichment } from './vocabProcessor';
+import { estimateSentenceDifficulty } from './sentenceDifficulty';
 import type { GameMode } from './promptBuilder';
 
 export async function generateLessonStream({
@@ -84,6 +85,21 @@ export async function generateLessonStream({
 
 	const stream = new ReadableStream({
 		async start(controller) {
+			// Estimate sentence complexity before streaming to the client.
+			// Parse the target-language sentence from the completed LLM JSON.
+			let sentenceDifficulty: ReturnType<typeof estimateSentenceDifficulty> | null = null;
+			try {
+				const parsed = JSON.parse(fullContent);
+				// targetSentence is the target-language sentence in all modes
+				const targetSentence: string =
+					parsed.targetSentence || parsed.challengeText || '';
+				if (targetSentence) {
+					sentenceDifficulty = estimateSentenceDifficulty(targetSentence, userLevel);
+				}
+			} catch {
+				// Non-fatal — difficulty metadata is informational only
+			}
+
 			// Send metadata first
 			controller.enqueue(
 				new TextEncoder().encode(
@@ -99,7 +115,8 @@ export async function generateLessonStream({
 							userLevel,
 							isAbsoluteBeginner,
 							isEarlyReview,
-							interleavedArm
+							interleavedArm,
+							sentenceDifficulty
 						}
 					}) + '\n'
 				)
