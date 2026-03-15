@@ -338,7 +338,13 @@ function computeFsrsUpdate(score: number, current: {
 	};
 }
 
-export async function updateSrsMetrics(userId: string, itemId: string, score: number, type: 'vocabulary' | 'grammar' = 'vocabulary') {
+export async function updateSrsMetrics(
+	userId: string,
+	itemId: string,
+	score: number,
+	type: 'vocabulary' | 'grammar' = 'vocabulary',
+	overridden = false
+) {
 	// Fetch user's FSRS retention preference once
 	const userRetention = await prisma.user.findUnique({
 		where: { id: userId },
@@ -381,10 +387,13 @@ export async function updateSrsMetrics(userId: string, itemId: string, score: nu
 		lastReviewDate: currentProgress?.lastReviewDate ?? null
 	}, userRetention);
 
+	// Increment overrideCount when user overrode an incorrect grade to correct.
+	const overrideIncrement = overridden ? 1 : 0;
+
 	await prisma.userVocabularyProgress.upsert({
 		where: { userId_vocabularyId: { userId, vocabularyId: itemId } },
-		create: { userId, vocabularyId: itemId, ...fsrs },
-		update: fsrs
+		create: { userId, vocabularyId: itemId, ...fsrs, overrideCount: overrideIncrement },
+		update: { ...fsrs, overrideCount: { increment: overrideIncrement } }
 	});
 
 	return fsrs;

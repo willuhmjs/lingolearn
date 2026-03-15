@@ -221,6 +221,7 @@ model UserVocabularyProgress {
   retrievability Float     @default(1.0) // FSRS: current memory strength [0, 1]
   repetitions    Int       @default(0)
   lapses         Int       @default(0)
+  overrideCount  Int       @default(0) // times user overrode an incorrect grade to correct
   lastReviewDate DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

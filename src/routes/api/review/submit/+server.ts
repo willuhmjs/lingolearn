@@ -9,15 +9,21 @@ export async function POST({ request, locals }) {
 	}
 
 	try {
-		const { vocabularyId, score } = await request.json();
+		const { vocabularyId, score, overridden } = await request.json();
 
 		if (!vocabularyId || typeof score !== 'number') {
 			return json({ error: 'Missing vocabularyId or score' }, { status: 400 });
 		}
 
-		await updateSrsMetrics(locals.user.id, vocabularyId, score);
+		const wasOverridden = overridden === true;
 
-		if (score >= XP_CONFIG.SCORE_THRESHOLD) {
+		// Cap overridden scores at 0.8 (FSRS "Good" not "Easy") so overrides
+		// don't inflate stability as fast as a genuinely perfect answer.
+		const effectiveScore = wasOverridden ? Math.min(score, 0.8) : score;
+
+		await updateSrsMetrics(locals.user.id, vocabularyId, effectiveScore, 'vocabulary', wasOverridden);
+
+		if (effectiveScore >= XP_CONFIG.SCORE_THRESHOLD) {
 			const cefrLevel = locals.user.cefrLevel || 'A1';
 			const xpToAdd = computeAnswerXp(XP_CONFIG.CORRECT_ANSWER.OTHER_MODES, cefrLevel);
 			await updateGamification(locals.user.id, xpToAdd);

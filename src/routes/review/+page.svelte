@@ -181,7 +181,8 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					vocabularyId: currentReview.vocabulary.id,
-					score: effectiveScore
+					score: effectiveScore,
+					overridden: userOverride !== null
 				})
 			});
 
