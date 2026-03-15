@@ -15,16 +15,19 @@
 
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	let activeTab: 'learn' | 'games' | 'immerse' = 'learn';
+	let activeTab: 'learn' | 'games' = 'learn';
 
 	$: {
 		const tabParam = $page.url.searchParams.get('tab');
 		if (tabParam === 'games') {
 			activeTab = 'games';
-		} else if (tabParam === 'learn') {
-			activeTab = 'learn';
 		} else if (tabParam === 'immerse') {
-			activeTab = 'immerse';
+			// Legacy URL — redirect to learn with immerse mode active
+			activeTab = 'learn';
+			gameMode = 'immerse';
+			showingImmerse = true;
+		} else {
+			activeTab = 'learn';
 		}
 	}
 	let myGames = data.myGames;
@@ -139,7 +142,8 @@
 		| 'target-to-native'
 		| 'fill-blank'
 		| 'multiple-choice'
-		| 'chat';
+		| 'chat'
+		| 'immerse';
 
 	let englishFlag = '🇬🇧';
 
@@ -173,6 +177,7 @@
 	let sessionChallenges = 0;
 	let displayedChallengeNumber = 1;
 	let gameMode: GameMode = data.cefrLevel === 'A1' ? 'multiple-choice' : 'native-to-target';
+	let showingImmerse = false; // true when immerse mode is active inline
 	let fillBlankAnswers: string[] = [];
 	let selectedChoice: string | null = null;
 	let shuffledChoices: string[] = [];
@@ -209,7 +214,8 @@
 	// Lock game mode to assignment's required mode when in assignment context
 	if (assignment) {
 		if (assignment.gamemode === 'immerse') {
-			activeTab = 'immerse';
+			gameMode = 'immerse';
+			showingImmerse = true;
 		} else {
 			gameMode = (assignment.gamemode as GameMode) ?? gameMode;
 		}
@@ -2019,18 +2025,64 @@
 				>
 					Quizzes
 				</button>
-				<button
-					class="tab-btn"
-					class:active={activeTab === 'immerse'}
-					onclick={() => (activeTab = 'immerse')}
-				>
-					Immerse
-				</button>
 			</div>
 		</div>
 
 		{#if activeTab === 'learn'}
 			<div class="learn-container">
+				{#if showingImmerse}
+					<!-- Immersive Reading mode (inline) -->
+					<div class="immerse-inline" in:fly={{ y: 20, duration: 400 }}>
+						<button
+							class="back-to-play-btn"
+							onclick={() => { showingImmerse = false; gameMode = 'multiple-choice'; }}
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+							Back to Play
+						</button>
+
+						{#if assignment && assignment.gamemode === 'immerse' && assignmentProgress}
+							<div
+								class="card card-duo assignment-banner {assignmentProgress.passed ? 'passed' : 'active'}"
+								in:fly={{ y: 20, duration: 400, delay: 100 }}
+							>
+								<div class="assignment-info">
+									<div class="assignment-icon">
+										{assignmentProgress.passed ? '🏆' : '📋'}
+									</div>
+									<div class="assignment-details">
+										<h2 class="assignment-title">{assignment.title}</h2>
+										<div class="assignment-meta">
+											<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
+											<span class="meta-badge gamemode">immerse</span>
+											<span class="meta-badge language">
+												{assignment.language === 'international'
+													? '🌍 International'
+													: `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
+											</span>
+										</div>
+									</div>
+								</div>
+								<div class="assignment-actions">
+									<div class="progress-box">
+										<p class="progress-label">Progress</p>
+										<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
+											{assignmentProgress.score}<span class="progress-target">/{assignmentProgress.targetScore}</span>
+										</p>
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<ImmersionView
+							language={lessonLanguage}
+							cefrLevel={userLevel}
+							assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
+							disableHoverTranslation={assignment?.disableHoverTranslation ?? false}
+							bind:assignmentProgress
+						/>
+					</div>
+				{:else}
 				<!-- Assignment context banner -->
 				{#if assignment && assignmentProgress}
 					<div
@@ -2086,20 +2138,6 @@
 				{#if !challenge && !loading}
 					<div class="card card-duo empty-state shadow-none" in:fly={{ y: 20, duration: 400 }}>
 						<h2 class="">Ready to test your skills?</h2>
-
-						{#if isAbsoluteBeginner}
-							<div class="beginner-tip">
-								<span class="tip-icon">💡</span>
-								<div>
-									<strong class="">Tip for beginners:</strong> Start with
-									<strong>Multiple Choice</strong>
-									or <strong>{lessonLanguage?.name || 'Target'} to English</strong> — these let you
-									recognize words before producing them. Once you feel confident, try
-									<strong>Fill in the Blank</strong>
-									and <strong>English to {lessonLanguage?.name || 'Target'}</strong>!
-								</div>
-							</div>
-						{/if}
 
 						<div class="mode-selector">
 							<span class="mode-label">Game Mode:</span>
@@ -2161,11 +2199,23 @@
 									💬 AI Chat Practice
 									<span class="chat-cta-subtitle">Practice conversation with an AI tutor</span>
 								</button>
+
+								<button
+									class="chat-cta-btn"
+									class:active={gameMode === 'immerse'}
+									onclick={() => (gameMode = 'immerse')}
+								>
+									📰 Immersive Reading
+									<span class="chat-cta-subtitle"
+										>Read authentic content and answer comprehension questions</span
+									>
+								</button>
 							{/if}
 						</div>
 						<button
 							onclick={() => {
 							if (gameMode === 'chat') { goto('/play/chat'); return; }
+							if (gameMode === 'immerse') { showingImmerse = true; return; }
 							const due = leitnerQueue.filter(q => q.dueAtChallenge <= sessionChallenges);
 							leitnerQueue = leitnerQueue.filter(q => q.dueAtChallenge > sessionChallenges);
 							const retryV = [...new Set(due.flatMap(q => q.vocabIds))];
@@ -2187,7 +2237,7 @@
 									d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
 								/></svg
 							>
-							{gameMode === 'chat' ? 'Start Chat Session' : 'Generate Next Challenge'}
+							{gameMode === 'chat' ? 'Start Chat Session' : gameMode === 'immerse' ? 'Start Immersive Reading' : 'Generate Next Challenge'}
 						</button>
 					</div>
 				{/if}
@@ -2586,66 +2636,7 @@
 						</button>
 					</div>
 				{/if}
-			</div>
-		{:else if activeTab === 'immerse'}
-			<div class="immerse-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-				{#if assignment && assignment.gamemode === 'immerse' && assignmentProgress}
-					<div
-						class="card card-duo assignment-banner {assignmentProgress.passed
-							? 'passed'
-							: 'active'}"
-						in:fly={{ y: 20, duration: 400, delay: 100 }}
-					>
-						<div class="assignment-info">
-							<div class="assignment-icon">
-								{assignmentProgress.passed ? '🏆' : '📋'}
-							</div>
-							<div class="assignment-details">
-								<h2 class="assignment-title">{assignment.title}</h2>
-								<div class="assignment-meta">
-									<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
-									<span class="meta-badge gamemode">immerse</span>
-									<span class="meta-badge language">
-										{assignment.language === 'international'
-											? '🌍 International'
-											: `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
-									</span>
-								</div>
-							</div>
-						</div>
-						<div class="assignment-actions">
-							<div class="progress-box">
-								<p class="progress-label">Progress</p>
-								<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
-									{assignmentProgress.score}<span class="progress-target"
-										>/{assignmentProgress.targetScore}</span
-									>
-								</p>
-							</div>
-							<a href="/classes/{assignment.classId}" class="btn-duo btn-secondary back-btn">
-								Back to Class
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="16"
-									height="16"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
-								>
-							</a>
-						</div>
-					</div>
 				{/if}
-				<ImmersionView
-					language={lessonLanguage}
-					cefrLevel={userLevel}
-					assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
-					disableHoverTranslation={assignment?.disableHoverTranslation ?? false}
-					bind:assignmentProgress
-				/>
 			</div>
 		{:else}
 			<div class="games-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
@@ -3029,6 +3020,38 @@
 		max-width: 800px;
 		margin: 0 auto;
 		width: 100%;
+	}
+
+	.immerse-inline {
+		max-width: 800px;
+		margin: 0 auto;
+		width: 100%;
+	}
+
+	.back-to-play-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		margin-bottom: 1rem;
+		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e2e8f0);
+		border-radius: 0.5rem;
+		color: var(--text-color, #334155);
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.back-to-play-btn:hover {
+		background: #f1f5f9;
+		border-color: #94a3b8;
+	}
+
+	:global(html[data-theme='dark']) .back-to-play-btn:hover {
+		background: #2a303c;
+		border-color: #64748b;
 	}
 
 	.header-section {
