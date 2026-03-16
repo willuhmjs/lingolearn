@@ -173,7 +173,70 @@ const french: LanguageConfig = {
 	stemWithSnowball: false,
 
 	llmConstraintPrompt:
-		"Agissez en tant que relecteur français expérimenté. Écrivez le texte dans un français impeccable (conforme à l'Académie française) et évitez les anglicismes ou les orthographes anglaises pour les termes apparentés. Veillez particulièrement à ne pas utiliser l'orthographe anglaise pour les mots français."
+		"Agissez en tant que relecteur français expérimenté. Écrivez le texte dans un français impeccable (conforme à l'Académie française) et évitez les anglicismes ou les orthographes anglaises pour les termes apparentés. Veillez particulièrement à ne pas utiliser l'orthographe anglaise pour les mots français.",
+
+	destinations: [
+		{
+			city: 'Paris',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: 'The City of Light — fashion, cuisine, and the Eiffel Tower'
+		},
+		{
+			city: 'Lyon',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: "France's gastronomic capital and UNESCO heritage city"
+		},
+		{
+			city: 'Marseille',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: 'Sun-drenched port city of bouillabaisse and calanques'
+		},
+		{
+			city: 'Montreal',
+			country: 'Canada',
+			emoji: '🇨🇦',
+			description: "North America's French heart — festivals and poutine"
+		},
+		{
+			city: 'Quebec City',
+			country: 'Canada',
+			emoji: '🇨🇦',
+			description: 'Fortified old town with a distinctly European feel'
+		},
+		{
+			city: 'Brussels',
+			country: 'Belgium',
+			emoji: '🇧🇪',
+			description: "Chocolate, waffles, and the EU's administrative capital"
+		},
+		{
+			city: 'Geneva',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'International diplomacy on the shores of Lake Leman'
+		},
+		{
+			city: 'Dakar',
+			country: 'Senegal',
+			emoji: '🇸🇳',
+			description: "West Africa's vibrant gateway to the Francophone world"
+		},
+		{
+			city: 'Abidjan',
+			country: "Cote d'Ivoire",
+			emoji: '🇨🇮',
+			description: "Cote d'Ivoire's dynamic economic powerhouse"
+		},
+		{
+			city: 'Casablanca',
+			country: 'Morocco',
+			emoji: '🇲🇦',
+			description: 'Atlantic port city where French and Arabic cultures meet'
+		}
+	]
 };
 
 export default french;

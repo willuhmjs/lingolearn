@@ -45,6 +45,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/src/lib/frequency ./src/lib/frequency
+COPY --from=builder /app/src/lib/languages ./src/lib/languages
 
 # Generate Prisma client using locally installed prisma (fast, no download)
 RUN pnpm prisma generate

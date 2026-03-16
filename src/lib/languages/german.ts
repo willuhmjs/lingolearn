@@ -288,7 +288,70 @@ const german: LanguageConfig = {
 	stemWithSnowball: true,
 
 	llmConstraintPrompt:
-		"Agieren Sie als erfahrener deutscher Lektor. Schreiben Sie den Text in fehlerfreiem Hochdeutsch (Duden-Konform) und vermeiden Sie Anglizismen oder englische Schreibweisen bei verwandten Begriffen. Achten Sie besonders darauf, keine englischen Schreibweisen für deutsche Wörter zu verwenden (z.B. 'oft' statt 'often', 'kollektiv' statt 'collective')."
+		"Agieren Sie als erfahrener deutscher Lektor. Schreiben Sie den Text in fehlerfreiem Hochdeutsch (Duden-Konform) und vermeiden Sie Anglizismen oder englische Schreibweisen bei verwandten Begriffen. Achten Sie besonders darauf, keine englischen Schreibweisen für deutsche Wörter zu verwenden (z.B. 'oft' statt 'often', 'kollektiv' statt 'collective').",
+
+	destinations: [
+		{
+			city: 'Berlin',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Germany's vibrant, history-rich capital"
+		},
+		{
+			city: 'Munich',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Bavaria's beer gardens and Alpine backdrop"
+		},
+		{
+			city: 'Hamburg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Germany's gateway to the sea"
+		},
+		{
+			city: 'Vienna',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: 'Imperial palaces, coffee houses, and classical music'
+		},
+		{
+			city: 'Salzburg',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: "Mozart's birthplace in the Austrian Alps"
+		},
+		{
+			city: 'Zurich',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: "Switzerland's cosmopolitan financial hub"
+		},
+		{
+			city: 'Bern',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'Charming medieval arcades and the Swiss capital'
+		},
+		{
+			city: 'Cologne',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Cathedral city on the Rhine with legendary Karneval'
+		},
+		{
+			city: 'Frankfurt',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Europe's financial heartbeat and Goethe's hometown"
+		},
+		{
+			city: 'Dresden',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Baroque masterpieces on the banks of the Elbe'
+		}
+	]
 };
 
 export default german;

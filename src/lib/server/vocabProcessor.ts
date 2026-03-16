@@ -2,7 +2,7 @@ import { prisma } from '$lib/server/prisma';
 import { generateChatCompletion } from '$lib/server/llm';
 import { recordTokenUsage } from '$lib/server/aiQuota';
 import { stemmer as germanStemmer } from '@orama/stemmers/german';
-import { getFrequencyRank, estimateFrequencyRank } from '$lib/frequency/index';
+import { getFrequencyRankDynamic, estimateFrequencyRank } from '$lib/server/frequencyLoader';
 import { getLanguageConfig } from '$lib/languages';
 
 export const AMBIGUOUS_WORDS_BY_LANG: Record<string, string[]> = {
@@ -708,7 +708,7 @@ async function upsertAiVocabEntry(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const gender = (v.gender ?? null) as any;
 		const frequency =
-			getFrequencyRank(cleanLemma, activeLangName) ?? estimateFrequencyRank(cleanLemma);
+			getFrequencyRankDynamic(cleanLemma, activeLangName) ?? estimateFrequencyRank(cleanLemma);
 		return prisma.vocabulary.create({
 			data: {
 				lemma: cleanLemma,

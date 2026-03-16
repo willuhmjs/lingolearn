@@ -106,4 +106,10 @@ export interface LanguageConfig {
 	 * Empty string = no constraint.
 	 */
 	llmConstraintPrompt: string;
+
+	/**
+	 * Destinations used by the World Immersion mode. Each entry becomes an
+	 * ImmersionDestination row, seeded automatically on first startup.
+	 */
+	destinations: { city: string; country: string; emoji: string; description: string }[];
 }

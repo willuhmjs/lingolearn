@@ -179,7 +179,70 @@ const spanish: LanguageConfig = {
 	stemWithSnowball: false,
 
 	llmConstraintPrompt:
-		'Actúe como un revisor de español experimentado. Escriba el texto en un español impecable (conforme a la RAE) y evite los anglicismos o la ortografía inglesa para términos relacionados. Tenga especial cuidado en no utilizar la ortografía inglesa para palabras españolas.'
+		'Actúe como un revisor de español experimentado. Escriba el texto en un español impecable (conforme a la RAE) y evite los anglicismos o la ortografía inglesa para términos relacionados. Tenga especial cuidado en no utilizar la ortografía inglesa para palabras españolas.',
+
+	destinations: [
+		{
+			city: 'Madrid',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: 'Vibrant capital of flamenco, tapas, and football'
+		},
+		{
+			city: 'Barcelona',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: "Gaudi's city of art, beaches, and Catalan culture"
+		},
+		{
+			city: 'Mexico City',
+			country: 'Mexico',
+			emoji: '🇲🇽',
+			description: 'Ancient Aztec heart meets modern Latin metropolis'
+		},
+		{
+			city: 'Buenos Aires',
+			country: 'Argentina',
+			emoji: '🇦🇷',
+			description: 'The Paris of South America — tango and steak capital'
+		},
+		{
+			city: 'Bogota',
+			country: 'Colombia',
+			emoji: '🇨🇴',
+			description: 'High-altitude city of emeralds and magical realism'
+		},
+		{
+			city: 'Lima',
+			country: 'Peru',
+			emoji: '🇵🇪',
+			description: "South America's culinary capital by the Pacific"
+		},
+		{
+			city: 'Havana',
+			country: 'Cuba',
+			emoji: '🇨🇺',
+			description: 'Classic cars, salsa rhythms, and colorful colonial streets'
+		},
+		{
+			city: 'Santiago',
+			country: 'Chile',
+			emoji: '🇨🇱',
+			description: "Andean peaks frame Chile's modern, dynamic capital"
+		},
+		{
+			city: 'Seville',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: "Flamenco's birthplace amid orange trees and tapas bars"
+		},
+		{
+			city: 'Cartagena',
+			country: 'Colombia',
+			emoji: '🇨🇴',
+			description: 'Walled Caribbean gem of cobblestones and bougainvillea'
+		}
+	]
 };
 
 export default spanish;

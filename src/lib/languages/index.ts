@@ -3,12 +3,14 @@ export type { LanguageConfig, ArticleForm, ArticleMapEntry, InflectionEntry } fr
 import german from './german';
 import french from './french';
 import spanish from './spanish';
+import italian from './italian';
 
 /** All registered language configs, keyed by display name. */
 const LANGUAGES: Record<string, typeof german> = {
 	German: german,
 	French: french,
-	Spanish: spanish
+	Spanish: spanish,
+	Italian: italian
 };
 
 /**
@@ -25,4 +27,4 @@ export function getLanguageNames(): string[] {
 }
 
 // Re-export individual configs for direct imports
-export { german, french, spanish };
+export { german, french, spanish, italian };
