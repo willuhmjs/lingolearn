@@ -667,7 +667,7 @@ export async function POST(event) {
 		// encountered them yet (e.g. Akkusativ, Dativ used implicitly in sentences).
 		const allLanguageGrammarDb = await prisma.grammarRule.findMany({
 			where: { languageId: activeLanguageId, level: { in: allowedLevels } },
-			select: { id: true, title: true, description: true, level: true }
+			select: { id: true, title: true, description: true, level: true, guide: true }
 		});
 
 		// Build short ID maps for LLM (saves tokens & prevents UUID garbling)
