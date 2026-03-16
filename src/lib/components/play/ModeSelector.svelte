@@ -38,11 +38,8 @@
 			showingImmerse = true;
 			return;
 		}
-		// Use pinned mode if set, otherwise pick adaptively
-		gameMode =
-			pinnedMode.size > 0
-				? [...pinnedMode][Math.floor(Math.random() * pinnedMode.size)]
-				: getNextCycleMode();
+		// getNextCycleMode respects pinnedMode internally
+		gameMode = getNextCycleMode();
 		const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
 		leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
 		const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];

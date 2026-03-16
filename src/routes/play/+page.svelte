@@ -178,11 +178,6 @@
 	let sessionChallenges = $state(0);
 	let displayedChallengeNumber = $state(1);
 	let gameMode: GameMode = $state('native-to-target');
-	$effect(() => {
-		if (data.cefrLevel === 'A1' && gameMode === 'native-to-target') {
-			gameMode = 'multiple-choice';
-		}
-	});
 	let showingImmerse = $state(false); // true when immerse mode is active inline
 	// null = adaptive (algorithm picks each round); set = user has pinned a specific cycle mode
 	let pinnedMode = $state(new Set<CyclableMode>());
@@ -229,6 +224,12 @@
 	}
 
 	function getNextCycleMode(): CyclableMode {
+		// If the user pinned specific modes, pick randomly from those only
+		if (pinnedMode.size > 0) {
+			const pinned = [...pinnedMode];
+			return pinned[Math.floor(Math.random() * pinned.length)];
+		}
+
 		// Blend global EMA with session-local rate (session rate weighted more as session grows)
 		const sessionRate =
 			sessionAnsweredCount > 0 ? sessionCorrectCount / sessionAnsweredCount : localEma;
@@ -2391,11 +2392,8 @@
 										showingImmerse = true;
 										return;
 									}
-									// Use pinned mode if set, otherwise pick adaptively
-									gameMode =
-										pinnedMode.size > 0
-											? [...pinnedMode][Math.floor(Math.random() * pinnedMode.size)]
-											: getNextCycleMode();
+									// getNextCycleMode respects pinnedMode internally
+									gameMode = getNextCycleMode();
 									const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
 									leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
 									const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
@@ -2428,7 +2426,17 @@
 
 					{#if loading}
 						<div class="card card-duo loading-state" in:fade={{ duration: 300 }}>
-							<div class="spinner"></div>
+							<div class="loading-mode-badge">
+								{#if gameMode === 'multiple-choice'}
+									🔘 Multiple Choice
+								{:else if gameMode === 'target-to-native'}
+									{lessonLanguage?.flag || '🏁'} → {englishFlag} {lessonLanguage?.name || 'Target'} to English
+								{:else if gameMode === 'fill-blank'}
+									✏️ Fill in the Blank
+								{:else if gameMode === 'native-to-target'}
+									{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name || 'Target'}
+								{/if}
+							</div>
 							<div class="load-progress-track">
 								<div
 									class="load-progress-fill {isLocalMode ? 'local-mode-fill' : ''}"
@@ -3612,6 +3620,25 @@
 	.loading-state {
 		text-align: center;
 		padding: 4rem 2rem;
+	}
+
+	.loading-mode-badge {
+		display: inline-block;
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #6366f1;
+		background: #eef2ff;
+		border: 1px solid #c7d2fe;
+		border-radius: 999px;
+		padding: 0.3rem 0.9rem;
+		margin-bottom: 1rem;
+		letter-spacing: 0.02em;
+	}
+
+	:global(html[data-theme='dark']) .loading-mode-badge {
+		color: #a5b4fc;
+		background: #1e1b4b;
+		border-color: #3730a3;
 	}
 
 	.spinner {
