@@ -772,7 +772,21 @@
 		des: { definite: false, forms: [{ caseLabel: 'Plural', nomArticle: 'des' }] }
 	};
 
-	// Maps Prisma Gender enum values to German/French article strings
+	// Map of common Spanish article forms
+	const SPANISH_ARTICLE_MAP: Record<string, { definite: boolean; forms: ArticleForm[] }> = {
+		el: { definite: true, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'el' }] },
+		la: { definite: true, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'la' }] },
+		los: { definite: true, forms: [{ caseLabel: 'Masc. Pl.', nomArticle: 'los' }] },
+		las: { definite: true, forms: [{ caseLabel: 'Fem. Pl.', nomArticle: 'las' }] },
+		un: { definite: false, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'un' }] },
+		una: { definite: false, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'una' }] },
+		unos: { definite: false, forms: [{ caseLabel: 'Masc. Pl.', nomArticle: 'unos' }] },
+		unas: { definite: false, forms: [{ caseLabel: 'Fem. Pl.', nomArticle: 'unas' }] },
+		al: { definite: true, forms: [{ caseLabel: 'Masc. Sing. (a + el)', nomArticle: 'el' }] },
+		del: { definite: true, forms: [{ caseLabel: 'Masc. Sing. (de + el)', nomArticle: 'el' }] }
+	};
+
+	// Maps Prisma Gender enum values to article strings for any supported language
 	function genderToArticle(
 		gender: string | null | undefined,
 		lang: string = 'German'
@@ -783,6 +797,10 @@
 			if (g === 'MASCULINE' || g === 'LE') return 'le';
 			if (g === 'FEMININE' || g === 'LA') return 'la';
 			return null;
+		} else if (lang === 'Spanish') {
+			if (g === 'MASCULINE' || g === 'EL') return 'el';
+			if (g === 'FEMININE' || g === 'LA') return 'la';
+			return null;
 		} else {
 			// default to German logic
 			if (g === 'MASCULINE' || g === 'DER') return 'der';
@@ -790,6 +808,23 @@
 			if (g === 'NEUTER' || g === 'DAS') return 'das';
 			return null;
 		}
+	}
+
+	/** Returns the article map for the active language. */
+	function getArticleMap(
+		lang: string
+	): Record<string, { definite: boolean; forms: ArticleForm[] }> {
+		if (lang === 'French') return FRENCH_ARTICLE_MAP;
+		if (lang === 'Spanish') return SPANISH_ARTICLE_MAP;
+		return GERMAN_ARTICLE_MAP;
+	}
+
+	/** Returns the inflection map for the active language. */
+	function getInflectionMap(lang: string): Record<string, { lemma: string; note: string }> {
+		if (lang === 'French') return FRENCH_INFLECTION_MAP;
+		// Spanish: no inflection map yet, return empty
+		if (lang === 'Spanish') return {};
+		return GERMAN_INFLECTION_MAP;
 	}
 
 	// German article forms → case + gender info for building smart tooltips
@@ -1065,9 +1100,9 @@
 		if (assignment?.disableHoverTranslation) return text;
 		const vocabMap = buildVocabMap();
 		const _isDeToEn = challenge.gameMode === 'target-to-native';
-		// Whether this text is German (to enable article case tooltips)
+		// Whether this text is in the target language (to enable article/case tooltips)
 		const mode = challenge.gameMode as string;
-		const isGermanText =
+		const isTargetLangText =
 			mode === 'fill-blank'
 				? true
 				: mode === 'target-to-native'
@@ -1078,6 +1113,18 @@
 							? isTargetedVocab
 							: false;
 
+		const isEnToDe = challenge.gameMode === 'native-to-target';
+
+		// Extract target-language words from targetSentence for contextual tooltips in native-to-target mode.
+		// This lets us show the actual form (e.g. "den" instead of "der") from the LLM-generated answer.
+		const targetWords =
+			isEnToDe && challenge?.targetSentence
+				? challenge.targetSentence
+						.replace(/<[^>]+>/g, '')
+						.split(/\s+/)
+						.map((w: string) => w.replace(/[.,!?;:'"(){}\-\u2014\u2013[\]]/g, ''))
+				: [];
+
 		// Step 1: Replace <vocab> tags with placeholders to protect them
 		const vocabReplacements: string[] = [];
 		text = text.replace(
@@ -1086,7 +1133,36 @@
 				const vocab =
 					challenge.targetedVocabulary?.find((v: any) => v.id === id) ||
 					challenge.allVocabulary?.find((v: any) => v.id === id);
-				const tooltipHtml = vocab ? buildTooltipHtml(vocab) : '';
+				let tooltipHtml = '';
+				if (vocab) {
+					// For native-to-target, find the contextual form of this word in the targetSentence
+					let contextForm: string | undefined;
+					if (isEnToDe && targetWords.length > 0) {
+						const lemma = vocab.lemma?.toLowerCase();
+						// Find the word in targetSentence that matches this vocab's lemma or an inflected form
+						const match = targetWords.find((tw: string) => {
+							const twLower = tw.toLowerCase();
+							if (twLower === lemma) return true;
+							// Check if this target word is a known inflection of the lemma
+							const activeLanguageName = lessonLanguage?.name || 'German';
+							const mapToUse = getInflectionMap(activeLanguageName);
+							const inf = mapToUse[twLower];
+							if (inf && inf.lemma.toLowerCase() === lemma) return true;
+							// Check if it starts with the lemma (common for German prefixed/conjugated forms)
+							if (
+								lemma &&
+								lemma.length >= 3 &&
+								twLower.startsWith(lemma.slice(0, Math.max(3, lemma.length - 2)))
+							)
+								return true;
+							return false;
+						});
+						if (match && match.toLowerCase() !== lemma) {
+							contextForm = match;
+						}
+					}
+					tooltipHtml = buildTooltipHtml(vocab, contextForm);
+				}
 				const replacement = `<span class="vocab-highlight tooltip-trigger">${word}${tooltipHtml}</span>`;
 				vocabReplacements.push(replacement);
 				return `\x00VOCAB_${vocabReplacements.length - 1}\x00`;
@@ -1096,7 +1172,6 @@
 		// Clean up incomplete tags from streaming
 		text = text.replace(/<vocab[^>]*>|<\/vocab>|<vocab[^>]*$/g, '');
 
-		const isEnToDe = challenge.gameMode === 'native-to-target';
 		const englishArticles = new Set(['the', 'a', 'an']);
 
 		// Helper: find vocab entry for a cleaned word
@@ -1114,7 +1189,7 @@
 				// except maybe to deprioritize nouns if lowercase (but wait, in French/Spanish, nouns are lowercase!).
 				// So ONLY apply this capitalization logic if the text we are parsing is German.
 				const activeLanguageName = lessonLanguage?.name || 'German';
-				const parsingGerman = isGermanText && activeLanguageName === 'German';
+				const parsingGerman = isTargetLangText && activeLanguageName === 'German';
 
 				if (parsingGerman) {
 					const isCapitalized = /^[A-ZÄÖÜ]/.test(originalToken.replace(/^[¿¡"'({[]+/, ''));
@@ -1136,8 +1211,7 @@
 			// Check the inflection map for conjugations/contractions
 			if (!isEnToDe) {
 				const activeLanguageName = lessonLanguage?.name || 'German';
-				const mapToUse =
-					activeLanguageName === 'French' ? FRENCH_INFLECTION_MAP : GERMAN_INFLECTION_MAP;
+				const mapToUse = getInflectionMap(activeLanguageName);
 
 				const inflection = mapToUse[cleanWord];
 				if (inflection) {
@@ -1258,25 +1332,55 @@
 						);
 					let article: string;
 
-					if (activeLanguageName === 'French') {
-						if (cleanWord === 'the') {
-							const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
-							article = isPlural ? 'les' : nomArt || 'le/la';
-						} else {
-							// "a" / "an" — indefinite
-							const genderMap: Record<string, string> = { le: 'un', la: 'une' };
-							const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
-							article = nomArt ? genderMap[nomArt] || 'un/une' : 'un/une';
+					// Try to find the actual article from the LLM-generated targetSentence
+					// so we show the correct case (e.g. "den" accusative instead of "der" nominative)
+					const artMap = getArticleMap(activeLanguageName);
+					const nounLemma = nounVocab.lemma?.toLowerCase();
+					let foundFromTarget = false;
+					if (targetWords.length > 0 && nounLemma) {
+						// Find the noun in the targetSentence, then look at the word before it for the article
+						for (let tw = 0; tw < targetWords.length; tw++) {
+							const twLower = targetWords[tw].toLowerCase();
+							if (twLower === nounLemma || twLower === nounVocab.plural?.toLowerCase()) {
+								// Look backwards for the nearest article
+								for (let back = tw - 1; back >= 0 && back >= tw - 3; back--) {
+									const candidate = targetWords[back].toLowerCase();
+									if (artMap[candidate]) {
+										article = targetWords[back];
+										foundFromTarget = true;
+										break;
+									}
+								}
+								break;
+							}
 						}
-					} else {
+					}
+
+					if (!foundFromTarget) {
+						const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
 						if (cleanWord === 'the') {
-							const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
-							article = isPlural ? 'die' : nomArt || 'der/die/das';
+							const defaultArticles: Record<string, { plural: string; fallback: string }> = {
+								French: { plural: 'les', fallback: 'le/la' },
+								Spanish: { plural: 'los/las', fallback: 'el/la' },
+								German: { plural: 'die', fallback: 'der/die/das' }
+							};
+							const defaults = defaultArticles[activeLanguageName] || defaultArticles.German;
+							article = isPlural ? defaults.plural : nomArt || defaults.fallback;
 						} else {
 							// "a" / "an" — indefinite
-							const genderMap: Record<string, string> = { der: 'ein', die: 'eine', das: 'ein' };
-							const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
-							article = nomArt ? genderMap[nomArt] || 'ein/eine' : 'ein/eine';
+							const indefiniteMap: Record<string, Record<string, string>> = {
+								French: { le: 'un', la: 'une' },
+								Spanish: { el: 'un', la: 'una' },
+								German: { der: 'ein', die: 'eine', das: 'ein' }
+							};
+							const defaultIndefinites: Record<string, string> = {
+								French: 'un/une',
+								Spanish: 'un/una',
+								German: 'ein/eine'
+							};
+							const genderMap = indefiniteMap[activeLanguageName] || indefiniteMap.German;
+							const fallback = defaultIndefinites[activeLanguageName] || defaultIndefinites.German;
+							article = nomArt ? genderMap[nomArt] || fallback : fallback;
 						}
 					}
 
@@ -1287,11 +1391,24 @@
 					continue;
 				}
 				// Fallback: show generic article tooltip even when noun not found
+				// Try to find any article from the targetSentence as a better fallback
 				let genericArticle = '';
-				if (activeLanguageName === 'French') {
-					genericArticle = cleanWord === 'the' ? 'le/la/les' : 'un/une/des';
+				const artMapFallback = getArticleMap(activeLanguageName);
+				const isDefinite = cleanWord === 'the';
+				const targetArticle = targetWords.find((tw: string) => {
+					const entry = artMapFallback[tw.toLowerCase()];
+					return entry && entry.definite === isDefinite;
+				});
+				if (targetArticle) {
+					genericArticle = targetArticle;
 				} else {
-					genericArticle = cleanWord === 'the' ? 'der/die/das' : 'ein/eine';
+					const genericDefaults: Record<string, { def: string; indef: string }> = {
+						French: { def: 'le/la/les', indef: 'un/une/des' },
+						Spanish: { def: 'el/la/los/las', indef: 'un/una' },
+						German: { def: 'der/die/das', indef: 'ein/eine' }
+					};
+					const defaults = genericDefaults[activeLanguageName] || genericDefaults.German;
+					genericArticle = isDefinite ? defaults.def : defaults.indef;
 				}
 				const genericTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${genericArticle}</span><span class="word-tooltip-body"><span class="word-tooltip-row"><strong>Article:</strong> ${cleanWord === 'the' ? 'definite' : 'indefinite'}</span></span></span>`;
 				result.push(
@@ -1300,10 +1417,10 @@
 				continue;
 			}
 
-			// Handle German/French article forms — show case + gender tooltip
-			if (isGermanText) {
+			// Handle target-language article forms — show case + gender tooltip
+			if (isTargetLangText) {
 				const activeLanguageName = lessonLanguage?.name || 'German';
-				const artMap = activeLanguageName === 'French' ? FRENCH_ARTICLE_MAP : GERMAN_ARTICLE_MAP;
+				const artMap = getArticleMap(activeLanguageName);
 
 				const artEntry = artMap[cleanWord];
 				if (artEntry) {
@@ -2430,11 +2547,13 @@
 								{#if gameMode === 'multiple-choice'}
 									🔘 Multiple Choice
 								{:else if gameMode === 'target-to-native'}
-									{lessonLanguage?.flag || '🏁'} → {englishFlag} {lessonLanguage?.name || 'Target'} to English
+									{lessonLanguage?.flag || '🏁'} → {englishFlag}
+									{lessonLanguage?.name || 'Target'} to English
 								{:else if gameMode === 'fill-blank'}
 									✏️ Fill in the Blank
 								{:else if gameMode === 'native-to-target'}
-									{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name || 'Target'}
+									{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
+										'Target'}
 								{/if}
 							</div>
 							<div class="load-progress-track">

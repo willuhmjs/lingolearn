@@ -380,11 +380,15 @@ function calculateNewElo(
 	const expected = 1 / (1 + Math.pow(10, (baseDifficulty - currentMu) / 400));
 	// Uncertainty attenuation factor g ∈ (0, modeWeight] — shrinks as σ² grows
 	const g = modeWeight / Math.sqrt(1 + (3 * q * q * currentVariance) / (Math.PI * Math.PI));
-	// Information gain from this observation
-	const d2 = 1 / (g * g * expected * (1 - expected) + 1e-8);
+	// Information gain from this observation (q² term per Glicko-1 so variance decays gradually)
+	const d2 = 1 / (q * q * g * g * expected * (1 - expected) + 1e-8);
 	// Posterior mean update
 	const updateStep = ((score - expected) * g) / (1 / currentVariance + 1 / d2);
-	const newMu = Math.max(500, Math.min(2500, currentMu + (1 / q) * updateStep));
+	// Cap per-review delta to prevent wild swings on first reviews / high-variance items
+	const MAX_ELO_DELTA = 40;
+	const rawDelta = (1 / q) * updateStep;
+	const clampedDelta = Math.max(-MAX_ELO_DELTA, Math.min(MAX_ELO_DELTA, rawDelta));
+	const newMu = Math.max(500, Math.min(2500, currentMu + clampedDelta));
 	// Posterior variance shrinks with each observation; floor at 25 (σ=5) to retain responsiveness
 	const newVariance = Math.max(25, 1 / (1 / currentVariance + 1 / d2));
 
