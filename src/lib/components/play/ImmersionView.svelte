@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly, fade } from 'svelte/transition';
 	import toast from 'svelte-french-toast';
+	import { getLanguageConfig } from '$lib/languages';
 
 	let {
 		language = null,
@@ -181,15 +182,14 @@
 		return raw.replace(/^[«»„""[\]().,!?;:'"–—]+|[«»„""[\]().,!?;:'"–—]+$/g, '').trim();
 	}
 
-	const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
+	let langConfig = $derived(getLanguageConfig(language?.name || 'German'));
 
 	function isSparseMeta(vocab: any): boolean {
 		// Missing definition
 		if (!vocab?.meanings?.length) return true;
 		// Noun in a gendered language missing its gender
 		const isNoun = vocab.partOfSpeech === 'noun';
-		const langIsGendered = GENDERED_LANGUAGES.includes((language?.name || '').toLowerCase());
-		if (isNoun && langIsGendered && !vocab.gender) return true;
+		if (isNoun && langConfig.hasGender && !vocab.gender) return true;
 		// Missing metadata enrichment
 		const meta = vocab?.metadata;
 		if (!meta) return true;

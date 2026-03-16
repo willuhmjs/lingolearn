@@ -3,6 +3,7 @@ import { generateChatCompletion } from '$lib/server/llm';
 import { recordTokenUsage } from '$lib/server/aiQuota';
 import { stemmer as germanStemmer } from '@orama/stemmers/german';
 import { getFrequencyRank, estimateFrequencyRank } from '$lib/frequency/index';
+import { getLanguageConfig } from '$lib/languages';
 
 export const AMBIGUOUS_WORDS_BY_LANG: Record<string, string[]> = {
 	German: [
@@ -609,7 +610,9 @@ export function stemWord(word: string, language: string): Set<string> {
 		}
 	};
 
-	if (language === 'German') {
+	const langConfig = getLanguageConfig(language);
+
+	if (langConfig.stemWithSnowball) {
 		// Strong/irregular verb lookup — resolves ablaut forms that no suffix
 		// algorithm can handle (e.g. fuhr→fahren, ging→gehen, war→sein).
 		const strongLemma = GERMAN_STRONG_VERB_LOOKUP[lower];
@@ -621,18 +624,6 @@ export function stemWord(word: string, language: string): Set<string> {
 		// Verb infinitive reconstruction (most German infinitives end in -en)
 		if (!stem.endsWith('en')) addBoth(stem + 'en');
 
-		// Also apply short-suffix stripping for forms Snowball leaves unreduced:
-		// verb conjugations (geht→geh, spielt→spiel) and noun -s plurals (Autos→Auto)
-		// and adjective -em dative (schönem→schön).
-		const shortSuffixes = ['en', 'em', 'st', 't', 'e', 's'];
-		for (const suffix of shortSuffixes) {
-			if (lower.length >= suffix.length + 3 && lower.endsWith(suffix)) {
-				const stripped = lower.slice(0, -suffix.length);
-				addBoth(stripped);
-				addBoth(stripped + 'en');
-			}
-		}
-
 		// zu-infinitive: aufzugeben → aufgeben
 		const zuMatch = lower.match(/^(.{2,})zu(.{2,})$/);
 		if (zuMatch) addBoth(zuMatch[1] + zuMatch[2]);
@@ -643,80 +634,16 @@ export function stemWord(word: string, language: string): Set<string> {
 			addBoth(rest);
 			if (rest.endsWith('t')) addBoth(rest.slice(0, -1) + 'en');
 		}
-	} else if (language === 'French') {
-		const suffixes = [
-			'es',
-			's',
-			'ent',
-			'ons',
-			'ez',
-			'ais',
-			'ait',
-			'ions',
-			'iez',
-			'aient',
-			'er',
-			'ir',
-			're',
-			'ée',
-			'ées',
-			'és'
-		];
-		for (const suffix of suffixes) {
-			if (lower.length > suffix.length + 2 && lower.endsWith(suffix)) {
-				const stem = lower.slice(0, -suffix.length);
-				candidates.add(stem);
-				candidates.add(stem + 'er');
-				candidates.add(stem + 'ir');
-				candidates.add(stem + 're');
-			}
-		}
-	} else if (language === 'Spanish') {
-		const suffixes = [
-			'as',
-			'a',
-			'amos',
-			'áis',
-			'an',
-			'es',
-			'e',
-			'emos',
-			'éis',
-			'en',
-			'is',
-			'imos',
-			'ís',
-			'aba',
-			'abas',
-			'ábamos',
-			'abais',
-			'aban',
-			'ía',
-			'ías',
-			'íamos',
-			'íais',
-			'ían',
-			'ar',
-			'er',
-			'ir',
-			'ado',
-			'ido',
-			'ados',
-			'idos',
-			'ada',
-			'ida',
-			'adas',
-			'idas',
-			's',
-			'es'
-		];
-		for (const suffix of suffixes) {
-			if (lower.length > suffix.length + 2 && lower.endsWith(suffix)) {
-				const stem = lower.slice(0, -suffix.length);
-				candidates.add(stem);
-				candidates.add(stem + 'ar');
-				candidates.add(stem + 'er');
-				candidates.add(stem + 'ir');
+	}
+
+	// Language-specific suffix stripping (Romance languages + German short-suffix pass)
+	for (const suffix of langConfig.stemSuffixes) {
+		if (lower.length >= suffix.length + 3 && lower.endsWith(suffix)) {
+			const stem = lower.slice(0, -suffix.length);
+			addBoth(stem);
+			// Reconstruct common infinitive endings for verb stems
+			for (const inf of ['en', 'ar', 'er', 'ir', 're']) {
+				if (!stem.endsWith(inf)) addBoth(stem + inf);
 			}
 		}
 	}
@@ -744,9 +671,10 @@ async function upsertAiVocabEntry(
 	const cleanLemma = v.lemma?.replace(/^[.,!?;:'"()[\]{}-]+|[.,!?;:'"()[\]{}-]+$/g, '') || '';
 	if (!cleanLemma) return null;
 
-	// German nouns must be capitalised; if the LLM lowercased it, demote POS to avoid bad data.
+	// In languages where nouns are capitalised (e.g. German), a lowercase lemma
+	// from the LLM cannot be a noun — demote to avoid bad data.
 	if (
-		activeLangName === 'German' &&
+		getLanguageConfig(activeLangName).capitalizeNouns &&
 		cleanLemma.charAt(0) === cleanLemma.charAt(0).toLowerCase() &&
 		v.partOfSpeech === 'noun'
 	) {

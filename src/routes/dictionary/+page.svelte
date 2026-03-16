@@ -3,6 +3,7 @@
 	import { marked } from 'marked';
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 	import { toastError } from '$lib/utils/toast';
+	import { getLanguageConfig } from '$lib/languages';
 
 	let { data } = $props();
 
@@ -40,17 +41,13 @@
 	let expandedGrammarId: string | null = $state(null);
 	let grammarQuery = $state('');
 
-	// Languages where nouns require a gender field
-	const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
-
 	function isSparse(word: any): boolean {
 		if (!word?.id) return false; // transient words can't be backfilled
 		// Missing definition
 		if (!word.meanings?.length) return true;
 		// Noun in a gendered language missing its gender
 		const isNoun = word.partOfSpeech === 'noun';
-		const langIsGendered = GENDERED_LANGUAGES.includes(currentLanguage.toLowerCase());
-		if (isNoun && langIsGendered && !word.gender) return true;
+		if (isNoun && langConfig.hasGender && !word.gender) return true;
 		// Missing metadata enrichment
 		const meta = word.metadata;
 		if (!meta) return true;
@@ -106,6 +103,7 @@
 	}
 
 	let currentLanguage = $derived(data.user?.activeLanguage?.name || 'German');
+	let langConfig = $derived(getLanguageConfig(currentLanguage));
 	let activeLanguageId = $derived(data.user?.activeLanguage?.id);
 	let grammarRules = $derived(data.grammarRules || []);
 	let learningWords: any[] = $state([]);
@@ -223,21 +221,13 @@
 	let showEssetPrompt = $state(false);
 
 	function handleInput() {
-		if (currentLanguage === 'German') {
-			// Check if 'ss' was typed to show prompt
-			if (query.includes('ss')) {
-				showEssetPrompt = true;
-			} else {
-				showEssetPrompt = false;
-			}
-
-			query = query
-				.replace(/ae/g, 'ä')
-				.replace(/oe/g, 'ö')
-				.replace(/ue/g, 'ü')
-				.replace(/Ae/g, 'Ä')
-				.replace(/Oe/g, 'Ö')
-				.replace(/Ue/g, 'Ü');
+		// Apply language-specific ASCII → native character replacements
+		for (const { from, to } of langConfig.asciiReplacements) {
+			query = query.replace(from, to);
+		}
+		// Show ß prompt when 'ss' is typed in languages that use ß (e.g. German)
+		if (langConfig.specialChars.includes('ß')) {
+			showEssetPrompt = query.includes('ss');
 		}
 
 		clearTimeout(debounceTimer);

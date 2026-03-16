@@ -11,6 +11,7 @@
 	import TranslationView from '$lib/components/play/TranslationView.svelte';
 	import ImmersionView from '$lib/components/play/ImmersionView.svelte';
 	import BookmarkButton from '$lib/components/BookmarkButton.svelte';
+	import { getLanguageConfig } from '$lib/languages';
 
 	let { data } = $props<{ data: PageData }>();
 
@@ -446,471 +447,31 @@
 		cancelAllRequests();
 	});
 
-	// Map of common German inflected/contracted forms → { lemma, note }
-	// This enables tooltips on conjugated verbs, contractions, etc.
-	const GERMAN_INFLECTION_MAP: Record<string, { lemma: string; note: string }> = {
-		// sein (to be) conjugations
-		bin: { lemma: 'sein', note: 'ich bin (I am)' },
-		bist: { lemma: 'sein', note: 'du bist (you are)' },
-		ist: { lemma: 'sein', note: 'er/sie/es ist (he/she/it is)' },
-		sind: { lemma: 'sein', note: 'wir/sie/Sie sind (we/they are)' },
-		seid: { lemma: 'sein', note: 'ihr seid (you all are)' },
-		war: { lemma: 'sein', note: 'ich/er war (I/he was)' },
-		warst: { lemma: 'sein', note: 'du warst (you were)' },
-		waren: { lemma: 'sein', note: 'wir/sie waren (we/they were)' },
-		wart: { lemma: 'sein', note: 'ihr wart (you all were)' },
-		gewesen: { lemma: 'sein', note: 'past participle of sein' },
-		// haben (to have) conjugations
-		habe: { lemma: 'haben', note: 'ich habe (I have)' },
-		hast: { lemma: 'haben', note: 'du hast (you have)' },
-		hat: { lemma: 'haben', note: 'er/sie/es hat (he/she/it has)' },
-		habt: { lemma: 'haben', note: 'ihr habt (you all have)' },
-		hatte: { lemma: 'haben', note: 'ich/er hatte (I/he had)' },
-		hattest: { lemma: 'haben', note: 'du hattest (you had)' },
-		hatten: { lemma: 'haben', note: 'wir/sie hatten (we/they had)' },
-		hattet: { lemma: 'haben', note: 'ihr hattet (you all had)' },
-		gehabt: { lemma: 'haben', note: 'past participle of haben' },
-		// werden (to become) conjugations
-		werde: { lemma: 'werden', note: 'ich werde (I become/will)' },
-		wirst: { lemma: 'werden', note: 'du wirst (you become/will)' },
-		wird: { lemma: 'werden', note: 'er/sie/es wird (becomes/will)' },
-		werdet: { lemma: 'werden', note: 'ihr werdet (you all become/will)' },
-		wurde: { lemma: 'werden', note: 'ich/er wurde (became/was)' },
-		wurdest: { lemma: 'werden', note: 'du wurdest (you became)' },
-		wurden: { lemma: 'werden', note: 'wir/sie wurden (became/were)' },
-		geworden: { lemma: 'werden', note: 'past participle of werden' },
-		// können (can) conjugations
-		kann: { lemma: 'können', note: 'ich/er kann (I/he can)' },
-		kannst: { lemma: 'können', note: 'du kannst (you can)' },
-		könnt: { lemma: 'können', note: 'ihr könnt (you all can)' },
-		konnte: { lemma: 'können', note: 'ich/er konnte (could)' },
-		konntest: { lemma: 'können', note: 'du konntest (you could)' },
-		konnten: { lemma: 'können', note: 'wir/sie konnten (could)' },
-		gekonnt: { lemma: 'können', note: 'past participle of können' },
-		// müssen (must) conjugations
-		muss: { lemma: 'müssen', note: 'ich/er muss (I/he must)' },
-		musst: { lemma: 'müssen', note: 'du musst (you must)' },
-		müsst: { lemma: 'müssen', note: 'ihr müsst (you all must)' },
-		musste: { lemma: 'müssen', note: 'ich/er musste (had to)' },
-		musstest: { lemma: 'müssen', note: 'du musstest (you had to)' },
-		mussten: { lemma: 'müssen', note: 'wir/sie mussten (had to)' },
-		gemusst: { lemma: 'müssen', note: 'past participle of müssen' },
-		// wollen (to want) conjugations
-		will: { lemma: 'wollen', note: 'ich/er will (I/he want(s))' },
-		willst: { lemma: 'wollen', note: 'du willst (you want)' },
-		wollt: { lemma: 'wollen', note: 'ihr wollt (you all want)' },
-		wollte: { lemma: 'wollen', note: 'ich/er wollte (wanted)' },
-		wolltest: { lemma: 'wollen', note: 'du wolltest (you wanted)' },
-		wollten: { lemma: 'wollen', note: 'wir/sie wollten (wanted)' },
-		gewollt: { lemma: 'wollen', note: 'past participle of wollen' },
-		// sollen (should) conjugations
-		soll: { lemma: 'sollen', note: 'ich/er soll (I/he should)' },
-		sollst: { lemma: 'sollen', note: 'du sollst (you should)' },
-		sollt: { lemma: 'sollen', note: 'ihr sollt (you all should)' },
-		sollte: { lemma: 'sollen', note: 'ich/er sollte (should)' },
-		solltest: { lemma: 'sollen', note: 'du solltest (you should)' },
-		sollten: { lemma: 'sollen', note: 'wir/sie sollten (should)' },
-		gesollt: { lemma: 'sollen', note: 'past participle of sollen' },
-		// dürfen (may) conjugations
-		darf: { lemma: 'dürfen', note: 'ich/er darf (I/he may)' },
-		darfst: { lemma: 'dürfen', note: 'du darfst (you may)' },
-		dürft: { lemma: 'dürfen', note: 'ihr dürft (you all may)' },
-		durfte: { lemma: 'dürfen', note: 'ich/er durfte (was allowed)' },
-		durftest: { lemma: 'dürfen', note: 'du durftest (you were allowed)' },
-		durften: { lemma: 'dürfen', note: 'wir/sie durften (were allowed)' },
-		gedurft: { lemma: 'dürfen', note: 'past participle of dürfen' },
-		// mögen/möchten
-		mag: { lemma: 'mögen', note: 'ich/er mag (I/he like(s))' },
-		magst: { lemma: 'mögen', note: 'du magst (you like)' },
-		mögt: { lemma: 'mögen', note: 'ihr mögt (you all like)' },
-		mochte: { lemma: 'mögen', note: 'ich/er mochte (liked)' },
-		möchte: { lemma: 'mögen', note: 'ich/er möchte (would like)' },
-		möchtest: { lemma: 'mögen', note: 'du möchtest (you would like)' },
-		möchten: { lemma: 'mögen', note: 'wir/sie möchten (would like)' },
-		möchtet: { lemma: 'mögen', note: 'ihr möchtet (you all would like)' },
-		// wissen (to know)
-		weiß: { lemma: 'wissen', note: 'ich/er weiß (I/he know(s))' },
-		weißt: { lemma: 'wissen', note: 'du weißt (you know)' },
-		wisst: { lemma: 'wissen', note: 'ihr wisst (you all know)' },
-		wusste: { lemma: 'wissen', note: 'ich/er wusste (knew)' },
-		wusstest: { lemma: 'wissen', note: 'du wusstest (you knew)' },
-		wussten: { lemma: 'wissen', note: 'wir/sie wussten (knew)' },
-		gewusst: { lemma: 'wissen', note: 'past participle of wissen' },
-		// geben (to give)
-		gibt: { lemma: 'geben', note: 'er/sie/es gibt (gives); es gibt (there is/are)' },
-		gab: { lemma: 'geben', note: 'ich/er gab (gave)' },
-		gabst: { lemma: 'geben', note: 'du gabst (you gave)' },
-		gaben: { lemma: 'geben', note: 'wir/sie gaben (gave)' },
-		gegeben: { lemma: 'geben', note: 'past participle of geben' },
-		// fahren (to drive/go)
-		fährt: { lemma: 'fahren', note: 'er/sie/es fährt (drives)' },
-		fährst: { lemma: 'fahren', note: 'du fährst (you drive)' },
-		fuhr: { lemma: 'fahren', note: 'ich/er fuhr (drove)' },
-		gefahren: { lemma: 'fahren', note: 'past participle of fahren' },
-		// sprechen (to speak)
-		spricht: { lemma: 'sprechen', note: 'er/sie/es spricht (speaks)' },
-		sprichst: { lemma: 'sprechen', note: 'du sprichst (you speak)' },
-		sprach: { lemma: 'sprechen', note: 'ich/er sprach (spoke)' },
-		gesprochen: { lemma: 'sprechen', note: 'past participle of sprechen' },
-		// sehen (to see)
-		sieht: { lemma: 'sehen', note: 'er/sie/es sieht (sees)' },
-		siehst: { lemma: 'sehen', note: 'du siehst (you see)' },
-		sah: { lemma: 'sehen', note: 'ich/er sah (saw)' },
-		gesehen: { lemma: 'sehen', note: 'past participle of sehen' },
-		// lesen (to read)
-		liest: { lemma: 'lesen', note: 'er/sie/du liest (reads/you read)' },
-		las: { lemma: 'lesen', note: 'ich/er las (read)' },
-		gelesen: { lemma: 'lesen', note: 'past participle of lesen' },
-		// essen (to eat)
-		isst: { lemma: 'essen', note: 'er/sie/du isst (eats/you eat)' },
-		aß: { lemma: 'essen', note: 'ich/er aß (ate)' },
-		gegessen: { lemma: 'essen', note: 'past participle of essen' },
-		// nehmen (to take)
-		nimmt: { lemma: 'nehmen', note: 'er/sie/es nimmt (takes)' },
-		nimmst: { lemma: 'nehmen', note: 'du nimmst (you take)' },
-		nahm: { lemma: 'nehmen', note: 'ich/er nahm (took)' },
-		genommen: { lemma: 'nehmen', note: 'past participle of nehmen' },
-		// kommen (to come)
-		kommt: { lemma: 'kommen', note: 'er/sie/es kommt (comes)' },
-		kam: { lemma: 'kommen', note: 'ich/er kam (came)' },
-		gekommen: { lemma: 'kommen', note: 'past participle of kommen' },
-		// gehen (to go)
-		geht: { lemma: 'gehen', note: 'er/sie/es geht (goes)' },
-		ging: { lemma: 'gehen', note: 'ich/er ging (went)' },
-		gegangen: { lemma: 'gehen', note: 'past participle of gehen' },
-		// stehen (to stand)
-		steht: { lemma: 'stehen', note: 'er/sie/es steht (stands)' },
-		stand: { lemma: 'stehen', note: 'ich/er stand (stood)' },
-		gestanden: { lemma: 'stehen', note: 'past participle of stehen' },
-		// finden (to find)
-		findet: { lemma: 'finden', note: 'er/sie/es findet (finds)' },
-		fand: { lemma: 'finden', note: 'ich/er fand (found)' },
-		gefunden: { lemma: 'finden', note: 'past participle of finden' },
-		// tun (to do)
-		tut: { lemma: 'tun', note: 'er/sie/es tut (does)' },
-		tat: { lemma: 'tun', note: 'ich/er tat (did)' },
-		getan: { lemma: 'tun', note: 'past participle of tun' },
-		// laufen (to run)
-		läuft: { lemma: 'laufen', note: 'er/sie/es läuft (runs)' },
-		läufst: { lemma: 'laufen', note: 'du läufst (you run)' },
-		lief: { lemma: 'laufen', note: 'ich/er lief (ran)' },
-		gelaufen: { lemma: 'laufen', note: 'past participle of laufen' },
-		// schlafen (to sleep)
-		schläft: { lemma: 'schlafen', note: 'er/sie/es schläft (sleeps)' },
-		schläfst: { lemma: 'schlafen', note: 'du schläfst (you sleep)' },
-		schlief: { lemma: 'schlafen', note: 'ich/er schlief (slept)' },
-		geschlafen: { lemma: 'schlafen', note: 'past participle of schlafen' },
-		// tragen (to carry/wear)
-		trägt: { lemma: 'tragen', note: 'er/sie/es trägt (carries/wears)' },
-		trägst: { lemma: 'tragen', note: 'du trägst (you carry/wear)' },
-		// heißen (to be called)
-		heiße: { lemma: 'heißen', note: 'ich heiße (I am called)' },
-		heißt: { lemma: 'heißen', note: 'du/er heißt (you are/is called)' },
+	// Language config — all language-specific data (articles, inflections, gender
+	// mappings, etc.) lives in src/lib/languages/. Adding a new language = adding
+	// one file there; no changes needed here.
+	let langConfig = $derived(getLanguageConfig(lessonLanguage?.name || 'German'));
 
-		// Preposition + article contractions
-		am: { lemma: 'an', note: 'am = an + dem (at/on the)' },
-		ans: { lemma: 'an', note: 'ans = an + das (to/onto the)' },
-		im: { lemma: 'in', note: 'im = in + dem (in the)' },
-		ins: { lemma: 'in', note: 'ins = in + das (into the)' },
-		zum: { lemma: 'zu', note: 'zum = zu + dem (to the, masc./neut.)' },
-		zur: { lemma: 'zu', note: 'zur = zu + der (to the, fem.)' },
-		vom: { lemma: 'von', note: 'vom = von + dem (from the)' },
-		beim: { lemma: 'bei', note: 'beim = bei + dem (at/by the)' },
-		aufs: { lemma: 'auf', note: 'aufs = auf + das (onto the)' },
-		fürs: { lemma: 'für', note: 'fürs = für + das (for the)' },
-		durchs: { lemma: 'durch', note: 'durchs = durch + das (through the)' },
-		ums: { lemma: 'um', note: 'ums = um + das (around the)' },
-		übers: { lemma: 'über', note: 'übers = über + das (over the)' },
-		unters: { lemma: 'unter', note: 'unters = unter + das (under the)' },
-		hinters: { lemma: 'hinter', note: 'hinters = hinter + das (behind the)' },
-		vors: { lemma: 'vor', note: 'vors = vor + das (in front of the)' }
-	};
-
-	// Map of common French inflected/contracted forms
-	const FRENCH_INFLECTION_MAP: Record<string, { lemma: string; note: string }> = {
-		// être (to be)
-		suis: { lemma: 'être', note: 'je suis (I am)' },
-		es: { lemma: 'être', note: 'tu es (you are)' },
-		est: { lemma: 'être', note: 'il/elle/on est (he/she/it is)' },
-		sommes: { lemma: 'être', note: 'nous sommes (we are)' },
-		êtes: { lemma: 'être', note: 'vous êtes (you all are)' },
-		sont: { lemma: 'être', note: 'ils/elles sont (they are)' },
-		étais: { lemma: 'être', note: "j'/tu étais (I/you was/were)" },
-		était: { lemma: 'être', note: 'il/elle était (was)' },
-		étions: { lemma: 'être', note: 'nous étions (we were)' },
-		étiez: { lemma: 'être', note: 'vous étiez (you all were)' },
-		étaient: { lemma: 'être', note: 'ils/elles étaient (they were)' },
-		serai: { lemma: 'être', note: 'je serai (I will be)' },
-		seras: { lemma: 'être', note: 'tu seras (you will be)' },
-		sera: { lemma: 'être', note: 'il/elle sera (will be)' },
-		serons: { lemma: 'être', note: 'nous serons (we will be)' },
-		serez: { lemma: 'être', note: 'vous serez (you all will be)' },
-		seront: { lemma: 'être', note: 'ils/elles seront (they will be)' },
-		sois: { lemma: 'être', note: 'je/tu sois (subjunctive)' },
-		soit: { lemma: 'être', note: 'il/elle soit (subjunctive)' },
-		soyons: { lemma: 'être', note: 'nous soyons (subjunctive)' },
-		soyez: { lemma: 'être', note: 'vous soyez (subjunctive)' },
-		soient: { lemma: 'être', note: 'ils/elles soient (subjunctive)' },
-		été: { lemma: 'être', note: 'past participle of être' },
-
-		// avoir (to have)
-		ai: { lemma: 'avoir', note: "j'ai (I have)" },
-		as: { lemma: 'avoir', note: 'tu as (you have)' },
-		a: { lemma: 'avoir', note: 'il/elle a (he/she/it has)' },
-		avons: { lemma: 'avoir', note: 'nous avons (we have)' },
-		avez: { lemma: 'avoir', note: 'vous avez (you all have)' },
-		ont: { lemma: 'avoir', note: 'ils/elles ont (they have)' },
-		avais: { lemma: 'avoir', note: "j'/tu avais (I/you had)" },
-		avait: { lemma: 'avoir', note: 'il/elle avait (had)' },
-		avions: { lemma: 'avoir', note: 'nous avions (we had)' },
-		aviez: { lemma: 'avoir', note: 'vous aviez (you all had)' },
-		avaient: { lemma: 'avoir', note: 'ils/elles avaient (they had)' },
-		aurai: { lemma: 'avoir', note: "j'aurai (I will have)" },
-		auras: { lemma: 'avoir', note: 'tu auras (you will have)' },
-		aura: { lemma: 'avoir', note: 'il/elle aura (will have)' },
-		aurons: { lemma: 'avoir', note: 'nous aurons (we will have)' },
-		aurez: { lemma: 'avoir', note: 'vous aurez (you all will have)' },
-		auront: { lemma: 'avoir', note: 'ils/elles auront (they will have)' },
-		aie: { lemma: 'avoir', note: "j'/tu aie (subjunctive)" },
-		ait: { lemma: 'avoir', note: 'il/elle ait (subjunctive)' },
-		ayons: { lemma: 'avoir', note: 'nous ayons (subjunctive)' },
-		ayez: { lemma: 'avoir', note: 'vous ayez (subjunctive)' },
-		aient: { lemma: 'avoir', note: 'ils/elles aient (subjunctive)' },
-		eu: { lemma: 'avoir', note: 'past participle of avoir' },
-
-		// aller (to go)
-		vais: { lemma: 'aller', note: 'je vais (I go/am going)' },
-		vas: { lemma: 'aller', note: 'tu vas (you go)' },
-		va: { lemma: 'aller', note: 'il/elle va (goes)' },
-		allons: { lemma: 'aller', note: 'nous allons (we go)' },
-		allez: { lemma: 'aller', note: 'vous allez (you all go)' },
-		vont: { lemma: 'aller', note: 'ils/elles vont (they go)' },
-		allais: { lemma: 'aller', note: "j'/tu allais (went/was going)" },
-		allait: { lemma: 'aller', note: 'il/elle allait (went/was going)' },
-		allions: { lemma: 'aller', note: 'nous allions (went/were going)' },
-		alliez: { lemma: 'aller', note: 'vous alliez (went/were going)' },
-		allaient: { lemma: 'aller', note: 'ils/elles allaient (went/were going)' },
-		irai: { lemma: 'aller', note: "j'irai (I will go)" },
-		iras: { lemma: 'aller', note: 'tu iras (you will go)' },
-		ira: { lemma: 'aller', note: 'il/elle ira (will go)' },
-		irons: { lemma: 'aller', note: 'nous irons (we will go)' },
-		irez: { lemma: 'aller', note: 'vous irez (you all will go)' },
-		iront: { lemma: 'aller', note: 'ils/elles iront (they will go)' },
-		allé: { lemma: 'aller', note: 'past participle of aller' },
-
-		// faire (to do/make)
-		fais: { lemma: 'faire', note: 'je/tu fais (do/make)' },
-		fait: { lemma: 'faire', note: 'il/elle fait (does/makes)' },
-		faisons: { lemma: 'faire', note: 'nous faisons (we do/make)' },
-		faites: { lemma: 'faire', note: 'vous faites (you all do/make)' },
-		font: { lemma: 'faire', note: 'ils/elles font (they do/make)' },
-		faisais: { lemma: 'faire', note: 'je/tu faisais (did/was doing)' },
-		faisait: { lemma: 'faire', note: 'il/elle faisait (did/was doing)' },
-		faisions: { lemma: 'faire', note: 'nous faisions (did/were doing)' },
-		faisiez: { lemma: 'faire', note: 'vous faisiez (did/were doing)' },
-		faisaient: { lemma: 'faire', note: 'ils/elles faisaient (did/were doing)' },
-		ferai: { lemma: 'faire', note: 'je ferai (I will do)' },
-		feras: { lemma: 'faire', note: 'tu feras (you will do)' },
-		fera: { lemma: 'faire', note: 'il/elle fera (will do)' },
-		ferons: { lemma: 'faire', note: 'nous ferons (we will do)' },
-		ferez: { lemma: 'faire', note: 'vous ferez (you all will do)' },
-		feront: { lemma: 'faire', note: 'ils/elles feront (they will do)' },
-		faite: { lemma: 'faire', note: 'past participle of faire (feminine)' },
-
-		// pouvoir (can/be able to)
-		peux: { lemma: 'pouvoir', note: 'je/tu peux (can)' },
-		peut: { lemma: 'pouvoir', note: 'il/elle peut (can)' },
-		pouvons: { lemma: 'pouvoir', note: 'nous pouvons (we can)' },
-		pouvez: { lemma: 'pouvoir', note: 'vous pouvez (you all can)' },
-		peuvent: { lemma: 'pouvoir', note: 'ils/elles peuvent (they can)' },
-		pouvais: { lemma: 'pouvoir', note: 'je/tu pouvais (could/was able)' },
-		pouvait: { lemma: 'pouvoir', note: 'il/elle pouvait (could/was able)' },
-		pouvions: { lemma: 'pouvoir', note: 'nous pouvions (could/were able)' },
-		pouviez: { lemma: 'pouvoir', note: 'vous pouviez (could/were able)' },
-		pouvaient: { lemma: 'pouvoir', note: 'ils/elles pouvaient (could/were able)' },
-		pourrai: { lemma: 'pouvoir', note: 'je pourrai (I will be able)' },
-		pourras: { lemma: 'pouvoir', note: 'tu pourras (you will be able)' },
-		pourra: { lemma: 'pouvoir', note: 'il/elle pourra (will be able)' },
-		pourrons: { lemma: 'pouvoir', note: 'nous pourrons (we will be able)' },
-		pourrez: { lemma: 'pouvoir', note: 'vous pourrez (you all will be able)' },
-		pourront: { lemma: 'pouvoir', note: 'ils/elles pourront (they will be able)' },
-		pu: { lemma: 'pouvoir', note: 'past participle of pouvoir' },
-
-		// vouloir (to want)
-		veux: { lemma: 'vouloir', note: 'je/tu veux (want)' },
-		veut: { lemma: 'vouloir', note: 'il/elle veut (wants)' },
-		voulons: { lemma: 'vouloir', note: 'nous voulons (we want)' },
-		voulez: { lemma: 'vouloir', note: 'vous voulez (you all want)' },
-		veulent: { lemma: 'vouloir', note: 'ils/elles veulent (they want)' },
-		voulais: { lemma: 'vouloir', note: 'je/tu voulais (wanted/was wanting)' },
-		voulait: { lemma: 'vouloir', note: 'il/elle voulait (wanted/was wanting)' },
-		voulions: { lemma: 'vouloir', note: 'nous voulions (wanted/were wanting)' },
-		vouliez: { lemma: 'vouloir', note: 'vous vouliez (wanted/were wanting)' },
-		voulaient: { lemma: 'vouloir', note: 'ils/elles voulaient (wanted/were wanting)' },
-		voudrai: { lemma: 'vouloir', note: 'je voudrai (I will want)' },
-		voudras: { lemma: 'vouloir', note: 'tu voudras (you will want)' },
-		voudra: { lemma: 'vouloir', note: 'il/elle voudra (will want)' },
-		voudrons: { lemma: 'vouloir', note: 'nous voudrons (we will want)' },
-		voudrez: { lemma: 'vouloir', note: 'vous voudrez (you all will want)' },
-		voudront: { lemma: 'vouloir', note: 'ils/elles voudront (they will want)' },
-		voulu: { lemma: 'vouloir', note: 'past participle of vouloir' },
-
-		// Contractions
-		au: { lemma: 'à', note: 'au = à + le (to the / at the)' },
-		aux: { lemma: 'à', note: 'aux = à + les (to the / at the, plural)' },
-		du: { lemma: 'de', note: 'du = de + le (of the / from the)' },
-		des: { lemma: 'de', note: 'des = de + les (of the / from the, plural)' }
-	};
-
-	// Map of common French article forms
-	const FRENCH_ARTICLE_MAP: Record<string, { definite: boolean; forms: ArticleForm[] }> = {
-		le: { definite: true, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'le' }] },
-		la: { definite: true, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'la' }] },
-		les: { definite: true, forms: [{ caseLabel: 'Plural', nomArticle: 'les' }] },
-		un: { definite: false, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'un' }] },
-		une: { definite: false, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'une' }] },
-		des: { definite: false, forms: [{ caseLabel: 'Plural', nomArticle: 'des' }] }
-	};
-
-	// Map of common Spanish article forms
-	const SPANISH_ARTICLE_MAP: Record<string, { definite: boolean; forms: ArticleForm[] }> = {
-		el: { definite: true, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'el' }] },
-		la: { definite: true, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'la' }] },
-		los: { definite: true, forms: [{ caseLabel: 'Masc. Pl.', nomArticle: 'los' }] },
-		las: { definite: true, forms: [{ caseLabel: 'Fem. Pl.', nomArticle: 'las' }] },
-		un: { definite: false, forms: [{ caseLabel: 'Masc. Sing.', nomArticle: 'un' }] },
-		una: { definite: false, forms: [{ caseLabel: 'Fem. Sing.', nomArticle: 'una' }] },
-		unos: { definite: false, forms: [{ caseLabel: 'Masc. Pl.', nomArticle: 'unos' }] },
-		unas: { definite: false, forms: [{ caseLabel: 'Fem. Pl.', nomArticle: 'unas' }] },
-		al: { definite: true, forms: [{ caseLabel: 'Masc. Sing. (a + el)', nomArticle: 'el' }] },
-		del: { definite: true, forms: [{ caseLabel: 'Masc. Sing. (de + el)', nomArticle: 'el' }] }
-	};
-
-	// Maps Prisma Gender enum values to article strings for any supported language
-	function genderToArticle(
-		gender: string | null | undefined,
-		lang: string = 'German'
-	): string | null {
+	function genderToArticle(gender: string | null | undefined): string | null {
 		if (!gender) return null;
-		const g = gender.toUpperCase();
-		if (lang === 'French') {
-			if (g === 'MASCULINE' || g === 'LE') return 'le';
-			if (g === 'FEMININE' || g === 'LA') return 'la';
-			return null;
-		} else if (lang === 'Spanish') {
-			if (g === 'MASCULINE' || g === 'EL') return 'el';
-			if (g === 'FEMININE' || g === 'LA') return 'la';
-			return null;
-		} else {
-			// default to German logic
-			if (g === 'MASCULINE' || g === 'DER') return 'der';
-			if (g === 'FEMININE' || g === 'DIE') return 'die';
-			if (g === 'NEUTER' || g === 'DAS') return 'das';
-			return null;
-		}
+		return langConfig.genderToArticle(gender);
+	}
+	function getArticleMap() {
+		return langConfig.articleMap;
+	}
+	function getInflectionMap() {
+		return langConfig.inflectionMap;
 	}
 
-	/** Returns the article map for the active language. */
-	function getArticleMap(
-		lang: string
-	): Record<string, { definite: boolean; forms: ArticleForm[] }> {
-		if (lang === 'French') return FRENCH_ARTICLE_MAP;
-		if (lang === 'Spanish') return SPANISH_ARTICLE_MAP;
-		return GERMAN_ARTICLE_MAP;
-	}
-
-	/** Returns the inflection map for the active language. */
-	function getInflectionMap(lang: string): Record<string, { lemma: string; note: string }> {
-		if (lang === 'French') return FRENCH_INFLECTION_MAP;
-		// Spanish: no inflection map yet, return empty
-		if (lang === 'Spanish') return {};
-		return GERMAN_INFLECTION_MAP;
-	}
-
-	// German article forms → case + gender info for building smart tooltips
-	// Each entry has: definite/indefinite flag, an array of possible {caseLabel, nominativeArticle} combos
-	type ArticleForm = { caseLabel: string; nomArticle: string };
-	const GERMAN_ARTICLE_MAP: Record<string, { definite: boolean; forms: ArticleForm[] }> = {
-		// Definite articles
-		der: {
-			definite: true,
-			forms: [
-				{ caseLabel: 'Nom. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Dat. Fem.', nomArticle: 'die' },
-				{ caseLabel: 'Gen. Fem.', nomArticle: 'die' }
-			]
-		},
-		die: {
-			definite: true,
-			forms: [
-				{ caseLabel: 'Nom./Acc. Fem.', nomArticle: 'die' },
-				{ caseLabel: 'Nom./Acc. Plural', nomArticle: 'die' }
-			]
-		},
-		das: { definite: true, forms: [{ caseLabel: 'Nom./Acc. Neut.', nomArticle: 'das' }] },
-		den: {
-			definite: true,
-			forms: [
-				{ caseLabel: 'Acc. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Dat. Plural', nomArticle: 'die' }
-			]
-		},
-		dem: {
-			definite: true,
-			forms: [
-				{ caseLabel: 'Dat. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Dat. Neut.', nomArticle: 'das' }
-			]
-		},
-		des: {
-			definite: true,
-			forms: [
-				{ caseLabel: 'Gen. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Gen. Neut.', nomArticle: 'das' }
-			]
-		},
-		// Indefinite articles
-		ein: {
-			definite: false,
-			forms: [
-				{ caseLabel: 'Nom. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Nom./Acc. Neut.', nomArticle: 'das' }
-			]
-		},
-		eine: { definite: false, forms: [{ caseLabel: 'Nom./Acc. Fem.', nomArticle: 'die' }] },
-		einen: { definite: false, forms: [{ caseLabel: 'Acc. Masc.', nomArticle: 'der' }] },
-		einem: { definite: false, forms: [{ caseLabel: 'Dat. Masc./Neut.', nomArticle: 'der' }] },
-		einer: {
-			definite: false,
-			forms: [
-				{ caseLabel: 'Dat./Gen. Fem.', nomArticle: 'die' },
-				{ caseLabel: 'Gen. Masc./Neut.', nomArticle: 'der' }
-			]
-		},
-		eines: { definite: false, forms: [{ caseLabel: 'Gen. Masc./Neut.', nomArticle: 'der' }] },
-		// Negative articles (kein/keine/...)
-		kein: {
-			definite: false,
-			forms: [
-				{ caseLabel: 'Nom. Masc.', nomArticle: 'der' },
-				{ caseLabel: 'Nom./Acc. Neut.', nomArticle: 'das' }
-			]
-		},
-		keine: { definite: false, forms: [{ caseLabel: 'Nom./Acc. Fem./Pl.', nomArticle: 'die' }] },
-		keinen: { definite: false, forms: [{ caseLabel: 'Acc. Masc.', nomArticle: 'der' }] },
-		keinem: { definite: false, forms: [{ caseLabel: 'Dat. Masc./Neut.', nomArticle: 'der' }] },
-		keiner: { definite: false, forms: [{ caseLabel: 'Dat./Gen. Fem.', nomArticle: 'die' }] },
-		keines: { definite: false, forms: [{ caseLabel: 'Gen. Masc./Neut.', nomArticle: 'der' }] }
-	};
-
+	// --- Inline language data removed — now in src/lib/languages/*.ts ---
+	// If you need to add a language, create a new file there.
 	function buildTooltipHtml(vocab: any, overrideArticle?: string, inflectionNote?: string): string {
 		const isNoun = vocab.partOfSpeech?.toLowerCase() === 'noun';
 		const lemmaDisplay = isNoun
 			? vocab.lemma.charAt(0).toUpperCase() + vocab.lemma.slice(1)
 			: vocab.lemma;
 
-		const activeLanguageName = lessonLanguage?.name || 'German';
-		const genderDisplay = genderToArticle(vocab.gender, activeLanguageName);
+		const genderDisplay = genderToArticle(vocab.gender);
 		const isAiGenerated = typeof vocab.id === 'string' && vocab.id.startsWith('ai_');
 		let html = `<span class="word-tooltip">`;
 		html += `<span class="word-tooltip-header">${overrideArticle ?? lemmaDisplay}${isAiGenerated ? '<span class="word-tooltip-ai-badge">AI</span>' : ''}</span>`;
@@ -1144,8 +705,7 @@
 							const twLower = tw.toLowerCase();
 							if (twLower === lemma) return true;
 							// Check if this target word is a known inflection of the lemma
-							const activeLanguageName = lessonLanguage?.name || 'German';
-							const mapToUse = getInflectionMap(activeLanguageName);
+							const mapToUse = getInflectionMap();
 							const inf = mapToUse[twLower];
 							if (inf && inf.lemma.toLowerCase() === lemma) return true;
 							// Check if it starts with the lemma (common for German prefixed/conjugated forms)
@@ -1185,13 +745,9 @@
 				if (list.length === 1) return list[0];
 
 				// In German, nouns are always capitalized.
-				// For other languages (or English), we shouldn't use capitalization to heavily bias towards nouns,
-				// except maybe to deprioritize nouns if lowercase (but wait, in French/Spanish, nouns are lowercase!).
-				// So ONLY apply this capitalization logic if the text we are parsing is German.
-				const activeLanguageName = lessonLanguage?.name || 'German';
-				const parsingGerman = isTargetLangText && activeLanguageName === 'German';
-
-				if (parsingGerman) {
+				// For languages where nouns are capitalized (e.g. German), use capitalization
+				// to bias vocab matching. For others (French, Spanish) nouns are lowercase.
+				if (isTargetLangText && langConfig.capitalizeNouns) {
 					const isCapitalized = /^[A-ZÄÖÜ]/.test(originalToken.replace(/^[¿¡"'({[]+/, ''));
 					if (isCapitalized) {
 						const noun = list.find((v) => v.partOfSpeech?.toLowerCase() === 'noun');
@@ -1210,8 +766,7 @@
 
 			// Check the inflection map for conjugations/contractions
 			if (!isEnToDe) {
-				const activeLanguageName = lessonLanguage?.name || 'German';
-				const mapToUse = getInflectionMap(activeLanguageName);
+				const mapToUse = getInflectionMap();
 
 				const inflection = mapToUse[cleanWord];
 				if (inflection) {
@@ -1322,7 +877,6 @@
 				// Get only non-whitespace tokens ahead
 				const upcomingWords = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
 				const nounVocab = findNextNoun(upcomingWords, 0);
-				const activeLanguageName = lessonLanguage?.name || 'German';
 
 				if (nounVocab) {
 					const isPlural =
@@ -1334,7 +888,7 @@
 
 					// Try to find the actual article from the LLM-generated targetSentence
 					// so we show the correct case (e.g. "den" accusative instead of "der" nominative)
-					const artMap = getArticleMap(activeLanguageName);
+					const artMap = getArticleMap();
 					const nounLemma = nounVocab.lemma?.toLowerCase();
 					let foundFromTarget = false;
 					if (targetWords.length > 0 && nounLemma) {
@@ -1357,30 +911,14 @@
 					}
 
 					if (!foundFromTarget) {
-						const nomArt = genderToArticle(nounVocab.gender, activeLanguageName);
+						const nomArt = genderToArticle(nounVocab.gender);
 						if (cleanWord === 'the') {
-							const defaultArticles: Record<string, { plural: string; fallback: string }> = {
-								French: { plural: 'les', fallback: 'le/la' },
-								Spanish: { plural: 'los/las', fallback: 'el/la' },
-								German: { plural: 'die', fallback: 'der/die/das' }
-							};
-							const defaults = defaultArticles[activeLanguageName] || defaultArticles.German;
-							article = isPlural ? defaults.plural : nomArt || defaults.fallback;
+							article = isPlural
+								? langConfig.pluralDefiniteArticle
+								: nomArt || langConfig.defaultDefiniteArticle;
 						} else {
-							// "a" / "an" — indefinite
-							const indefiniteMap: Record<string, Record<string, string>> = {
-								French: { le: 'un', la: 'une' },
-								Spanish: { el: 'un', la: 'una' },
-								German: { der: 'ein', die: 'eine', das: 'ein' }
-							};
-							const defaultIndefinites: Record<string, string> = {
-								French: 'un/une',
-								Spanish: 'un/una',
-								German: 'ein/eine'
-							};
-							const genderMap = indefiniteMap[activeLanguageName] || indefiniteMap.German;
-							const fallback = defaultIndefinites[activeLanguageName] || defaultIndefinites.German;
-							article = nomArt ? genderMap[nomArt] || fallback : fallback;
+							const indef = nomArt ? langConfig.definiteToIndefinite[nomArt] : null;
+							article = indef || langConfig.defaultIndefiniteArticle;
 						}
 					}
 
@@ -1393,7 +931,7 @@
 				// Fallback: show generic article tooltip even when noun not found
 				// Try to find any article from the targetSentence as a better fallback
 				let genericArticle = '';
-				const artMapFallback = getArticleMap(activeLanguageName);
+				const artMapFallback = getArticleMap();
 				const isDefinite = cleanWord === 'the';
 				const targetArticle = targetWords.find((tw: string) => {
 					const entry = artMapFallback[tw.toLowerCase()];
@@ -1402,13 +940,9 @@
 				if (targetArticle) {
 					genericArticle = targetArticle;
 				} else {
-					const genericDefaults: Record<string, { def: string; indef: string }> = {
-						French: { def: 'le/la/les', indef: 'un/une/des' },
-						Spanish: { def: 'el/la/los/las', indef: 'un/una' },
-						German: { def: 'der/die/das', indef: 'ein/eine' }
-					};
-					const defaults = genericDefaults[activeLanguageName] || genericDefaults.German;
-					genericArticle = isDefinite ? defaults.def : defaults.indef;
+					genericArticle = isDefinite
+						? langConfig.defaultDefiniteArticle
+						: langConfig.defaultIndefiniteArticle;
 				}
 				const genericTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${genericArticle}</span><span class="word-tooltip-body"><span class="word-tooltip-row"><strong>Article:</strong> ${cleanWord === 'the' ? 'definite' : 'indefinite'}</span></span></span>`;
 				result.push(
@@ -1419,14 +953,13 @@
 
 			// Handle target-language article forms — show case + gender tooltip
 			if (isTargetLangText) {
-				const activeLanguageName = lessonLanguage?.name || 'German';
-				const artMap = getArticleMap(activeLanguageName);
+				const artMap = getArticleMap();
 
 				const artEntry = artMap[cleanWord];
 				if (artEntry) {
 					const upcomingGerman = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
 					const nounVocab = findNextNoun(upcomingGerman, 0);
-					const nomArt = nounVocab ? genderToArticle(nounVocab.gender, activeLanguageName) : null;
+					const nomArt = nounVocab ? genderToArticle(nounVocab.gender) : null;
 					// Narrow down possible case forms using the noun's gender
 					const matchedForms = nomArt
 						? artEntry.forms.filter((f) => f.nomArticle === nomArt)
@@ -1446,7 +979,7 @@
 					ttHtml += `<span class="word-tooltip-row"><strong>Form:</strong> ${caseLabel}</span>`;
 					if (nounVocab) {
 						const nDisplay = nounVocab.lemma.charAt(0).toUpperCase() + nounVocab.lemma.slice(1);
-						const nGender = genderToArticle(nounVocab.gender, activeLanguageName);
+						const nGender = genderToArticle(nounVocab.gender);
 						ttHtml += `<span class="word-tooltip-row"><strong>Noun:</strong> ${nDisplay}</span>`;
 						if (nGender)
 							ttHtml += `<span class="word-tooltip-row"><strong>Gender:</strong> ${nGender}</span>`;

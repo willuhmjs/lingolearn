@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { getLanguageConfig } from '$lib/languages';
 import { prisma } from '$lib/server/prisma';
 import { getSiteSettings } from '$lib/server/settings';
 import OpenAI from 'openai';
@@ -160,16 +161,7 @@ export async function generateChatCompletion({
 
 	let constraintPrompt = '';
 	if (addLanguageConstraint) {
-		if (languageName === 'German') {
-			constraintPrompt =
-				"Agieren Sie als erfahrener deutscher Lektor. Schreiben Sie den Text in fehlerfreiem Hochdeutsch (Duden-Konform) und vermeiden Sie Anglizismen oder englische Schreibweisen bei verwandten Begriffen. Achten Sie besonders darauf, keine englischen Schreibweisen für deutsche Wörter zu verwenden (z.B. 'oft' statt 'often', 'kollektiv' statt 'collective').";
-		} else if (languageName === 'French') {
-			constraintPrompt =
-				"Agissez en tant que relecteur français expérimenté. Écrivez le texte dans un français impeccable (conforme à l'Académie française) et évitez les anglicismes ou les orthographes anglaises pour les termes apparentés. Veillez particulièrement à ne pas utiliser l'orthographe anglaise pour les mots français.";
-		} else if (languageName === 'Spanish') {
-			constraintPrompt =
-				'Actúe como un revisor de español experimentado. Escriba el texto en un español impecable (conforme a la RAE) y evite los anglicismos o la ortografía inglesa para términos relacionados. Tenga especial cuidado en no utilizar la ortografía inglesa para palabras españolas.';
-		}
+		constraintPrompt = getLanguageConfig(languageName).llmConstraintPrompt;
 	}
 
 	if (systemPrompt) {

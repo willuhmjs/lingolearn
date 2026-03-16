@@ -4,17 +4,9 @@ import { prisma } from '$lib/server/prisma';
 import { CefrService } from '$lib/server/cefrService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 import { stemWord } from '$lib/server/vocabProcessor';
+import { getLanguageConfig } from '$lib/languages';
 
 import type { RequestEvent } from './$types';
-
-const GREETINGS: Record<string, string> = {
-	German:
-		'Hallo! (Hello!) Ich freue mich darauf, herauszufinden, wie gut dein Deutsch bereits ist. Wie heißt du? (What is your name?)',
-	Spanish:
-		'¡Hola! (Hello!) Estoy emocionado de descubrir en qué nivel estás con tu español. ¿Cómo te llamas? (What is your name?)',
-	French:
-		'Bonjour ! (Hello!) Je suis ravi de découvrir votre niveau de français. Comment vous appelez-vous ? (What is your name?)'
-};
 
 const getSystemPrompt = (
 	activeLangName: string,
@@ -146,7 +138,7 @@ export async function POST({ request, locals }: RequestEvent) {
 
 		if (messages.length === 0) {
 			const greetingMessage =
-				GREETINGS[activeLangName] ||
+				getLanguageConfig(activeLangName).onboardingGreeting ||
 				`Hello! Welcome! I'm excited to find out where you are with your ${activeLangName}. Don't worry if you're just starting out — I'll adjust to your level.\n\nLet's begin: What is your name? Feel free to answer in ${activeLangName} or English!`;
 
 			return json({

@@ -3,6 +3,7 @@ import { prisma } from '$lib/server/prisma';
 import { llmDictionaryRateLimiter } from '$lib/server/ratelimit';
 import { generateChatCompletion } from '$lib/server/llm';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
+import { getLanguageConfig } from '$lib/languages';
 
 // Module-level dedup map: "languageId:wordLower" → in-flight LLM promise.
 // Any concurrent request for the same word joins the existing promise instead of
@@ -82,9 +83,8 @@ However, you MUST be extremely strict about safety: only allow inputs that are "
 If the input is already in ${language.name}, verify it is a real, valid word or common phrase in ${language.name}.
 
 ${
-	language.name === 'German'
-		? `CRITICAL INSTRUCTION FOR GERMAN: You MUST return the word with actual umlauts (ä, ö, ü, ß) instead of their multi-letter equivalents (ae, oe, ue, ss). For example, return "Käse" instead of "Kaese", "groß" instead of "gross".
-Also, if the first letter of the word (lemma) is lowercase, it MUST NOT be classified as a "noun". In German, all nouns are capitalized.`
+	getLanguageConfig(language.name).capitalizeNouns
+		? `CRITICAL: Nouns in ${language.name} are always capitalized. If the lemma starts with a lowercase letter, it MUST NOT be classified as a "noun". Also return the word with its correct native characters (e.g. umlauts/diacritics) rather than ASCII substitutes.`
 		: ''
 }
 
@@ -187,17 +187,9 @@ Return the dictionary entry in the following JSON format:
 			// If it exists and has meanings, check if it's sparse (missing metadata enrichment).
 			// If not sparse, return as-is. If sparse, fall through to update it with LLM data.
 			if (existingVocab && existingVocab.meanings && existingVocab.meanings.length > 0) {
-				const GENDERED_LANGUAGES = [
-					'german',
-					'french',
-					'spanish',
-					'italian',
-					'portuguese',
-					'russian'
-				];
 				const isNoun = existingVocab.partOfSpeech === 'noun';
-				const langIsGendered = GENDERED_LANGUAGES.includes(language.name.toLowerCase());
-				const missingGender = isNoun && langIsGendered && !existingVocab.gender;
+				const missingGender =
+					isNoun && getLanguageConfig(language.name).hasGender && !existingVocab.gender;
 				const meta = existingVocab.metadata as Record<string, unknown> | null;
 				const isSparse =
 					missingGender || !meta || !(meta.example || meta.declensions || meta.conjugations);
