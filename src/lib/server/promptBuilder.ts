@@ -39,16 +39,19 @@ export function buildLessonPrompt({
 	const isBeginner = userLevel === 'A1' || userLevel === 'A2';
 
 	const sentenceConstraint = isAbsoluteBeginner
-		? `Generate EXACTLY ONE very simple ${activeLangName} sentence (3-6 words, no run-ons) suitable for someone who is just starting to learn ${activeLangName}. Use only basic vocabulary like greetings, pronouns, simple verbs (sein, haben, heißen, kommen), and common nouns. Keep it extremely simple.`
+		? `Generate EXACTLY ONE very simple ${activeLangName} sentence (3-6 words, no run-ons) suitable for someone who is just starting to learn ${activeLangName}. Use only basic vocabulary like greetings, pronouns, simple verbs (sein, haben, heißen, kommen), and common nouns. The sentence MUST be a complete, standalone thought about a real daily-life situation (e.g. greeting someone, saying where you live, ordering food, introducing yourself). NEVER generate sentence fragments, dangling clauses, or abstract statements.`
 		: isBeginner
-			? `Generate EXACTLY ONE simple, natural ${activeLangName} sentence (no run-ons/semi-colons) as a challenge.`
-			: `Generate a natural, coherent ${activeLangName} sentence suitable for ${userLevel}. It can be a single complex sentence or, if it reads naturally, two short closely related sentences that form a logical mini-narrative. The result MUST read as something a native speaker would actually say or write.`;
+			? `Generate EXACTLY ONE simple, natural ${activeLangName} sentence (no run-ons/semi-colons) as a challenge. The sentence MUST be a complete thought grounded in a concrete, everyday scenario — something a person would actually say in conversation, at work, while shopping, traveling, or socializing. NEVER generate orphan subordinate clauses (e.g. "If I have a book"), abstract fragments, or sentences that lack a clear real-world context.`
+			: `Generate a natural, coherent ${activeLangName} sentence suitable for ${userLevel}. It can be a single complex sentence or, if it reads naturally, two short closely related sentences that form a logical mini-narrative. The result MUST read as something a native speaker would actually say or write in a real situation — conversation, email, news, storytelling, or daily life. NEVER generate orphan clauses or contextless fragments.`;
 
 	const qualityConstraint = `
 CRITICAL STYLE & TONE CONSTRAINT:
 - The sentence(s) MUST make logical, real-world sense. NEVER produce a sentence that sounds absurd, surreal, or randomly cobbled together.
+- Every sentence MUST be a COMPLETE, STANDALONE THOUGHT. Never output a dangling subordinate clause (e.g. "If I have a book", "When the weather is nice"), a noun phrase without a verb, or any fragment that leaves the reader waiting for more. If you use a subordinate clause, it MUST be paired with a main clause.
 - Before outputting, mentally re-read the sentence and ask: "Would a native speaker ever actually say this in a real conversation or written text?" If not, rewrite it.
-- They MUST be engaging and relevant for everyday use — real-world situations, daily routines, opinions, travel, work, hobbies, social interactions, etc.
+- Ground every sentence in a CONCRETE DAILY-LIFE SCENARIO. Good topics: greetings, introductions, ordering food/drinks, asking for directions, making plans, describing your day, talking about family/friends, shopping, travel, work, school, weather, hobbies, opinions on common topics.
+- BAD examples (NEVER generate these): "If I have a book", "The big red house and the small cat", "When one learns a language", "A man with a dog". These are fragments or lack real conversational context.
+- GOOD examples: "I'd like a coffee, please", "Where is the train station?", "My sister lives in Berlin", "Can you help me find the library?", "I usually go jogging in the morning".
 - Emulate the style, depth, and conversational realism of AP Language classes.
 - It is MUCH BETTER to use only 1 target vocabulary word in a natural sentence than to force 2-3 words into a sentence that sounds unnatural or nonsensical.`;
 
@@ -196,8 +199,8 @@ CRITICAL STYLE & TONE CONSTRAINT:
 		? `\nABSOLUTE BEGINNER MODE: This student is just starting to learn ${activeLangName}. They may know almost nothing.
 - Use extremely simple vocabulary (greetings, personal pronouns, basic verbs like sein/haben/heißen)
 - Sentences should be 3-6 words maximum
-- For native-to-target mode: use simple English sentences like "I am a man", "The child is small", "I have a book"
-- For target-to-native mode: use simple ${activeLangName} like "Ich bin gut", "Das Kind ist klein"
+- For native-to-target mode: use simple conversational English sentences like "Good morning!", "My name is Anna.", "I live in Berlin.", "I would like water, please.", "Where is the school?"
+- For target-to-native mode: use simple conversational ${activeLangName} like "Guten Morgen!", "Ich heiße Anna.", "Ich wohne in Berlin.", "Wo ist die Schule?"
 - For fill-blank: blank only ONE very basic word
 - For multiple-choice: make distractors clearly different from the correct answer
 - Focus on building confidence — correctness over complexity\n`
@@ -213,7 +216,7 @@ Compose the ${activeLangName} text by HEAVILY prioritizing the "Learning Vocabul
 CRITICAL THEMATIC INJECTION: Your primary goal is to teach the words in the "Learning Vocabulary" list. You MUST use at least one word from this list. You MAY use 2-3 if they fit together naturally in a coherent, realistic scenario — but NEVER force multiple target words into a sentence if doing so produces an awkward, contrived, or illogical result. It is always better to write a perfect sentence with 1 target word than a strange sentence with 3. Build a realistic, high-quality scenario around the chosen target word(s). You may also use words from the "Mastered" list or other common ${activeLangName} words appropriate for a ${userLevel} student to ensure natural flow.
 CRITICAL GRAMMAR INJECTION: You MUST structurally incorporate the requested grammar rule(s) (either from the critical grammar constraint above, or from the Learning Grammar section) into the sentence. This is mandatory. Ensure the grammar rule is naturally applied. You MUST identify ANY and ALL grammar rules used in your sentence (from BOTH the Learning and Mastered Grammar lists) and return their IDs (e.g., "g0", "g1") in the "targetedGrammarIds" array.
 CRITICAL QUALITY INSTRUCTION: Prioritize sentence quality, natural flow, and logic above all else. The sentence MUST sound like something a native speaker would genuinely say or write. Do NOT force unrelated vocabulary words into the same sentence — if words don't naturally belong together in a coherent scenario, pick only the one that works best and build a good sentence around it. The sentence must be authentic and pedagogically useful.
-SELF-CHECK: After composing your sentence, verify: (1) Does it make logical sense? (2) Is the scenario realistic? (3) Would a native speaker find it natural? If any answer is no, rewrite it.
+SELF-CHECK: After composing your sentence, verify: (1) Is it a complete sentence with a subject and verb, not a fragment or dangling clause? (2) Does it describe a concrete, real-world situation? (3) Would a native speaker actually say this in daily life? If any answer is no, rewrite it.
 ${modeInstruction}
 
 ${vocabTagInstruction}
