@@ -7,7 +7,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
-
+.claude/*
 # OS
 .DS_Store
 Thumbs.db
@@ -27,6 +27,7 @@ generated/prisma
 
 # Docker
 docker-data/
+.pnpm-store/
 
 # Logs
 *.log

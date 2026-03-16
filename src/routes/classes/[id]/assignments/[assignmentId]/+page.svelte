@@ -5,23 +5,27 @@
 	import { toastError } from '$lib/utils/toast';
 	import { modal } from '$lib/modal.svelte';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 
-	$: assignment = data.assignment;
-	$: classDetails = data.classDetails;
+	let assignment = $derived(data.assignment);
+	let classDetails = $derived(data.classDetails);
 
 	// Only consider student members for progress tracking
-	$: studentMembers = classDetails.members.filter((m: any) => m.role === 'STUDENT');
+	let studentMembers = $derived(classDetails.members.filter((m: any) => m.role === 'STUDENT'));
 
 	function getScoreForUser(userId: string) {
 		return assignment.scores.find((s: any) => s.userId === userId);
 	}
 
-	$: totalStudents = studentMembers.length;
-	$: passedStudents = studentMembers.filter((m: any) => getScoreForUser(m.userId)?.passed).length;
-	$: passPercentage = totalStudents > 0 ? Math.round((passedStudents / totalStudents) * 100) : 0;
+	let totalStudents = $derived(studentMembers.length);
+	let passedStudents = $derived(
+		studentMembers.filter((m: any) => getScoreForUser(m.userId)?.passed).length
+	);
+	let passPercentage = $derived(
+		totalStudents > 0 ? Math.round((passedStudents / totalStudents) * 100) : 0
+	);
 
-	let copied = false;
+	let copied = $state(false);
 
 	async function copyLink() {
 		const url = `${window.location.origin}/play?assignmentId=${assignment.id}`;
@@ -53,28 +57,28 @@
 	import { invalidateAll } from '$app/navigation';
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 
-	$: currentLang = data.languages?.find((l: any) => l.code === editLanguage);
-	$: availableRules = currentLang ? currentLang.grammarRules : [];
-
 	// Edit Assignment
-	let showEditModal = false;
-	let editTitle = '';
-	let editDescription = '';
-	let editMode = 'multiple-choice';
-	let editTargetScore = 10;
-	let editPassThreshold = 50;
-	let editDisableHoverTranslation = false;
-	let editLanguage = '';
-	let editTargetCefrLevel = '';
-	let editTopic = '';
-	let selectedGrammarRules: string[] = [];
-	let targetVocabList: string[] = [];
-	let vocabInput = '';
-	let vocabInputRef: HTMLInputElement;
-	let grammarSearchQuery = '';
+	let showEditModal = $state(false);
+	let editTitle = $state('');
+	let editDescription = $state('');
+	let editMode = $state('multiple-choice');
+	let editTargetScore = $state(10);
+	let editPassThreshold = $state(50);
+	let editDisableHoverTranslation = $state(false);
+	let editLanguage = $state('');
+	let editTargetCefrLevel = $state('');
+	let editTopic = $state('');
+	let selectedGrammarRules: string[] = $state([]);
+	let targetVocabList: string[] = $state([]);
+	let vocabInput = $state('');
+	let vocabInputRef = $state<HTMLInputElement | undefined>(undefined);
+	let grammarSearchQuery = $state('');
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let editGameId = '';
-	let isSaving = false;
+	let editGameId = $state('');
+	let isSaving = $state(false);
+
+	let currentLang = $derived(data.languages?.find((l: any) => l.code === editLanguage));
+	let availableRules = $derived(currentLang ? currentLang.grammarRules : []);
 
 	function openEditModal() {
 		editTitle = assignment.title;
@@ -149,9 +153,6 @@
 			});
 
 			if (res.ok) {
-				const updatedAssignment = await res.json();
-				// eslint-disable-next-line svelte/no-reactive-reassign
-				assignment = { ...assignment, ...updatedAssignment };
 				toast.success('Assignment updated');
 				closeEditModal();
 				await invalidateAll();

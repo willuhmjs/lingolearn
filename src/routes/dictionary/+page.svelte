@@ -4,22 +4,22 @@
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
 	import { toastError } from '$lib/utils/toast';
 
-	export let data;
+	let { data } = $props();
 
-	let activeTab: 'vocabulary' | 'grammar' = 'vocabulary';
-	let query = '';
-	let results: any[] = [];
-	let loading = false;
-	let llmLoading = false;
+	let activeTab: 'vocabulary' | 'grammar' = $state('vocabulary');
+	let query = $state('');
+	let results: any[] = $state([]);
+	let loading = $state(false);
+	let llmLoading = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>;
-	let searchController: AbortController | null = null;
-	let searchInputEl: HTMLInputElement;
+	let searchController: AbortController | null = $state(null);
+	let searchInputEl: HTMLInputElement | undefined = $state(undefined);
 
 	// Keep track of which words have been added in this session
-	let addedWords: string[] = [];
+	let addedWords: string[] = $state([]);
 
 	// Copy-to-clipboard (#47)
-	let copiedId: string | null = null;
+	let copiedId: string | null = $state(null);
 	async function copyWord(id: string, text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
@@ -33,12 +33,12 @@
 	}
 
 	// Track selected word for modal
-	let selectedResult: any | null = null;
-	let enriching = false;
+	let selectedResult: any | null = $state(null);
+	let enriching = $state(false);
 
 	// Track expanded grammar rules
-	let expandedGrammarId: string | null = null;
-	let grammarQuery = '';
+	let expandedGrammarId: string | null = $state(null);
+	let grammarQuery = $state('');
 
 	// Languages where nouns require a gender field
 	const GENDERED_LANGUAGES = ['german', 'french', 'spanish', 'italian', 'portuguese', 'russian'];
@@ -83,7 +83,6 @@
 					// Also update the word in the results/learningWords lists so the
 					// data is fresh if the user closes and reopens the modal
 					results = results.map((r) => (r.id === enriched.id ? { ...r, ...enriched } : r));
-					// eslint-disable-next-line svelte/no-reactive-reassign
 					learningWords = learningWords.map((r) =>
 						r.id === enriched.id ? { ...r, ...enriched } : r
 					);
@@ -106,71 +105,82 @@
 		expandedGrammarId = expandedGrammarId === id ? null : id;
 	}
 
-	$: currentLanguage = data.user?.activeLanguage?.name || 'German';
-	$: activeLanguageId = data.user?.activeLanguage?.id;
-	$: grammarRules = data.grammarRules || [];
-	$: learningWords = data.learningWords || [];
-	$: displayResults = query.trim() ? results : learningWords;
+	let currentLanguage = $derived(data.user?.activeLanguage?.name || 'German');
+	let activeLanguageId = $derived(data.user?.activeLanguage?.id);
+	let grammarRules = $derived(data.grammarRules || []);
+	let learningWords: any[] = $state([]);
+	$effect(() => {
+		learningWords = data.learningWords || [];
+	});
+	let displayResults = $derived(query.trim() ? results : learningWords);
 
-	let grammarSortMode: 'prereq' | 'alpha' = 'prereq';
+	let grammarSortMode: 'prereq' | 'alpha' = $state('prereq');
 
 	// Topological sort (prerequisite chain order)
-	$: topoSortedRules = (() => {
-		const rules = grammarRules;
-		const sorted: any[] = [];
-		const visited = new Set<string>();
-		const visiting = new Set<string>();
+	let topoSortedRules = $derived(
+		(() => {
+			const rules = grammarRules;
+			const sorted: any[] = [];
+			const visited = new Set<string>();
+			const visiting = new Set<string>();
 
-		function visit(rule: any) {
-			if (visited.has(rule.id)) return;
-			if (visiting.has(rule.id)) return;
-			visiting.add(rule.id);
-			for (const dep of rule.dependencies || []) {
-				const depRule = rules.find((r: any) => r.id === dep.id);
-				if (depRule) visit(depRule);
+			function visit(rule: any) {
+				if (visited.has(rule.id)) return;
+				if (visiting.has(rule.id)) return;
+				visiting.add(rule.id);
+				for (const dep of rule.dependencies || []) {
+					const depRule = rules.find((r: any) => r.id === dep.id);
+					if (depRule) visit(depRule);
+				}
+				visiting.delete(rule.id);
+				visited.add(rule.id);
+				sorted.push(rule);
 			}
-			visiting.delete(rule.id);
-			visited.add(rule.id);
-			sorted.push(rule);
-		}
 
-		for (const rule of rules) visit(rule);
-		return sorted;
-	})();
+			for (const rule of rules) visit(rule);
+			return sorted;
+		})()
+	);
 
 	// Group grammar rules by level (for alpha mode)
-	$: groupedGrammar = grammarRules.reduce((acc: any, rule: any) => {
-		if (!acc[rule.level]) acc[rule.level] = [];
-		acc[rule.level].push(rule);
-		return acc;
-	}, {});
-	$: sortedLevels = Object.keys(groupedGrammar).sort();
+	let groupedGrammar = $derived(
+		grammarRules.reduce((acc: any, rule: any) => {
+			if (!acc[rule.level]) acc[rule.level] = [];
+			acc[rule.level].push(rule);
+			return acc;
+		}, {})
+	);
+	let sortedLevels = $derived(Object.keys(groupedGrammar).sort());
 
-	$: filteredTopoRules = (() => {
-		if (!grammarQuery.trim()) return topoSortedRules;
-		const q = grammarQuery.toLowerCase();
-		return topoSortedRules.filter(
-			(rule: any) =>
-				rule.title.toLowerCase().includes(q) ||
-				(rule.description && rule.description.toLowerCase().includes(q))
-		);
-	})();
-
-	$: filteredGroupedGrammar = (() => {
-		if (!grammarQuery.trim()) return groupedGrammar;
-		const q = grammarQuery.toLowerCase();
-		const filtered: any = {};
-		for (const level of sortedLevels) {
-			const matching = groupedGrammar[level].filter(
+	let filteredTopoRules = $derived(
+		(() => {
+			if (!grammarQuery.trim()) return topoSortedRules;
+			const q = grammarQuery.toLowerCase();
+			return topoSortedRules.filter(
 				(rule: any) =>
 					rule.title.toLowerCase().includes(q) ||
 					(rule.description && rule.description.toLowerCase().includes(q))
 			);
-			if (matching.length > 0) filtered[level] = matching;
-		}
-		return filtered;
-	})();
-	$: filteredLevels = Object.keys(filteredGroupedGrammar).sort();
+		})()
+	);
+
+	let filteredGroupedGrammar = $derived(
+		(() => {
+			if (!grammarQuery.trim()) return groupedGrammar;
+			const q = grammarQuery.toLowerCase();
+			const filtered: any = {};
+			for (const level of sortedLevels) {
+				const matching = groupedGrammar[level].filter(
+					(rule: any) =>
+						rule.title.toLowerCase().includes(q) ||
+						(rule.description && rule.description.toLowerCase().includes(q))
+				);
+				if (matching.length > 0) filtered[level] = matching;
+			}
+			return filtered;
+		})()
+	);
+	let filteredLevels = $derived(Object.keys(filteredGroupedGrammar).sort());
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (activeTab !== 'vocabulary') return;
@@ -210,7 +220,7 @@
 		}
 	}
 
-	let showEssetPrompt = false;
+	let showEssetPrompt = $state(false);
 
 	function handleInput() {
 		if (currentLanguage === 'German') {
@@ -863,11 +873,16 @@
 </div>
 
 {#if selectedResult}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="modal-backdrop" onclick={closeModal} transition:fade={{ duration: 200 }}>
+	<div
+		class="modal-backdrop"
+		role="presentation"
+		onclick={closeModal}
+		transition:fade={{ duration: 200 }}
+	>
 		<div
 			class="modal-content"
+			role="dialog"
+			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 			transition:fly={{ y: 20, duration: 200 }}
 		>

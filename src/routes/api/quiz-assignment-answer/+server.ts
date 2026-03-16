@@ -1,7 +1,13 @@
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
+import { quizAnswerRateLimiter } from '$lib/server/ratelimit';
 
-export const POST = async ({ request, locals }: any) => {
+export const POST = async (event: any) => {
+	const { request, locals } = event;
+
+	if (await quizAnswerRateLimiter.isLimited(event)) {
+		return json({ error: 'Rate limit exceeded. Please try again later.' }, { status: 429 });
+	}
 	if (!locals.user) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}

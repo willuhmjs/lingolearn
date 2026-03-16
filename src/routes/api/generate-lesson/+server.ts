@@ -12,7 +12,6 @@ import {
 	thompsonSampleInterleave
 } from '$lib/server/srsConfig';
 import { pfaPredictCorrect } from '$lib/server/pfa';
-import { loadHlrWeights, hlrInitialStability } from '$lib/server/hlr';
 import { loadErrorCoMatrix, getRelatedErrorTypes } from '$lib/server/errorCoMatrix';
 import { parseErrorCounts, getDominantErrors } from '$lib/server/errorCounts';
 import type { ErrorType } from '$lib/server/grader';

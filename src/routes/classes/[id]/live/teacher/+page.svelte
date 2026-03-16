@@ -4,21 +4,23 @@
 	import { toast } from '$lib/toast';
 	import { modal } from '$lib/modal.svelte';
 
-	export let data: any;
+	let { data }: { data: any } = $props();
 
-	let session: any = null;
+	let session: any = $state(null);
 	let interval: any;
-	let loading = true;
+	let loading = $state(true);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let currentUserId = '';
+	let currentUserId = $state('');
 
 	const classId = $page.params.id;
-	$: className = data.className;
+	let className = $derived(data.className);
 
-	$: currentQuestionData = session?.game?.questions?.[session?.currentQuestionIndex || 0] || null;
-	$: totalQuestions = session?.game?.questions?.length || 0;
-	$: students = session?.participants || [];
-	$: answeredCount = students.filter((p: any) => p.hasAnswered).length;
+	let currentQuestionData = $derived(
+		session?.game?.questions?.[session?.currentQuestionIndex || 0] || null
+	);
+	let totalQuestions = $derived(session?.game?.questions?.length || 0);
+	let students = $derived(session?.participants || []);
+	let answeredCount = $derived(students.filter((p: any) => p.hasAnswered).length);
 
 	async function fetchSession() {
 		try {

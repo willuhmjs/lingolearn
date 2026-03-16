@@ -77,7 +77,7 @@
 
 	{#if isExpanded}
 		<div transition:slide class="keyboard-panel-wrapper">
-			<div class="keyboard-panel">
+			<div class="keyboard-panel" role="toolbar" aria-label="Special characters">
 				<button
 					type="button"
 					class="shift-button {isShift ? 'active' : ''}"
@@ -89,7 +89,12 @@
 				</button>
 				<div class="char-keys">
 					{#each displayChars as char}
-						<button type="button" class="char-key" onclick={() => insertChar(char)}>
+						<button
+							type="button"
+							class="char-key"
+							onclick={() => insertChar(char)}
+							aria-label="Insert {char}"
+						>
 							{char}
 						</button>
 					{/each}

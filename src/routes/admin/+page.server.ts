@@ -3,12 +3,19 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { runSeed } from '../../../prisma/seed';
 import { getSiteSettings, updateSiteSettings } from '$lib/server/settings';
+import { todayUtc } from '$lib/server/dateUtils';
+import { DAILY_TOKEN_QUOTA } from '$lib/server/aiQuota';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Additional fallback check though hooks.server.ts handles it
 	if (!locals.user || locals.user.role !== 'ADMIN') {
 		throw redirect(303, '/');
 	}
+
+	const now = Date.now();
+	const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+	const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+	const today = todayUtc();
 
 	const [
 		users,
@@ -18,7 +25,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 		totalUsers,
 		activeUsers,
 		totalClasses,
-		totalVocabWords
+		totalVocabWords,
+		// System Health queries
+		activeUsers24h,
+		activeUsers7d,
+		totalGrammarRules,
+		gamesPublished,
+		todayAiUsage,
+		usersOverQuota,
+		userVocabularyCount,
+		userVocabularyProgressCount,
+		reviewLogCount,
+		conversationSessionCount,
+		messageCount
 	] = await Promise.all([
 		prisma.user.findMany({
 			orderBy: { createdAt: 'desc' },
@@ -54,7 +73,32 @@ export const load: PageServerLoad = async ({ locals }) => {
 			}
 		}),
 		prisma.class.count(),
-		prisma.vocabulary.count()
+		prisma.vocabulary.count(),
+		// User Stats
+		prisma.user.count({ where: { lastActive: { gte: oneDayAgo } } }),
+		prisma.user.count({ where: { lastActive: { gte: sevenDaysAgo } } }),
+		// Content Stats
+		prisma.grammarRule.count(),
+		prisma.game.count({ where: { isPublished: true } }),
+		// AI Usage — aggregate tokens used today
+		prisma.userAiUsage.aggregate({
+			where: { date: today },
+			_sum: { tokensUsed: true, goodWillTokens: true },
+			_count: true
+		}),
+		// Users who exceeded quota today
+		prisma.userAiUsage.count({
+			where: {
+				date: today,
+				tokensUsed: { gte: DAILY_TOKEN_QUOTA }
+			}
+		}),
+		// Database Size — key table counts
+		prisma.userVocabulary.count(),
+		prisma.userVocabularyProgress.count(),
+		prisma.reviewLog.count(),
+		prisma.conversationSession.count(),
+		prisma.message.count()
 	]);
 
 	const classes = await prisma.class.findMany({
@@ -79,6 +123,37 @@ export const load: PageServerLoad = async ({ locals }) => {
 			totalClasses,
 			totalVocabWords,
 			pendingVocabWords: pendingVocab.length
+		},
+		systemHealth: {
+			userStats: {
+				total: totalUsers,
+				active24h: activeUsers24h,
+				active7d: activeUsers7d
+			},
+			contentStats: {
+				vocabularyWords: totalVocabWords,
+				grammarRules: totalGrammarRules,
+				gamesPublished
+			},
+			aiUsage: {
+				tokensUsedToday: todayAiUsage._sum.tokensUsed ?? 0,
+				goodWillTokensToday: todayAiUsage._sum.goodWillTokens ?? 0,
+				usersActiveToday: todayAiUsage._count,
+				usersOverQuota,
+				dailyQuotaLimit: DAILY_TOKEN_QUOTA
+			},
+			databaseSize: {
+				userVocabulary: userVocabularyCount,
+				userVocabularyProgress: userVocabularyProgressCount,
+				reviewLog: reviewLogCount,
+				conversationSession: conversationSessionCount,
+				message: messageCount
+			},
+			systemConfig: {
+				llmEndpoint: settings.llmEndpoint || 'Not configured',
+				llmModel: settings.llmModel || 'Not configured',
+				localLoginEnabled: settings.localLoginEnabled
+			}
 		}
 	};
 };

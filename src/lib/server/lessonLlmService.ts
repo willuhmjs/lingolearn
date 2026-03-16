@@ -91,8 +91,7 @@ export async function generateLessonStream({
 			try {
 				const parsed = JSON.parse(fullContent);
 				// targetSentence is the target-language sentence in all modes
-				const targetSentence: string =
-					parsed.targetSentence || parsed.challengeText || '';
+				const targetSentence: string = parsed.targetSentence || parsed.challengeText || '';
 				if (targetSentence) {
 					sentenceDifficulty = estimateSentenceDifficulty(targetSentence, userLevel);
 				}

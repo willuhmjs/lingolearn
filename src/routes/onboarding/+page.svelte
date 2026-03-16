@@ -8,6 +8,7 @@
 	let activeLanguageName = $derived(data?.user?.activeLanguage?.name ?? '');
 
 	// ── Global state ──────────────────────────────────────────────────────────
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let loading = $state(false);
 	let completed = $state(false);
 	let completionData: { level?: string; feedback?: string } = $state({});
@@ -314,6 +315,7 @@
 	let chatMessages: { role: string; content: string }[] = $state([]);
 	let chatInput = $state('');
 	let chatLoading = $state(false);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let lastChatLevelGuess = $state('A1');
 
 	function resetChat() {

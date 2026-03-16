@@ -3,10 +3,10 @@
 	import { page } from '$app/stores';
 	import { addToast } from '$lib/toast';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 
-	let creating = false;
-	let dropdownOpen = false;
+	let creating = $state(false);
+	let dropdownOpen = $state(false);
 
 	const errorLabels: Record<string, string> = {
 		wrong_case: 'Wrong Case',
@@ -17,13 +17,17 @@
 		vocabulary_gap: 'Vocabulary Gap'
 	};
 
-	$: sortedStudents = [...((data as any).studentSummaries ?? [])].sort(
-		(a: any, b: any) => (b.totalXp ?? 0) - (a.totalXp ?? 0)
+	let sortedStudents = $derived(
+		[...((data as any).studentSummaries ?? [])].sort(
+			(a: any, b: any) => (b.totalXp ?? 0) - (a.totalXp ?? 0)
+		)
 	);
-	$: errorEntries = Object.entries((data as any).errorTypeCounts ?? {}).sort(
-		(a, b) => (b[1] as number) - (a[1] as number)
+	let errorEntries = $derived(
+		Object.entries((data as any).errorTypeCounts ?? {}).sort(
+			(a, b) => (b[1] as number) - (a[1] as number)
+		)
 	);
-	$: totalErrors = errorEntries.reduce((s, [, v]) => s + (v as number), 0);
+	let totalErrors = $derived(errorEntries.reduce((s, [, v]) => s + (v as number), 0));
 
 	async function createRemediationAssignment(limit: number) {
 		creating = true;

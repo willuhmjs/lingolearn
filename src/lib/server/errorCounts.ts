@@ -102,10 +102,7 @@ export function updateErrorCounts(
  * count descending. Default threshold = 0.5 (equivalent to ~1 error within
  * the last half-life).
  */
-export function getDominantErrors(
-	counts: ErrorCountVector,
-	threshold = 0.5
-): ErrorType[] {
+export function getDominantErrors(counts: ErrorCountVector, threshold = 0.5): ErrorType[] {
 	return (Object.entries(counts) as [ErrorType, number][])
 		.filter(([, v]) => v >= threshold)
 		.sort((a, b) => b[1] - a[1])

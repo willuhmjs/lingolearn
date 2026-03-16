@@ -37,19 +37,76 @@ type CefrLevel = (typeof CEFR_ORDER)[number];
 // Subordinating conjunctions across German, Spanish, French
 const SUBORDINATORS = new Set([
 	// German
-	'dass', 'weil', 'obwohl', 'obgleich', 'obschon', 'wenn', 'als', 'ob', 'damit',
-	'sodass', 'so dass', 'nachdem', 'bevor', 'während', 'seitdem', 'falls', 'sofern',
-	'solange', 'sobald', 'bis', 'ehe', 'indem', 'inwiefern', 'wozu', 'weshalb',
+	'dass',
+	'weil',
+	'obwohl',
+	'obgleich',
+	'obschon',
+	'wenn',
+	'als',
+	'ob',
+	'damit',
+	'sodass',
+	'so dass',
+	'nachdem',
+	'bevor',
+	'während',
+	'seitdem',
+	'falls',
+	'sofern',
+	'solange',
+	'sobald',
+	'bis',
+	'ehe',
+	'indem',
+	'inwiefern',
+	'wozu',
+	'weshalb',
 	// Spanish
-	'que', 'porque', 'aunque', 'cuando', 'si', 'mientras', 'antes', 'después',
-	'para que', 'sin que', 'a menos que', 'con tal de que', 'puesto que',
-	'dado que', 'ya que', 'como', 'según',
+	'que',
+	'porque',
+	'aunque',
+	'cuando',
+	'si',
+	'mientras',
+	'antes',
+	'después',
+	'para que',
+	'sin que',
+	'a menos que',
+	'con tal de que',
+	'puesto que',
+	'dado que',
+	'ya que',
+	'como',
+	'según',
 	// French
-	'quand', 'puisque', 'parce que', 'bien que', 'quoique', 'lorsque', 'dès que',
-	'depuis que', 'pendant que', 'afin que', 'pour que', 'à moins que', 'si',
+	'quand',
+	'puisque',
+	'parce que',
+	'bien que',
+	'quoique',
+	'lorsque',
+	'dès que',
+	'depuis que',
+	'pendant que',
+	'afin que',
+	'pour que',
+	'à moins que',
+	'si',
 	// English (for target-to-native mode input checking)
-	'although', 'because', 'since', 'whereas', 'whether', 'unless', 'until',
-	'whenever', 'wherever', 'however', 'despite', 'notwithstanding'
+	'although',
+	'because',
+	'since',
+	'whereas',
+	'whether',
+	'unless',
+	'until',
+	'whenever',
+	'wherever',
+	'however',
+	'despite',
+	'notwithstanding'
 ]);
 
 // Relative pronoun patterns that signal a relative clause (preceded by a comma or noun)
@@ -62,7 +119,7 @@ const ZU_INFINITIVE = /\bzu\s+\w+en\b/gi; // German: "zu gehen", "zu lernen"
 const ETANT_AYANT = /\b(étant|ayant|siendo|habiendo)\b/gi;
 
 // Punctuation that raises complexity
-const COMPLEX_PUNCT = /[;—–()\[\]]/g;
+const COMPLEX_PUNCT = /[;—–()[\]]/g;
 
 export interface DifficultyResult {
 	estimatedLevel: string;
@@ -70,10 +127,7 @@ export interface DifficultyResult {
 	complexityScore: number;
 }
 
-export function estimateSentenceDifficulty(
-	sentence: string,
-	userLevel: string
-): DifficultyResult {
+export function estimateSentenceDifficulty(sentence: string, userLevel: string): DifficultyResult {
 	if (!sentence || sentence.trim().length === 0) {
 		return { estimatedLevel: userLevel, tooComplex: false, complexityScore: 0 };
 	}

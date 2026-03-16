@@ -50,8 +50,6 @@ export async function POST({ request, locals }: RequestEvent) {
 		return json({ error: 'Active language is required' }, { status: 400 });
 	}
 
-	const langId = activeLanguage.id;
-
 	const body = await request.json().catch(() => ({}));
 
 	/**

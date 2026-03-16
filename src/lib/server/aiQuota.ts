@@ -1,4 +1,5 @@
 import { prisma } from '$lib/server/prisma';
+import { todayUtc } from '$lib/server/dateUtils';
 
 /**
  * Daily token quota for users on the public LLM.
@@ -9,12 +10,6 @@ import { prisma } from '$lib/server/prisma';
  * Set very liberally by default — tighten via code when needed.
  */
 export const DAILY_TOKEN_QUOTA = 500_000;
-
-/** Returns the UTC midnight Date for the current day (used as the row key). */
-function todayUtc(): Date {
-	const now = new Date();
-	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
 
 /**
  * Returns the user's current effective token usage for today.

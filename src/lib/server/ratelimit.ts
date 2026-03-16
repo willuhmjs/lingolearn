@@ -37,6 +37,11 @@ export const publishGameRateLimiter = new RateLimiter({
 	IPUA: [20, 'h']
 });
 
+export const quizAnswerRateLimiter = new RateLimiter({
+	IP: [60, 'm'], // 60 per minute per IP
+	IPUA: [600, 'h'] // 600 per hour per IP+UA
+});
+
 // Test-out generates 10 questions in one LLM call — keep burst limit but relax daily
 export const testOutRateLimiter = new RateLimiter({
 	IP: [10, 'm'], // 10 attempts per minute per IP

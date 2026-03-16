@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	export let trigger: boolean = false;
-	export let duration: number = 3000;
+	let { trigger = false, duration = 3000 }: { trigger?: boolean; duration?: number } = $props();
 
 	interface Particle {
 		x: number;
@@ -92,9 +91,11 @@
 		}, duration);
 	}
 
-	$: if (trigger && ctx) {
-		startConfetti();
-	}
+	$effect(() => {
+		if (trigger && ctx) {
+			startConfetti();
+		}
+	});
 
 	onMount(() => {
 		if (!canvas) return;
@@ -119,7 +120,7 @@
 	});
 </script>
 
-<canvas bind:this={canvas} class="confetti-canvas"></canvas>
+<canvas bind:this={canvas} class="confetti-canvas" aria-hidden="true"></canvas>
 
 <style>
 	.confetti-canvas {

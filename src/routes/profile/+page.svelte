@@ -220,6 +220,60 @@
 				</section>
 			{/if}
 
+			<!-- Export Vocabulary -->
+			<section class="card">
+				<h2>Export Vocabulary</h2>
+				<p style="color: var(--text-muted, #64748b); margin-bottom: 1rem; font-size: 0.9rem;">
+					Download your vocabulary list for offline study or import into other tools.
+				</p>
+				<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+					<a
+						href="/api/user/vocabulary/export?format=csv"
+						class="btn-duo btn-secondary"
+						style="font-size: 0.875rem; padding: 0.625rem 1.25rem;"
+						download
+					>
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							width="18"
+							height="18"
+							style="margin-right: 0.5rem;"
+							aria-hidden="true"
+						>
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+								points="7 10 12 15 17 10"
+							/><line x1="12" y1="15" x2="12" y2="3" />
+						</svg>
+						Export CSV
+					</a>
+					<a
+						href="/api/user/vocabulary/export?format=anki"
+						class="btn-duo btn-secondary"
+						style="font-size: 0.875rem; padding: 0.625rem 1.25rem;"
+						download
+					>
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							width="18"
+							height="18"
+							style="margin-right: 0.5rem;"
+							aria-hidden="true"
+						>
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+								points="7 10 12 15 17 10"
+							/><line x1="12" y1="15" x2="12" y2="3" />
+						</svg>
+						Export for Anki
+					</a>
+				</div>
+			</section>
+
 			<!-- AI Quota -->
 			{#if !data.user?.useLocalLlm}
 				<section class="card quota-card">

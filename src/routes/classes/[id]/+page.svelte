@@ -6,34 +6,40 @@
 	import { modal } from '$lib/modal.svelte';
 	import type { PageData } from './$types';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 
-	$: classDetails = data.classDetails;
-	$: currentUserRole = data.currentUserRole;
-	$: currentLang = data.languages?.find((l: any) => l.code === createAssignmentLanguage);
-	$: availableRules = currentLang ? currentLang.grammarRules : [];
-	$: classLang = data.languages?.find((l: any) => l.code === classDetails.primaryLanguage);
-	$: targetFlag = classLang?.flag ?? '🎯';
+	let classDetails = $derived(data.classDetails);
+	let currentUserRole = $derived(data.currentUserRole);
 	const nativeFlag = '🇬🇧';
 
 	// Assignment Creation
-	let showCreateAssignmentModal = false;
-	let createAssignmentTitle = '';
-	let createAssignmentDescription = '';
-	let createAssignmentMode = 'multiple-choice';
-	let createAssignmentTargetScore = 10;
-	let createAssignmentPassThreshold = 50;
-	let createAssignmentLanguage = data.classDetails.primaryLanguage;
-	let createAssignmentTargetCefrLevel = '';
-	let createAssignmentTopic = '';
-	let selectedGrammarRules: string[] = [];
-	let targetVocabList: string[] = [];
-	let vocabInput = '';
-	let grammarSearchQuery = '';
-	let createAssignmentGameId = '';
-	let createAssignmentDisableHoverTranslation = false;
-	let titleWasAutoFilled = false;
-	let isCreatingAssignment = false;
+	let showCreateAssignmentModal = $state(false);
+	let createAssignmentTitle = $state('');
+	let createAssignmentDescription = $state('');
+	let createAssignmentMode = $state('multiple-choice');
+	let createAssignmentTargetScore = $state(10);
+	let createAssignmentPassThreshold = $state(50);
+	let createAssignmentLanguage = $state('');
+	$effect(() => {
+		createAssignmentLanguage = data.classDetails?.primaryLanguage || '';
+	});
+	let createAssignmentTargetCefrLevel = $state('');
+	let createAssignmentTopic = $state('');
+	let selectedGrammarRules: string[] = $state([]);
+	let targetVocabList: string[] = $state([]);
+	let vocabInput = $state('');
+	let grammarSearchQuery = $state('');
+	let createAssignmentGameId = $state('');
+	let createAssignmentDisableHoverTranslation = $state(false);
+	let titleWasAutoFilled = $state(false);
+	let isCreatingAssignment = $state(false);
+
+	let currentLang = $derived(data.languages?.find((l: any) => l.code === createAssignmentLanguage));
+	let availableRules = $derived(currentLang ? currentLang.grammarRules : []);
+	let classLang = $derived(
+		data.languages?.find((l: any) => l.code === classDetails.primaryLanguage)
+	);
+	let targetFlag = $derived(classLang?.flag ?? '🎯');
 
 	const MODE_DEFAULTS: Record<string, { targetScore: number; passThreshold: number }> = {
 		'multiple-choice': { targetScore: 10, passThreshold: 80 },
@@ -216,7 +222,7 @@
 		return assignment.scores.find((s: any) => s.userId === userId) ?? null;
 	}
 
-	let copiedAssignmentId: string | null = null;
+	let copiedAssignmentId: string | null = $state(null);
 
 	async function copyAssignmentLink(assignmentId: string, gameId?: string | null) {
 		const url = gameId

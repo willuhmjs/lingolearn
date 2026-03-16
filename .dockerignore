@@ -15,7 +15,6 @@ build
 
 # Git and IDE
 .git
-.gitignore
 .github
 .vscode
 
@@ -24,8 +23,11 @@ flutter_client
 docs
 README.md
 
+# pnpm store
+.pnpm-store
+
 # Docker files
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
 .dockerignore
 kubernetes.yaml

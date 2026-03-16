@@ -4,7 +4,7 @@
 	import { marked } from 'marked';
 	import { onMount } from 'svelte';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 
 	// SrsState enum values from Prisma schema
 	const srsColors = {
@@ -15,113 +15,129 @@
 		MASTERED: 'var(--color-mastered, #10b981)' // emerald-500
 	};
 
-	let grammarSortOrder: 'easiest' | 'hardest' = 'easiest';
-	let grammarView: 'web' | 'list' = 'web'; // #15: list fallback for mobile
+	let grammarSortOrder = $state<'easiest' | 'hardest'>('easiest');
+	let grammarView = $state<'web' | 'list'>('web'); // #15: list fallback for mobile
 
 	// Topologically sort grammar rules to ensure prerequisites come first
-	$: sortedRules = (() => {
-		const rules = data.allGrammarRules || [];
-		const sorted: any[] = [];
-		const visited = new Set<string>();
-		const visiting = new Set<string>();
+	let sortedRules = $derived(
+		(() => {
+			const rules = data.allGrammarRules || [];
+			const sorted: any[] = [];
+			const visited = new Set<string>();
+			const visiting = new Set<string>();
 
-		function visit(rule: any) {
-			if (visited.has(rule.id)) return;
-			if (visiting.has(rule.id)) return; // Break cycle
-			visiting.add(rule.id);
+			function visit(rule: any) {
+				if (visited.has(rule.id)) return;
+				if (visiting.has(rule.id)) return; // Break cycle
+				visiting.add(rule.id);
 
-			for (const dep of rule.dependencies || []) {
-				const depRule = rules.find((r: any) => r.id === dep.id);
-				if (depRule) {
-					visit(depRule);
+				for (const dep of rule.dependencies || []) {
+					const depRule = rules.find((r: any) => r.id === dep.id);
+					if (depRule) {
+						visit(depRule);
+					}
 				}
+
+				visiting.delete(rule.id);
+				visited.add(rule.id);
+				sorted.push(rule);
 			}
 
-			visiting.delete(rule.id);
-			visited.add(rule.id);
-			sorted.push(rule);
-		}
+			for (const rule of rules) {
+				visit(rule);
+			}
 
-		for (const rule of rules) {
-			visit(rule);
-		}
+			if (grammarSortOrder === 'hardest') {
+				return sorted.reverse();
+			}
 
-		if (grammarSortOrder === 'hardest') {
-			return sorted.reverse();
-		}
-
-		return sorted;
-	})();
-
-	// Merge user progress with all possible rules for the grammar web
-	$: grammarWebNodes = sortedRules.map((rule: any) => {
-		const userProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === rule.id);
-		const prereqsMet =
-			(rule.dependencies || []).length === 0 ||
-			(rule.dependencies || []).every((dep: any) => {
-				const depProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === dep.id);
-				return depProgress?.srsState === 'MASTERED';
-			});
-		return {
-			...userProgress,
-			grammarRule: rule,
-			srsState: userProgress?.srsState || (prereqsMet ? 'UNSEEN' : 'LOCKED'),
-			eloRating: userProgress?.eloRating || 1000,
-			isLocked: !prereqsMet
-		};
-	});
-
-	// Summary Statistics Calculations
-	const totalVocab = data.vocabularies.length;
-	const avgVocabElo =
-		totalVocab > 0
-			? Math.ceil(data.vocabularies.reduce((acc, v) => acc + v.eloRating, 0) / totalVocab)
-			: 0;
-	const vocabSrsBreakdown = data.vocabularies.reduce(
-		(acc, v) => {
-			acc[v.srsState] = (acc[v.srsState] || 0) + 1;
-			return acc;
-		},
-		{} as Record<string, number>
+			return sorted;
+		})()
 	);
 
-	const totalGrammar = data.grammarRules.length;
-	const avgGrammarElo =
+	// Merge user progress with all possible rules for the grammar web
+	let grammarWebNodes = $derived(
+		sortedRules.map((rule: any) => {
+			const userProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === rule.id);
+			const prereqsMet =
+				(rule.dependencies || []).length === 0 ||
+				(rule.dependencies || []).every((dep: any) => {
+					const depProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === dep.id);
+					return depProgress?.srsState === 'MASTERED';
+				});
+			return {
+				...userProgress,
+				grammarRule: rule,
+				srsState: userProgress?.srsState || (prereqsMet ? 'UNSEEN' : 'LOCKED'),
+				eloRating: userProgress?.eloRating || 1000,
+				isLocked: !prereqsMet
+			};
+		})
+	);
+
+	// Summary Statistics Calculations
+	let totalVocab = $derived(data.vocabularies.length);
+	let avgVocabElo = $derived(
+		totalVocab > 0
+			? Math.ceil(data.vocabularies.reduce((acc, v) => acc + v.eloRating, 0) / totalVocab)
+			: 0
+	);
+	let vocabSrsBreakdown = $derived(
+		data.vocabularies.reduce(
+			(acc, v) => {
+				acc[v.srsState] = (acc[v.srsState] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>
+		)
+	);
+
+	let totalGrammar = $derived(data.grammarRules.length);
+	let avgGrammarElo = $derived(
 		totalGrammar > 0
 			? Math.ceil(data.grammarRules.reduce((acc, r) => acc + r.eloRating, 0) / totalGrammar)
-			: 0;
-	const grammarSrsBreakdown = data.grammarRules.reduce(
-		(acc, r) => {
-			acc[r.srsState] = (acc[r.srsState] || 0) + 1;
-			return acc;
-		},
-		{} as Record<string, number>
+			: 0
+	);
+	let grammarSrsBreakdown = $derived(
+		data.grammarRules.reduce(
+			(acc, r) => {
+				acc[r.srsState] = (acc[r.srsState] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>
+		)
 	);
 
 	// Modal navigation stack - supports drilling into prerequisite modals
-	let modalStack: Array<{
-		type: 'vocab' | 'grammar';
-		data: any;
-		color: string;
-		eloPercent: number;
-	}> = [];
-	$: selectedModalItem = modalStack.length > 0 ? modalStack[modalStack.length - 1] : null;
+	let modalStack = $state<
+		Array<{
+			type: 'vocab' | 'grammar';
+			data: any;
+			color: string;
+			eloPercent: number;
+		}>
+	>([]);
+	let selectedModalItem = $derived(
+		modalStack.length > 0 ? modalStack[modalStack.length - 1] : null
+	);
 
 	// Test-out state
-	let grammarModalPhase: 'detail' | 'testing' | 'results' = 'detail';
-	let testOutQuestions: any[] | null = null;
-	let testOutCurrentIndex = 0;
-	let testOutSelectedAnswer: number | null = null;
-	let testOutAnsweredCurrent = false;
-	let testOutScores: boolean[] = [];
-	let testOutLoading = false;
-	let testOutError: string | null = null;
-	let testOutMastering = false;
-	let testOutMasteryDone = false;
+	let grammarModalPhase = $state<'detail' | 'testing' | 'results'>('detail');
+	let testOutQuestions = $state<any[] | null>(null);
+	let testOutCurrentIndex = $state(0);
+	let testOutSelectedAnswer = $state<number | null>(null);
+	let testOutAnsweredCurrent = $state(false);
+	let testOutScores = $state<boolean[]>([]);
+	let testOutLoading = $state(false);
+	let testOutError = $state<string | null>(null);
+	let testOutMastering = $state(false);
+	let testOutMasteryDone = $state(false);
 
-	$: testOutPassedCount = testOutScores.filter(Boolean).length;
-	$: testOutTotalQuestions = testOutQuestions?.length || 10;
-	$: testOutPassed = testOutScores.length === testOutTotalQuestions && testOutPassedCount >= 9;
+	let testOutPassedCount = $derived(testOutScores.filter(Boolean).length);
+	let testOutTotalQuestions = $derived(testOutQuestions?.length || 10);
+	let testOutPassed = $derived(
+		testOutScores.length === testOutTotalQuestions && testOutPassedCount >= 9
+	);
 
 	function resetTestOut() {
 		testOutQuestions = null;

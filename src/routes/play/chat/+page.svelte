@@ -5,10 +5,11 @@
 	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
+	import BookmarkButton from '$lib/components/BookmarkButton.svelte';
 
-	export let data;
+	let { data } = $props();
 
-	let sessionStarted = false;
+	let sessionStarted = $state(false);
 
 	// Only show a correction if it actually contains an error, not a "looks good" message
 	function parseCorrection(correction: string | null | undefined): string | null {
@@ -31,32 +32,40 @@
 		if (noErrorPhrases.some((p) => lower.includes(p))) return null;
 		return correction;
 	}
-	let showTopicChange = false;
-	let newPersona = '';
-	let sessionId = '';
+	let showTopicChange = $state(false);
+	let newPersona = $state('');
+	let sessionId = $state('');
 
 	// Assignment state
-	$: assignment = data.assignment;
-	$: assignmentScore = data.assignmentScore;
-	$: isAssignment = !!assignment;
-	let isPassed = assignmentScore?.passed || false;
-	$: targetScore = assignment?.targetScore || 10;
-	let messagesSent = assignmentScore?.score || 0;
+	let assignment = $derived(data.assignment);
+	let assignmentScore = $derived(data.assignmentScore);
+	let isAssignment = $derived(!!assignment);
+	let isPassed = $state(false);
+	let targetScore = $derived(assignment?.targetScore || 10);
+	let messagesSent = $state(0);
 
-	let persona = 'A friendly waiter at a café';
-	$: {
+	$effect(() => {
+		if (assignmentScore) {
+			isPassed = assignmentScore.passed || false;
+			messagesSent = assignmentScore.score || 0;
+		}
+	});
+
+	let persona = $state('A friendly waiter at a café');
+	$effect(() => {
 		if (isAssignment && assignment?.topic) {
 			persona = assignment.topic;
 		}
-	}
+	});
 
-	$: language = $page.data.user?.activeLanguage?.name || 'German';
-	let message = '';
-	let isLoading = false;
+	let language = $derived($page.data.user?.activeLanguage?.name || 'German');
+	let languageId = $derived($page.data.user?.activeLanguage?.id || '');
+	let message = $state('');
+	let isLoading = $state(false);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let isTyping = false;
-	let chatContainer: HTMLElement;
-	let chatInputRef: HTMLTextAreaElement;
+	let isTyping = $state(false);
+	let chatContainer = $state<HTMLElement>(null!);
+	let chatInputRef = $state<HTMLTextAreaElement>(null!);
 
 	const TOPICS = [
 		// Food & Dining
@@ -215,8 +224,8 @@
 		extraVocabLemmas?: string[];
 	}
 
-	let messages: ChatMessage[] = [];
-	let userMessageCount = 0;
+	let messages: ChatMessage[] = $state([]);
+	let userMessageCount = $state(0);
 
 	async function scrollToBottom() {
 		await tick();
@@ -709,10 +718,12 @@
 										+ ELO Updated
 										{#if (msg.vocabularyUpdates && msg.vocabularyUpdates.length > 0) || (msg.extraVocabLemmas && msg.extraVocabLemmas.length > 0)}
 											<span class="elo-details">
-												({[
-													...(msg.vocabularyUpdates || []).map((u) => u.lemma || 'Vocab'),
-													...(msg.extraVocabLemmas || [])
-												].join(', ')})
+												({#each [...(msg.vocabularyUpdates || []).map( (u) => ({ lemma: u.lemma || 'Vocab', vocabId: u.id || '' }) ), ...(msg.extraVocabLemmas || []).map( (l) => ({ lemma: l, vocabId: '' }) )] as item, i}{#if i > 0},
+													{/if}{item.lemma}<BookmarkButton
+														word={item.lemma}
+														vocabularyId={item.vocabId}
+														{languageId}
+													/>{/each})
 											</span>
 										{/if}
 									</div>

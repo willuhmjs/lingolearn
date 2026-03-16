@@ -21,6 +21,18 @@
 			theme = 'dark';
 		}
 		document.documentElement.setAttribute('data-theme', theme);
+
+		// Detect and save user timezone once (fire-and-forget)
+		if (user) {
+			const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (tz) {
+				fetch('/api/user/timezone', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ timezone: tz })
+				}).catch(() => {});
+			}
+		}
 	});
 
 	function cycleTheme() {

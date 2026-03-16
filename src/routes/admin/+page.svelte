@@ -4,36 +4,35 @@
 	import { modal } from '$lib/modal.svelte';
 	import { fly } from 'svelte/transition';
 	import type { PageData, ActionData } from './$types';
-	export let data: PageData;
-	export let form: ActionData;
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let isRunningSeed = false;
+	let isRunningSeed = $state(false);
 
 	// Language data management state
-	let selectedLangId = '';
-	let isExporting = false;
-	let isImporting = false;
-	let importFile: FileList | undefined;
-	let langDataMsg = '';
-	let langDataError = false;
-	let showDeleteLangConfirm = false;
-	let deleteScope: 'vocab' | 'grammar' | 'all' = 'all';
-	let isDeletingLangData = false;
+	let selectedLangId = $state('');
+	let isExporting = $state(false);
+	let isImporting = $state(false);
+	let importFile = $state<FileList | undefined>();
+	let langDataMsg = $state('');
+	let langDataError = $state(false);
+	let showDeleteLangConfirm = $state(false);
+	let deleteScope = $state<'vocab' | 'grammar' | 'all'>('all');
+	let isDeletingLangData = $state(false);
 
 	// LLM config state
-	let llmEndpoint = data.llmEndpoint || '';
-	let llmApiKey = data.llmApiKey || '';
-	let llmModel = data.llmModel || '';
-	let availableModels: string[] = [];
-	let isFetchingModels = false;
-	let llmMsg = '';
-	let llmError = false;
+	let llmEndpoint = $state(data.llmEndpoint || '');
+	let llmApiKey = $state(data.llmApiKey || '');
+	let llmModel = $state(data.llmModel || '');
+	let availableModels = $state<string[]>([]);
+	let isFetchingModels = $state(false);
+	let llmMsg = $state('');
+	let llmError = $state(false);
 
 	// AI Check state
-	let isCheckingAI = false;
-	let aiCheckResult = '';
+	let isCheckingAI = $state(false);
+	let aiCheckResult = $state('');
 
-	let aiCheckProgress = '';
+	let aiCheckProgress = $state('');
 
 	async function runAICheckAll() {
 		if (data.pendingVocab.length === 0) return;
@@ -141,13 +140,6 @@
 		}
 	}
 
-	// Try fetching models on load if endpoint exists
-	$: {
-		if (data.llmEndpoint) {
-			// Initialize
-		}
-	}
-
 	// Svelte onMount is better for initial fetch to avoid SSR issues
 	import { onMount } from 'svelte';
 	onMount(() => {
@@ -155,7 +147,7 @@
 		runAutoReview();
 	});
 
-	$: selectedLang = data.languages.find((l: any) => l.id === selectedLangId);
+	let selectedLang = $derived(data.languages.find((l: any) => l.id === selectedLangId));
 
 	async function exportLangData() {
 		if (!selectedLangId) return;
@@ -232,7 +224,7 @@
 	}
 
 	// Modal state
-	let editingUser: {
+	let editingUser = $state<{
 		id: string;
 		username: string;
 		email: string;
@@ -243,12 +235,12 @@
 			cefrLevel: string;
 			hasOnboarded: boolean;
 		}>;
-	} | null = null;
+	} | null>(null);
 
-	let isSaving = false;
-	let isDeleting = false;
-	let modalError = '';
-	let showDeleteConfirm = false;
+	let isSaving = $state(false);
+	let isDeleting = $state(false);
+	let modalError = $state('');
+	let showDeleteConfirm = $state(false);
 
 	function openEditModal(user: (typeof data.users)[number]) {
 		editingUser = {
@@ -444,6 +436,157 @@
 			<div class="stat-item">
 				<span class="stat-label">Pending Vocab</span>
 				<span class="stat-value">{data.stats.pendingVocabWords}</span>
+			</div>
+		</div>
+	</section>
+
+	<section class="health-panel" in:fly={{ y: 20, duration: 400, delay: 120 }}>
+		<h2>System Health</h2>
+		<div class="health-grid">
+			<div class="health-card">
+				<h3>User Stats</h3>
+				<div class="health-items">
+					<div class="health-row">
+						<span class="health-label">Total Users</span>
+						<span class="health-value">{data.systemHealth.userStats.total.toLocaleString()}</span>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Active (24h)</span>
+						<span class="health-value"
+							>{data.systemHealth.userStats.active24h.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Active (7d)</span>
+						<span class="health-value">{data.systemHealth.userStats.active7d.toLocaleString()}</span
+						>
+					</div>
+				</div>
+			</div>
+
+			<div class="health-card">
+				<h3>Content Stats</h3>
+				<div class="health-items">
+					<div class="health-row">
+						<span class="health-label">Vocabulary Words</span>
+						<span class="health-value"
+							>{data.systemHealth.contentStats.vocabularyWords.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Grammar Rules</span>
+						<span class="health-value"
+							>{data.systemHealth.contentStats.grammarRules.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Games Published</span>
+						<span class="health-value"
+							>{data.systemHealth.contentStats.gamesPublished.toLocaleString()}</span
+						>
+					</div>
+				</div>
+			</div>
+
+			<div class="health-card">
+				<h3>AI Usage (Today)</h3>
+				<div class="health-items">
+					<div class="health-row">
+						<span class="health-label">Tokens Used</span>
+						<span class="health-value"
+							>{data.systemHealth.aiUsage.tokensUsedToday.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Good-Will Tokens</span>
+						<span class="health-value"
+							>{data.systemHealth.aiUsage.goodWillTokensToday.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Active AI Users</span>
+						<span class="health-value"
+							>{data.systemHealth.aiUsage.usersActiveToday.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Over Quota</span>
+						<span
+							class="health-value"
+							class:health-warning={data.systemHealth.aiUsage.usersOverQuota > 0}
+						>
+							{data.systemHealth.aiUsage.usersOverQuota}
+						</span>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Daily Quota Limit</span>
+						<span class="health-value health-muted"
+							>{data.systemHealth.aiUsage.dailyQuotaLimit.toLocaleString()}</span
+						>
+					</div>
+				</div>
+			</div>
+
+			<div class="health-card">
+				<h3>Database Size</h3>
+				<div class="health-items">
+					<div class="health-row">
+						<span class="health-label">UserVocabulary</span>
+						<span class="health-value"
+							>{data.systemHealth.databaseSize.userVocabulary.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">UserVocabularyProgress</span>
+						<span class="health-value"
+							>{data.systemHealth.databaseSize.userVocabularyProgress.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">ReviewLog</span>
+						<span class="health-value"
+							>{data.systemHealth.databaseSize.reviewLog.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">ConversationSession</span>
+						<span class="health-value"
+							>{data.systemHealth.databaseSize.conversationSession.toLocaleString()}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Message</span>
+						<span class="health-value"
+							>{data.systemHealth.databaseSize.message.toLocaleString()}</span
+						>
+					</div>
+				</div>
+			</div>
+
+			<div class="health-card">
+				<h3>System Config</h3>
+				<div class="health-items">
+					<div class="health-row">
+						<span class="health-label">LLM Endpoint</span>
+						<span class="health-value health-mono"
+							>{data.systemHealth.systemConfig.llmEndpoint}</span
+						>
+					</div>
+					<div class="health-row">
+						<span class="health-label">LLM Model</span>
+						<span class="health-value health-mono">{data.systemHealth.systemConfig.llmModel}</span>
+					</div>
+					<div class="health-row">
+						<span class="health-label">Local Login</span>
+						<span class="health-value">
+							{#if data.systemHealth.systemConfig.localLoginEnabled}
+								<span class="health-badge health-badge-on">Enabled</span>
+							{:else}
+								<span class="health-badge health-badge-off">Disabled</span>
+							{/if}
+						</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -871,8 +1014,8 @@
 </div>
 
 {#if editingUser}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="modal-backdrop" onclick={handleBackdropClick}>
 		<div class="modal">
 			<div class="modal-header">
@@ -1607,5 +1750,107 @@
 	.checkbox-group input[type='checkbox'] {
 		width: auto;
 		cursor: pointer;
+	}
+
+	/* System Health Panel */
+	.health-panel {
+		background: var(--card-bg, #ffffff);
+		border: 1px solid var(--card-border, #e5e7eb);
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.health-panel h2 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--text-color, #111827);
+		margin: 0 0 1rem 0;
+	}
+
+	.health-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 1rem;
+	}
+
+	.health-card {
+		background: var(--card-bg, #f9fafb);
+		border: 1px solid var(--card-border, #e5e7eb);
+		border-radius: 0.5rem;
+		padding: 1rem 1.25rem;
+	}
+
+	.health-card h3 {
+		font-size: 0.8rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted, #6b7280);
+		margin: 0 0 0.75rem 0;
+	}
+
+	.health-items {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.health-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.health-label {
+		font-size: 0.825rem;
+		color: var(--text-color, #4b5563);
+	}
+
+	.health-value {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text-color, #111827);
+		text-align: right;
+	}
+
+	.health-mono {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 0.75rem;
+		font-weight: 500;
+		max-width: 180px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.health-muted {
+		color: var(--text-muted, #9ca3af);
+		font-weight: 500;
+	}
+
+	.health-warning {
+		color: #dc2626;
+	}
+
+	.health-badge {
+		display: inline-block;
+		padding: 0.1rem 0.5rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 600;
+	}
+
+	.health-badge-on {
+		background-color: #ecfdf5;
+		color: #059669;
+		border: 1px solid #a7f3d0;
+	}
+
+	.health-badge-off {
+		background-color: #fef2f2;
+		color: #dc2626;
+		border: 1px solid #fecaca;
 	}
 </style>

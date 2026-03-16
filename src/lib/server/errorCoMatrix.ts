@@ -42,7 +42,6 @@ const ERROR_TYPES: ErrorType[] = [
  * Returns an empty matrix if not yet fitted.
  */
 export async function loadErrorCoMatrix(): Promise<CoMatrix> {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
 	if (!settings) return {};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

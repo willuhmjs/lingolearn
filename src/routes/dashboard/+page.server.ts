@@ -8,6 +8,11 @@ import { parseBanditState } from '$lib/server/srsConfig';
 import { pfaPredictCorrect } from '$lib/server/pfa';
 import { loadErrorCoMatrix, getRelatedErrorTypes } from '$lib/server/errorCoMatrix';
 import type { ErrorType } from '$lib/server/grader';
+import {
+	getCachedDashboardAnalytics,
+	setCachedDashboardAnalytics,
+	type DashboardAnalytics
+} from '$lib/server/dashboardCache';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -135,168 +140,199 @@ export const load: PageServerLoad = async ({ locals }) => {
 		loadRetentionStats(user.id)
 	]);
 
-	// --- Enhanced analytics ---
+	// --- Enhanced analytics (cached for 10 minutes) ---
 
-	// Fetch all vocab progress records for in-depth analysis
-	const vocabProgressRecords = await prisma.userVocabularyProgress.findMany({
-		where: { userId: user.id },
-		select: {
-			vocabularyId: true,
-			stability: true,
-			retrievability: true,
-			lastReviewDate: true,
-			repetitions: true,
-			lapses: true,
-			lastErrorType: true,
-			overrideCount: true
-		}
-	});
+	const languageId = user.activeLanguage?.id ?? '';
+	const cached = getCachedDashboardAnalytics(user.id, languageId);
 
-	const now = new Date();
+	let analytics: DashboardAnalytics;
 
-	// Re-compute current retrievability (stored value is stale since last review)
-	// R(t) = (1 + t / (9 * S))^-1
-	type UrgentItem = { vocabularyId: string; retrievabilityPct: number; lapses: number };
-	const urgentVocab: UrgentItem[] = [];
-	const errorTypeCounts: Record<string, number> = {};
-	let totalOverrides = 0;
-
-	for (const rec of vocabProgressRecords) {
-		if (rec.repetitions === 0) continue;
-		let currentRet = 1;
-		if (rec.stability > 0 && rec.lastReviewDate) {
-			const elapsedDays = (now.getTime() - rec.lastReviewDate.getTime()) / (1000 * 60 * 60 * 24);
-			currentRet = Math.max(0, Math.min(1, Math.pow(1 + elapsedDays / (9 * rec.stability), -1)));
-		}
-		if (currentRet < 0.7) {
-			urgentVocab.push({
-				vocabularyId: rec.vocabularyId,
-				retrievabilityPct: Math.round(currentRet * 100),
-				lapses: rec.lapses
-			});
-		}
-		if (rec.lastErrorType) {
-			errorTypeCounts[rec.lastErrorType] = (errorTypeCounts[rec.lastErrorType] ?? 0) + 1;
-		}
-		totalOverrides += rec.overrideCount;
-	}
-	urgentVocab.sort((a, b) => a.retrievabilityPct - b.retrievabilityPct);
-
-	// Resolve lemmas for top urgent items
-	const topUrgentIds = urgentVocab.slice(0, 10).map((u) => u.vocabularyId);
-	const urgentVocabDetails =
-		topUrgentIds.length > 0
-			? await prisma.vocabulary.findMany({
-					where: { id: { in: topUrgentIds } },
-					select: { id: true, lemma: true, meanings: { select: { value: true }, take: 1 } }
-				})
-			: [];
-	const urgentVocabMap = new Map(urgentVocabDetails.map((v) => [v.id, v]));
-
-	const urgentItems = urgentVocab.slice(0, 10).map((u) => ({
-		...u,
-		lemma: urgentVocabMap.get(u.vocabularyId)?.lemma ?? u.vocabularyId,
-		meaning: urgentVocabMap.get(u.vocabularyId)?.meanings[0]?.value ?? null
-	}));
-
-	// Grammar coverage: how many total grammar rules exist vs. how many the user has interacted with
-	const totalGrammarRuleCount = allGrammarRules.length;
-	const interactedGrammarCount = grammarRules.length;
-	const masteredGrammarCount = grammarRules.filter(
-		(r) => r.srsState === 'MASTERED' || r.srsState === 'KNOWN'
-	).length;
-	const lockedGrammarCount = allGrammarRules.filter((rule) => {
-		const userRule = grammarRules.find((r) => r.grammarRuleId === rule.id);
-		if (userRule) return false; // interacted, not locked
-		return rule.dependencies.some(
-			(dep) =>
-				!grammarRules.find(
-					(r) => r.grammarRuleId === dep.id && (r.srsState === 'MASTERED' || r.srsState === 'KNOWN')
-				)
-		);
-	}).length;
-
-	const grammarCoverage = {
-		total: totalGrammarRuleCount,
-		interacted: interactedGrammarCount,
-		mastered: masteredGrammarCount,
-		locked: lockedGrammarCount,
-		available: totalGrammarRuleCount - interactedGrammarCount - lockedGrammarCount
-	};
-
-	// --- Adaptive learning signals ---
-
-	const sessionEma = userRecord?.sessionSuccessEma ?? 0.75;
-	const adaptiveCap = computeAdaptiveNewWordCap(sessionEma);
-
-	// Bandit state: arm means (expected success rate) for each interleave count
-	const banditState = parseBanditState(userRecord?.interleaveBanditState ?? null);
-	const banditArmMeans = banditState.arms.map((arm, i) => ({
-		interleaveCount: i,
-		mean: Math.round((arm.alpha / (arm.alpha + arm.beta)) * 100),
-		observations: arm.alpha + arm.beta - 2 // subtract priors
-	}));
-	const bestBanditArm = banditArmMeans.reduce((best, arm) => (arm.mean > best.mean ? arm : best));
-
-	// ELO confidence: vocab items with highest variance (most uncertain)
-	const highVarianceVocab = await prisma.userVocabulary.findMany({
-		where: { userId: user.id, vocabulary: { languageId: user.activeLanguage?.id } },
-		orderBy: { eloVariance: 'desc' },
-		take: 8,
-		select: {
-			eloRating: true,
-			eloVariance: true,
-			vocabulary: { select: { lemma: true, cefrLevel: true } }
-		}
-	});
-
-	// PFA grammar health: rules where P(correct) is low (most at-risk)
-	const grammarWithPfa = await prisma.userGrammarRule.findMany({
-		where: { userId: user.id, grammarRule: { languageId: user.activeLanguage?.id } },
-		select: {
-			grammarRuleId: true,
-			grammarRule: {
-				select: { title: true, level: true, pfaGamma: true, pfaRho: true, pfaDelta: true }
+	if (cached) {
+		analytics = cached;
+	} else {
+		// Fetch all vocab progress records for in-depth analysis
+		const vocabProgressRecords = await prisma.userVocabularyProgress.findMany({
+			where: { userId: user.id },
+			select: {
+				vocabularyId: true,
+				stability: true,
+				retrievability: true,
+				lastReviewDate: true,
+				repetitions: true,
+				lapses: true,
+				lastErrorType: true,
+				overrideCount: true
 			}
-		}
-	});
-	const grammarProgressForDash = await prisma.userGrammarRuleProgress.findMany({
-		where: { userId: user.id, grammarRuleId: { in: grammarWithPfa.map((g) => g.grammarRuleId) } },
-		select: { grammarRuleId: true, repetitions: true, lapses: true }
-	});
-	const grammarProgressDashMap = new Map(grammarProgressForDash.map((p) => [p.grammarRuleId, p]));
+		});
 
-	const pfaAtRisk = grammarWithPfa
-		.map((g) => {
-			const prog = grammarProgressDashMap.get(g.grammarRuleId);
-			const successes = prog ? Math.max(0, prog.repetitions - prog.lapses) : 0;
-			const failures = prog?.lapses ?? 0;
-			const p = pfaPredictCorrect(
-				g.grammarRule.pfaGamma,
-				g.grammarRule.pfaRho,
-				g.grammarRule.pfaDelta,
-				successes,
-				failures
+		const now = new Date();
+
+		// Re-compute current retrievability (stored value is stale since last review)
+		// R(t) = (1 + t / (9 * S))^-1
+		type UrgentItem = { vocabularyId: string; retrievabilityPct: number; lapses: number };
+		const urgentVocab: UrgentItem[] = [];
+		const errorTypeCounts: Record<string, number> = {};
+		let totalOverrides = 0;
+
+		for (const rec of vocabProgressRecords) {
+			if (rec.repetitions === 0) continue;
+			let currentRet = 1;
+			if (rec.stability > 0 && rec.lastReviewDate) {
+				const elapsedDays = (now.getTime() - rec.lastReviewDate.getTime()) / (1000 * 60 * 60 * 24);
+				currentRet = Math.max(0, Math.min(1, Math.pow(1 + elapsedDays / (9 * rec.stability), -1)));
+			}
+			if (currentRet < 0.7) {
+				urgentVocab.push({
+					vocabularyId: rec.vocabularyId,
+					retrievabilityPct: Math.round(currentRet * 100),
+					lapses: rec.lapses
+				});
+			}
+			if (rec.lastErrorType) {
+				errorTypeCounts[rec.lastErrorType] = (errorTypeCounts[rec.lastErrorType] ?? 0) + 1;
+			}
+			totalOverrides += rec.overrideCount;
+		}
+		urgentVocab.sort((a, b) => a.retrievabilityPct - b.retrievabilityPct);
+
+		// Resolve lemmas for top urgent items
+		const topUrgentIds = urgentVocab.slice(0, 10).map((u) => u.vocabularyId);
+		const urgentVocabDetails =
+			topUrgentIds.length > 0
+				? await prisma.vocabulary.findMany({
+						where: { id: { in: topUrgentIds } },
+						select: { id: true, lemma: true, meanings: { select: { value: true }, take: 1 } }
+					})
+				: [];
+		const urgentVocabMap = new Map(urgentVocabDetails.map((v) => [v.id, v]));
+
+		const urgentItems = urgentVocab.slice(0, 10).map((u) => ({
+			...u,
+			lemma: urgentVocabMap.get(u.vocabularyId)?.lemma ?? u.vocabularyId,
+			meaning: urgentVocabMap.get(u.vocabularyId)?.meanings[0]?.value ?? null
+		}));
+
+		// Grammar coverage
+		const totalGrammarRuleCount = allGrammarRules.length;
+		const interactedGrammarCount = grammarRules.length;
+		const masteredGrammarCount = grammarRules.filter(
+			(r) => r.srsState === 'MASTERED' || r.srsState === 'KNOWN'
+		).length;
+		const lockedGrammarCount = allGrammarRules.filter((rule) => {
+			const userRule = grammarRules.find((r) => r.grammarRuleId === rule.id);
+			if (userRule) return false;
+			return rule.dependencies.some(
+				(dep) =>
+					!grammarRules.find(
+						(r) =>
+							r.grammarRuleId === dep.id && (r.srsState === 'MASTERED' || r.srsState === 'KNOWN')
+					)
 			);
-			return { title: g.grammarRule.title, level: g.grammarRule.level, pCorrect: p };
-		})
-		.filter((g) => g.pCorrect !== null && g.pCorrect < 0.6)
-		.sort((a, b) => (a.pCorrect ?? 1) - (b.pCorrect ?? 1))
-		.slice(0, 6);
+		}).length;
 
-	// Error co-occurrence: top related error pairs for the user's active errors
-	const coMatrix = await loadErrorCoMatrix();
-	const activeErrorTypes = Object.keys(errorTypeCounts) as ErrorType[];
-	const coOccurrencePairs: { from: ErrorType; to: ErrorType; strength: string }[] = [];
-	for (const et of activeErrorTypes) {
-		const related = getRelatedErrorTypes(coMatrix, et).slice(0, 2);
-		for (const rel of related) {
-			if (!coOccurrencePairs.find((p) => p.from === rel && p.to === et)) {
-				const count = coMatrix[et]?.[rel] ?? 0;
-				const strength = count > 20 ? 'strong' : count > 5 ? 'moderate' : 'weak';
-				coOccurrencePairs.push({ from: et, to: rel, strength });
+		const grammarCoverage = {
+			total: totalGrammarRuleCount,
+			interacted: interactedGrammarCount,
+			mastered: masteredGrammarCount,
+			locked: lockedGrammarCount,
+			available: totalGrammarRuleCount - interactedGrammarCount - lockedGrammarCount
+		};
+
+		// --- Adaptive learning signals ---
+		const sessionEma = userRecord?.sessionSuccessEma ?? 0.75;
+		const adaptiveCap = computeAdaptiveNewWordCap(sessionEma);
+
+		const banditState = parseBanditState(userRecord?.interleaveBanditState ?? null);
+		const banditArmMeans = banditState.arms.map((arm, i) => ({
+			interleaveCount: i,
+			mean: Math.round((arm.alpha / (arm.alpha + arm.beta)) * 100),
+			observations: arm.alpha + arm.beta - 2
+		}));
+		const bestBanditArm = banditArmMeans.reduce((best, arm) => (arm.mean > best.mean ? arm : best));
+
+		const highVarianceVocab = await prisma.userVocabulary.findMany({
+			where: { userId: user.id, vocabulary: { languageId: user.activeLanguage?.id } },
+			orderBy: { eloVariance: 'desc' },
+			take: 8,
+			select: {
+				eloRating: true,
+				eloVariance: true,
+				vocabulary: { select: { lemma: true, cefrLevel: true } }
+			}
+		});
+
+		const grammarWithPfa = await prisma.userGrammarRule.findMany({
+			where: { userId: user.id, grammarRule: { languageId: user.activeLanguage?.id } },
+			select: {
+				grammarRuleId: true,
+				grammarRule: {
+					select: { title: true, level: true, pfaGamma: true, pfaRho: true, pfaDelta: true }
+				}
+			}
+		});
+		const grammarProgressForDash = await prisma.userGrammarRuleProgress.findMany({
+			where: {
+				userId: user.id,
+				grammarRuleId: { in: grammarWithPfa.map((g) => g.grammarRuleId) }
+			},
+			select: { grammarRuleId: true, repetitions: true, lapses: true }
+		});
+		const grammarProgressDashMap = new Map(grammarProgressForDash.map((p) => [p.grammarRuleId, p]));
+
+		const pfaAtRisk = grammarWithPfa
+			.map((g) => {
+				const prog = grammarProgressDashMap.get(g.grammarRuleId);
+				const successes = prog ? Math.max(0, prog.repetitions - prog.lapses) : 0;
+				const failures = prog?.lapses ?? 0;
+				const p = pfaPredictCorrect(
+					g.grammarRule.pfaGamma,
+					g.grammarRule.pfaRho,
+					g.grammarRule.pfaDelta,
+					successes,
+					failures
+				);
+				return { title: g.grammarRule.title, level: g.grammarRule.level, pCorrect: p };
+			})
+			.filter((g) => g.pCorrect !== null && g.pCorrect < 0.6)
+			.sort((a, b) => (a.pCorrect ?? 1) - (b.pCorrect ?? 1))
+			.slice(0, 6);
+
+		const coMatrix = await loadErrorCoMatrix();
+		const activeErrorTypes = Object.keys(errorTypeCounts) as ErrorType[];
+		const coOccurrencePairs: { from: string; to: string; strength: string }[] = [];
+		for (const et of activeErrorTypes) {
+			const related = getRelatedErrorTypes(coMatrix, et).slice(0, 2);
+			for (const rel of related) {
+				if (!coOccurrencePairs.find((p) => p.from === rel && p.to === et)) {
+					const count = coMatrix[et]?.[rel] ?? 0;
+					const strength = count > 20 ? 'strong' : count > 5 ? 'moderate' : 'weak';
+					coOccurrencePairs.push({ from: et, to: rel, strength });
+				}
 			}
 		}
+
+		analytics = {
+			urgentItems,
+			errorTypeCounts,
+			totalOverrides,
+			grammarCoverage,
+			sessionEma: Math.round(sessionEma * 100),
+			adaptiveCap,
+			banditArmMeans,
+			bestBanditArm,
+			highVarianceVocab: highVarianceVocab.map((v) => ({
+				lemma: v.vocabulary.lemma,
+				level: v.vocabulary.cefrLevel,
+				elo: Math.round(v.eloRating),
+				sigma: Math.round(Math.sqrt(v.eloVariance))
+			})),
+			pfaAtRisk,
+			coOccurrencePairs,
+			hasPersonalizedWeights: (userRecord?.fsrsWeights?.length ?? 0) === 19,
+			fsrsRetention: Math.round((userRecord?.fsrsRetention ?? 0.9) * 100)
+		};
+
+		setCachedDashboardAnalytics(user.id, languageId, analytics);
 	}
 
 	return {
@@ -308,24 +344,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		retentionStats,
 		dueSoonAssignments,
 		activeLiveSessions,
-		urgentItems,
-		errorTypeCounts,
-		totalOverrides,
-		grammarCoverage,
-		// New algorithm signals
-		sessionEma: Math.round(sessionEma * 100),
-		adaptiveCap,
-		banditArmMeans,
-		bestBanditArm,
-		highVarianceVocab: highVarianceVocab.map((v) => ({
-			lemma: v.vocabulary.lemma,
-			level: v.vocabulary.cefrLevel,
-			elo: Math.round(v.eloRating),
-			sigma: Math.round(Math.sqrt(v.eloVariance))
-		})),
-		pfaAtRisk,
-		coOccurrencePairs,
-		hasPersonalizedWeights: (userRecord?.fsrsWeights?.length ?? 0) === 19,
-		fsrsRetention: Math.round((userRecord?.fsrsRetention ?? 0.9) * 100)
+		...analytics
 	};
 };
