@@ -3,7 +3,7 @@ import { generateChatCompletion } from '$lib/server/llm';
 import { recordTokenUsage } from '$lib/server/aiQuota';
 import { stemmer as germanStemmer } from '@orama/stemmers/german';
 import { getFrequencyRankDynamic, estimateFrequencyRank } from '$lib/server/frequencyLoader';
-import { getLanguageConfig } from '$lib/languages';
+import { getLanguageConfig, getLanguageNames } from '$lib/languages';
 
 export const AMBIGUOUS_WORDS_BY_LANG: Record<string, string[]> = {
 	German: [
@@ -609,6 +609,8 @@ export function stemWord(word: string, language: string): Set<string> {
 			candidates.add(restored.charAt(0).toUpperCase() + restored.slice(1));
 		}
 	};
+
+	if (!getLanguageNames().includes(language)) return candidates;
 
 	const langConfig = getLanguageConfig(language);
 
