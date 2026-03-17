@@ -2097,6 +2097,31 @@
 		justify-content: center;
 		gap: 1.25rem;
 		flex-wrap: wrap;
+		max-width: none;
+	}
+
+	.path-selection.horizontal .path-card {
+		width: 200px;
+		min-height: 180px;
+		justify-content: center;
+	}
+
+	@media (max-width: 600px) {
+		.path-selection.horizontal {
+			gap: 0.75rem;
+		}
+
+		.path-selection.horizontal .path-card {
+			width: calc(50% - 0.375rem);
+			min-height: 150px;
+		}
+	}
+
+	@media (max-width: 360px) {
+		.path-selection.horizontal .path-card {
+			width: 100%;
+			min-height: 120px;
+		}
 	}
 
 	.path-card {
