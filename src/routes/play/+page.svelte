@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import toast from 'svelte-french-toast';
   import { marked } from 'marked';
@@ -41,6 +41,7 @@
     }
   });
   let teacherClasses = $derived(data.teacherClasses);
+  let recommendedGames = $derived(data.recommendedGames);
 
   let currentCategory = $state('All');
   const categories = ['All', 'Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
@@ -1280,13 +1281,6 @@
                 // Only stop loading once we have actual text to show
                 if (loading) {
                   loading = false;
-                  tick().then(() => {
-                    fetch('/api/load-time-stat', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ loadTimeMs: Date.now() - progressStart })
-                    }).catch(() => {});
-                  });
                 }
               }
 
@@ -2496,6 +2490,56 @@
           <a href="/play/games/create" class="btn-primary create-btn"> + Create Quiz </a>
         </div>
 
+        {#if recommendedGames && recommendedGames.length > 0}
+          <div class="games-section recommended-section">
+            <h2 class="recommendation-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+                />
+              </svg>
+              Recommended for You
+            </h2>
+            <div class="games-grid">
+              {#each recommendedGames as game}
+                <div class="card-duo game-card recommended-card">
+                  <div class="game-card-content">
+                    <div class="game-card-header">
+                      <h3>{game.title}</h3>
+                      <span class="language-badge" title={game.language}>
+                        {getFlagEmoji(game.language)}
+                      </span>
+                    </div>
+                    <p class="recommendation-reason">
+                      <span class="sparkle">✨</span>
+                      {game.recommendationReason}
+                    </p>
+                    <p class="game-description">
+                      {game.description || 'No description provided.'}
+                    </p>
+                  </div>
+                  <div class="game-actions">
+                    {#if canPlayLive}
+                      <button
+                        type="button"
+                        class="btn-action live-btn"
+                        onclick={() => handlePlayLive(game.id)}
+                      >
+                        Play Live
+                      </button>
+                    {/if}
+                    <a href="/play/games/{game.id}/play" class="btn-action"> Solo </a>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+          <hr class="games-divider" />
+        {/if}
+
         <div class="games-section">
           <h2>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2968,6 +3012,34 @@
   .game-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .recommended-card {
+    border: 2px solid #3b82f633;
+    background: linear-gradient(to bottom right, var(--card-bg), #3b82f608);
+  }
+
+  :global(html[data-theme='dark']) .recommended-card {
+    border-color: #60a5fa22;
+    background: linear-gradient(to bottom right, #1e293b, #1e293b88);
+  }
+
+  .recommendation-reason {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #3b82f6;
+    margin: 0.25rem 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  :global(html[data-theme='dark']) .recommendation-reason {
+    color: #60a5fa;
+  }
+
+  .sparkle {
+    font-size: 1rem;
   }
 
   .game-card-content {

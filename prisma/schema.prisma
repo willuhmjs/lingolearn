@@ -74,6 +74,11 @@ model User {
   liveSessions         LiveSessionParticipant[]
   conversationSessions ConversationSession[]
 
+  friendshipsInitiated Friendship[] @relation("FriendshipInitiator")
+  friendshipsReceived  Friendship[] @relation("FriendshipReceiver")
+  challengesSent       Challenge[]  @relation("ChallengeChallenger")
+  challengesReceived   Challenge[]  @relation("ChallengeChallengee")
+
   // Deprecated: Moving to UserProgress
   // cefrLevel    String?  @default("A1")
   // hasOnboarded Boolean? @default(false)
@@ -424,6 +429,7 @@ model Game {
   questions    GameQuestion[]
   liveSessions LiveSession[]
   assignments  Assignment[]
+  challenges   Challenge[]
 
   @@index([creatorId])
 }
@@ -562,4 +568,57 @@ model Message {
   session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  initiatorId String
+  receiverId  String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  initiator User @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  receiver  User @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([initiatorId, receiverId])
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+enum ChallengeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+  EXPIRED
+}
+
+model Challenge {
+  id           String          @id @default(uuid())
+  challengerId String
+  challengeeId String
+  gameId       String
+  scoreToBeat  Int
+  status       ChallengeStatus @default(PENDING)
+  expiresAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  challenger User @relation("ChallengeChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  challengee User @relation("ChallengeChallengee", fields: [challengeeId], references: [id], onDelete: Cascade)
+  game       Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([challengerId])
+  @@index([challengeeId])
+  @@index([gameId])
+  @@index([status])
 }

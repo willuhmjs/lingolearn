@@ -10,7 +10,7 @@ const IV_LENGTH = 16; // For AES, this is always 16
  */
 export function encrypt(text: string): string {
   if (!text) return '';
-  
+
   const key = env.ENCRYPTION_KEY;
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is not set');
@@ -20,10 +20,10 @@ export function encrypt(text: string): string {
   const keyBuffer = Buffer.alloc(32, key, 'utf8');
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, keyBuffer, iv);
-  
+
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  
+
   return `${iv.toString('hex')}:${encrypted}`;
 }
 
@@ -32,7 +32,7 @@ export function encrypt(text: string): string {
  */
 export function decrypt(text: string): string {
   if (!text) return '';
-  
+
   const key = env.ENCRYPTION_KEY;
   if (!key) {
     throw new Error('ENCRYPTION_KEY environment variable is not set');
@@ -52,14 +52,14 @@ export function decrypt(text: string): string {
     const iv = Buffer.from(ivHex, 'hex');
     const encryptedText = Buffer.from(encryptedHex, 'hex');
     const decipher = crypto.createDecipheriv(ALGORITHM, keyBuffer, iv);
-    
+
     let decrypted = decipher.update(encryptedText, undefined, 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   } catch (error) {
     console.error('Decryption failed:', error);
-    // Return original text as fallback for legacy keys, 
+    // Return original text as fallback for legacy keys,
     // or empty string if it's clearly not a legacy key.
     return text;
   }

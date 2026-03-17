@@ -59,10 +59,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         // Decrypt the hash if it's encrypted (decrypt handles legacy hashes)
         const decryptedHash = decrypt(user.passwordHash);
 
-        const passwordsMatch = await bcrypt.compare(
-          credentials.password as string,
-          decryptedHash
-        );
+        const passwordsMatch = await bcrypt.compare(credentials.password as string, decryptedHash);
         if (passwordsMatch) return user;
         return null;
       }

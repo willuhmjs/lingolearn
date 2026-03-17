@@ -86,11 +86,7 @@ const authorization: Handle = async ({ event, resolve }) => {
     return resolve(event);
   }
 
-  let activeLanguage = dbUser.activeLanguage;
-  if (!activeLanguage) {
-    const { getCachedLanguageByCode } = await import('$lib/server/cache');
-    activeLanguage = await getCachedLanguageByCode('de');
-  }
+  const activeLanguage = dbUser.activeLanguage;
 
   let cefrLevel = 'A1';
   let hasOnboarded = false;

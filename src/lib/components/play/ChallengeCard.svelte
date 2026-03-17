@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
+  import { fly, fade } from 'svelte/transition';
+  import { spring } from 'svelte/motion';
   import { marked } from 'marked';
   import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
   import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
@@ -48,32 +49,48 @@
     onSubmitAnswer: () => void;
     onToggleGrammar: (id: string) => void;
   } = $props();
+
+  const hoverScale = spring(1, {
+    stiffness: 0.1,
+    damping: 0.25
+  });
+  const grammarHoverScale = spring(1, { stiffness: 0.1, damping: 0.25 });
 </script>
 
 <div class="card card-duo challenge-card" in:fly={{ y: 20, duration: 400 }}>
   <div class="challenge-card-top">
-    <button type="button" class="change-mode-link" onclick={onChangeMode}>
+    <button
+      type="button"
+      class="change-mode-link"
+      onclick={onChangeMode}
+      onmouseenter={() => hoverScale.set(1.02)}
+      onmouseleave={() => hoverScale.set(1)}
+      style="transform: scale({$hoverScale})"
+    >
       &larr; Change Mode
     </button>
-    <span class="session-progress-badge">Challenge {displayedChallengeNumber}</span>
+    <span class="session-progress-badge" in:fade={{ delay: 200 }}
+      >Challenge {displayedChallengeNumber}</span
+    >
   </div>
   {#if sentenceTooComplex && sentenceEstimatedLevel}
     <div
       class="difficulty-notice"
       title="This sentence uses {sentenceEstimatedLevel}-level structures — a good stretch!"
+      in:fly={{ x: -10, duration: 400 }}
     >
       ⚡ Advanced structure ({sentenceEstimatedLevel})
     </div>
   {/if}
   <div class="challenge-section">
     {#if challenge.gameMode === 'fill-blank'}
-      <h3>Fill in the blanks:</h3>
+      <h3 in:fade>Fill in the blanks:</h3>
     {:else if challenge.gameMode === 'multiple-choice'}
-      <h3>Choose the correct English translation:</h3>
+      <h3 in:fade>Choose the correct English translation:</h3>
     {:else if challenge.gameMode === 'target-to-native'}
-      <h3>Translate this to English:</h3>
+      <h3 in:fade>Translate this to English:</h3>
     {:else}
-      <h3>
+      <h3 in:fade>
         Translate this to {lessonLanguage?.name || 'Target'}:
       </h3>
     {/if}
@@ -105,17 +122,20 @@
         type="button"
         class="grammar-ref-toggle"
         onclick={() => (showGrammarRef = !showGrammarRef)}
+        onmouseenter={() => grammarHoverScale.set(1.02)}
+        onmouseleave={() => grammarHoverScale.set(1)}
+        style="transform: scale({$grammarHoverScale})"
       >
         {showGrammarRef ? 'Hide help' : 'Need help?'}
         <span class="grammar-ref-chevron" class:expanded={showGrammarRef}>&#9662;</span>
       </button>
       {#if showGrammarRef}
-        <div transition:fly={{ y: -5, duration: 200 }}>
+        <div transition:fly={{ y: -10, duration: 300, opacity: 0 }}>
           <h3 style="margin-top: 0.75rem;">Grammar Reference:</h3>
           {#if challenge.targetedGrammar?.length > 0}
             <ul class="concept-list">
-              {#each challenge.targetedGrammar as grammar}
-                <li class="grammar-item">
+              {#each challenge.targetedGrammar as grammar, i}
+                <li class="grammar-item" in:fly={{ y: 10, delay: i * 100 }}>
                   <div class="grammar-header">
                     <span class="concept-type">Grammar</span>
                     <span class="grammar-title">{grammar.title}</span>
@@ -132,7 +152,7 @@
                   {#if grammar.guide && expandedGrammarId === grammar.id}
                     <div
                       class="grammar-guide markdown-body"
-                      transition:fly={{ y: -5, duration: 200 }}
+                      transition:fly={{ y: -5, duration: 250 }}
                     >
                       {@html marked(grammar.guide)}
                     </div>

@@ -5,6 +5,7 @@ import { generateLessonRateLimiter } from '$lib/server/ratelimit';
 import { buildLessonPrompt, type GameMode } from '$lib/server/promptBuilder';
 import { generateLessonStream } from '$lib/server/lessonLlmService';
 import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
+import { recordLoadTime, recordUserLocalLoadTime } from '$lib/server/loadTimeStat';
 import {
   LESSON_CONFIG,
   computeAdaptiveNewWordCap,
@@ -17,6 +18,7 @@ import { parseErrorCounts, getDominantErrors } from '$lib/server/errorCounts';
 import type { ErrorType } from '$lib/server/grader';
 
 export async function POST(event) {
+  const startTime = Date.now();
   const { request, locals } = event;
 
   if (!locals.user) {
@@ -831,7 +833,19 @@ export async function POST(event) {
         ? undefined
         : ({ totalTokens }) => {
             recordTokenUsage(userId, totalTokens);
-          }
+          },
+      onChallengeVisible: () => {
+        const duration = Date.now() - startTime;
+        if (user?.useLocalLlm) {
+          recordUserLocalLoadTime(userId, duration).catch((err) =>
+            console.error('Failed to record local load time:', err)
+          );
+        } else {
+          recordLoadTime(duration).catch((err) =>
+            console.error('Failed to record public load time:', err)
+          );
+        }
+      }
     });
 
     return new Response(stream, {

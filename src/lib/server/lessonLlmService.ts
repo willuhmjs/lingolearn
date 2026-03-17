@@ -22,7 +22,8 @@ export async function generateLessonStream({
   masteredVocab,
   learningVocab,
   useLocalLlm = false,
-  onUsage
+  onUsage,
+  onChallengeVisible
 }: {
   userId: string;
   systemPrompt: string;
@@ -47,6 +48,7 @@ export async function generateLessonStream({
     completionTokens: number;
     totalTokens: number;
   }) => void;
+  onChallengeVisible?: () => void;
 }) {
   const llmResponse = await generateChatCompletion({
     userId,
@@ -123,6 +125,8 @@ export async function generateLessonStream({
 
       try {
         if (fullContent) {
+          // Trigger the timing call just before sending the chunk that hides the loader
+          onChallengeVisible?.();
           controller.enqueue(
             new TextEncoder().encode(JSON.stringify({ type: 'chunk', content: fullContent }) + '\n')
           );

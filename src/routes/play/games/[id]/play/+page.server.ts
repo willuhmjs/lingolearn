@@ -55,9 +55,21 @@ export const load = async ({ params, locals, url }) => {
     throw redirect(302, '/play?tab=games');
   }
 
+  const friends = await prisma.friendship.findMany({
+    where: {
+      OR: [{ initiatorId: locals.user.id }, { receiverId: locals.user.id }],
+      status: 'ACCEPTED'
+    },
+    include: {
+      initiator: { select: { id: true, username: true } },
+      receiver: { select: { id: true, username: true } }
+    }
+  });
+
   return {
     game,
     assignment: hasAssignmentAccess ? assignment : null,
-    assignmentScore: hasAssignmentAccess ? assignmentScore : null
+    assignmentScore: hasAssignmentAccess ? assignmentScore : null,
+    friends: friends.map((f) => (f.initiatorId === locals.user.id ? f.receiver : f.initiator))
   };
 };

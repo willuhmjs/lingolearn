@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
-  import { calculateEloProgress, getEloLevelClass } from '$lib/utils/playTypes';
+  import { fly, scale } from 'svelte/transition';
+  import EloProgressBar from '$lib/components/play/EloProgressBar.svelte';
 
   let {
     feedback,
@@ -60,7 +60,9 @@
           {#each feedback.vocabularyUpdates as update}
             {@const v = challenge.targetedVocabulary.find((v: any) => v.id === update.id)}
             <li>
-              <span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
+              <span class="icon" in:scale={{ delay: 200, duration: 400, start: 0.5 }}>
+                {(update.score ?? 0) >= 0.5 ? '✅' : '❌'}
+              </span>
               <div class="item-info">
                 <div class="item-row">
                   <span class="item-label">
@@ -77,22 +79,20 @@
                     )}
                     {#if showAfterElo && update.eloAfter !== update.eloBefore}
                       {@const delta = Math.round(update.eloAfter - update.eloBefore)}
-                      <span class="elo-delta" class:positive={delta > 0} class:negative={delta < 0}>
+                      <span
+                        class="elo-delta"
+                        class:positive={delta > 0}
+                        class:negative={delta < 0}
+                        in:fly={{ y: 5, delay: 600 }}
+                      >
                         {delta > 0 ? '+' : ''}{delta}
                       </span>
                     {/if}
                   </span>
                 </div>
-                <div class="progress-bar-">
-                  <div
-                    class="progress-bar-fill {getEloLevelClass(
-                      showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)
-                    )}"
-                    style="width: {calculateEloProgress(
-                      showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)
-                    )}%"
-                  ></div>
-                </div>
+                <EloProgressBar
+                  eloValue={showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)}
+                />
               </div>
             </li>
           {/each}
@@ -106,7 +106,9 @@
         <ul>
           {#each feedback.grammarUpdates as update}
             <li>
-              <span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
+              <span class="icon" in:scale={{ delay: 200, duration: 400, start: 0.5 }}>
+                {(update.score ?? 0) >= 0.5 ? '✅' : '❌'}
+              </span>
               <div class="item-info">
                 <div class="item-row">
                   <span class="item-label">
@@ -119,22 +121,20 @@
                     )}
                     {#if showAfterElo && update.eloAfter !== update.eloBefore}
                       {@const delta = Math.round(update.eloAfter - update.eloBefore)}
-                      <span class="elo-delta" class:positive={delta > 0} class:negative={delta < 0}>
+                      <span
+                        class="elo-delta"
+                        class:positive={delta > 0}
+                        class:negative={delta < 0}
+                        in:fly={{ y: 5, delay: 600 }}
+                      >
                         {delta > 0 ? '+' : ''}{delta}
                       </span>
                     {/if}
                   </span>
                 </div>
-                <div class="progress-bar-">
-                  <div
-                    class="progress-bar-fill {getEloLevelClass(
-                      showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)
-                    )}"
-                    style="width: {calculateEloProgress(
-                      showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)
-                    )}%"
-                  ></div>
-                </div>
+                <EloProgressBar
+                  eloValue={showAfterElo ? (update.eloAfter ?? 1000) : (update.eloBefore ?? 1000)}
+                />
               </div>
             </li>
           {/each}
@@ -359,67 +359,6 @@
   }
   .elo-delta.negative {
     color: #dc2626;
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    animation: progress-stripes 1s linear infinite;
-  }
-
-  .progress-bar-fill.learning {
-    background-color: #facc15;
-    background-image: linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.15) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.15) 75%,
-      transparent 75%,
-      transparent
-    );
-    background-size: 1rem 1rem;
-  }
-
-  .progress-bar-fill.known {
-    background-color: #34d399;
-    background-image: linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.15) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.15) 75%,
-      transparent 75%,
-      transparent
-    );
-    background-size: 1rem 1rem;
-  }
-
-  .progress-bar-fill.mastered {
-    background-color: #10b981;
-    background-image: linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.15) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.15) 75%,
-      transparent 75%,
-      transparent
-    );
-    background-size: 1rem 1rem;
-  }
-
-  @keyframes progress-stripes {
-    from {
-      background-position: 1rem 0;
-    }
-    to {
-      background-position: 0 0;
-    }
   }
 
   .feedback-list-section .icon {

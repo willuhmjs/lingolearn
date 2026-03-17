@@ -94,29 +94,32 @@
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (showResult || isQuizOver) return;
-    const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea') return;
-    const keyMap: Record<string, number> = {
-      '1': 0,
-      a: 0,
-      '2': 1,
-      b: 1,
-      '3': 2,
-      c: 2,
-      '4': 3,
-      d: 3
-    };
-    const idx = keyMap[e.key.toLowerCase()];
-    if (idx !== undefined && idx < options.length) {
-      e.preventDefault();
-      selectOption(options[idx]);
+  let isChallengeSent = $state(false);
+  let challengeError = $state<string | null>(null);
+
+  async function challengeFriend(friendId: string) {
+    challengeError = null;
+    try {
+      const res = await fetch('/api/challenges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: game.id,
+          challengeeId: friendId,
+          scoreToBeat: score
+        })
+      });
+      if (res.ok) {
+        isChallengeSent = true;
+      } else {
+        const err = await res.json();
+        challengeError = err.error || 'Failed to send challenge';
+      }
+    } catch {
+      challengeError = 'An error occurred';
     }
   }
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 <div class="learn-container">
   <nav class="breadcrumb">
@@ -153,13 +156,39 @@
       {#if assignmentProgress?.passed}
         <p class="passed-text">🏆 Assignment passed!</p>
       {/if}
-      {#if assignment}
-        <a href="/classes/{assignment.classId}" class="btn-primary link-btn-primary"
-          >Back to Class</a
-        >
-      {:else}
-        <a href="/play?tab=games" class="btn-primary link-btn-primary">Return to Quizzes</a>
+
+      {#if data.friends && data.friends.length > 0}
+        <div class="challenge-section">
+          <h3>Challenge a Friend</h3>
+          {#if isChallengeSent}
+            <p class="text-success">Challenge sent!</p>
+          {:else}
+            <div class="friend-challenge-list">
+              {#each data.friends as friend}
+                <button
+                  class="btn-secondary challenge-btn"
+                  onclick={() => challengeFriend(friend.id)}
+                >
+                  Challenge {friend.username}
+                </button>
+              {/each}
+            </div>
+            {#if challengeError}
+              <p class="text-error">{challengeError}</p>
+            {/if}
+          {/if}
+        </div>
       {/if}
+
+      <div class="game-over-actions">
+        {#if assignment}
+          <a href="/classes/{assignment.classId}" class="btn-primary link-btn-primary"
+            >Back to Class</a
+          >
+        {:else}
+          <a href="/play?tab=games" class="btn-primary link-btn-primary">Return to Quizzes</a>
+        {/if}
+      </div>
     </div>
   {:else if currentQuestion}
     <div class="game-header">
@@ -572,5 +601,52 @@
 
   :global(html[data-theme='dark']) .result-message {
     color: #cbd5e1;
+  }
+  .game-over-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .challenge-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  :global(html[data-theme='dark']) .challenge-section {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .challenge-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+  }
+
+  .friend-challenge-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .challenge-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .text-success {
+    color: #16a34a;
+    font-weight: 600;
+  }
+
+  .text-error {
+    color: #dc2626;
+    font-size: 0.875rem;
   }
 </style>

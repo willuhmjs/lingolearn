@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { SvelteFlow, Background, Controls, type Node, type Edge } from '@xyflow/svelte';
+  import dagre from 'dagre';
+  import GrammarNode from './GrammarNode.svelte';
+
+  import '@xyflow/svelte/dist/style.css';
 
   const srsColors: Record<string, string> = {
     LOCKED: 'var(--color-locked, #94a3b8)',
@@ -19,6 +24,10 @@
 
   let grammarSortOrder = $state<'easiest' | 'hardest'>('easiest');
   let grammarView = $state<'web' | 'list'>('web');
+
+  const nodeTypes = {
+    grammar: GrammarNode
+  };
 
   onMount(() => {
     if (window.innerWidth < 640) grammarView = 'list';
@@ -103,6 +112,74 @@
     const eloPercent = computeEloPercent(rule);
     onOpenModal(rule, srsColor, eloPercent);
   }
+
+  // Svelte Flow state
+  let nodes = $state<Node[]>([]);
+  let edges = $state<Edge[]>([]);
+
+  function getLayoutedElements(nodes: Node[], edges: Edge[]) {
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 100, ranksep: 100 });
+
+    nodes.forEach((node) => {
+      dagreGraph.setNode(node.id, { width: 180, height: 60 });
+    });
+
+    edges.forEach((edge) => {
+      dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    return nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id);
+      return {
+        ...node,
+        position: {
+          x: nodeWithPosition.x - 90,
+          y: nodeWithPosition.y - 30
+        }
+      };
+    });
+  }
+
+  $effect(() => {
+    if (grammarView !== 'web') return;
+
+    const flowNodes: Node[] = grammarWebNodes.map((rule: any) => ({
+      id: rule.grammarRule.id,
+      type: 'grammar',
+      data: {
+        title: rule.grammarRule.title,
+        srsState: rule.srsState,
+        eloRating: rule.eloRating,
+        eloPercent: computeEloPercent(rule),
+        isLocked: rule.isLocked,
+        description: rule.grammarRule.description,
+        srsColor: srsColors[rule.srsState] || srsColors.LOCKED,
+        onOpenModal: () => handleOpenModal(rule),
+        rule: rule
+      },
+      position: { x: 0, y: 0 }
+    }));
+
+    const flowEdges: Edge[] = [];
+    grammarWebNodes.forEach((rule: any) => {
+      (rule.grammarRule.dependencies || []).forEach((dep: any) => {
+        flowEdges.push({
+          id: `e-${dep.id}-${rule.grammarRule.id}`,
+          source: dep.id,
+          target: rule.grammarRule.id,
+          animated: rule.srsState !== 'LOCKED' && rule.srsState !== 'UNSEEN'
+        });
+      });
+    });
+
+    const layoutedNodes = getLayoutedElements(flowNodes, flowEdges);
+    nodes = layoutedNodes;
+    edges = flowEdges;
+  });
 </script>
 
 <section class="grammar-section">
@@ -213,72 +290,22 @@
     </div>
   {:else}
     <div class="grammar-web-container">
-      <div class="grammar-web-scroll-content">
-        <!-- Visual web lines drawing actual connections -->
-        <svg class="web-svg-lines" width="100%" height="100%">
-          {#each grammarWebNodes as _rule, i}
-            {#if i < grammarWebNodes.length - 1}
-              <line
-                x1="50%"
-                y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
-                x2="50%"
-                y2="{(100 / grammarWebNodes.length) * (i + 1) + 100 / grammarWebNodes.length / 2}%"
-                class="web-connection-line"
-              />
-            {/if}
-          {/each}
-        </svg>
-
-        <div class="web-tree-layout">
-          {#each grammarWebNodes as rule}
-            {@const srsColor = srsColors[rule.srsState] || srsColors.LOCKED}
-            {@const eloPercent = computeEloPercent(rule)}
-
-            <button
-              class="web-node-pill"
-              class:locked={rule.isLocked}
-              style="--node-color: {srsColor}"
-              onclick={() => handleOpenModal(rule)}
-              onkeydown={(e) => e.key === 'Enter' && handleOpenModal(rule)}
-              aria-label="View grammar rule: {rule.grammarRule.title}"
-            >
-              <div class="node-pill-content tooltip-trigger">
-                <div class="node-icon" style="background-color: {srsColor}">
-                  <span class="sr-only">{rule.srsState}</span>
-                </div>
-                <span class="node-title">{rule.grammarRule.title}</span>
-
-                <div class="tooltip-content">
-                  <div class="tooltip-header">
-                    {rule.grammarRule.title}
-                  </div>
-                  <div class="tooltip-body">
-                    <div class="word-tooltip-elo">
-                      <div class="elo-header">
-                        <span>Status: {rule.srsState}</span>
-                        {#if !rule.isLocked}
-                          <span class="elo-score">ELO {Math.ceil(rule.eloRating)}</span>
-                        {/if}
-                      </div>
-                      {#if !rule.isLocked}
-                        <div class="elo-progress-track">
-                          <div
-                            class="elo-progress-fill {rule.srsState.toLowerCase()}"
-                            style="width: {eloPercent}%; background-color: {srsColor}"
-                          ></div>
-                        </div>
-                      {/if}
-                    </div>
-                    <p class="node-desc">
-                      {rule.grammarRule.description || 'No description available.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </button>
-          {/each}
-        </div>
-      </div>
+      <SvelteFlow
+        {nodes}
+        {edges}
+        {nodeTypes}
+        fitView
+        colorMode="system"
+        minZoom={0.2}
+        maxZoom={1.5}
+        defaultEdgeOptions={{
+          type: 'bezier',
+          style: 'stroke-width: 2px;'
+        }}
+      >
+        <Background />
+        <Controls />
+      </SvelteFlow>
     </div>
   {/if}
 </section>
@@ -458,120 +485,26 @@
     position: relative;
     background: var(--card-bg, #ffffff);
     border-radius: 1rem;
-    height: 500px;
+    height: 600px;
     box-shadow:
       0 10px 15px -3px rgba(0, 0, 0, 0.05),
       0 4px 6px -4px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.05);
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: block;
+    overflow: hidden;
   }
 
-  .grammar-web-scroll-content {
-    position: relative;
-    padding: 2rem;
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+  :global(.svelte-flow__node-grammar) {
+    padding: 0;
+    border: none;
+    background: transparent;
   }
 
-  .web-svg-lines {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .web-connection-line {
+  :global(.svelte-flow__edge-path) {
     stroke: #cbd5e1;
-    stroke-width: 2px;
-    stroke-dasharray: 4 4;
   }
 
-  :global(html[data-theme='dark']) .web-connection-line {
+  :global(html[data-theme='dark'] .svelte-flow__edge-path) {
     stroke: #475569;
-  }
-
-  .web-tree-layout {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 3rem;
-    align-items: center;
-    width: 100%;
-    padding: 2rem 0;
-  }
-
-  .web-node-pill {
-    position: relative;
-    display: flex;
-    align-items: center;
-    background: #ffffff;
-    border: 2px solid var(--node-color);
-    border-radius: 9999px;
-    padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 0 10px var(--node-color) 40;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-  }
-
-  :global(html[data-theme='dark']) .web-node-pill {
-    background: #1e293b;
-  }
-
-  .web-node-pill:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 0 15px var(--node-color) 60;
-    z-index: 10;
-  }
-
-  .web-node-pill.locked {
-    opacity: 0.7;
-    border-style: dashed;
-    background-color: #f1f5f9;
-  }
-
-  :global(html[data-theme='dark']) .web-node-pill.locked {
-    background-color: #0f172a;
-  }
-
-  .node-pill-content {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .node-icon {
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  .node-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: #334155;
-  }
-
-  :global(html[data-theme='dark']) .node-title {
-    color: #f8fafc;
-  }
-
-  .node-desc {
-    margin-top: 0.5rem;
-    color: #94a3b8;
   }
 
   .empty-state {
@@ -590,153 +523,11 @@
     border-color: #475569;
   }
 
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-  }
-
-  /* Tooltip styles */
-  .tooltip-trigger {
-    position: relative;
-  }
-
-  .tooltip-content {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%) translateY(5px);
-    margin-bottom: 0;
-    background-color: #0f172a;
-    color: #f8fafc;
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    width: max-content;
-    min-width: 140px;
-    max-width: 200px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    z-index: 100;
-    pointer-events: none;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    line-height: 1.3;
-  }
-
-  .tooltip-content::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -6px;
-    border-width: 6px;
-    border-style: solid;
-    border-color: #0f172a transparent transparent transparent;
-  }
-
   @media (max-width: 768px) {
-    .tooltip-content {
-      left: auto;
-      right: -40px;
-      transform: translateX(0) translateY(5px);
-    }
-    .tooltip-content::after {
-      left: auto;
-      right: 46px;
-    }
-  }
-
-  .tooltip-trigger:hover .tooltip-content {
-    visibility: visible;
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  @media (max-width: 768px) {
-    .tooltip-trigger:hover .tooltip-content {
-      transform: translateX(0) translateY(0);
-    }
-
     .grammar-header-row {
       flex-direction: column;
       align-items: flex-start;
       gap: 1rem;
     }
-  }
-
-  .tooltip-header {
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 0.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 0.25rem;
-    color: #ffffff;
-  }
-
-  .tooltip-body {
-    font-size: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    color: #cbd5e1;
-  }
-
-  .word-tooltip-elo {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    margin-bottom: 0.25rem;
-    padding-bottom: 0.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .elo-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-    font-size: 0.7rem;
-    color: #94a3b8;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .elo-score {
-    color: #3b82f6;
-  }
-
-  .elo-progress-track {
-    display: block;
-    width: 100%;
-    height: 4px;
-    background: #1e293b;
-    border-radius: 9999px;
-    overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-  }
-
-  .elo-progress-fill {
-    display: block;
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .elo-progress-fill.learning {
-    background: linear-gradient(90deg, #facc15, #fef08a);
-  }
-  .elo-progress-fill.known {
-    background: linear-gradient(90deg, #34d399, #6ee7b7);
-  }
-  .elo-progress-fill.mastered {
-    background: linear-gradient(90deg, #10b981, #059669);
   }
 </style>

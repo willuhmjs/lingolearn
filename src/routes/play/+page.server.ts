@@ -1,11 +1,15 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
+import { getRecommendedGames } from '$lib/server/recommendationService';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   if (!locals.user) {
     throw redirect(302, '/login');
   }
+
+  // Load recommendations for the user
+  const recommendedGames = await getRecommendedGames(locals.user.id);
 
   // Load assignment context if assignmentId is provided
   const assignmentId = url.searchParams.get('assignmentId');
@@ -144,6 +148,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     communityGames,
     totalCommunityGames,
     teacherClasses,
+    recommendedGames,
     userRole: locals.user.role
   };
 };
