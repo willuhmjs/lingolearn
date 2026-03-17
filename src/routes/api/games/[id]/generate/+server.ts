@@ -6,45 +6,45 @@ import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const session = await locals.auth();
-	if (!session?.user?.id) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  const session = await locals.auth();
+  if (!session?.user?.id) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	const userId = session.user.id;
-	const dbUser = await prisma.user.findUnique({
-		where: { id: userId },
-		select: { useLocalLlm: true }
-	});
-	const useLocalLlm = dbUser?.useLocalLlm ?? false;
+  const userId = session.user.id;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { useLocalLlm: true }
+  });
+  const useLocalLlm = dbUser?.useLocalLlm ?? false;
 
-	if (!useLocalLlm && (await isQuotaExceeded(userId, false))) {
-		return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
-	}
+  if (!useLocalLlm && (await isQuotaExceeded(userId, false))) {
+    return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
+  }
 
-	try {
-		const { topic, count } = await request.json();
+  try {
+    const { topic, count } = await request.json();
 
-		if (!topic) {
-			return json({ error: 'Topic is required' }, { status: 400 });
-		}
+    if (!topic) {
+      return json({ error: 'Topic is required' }, { status: 400 });
+    }
 
-		const numQuestions = Math.min(Math.max(1, parseInt(count) || 5), 20);
+    const numQuestions = Math.min(Math.max(1, parseInt(count) || 5), 20);
 
-		const game = await prisma.game.findUnique({
-			where: { id: params.id }
-		});
+    const game = await prisma.game.findUnique({
+      where: { id: params.id }
+    });
 
-		if (!game) {
-			return json({ error: 'Game not found' }, { status: 404 });
-		}
+    if (!game) {
+      return json({ error: 'Game not found' }, { status: 404 });
+    }
 
-		if (game.creatorId !== userId) {
-			return json({ error: 'Forbidden' }, { status: 403 });
-		}
+    if (game.creatorId !== userId) {
+      return json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-		const safeTopic = sanitizeForPrompt(topic, 300);
-		const prompt = `Generate ${numQuestions} multiple choice questions for a language learning game.
+    const safeTopic = sanitizeForPrompt(topic, 300);
+    const prompt = `Generate ${numQuestions} multiple choice questions for a language learning game.
 The language is ${sanitizeForPrompt(game.language, 50)}.
 The topic is: ${safeTopic}.
 Return ONLY a valid JSON array of objects.
@@ -62,74 +62,74 @@ Example:
   }
 ]`;
 
-		const response = await generateChatCompletion({
-			userId,
-			messages: [{ role: 'user', content: prompt }],
-			onUsage: useLocalLlm
-				? undefined
-				: ({ totalTokens }) => {
-						recordTokenUsage(userId, totalTokens);
-					}
-		});
+    const response = await generateChatCompletion({
+      userId,
+      messages: [{ role: 'user', content: prompt }],
+      onUsage: useLocalLlm
+        ? undefined
+        : ({ totalTokens }) => {
+            recordTokenUsage(userId, totalTokens);
+          }
+    });
 
-		if (!response || !response.choices || !response.choices[0]) {
-			return json({ error: 'Failed to generate questions' }, { status: 500 });
-		}
+    if (!response || !response.choices || !response.choices[0]) {
+      return json({ error: 'Failed to generate questions' }, { status: 500 });
+    }
 
-		// Try to parse the JSON
-		let questionsData;
-		try {
-			const content = response.choices[0].message.content;
-			// Extract JSON array if there's surrounding text (like markdown backticks)
-			const match = content.match(/\[[\s\S]*\]/);
-			const jsonString = match ? match[0] : content;
-			questionsData = JSON.parse(jsonString);
-		} catch (e) {
-			console.error('Failed to parse LLM response:', e);
-			return json({ error: 'Failed to parse generated questions' }, { status: 500 });
-		}
+    // Try to parse the JSON
+    let questionsData;
+    try {
+      const content = response.choices[0].message.content;
+      // Extract JSON array if there's surrounding text (like markdown backticks)
+      const match = content.match(/\[[\s\S]*\]/);
+      const jsonString = match ? match[0] : content;
+      questionsData = JSON.parse(jsonString);
+    } catch (e) {
+      console.error('Failed to parse LLM response:', e);
+      return json({ error: 'Failed to parse generated questions' }, { status: 500 });
+    }
 
-		if (!Array.isArray(questionsData)) {
-			return json({ error: 'Invalid format returned by LLM' }, { status: 500 });
-		}
+    if (!Array.isArray(questionsData)) {
+      return json({ error: 'Invalid format returned by LLM' }, { status: 500 });
+    }
 
-		// Save the questions to the database
-		const currentQuestionsCount = await prisma.gameQuestion.count({
-			where: { gameId: params.id }
-		});
+    // Save the questions to the database
+    const currentQuestionsCount = await prisma.gameQuestion.count({
+      where: { gameId: params.id }
+    });
 
-		const createdQuestions = [];
-		for (let i = 0; i < questionsData.length; i++) {
-			const q = questionsData[i];
-			if (q.question && q.answer && Array.isArray(q.options)) {
-				// Filter out the correct answer from options if it somehow got included
-				const filteredOptions = q.options.filter(
-					(opt: string) => opt.toLowerCase() !== q.answer.toLowerCase()
-				);
+    const createdQuestions = [];
+    for (let i = 0; i < questionsData.length; i++) {
+      const q = questionsData[i];
+      if (q.question && q.answer && Array.isArray(q.options)) {
+        // Filter out the correct answer from options if it somehow got included
+        const filteredOptions = q.options.filter(
+          (opt: string) => opt.toLowerCase() !== q.answer.toLowerCase()
+        );
 
-				const created = await prisma.gameQuestion.create({
-					data: {
-						gameId: params.id,
-						question: q.question,
-						answer: q.answer,
-						options: filteredOptions,
-						order: currentQuestionsCount + i
-					}
-				});
-				createdQuestions.push(created);
-			}
-		}
+        const created = await prisma.gameQuestion.create({
+          data: {
+            gameId: params.id,
+            question: q.question,
+            answer: q.answer,
+            options: filteredOptions,
+            order: currentQuestionsCount + i
+          }
+        });
+        createdQuestions.push(created);
+      }
+    }
 
-		if (createdQuestions.length > 0 && game.isPublished) {
-			await prisma.game.update({
-				where: { id: params.id },
-				data: { isPublished: false }
-			});
-		}
+    if (createdQuestions.length > 0 && game.isPublished) {
+      await prisma.game.update({
+        where: { id: params.id },
+        data: { isPublished: false }
+      });
+    }
 
-		return json({ questions: createdQuestions });
-	} catch (error) {
-		console.error('Failed to generate questions:', error);
-		return json({ error: 'Failed to generate questions' }, { status: 500 });
-	}
+    return json({ questions: createdQuestions });
+  } catch (error) {
+    console.error('Failed to generate questions:', error);
+    return json({ error: 'Failed to generate questions' }, { status: 500 });
+  }
 };

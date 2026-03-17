@@ -1,5029 +1,5029 @@
 <script lang="ts">
-	import { onMount, onDestroy, tick } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
-	import toast from 'svelte-french-toast';
-	import { marked } from 'marked';
-	import { modal } from '$lib/modal.svelte';
-	import type { PageData } from './$types';
-
-	import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
-	import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
-	import TranslationView from '$lib/components/play/TranslationView.svelte';
-	import ImmersionView from '$lib/components/play/ImmersionView.svelte';
-	import BookmarkButton from '$lib/components/BookmarkButton.svelte';
-	import { getLanguageConfig } from '$lib/languages';
-
-	let { data } = $props<{ data: PageData }>();
-
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	let activeTab = $state<'learn' | 'games'>('learn');
-
-	$effect(() => {
-		const tabParam = $page.url.searchParams.get('tab');
-		if (tabParam === 'games') {
-			activeTab = 'games';
-		} else if (tabParam === 'immerse') {
-			// Legacy URL — redirect to learn with immerse mode active
-			activeTab = 'learn';
-			gameMode = 'immerse';
-			showingImmerse = true;
-		} else {
-			activeTab = 'learn';
-		}
-	});
-	let myGames = $derived(data.myGames);
-	let communityGames = $derived(data.communityGames);
-	let totalCommunityGames = $state(0);
-	$effect(() => {
-		if (data.totalCommunityGames) {
-			totalCommunityGames = data.totalCommunityGames;
-		}
-	});
-	let teacherClasses = $derived(data.teacherClasses);
-
-	let currentCategory = $state('All');
-	const categories = ['All', 'Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
-	let currentPage = $state(1);
-	let loadingMore = $state(false);
-
-	async function loadGames(page = 1, append = false) {
-		loadingMore = true;
-		try {
-			const res = await fetch(`/api/games?page=${page}&limit=10&category=${currentCategory}`);
-			if (res.ok) {
-				const json = await res.json();
-				if (append) {
-					communityGames = [...communityGames, ...json.games];
-				} else {
-					communityGames = json.games;
-				}
-				totalCommunityGames = json.pagination.total;
-				currentPage = page;
-			}
-		} catch (error) {
-			console.error('Failed to load games', error);
-		} finally {
-			loadingMore = false;
-		}
-	}
-
-	function handleCategoryChange(category: string) {
-		currentCategory = category;
-		loadGames(1, false);
-	}
-
-	function loadMore() {
-		loadGames(currentPage + 1, true);
-	}
-
-	// Modal state for selecting a class
-	let showClassModal = $state(false);
-	let selectedGameIdForLive = $state<string | null>(null);
-
-	// No longer dependent on classId in the URL
-	let canPlayLive = $derived(data.userRole === 'ADMIN' || data.userRole === 'TEACHER');
-
-	async function startLiveSession(gameId: string, targetClassId: string) {
-		try {
-			const res = await fetch(`/api/classes/${targetClassId}/live-session`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'start', gameId })
-			});
-			if (res.ok) {
-				toast.success('Live session started! Students can now join.');
-				window.location.href = `/classes/${targetClassId}/live/teacher`;
-			} else {
-				const err = await res.json();
-				toast.error(err.error || 'Failed to start live session');
-			}
-		} catch (_) {
-			toast.error('An error occurred');
-		}
-	}
-
-	function handlePlayLive(gameId: string) {
-		const urlClassId = $page.url.searchParams.get('classId');
-		if (urlClassId) {
-			startLiveSession(gameId, urlClassId);
-			return;
-		}
-
-		if (teacherClasses.length === 0) {
-			toast.error('You need to create a class first.');
-			return;
-		}
-
-		if (teacherClasses.length === 1) {
-			startLiveSession(gameId, teacherClasses[0].id);
-		} else {
-			selectedGameIdForLive = gameId;
-			showClassModal = true;
-		}
-	}
-
-	function getFlagEmoji(language: string) {
-		if (!language) return '🌍';
-		const lang = language.toLowerCase();
-		if (lang === 'german' || lang === 'de') return '🇩🇪';
-		if (lang === 'french' || lang === 'fr') return '🇫🇷';
-		if (lang === 'spanish' || lang === 'es') return '🇪🇸';
-		if (lang === 'english' || lang === 'en') return '🇺🇸';
-		if (lang === 'italian' || lang === 'it') return '🇮🇹';
-		if (lang === 'portuguese' || lang === 'pt') return '🇵🇹';
-		if (lang === 'russian' || lang === 'ru') return '🇷🇺';
-		if (lang === 'japanese' || lang === 'ja') return '🇯🇵';
-		if (lang === 'korean' || lang === 'ko') return '🇰🇷';
-		if (lang === 'chinese' || lang === 'zh') return '🇨🇳';
-		return '🌍';
-	}
-
-	type GameMode =
-		| 'native-to-target'
-		| 'target-to-native'
-		| 'fill-blank'
-		| 'multiple-choice'
-		| 'chat'
-		| 'immerse';
-
-	let englishFlag = $state('🇬🇧');
-
-	onMount(async () => {
-		try {
-			if (
-				'keyboard' in navigator &&
-				typeof (navigator as any).keyboard?.getLayoutMap === 'function'
-			) {
-				await (navigator as any).keyboard.getLayoutMap(); // layout map available but locale detection not used
-				// Keyboard Layout Map doesn't directly expose locale, but we can check navigator.language as primary signal
-			}
-		} catch (_) {
-			/* keyboard layout API unavailable */
-		}
-		// Fall back to navigator.language / navigator.languages
-		const langs = [...(navigator.languages || []), navigator.language].map((l) => l.toLowerCase());
-		if (langs.some((l) => l === 'en-us' || l.startsWith('en-us'))) {
-			englishFlag = '🇺🇸';
-		}
-	});
-
-	let challenge = $state<any>(null);
-	let loading = $state(false);
-	let isStreaming = $state(false);
-	let userInput = $state('');
-	let feedback = $state<any>(null);
-	let submitting = $state(false);
-	let challengeStartMs = $state<number | null>(null); // timestamp when challenge became ready for input
-	let sessionXp = $state(0);
-	let sessionChallenges = $state(0);
-	let displayedChallengeNumber = $state(1);
-	let gameMode: GameMode = $state('native-to-target');
-	let showingImmerse = $state(false); // true when immerse mode is active inline
-	// null = adaptive (algorithm picks each round); set = user has pinned a specific cycle mode
-	let pinnedMode = $state(new Set<CyclableMode>());
-
-	// ── Adaptive mode selection ──────────────────────────────────────────────
-	// Modes ordered from easiest (0) to hardest (3).
-	// The selection algorithm uses a Gaussian-weighted probability distribution
-	// centered at a "target difficulty" derived from the user's recent performance.
-	//
-	// Target difficulty = blend(sessionSuccessEma, sessionCorrectRate) × 3
-	//   - Low performance → target near 0 → favours multiple-choice
-	//   - High performance → target near 3 → favours native-to-target
-	//
-	// Gaussian kernel: weight[i] = exp(-((i - target)^2) / (2σ²))
-	// σ = 1.2 gives reasonable spread so no mode is ever fully excluded.
-	type CyclableMode = 'multiple-choice' | 'target-to-native' | 'fill-blank' | 'native-to-target';
-	const ALL_CYCLE_MODES: CyclableMode[] = [
-		'multiple-choice', // difficulty index 0
-		'target-to-native', // difficulty index 1
-		'fill-blank', // difficulty index 2
-		'native-to-target' // difficulty index 3
-	];
-	const EMA_ALPHA = 0.2; // matches server-side SESSION_SUCCESS_EMA_ALPHA
-	const GAUSS_SIGMA = 1.2; // spread of the Gaussian; higher = more mode variety
-
-	// Local EMA — starts from last-known server value, updated after each answer
-	let localEma = $state(0.75);
-	$effect(() => {
-		if (data.sessionSuccessEma !== undefined) {
-			localEma = data.sessionSuccessEma;
-		}
-	});
-
-	// Per-session tracking for immediate feedback within a session
-	let sessionCorrectCount = $state(0);
-	let sessionAnsweredCount = $state(0);
-
-	function recordModeOutcome(wasCorrect: boolean) {
-		// Update per-session counters
-		sessionAnsweredCount++;
-		if (wasCorrect) sessionCorrectCount++;
-		// Update local EMA using the same rule as the server
-		localEma = localEma + EMA_ALPHA * ((wasCorrect ? 1.0 : 0.0) - localEma);
-	}
-
-	function getNextCycleMode(): CyclableMode {
-		// If the user pinned specific modes, pick randomly from those only
-		if (pinnedMode.size > 0) {
-			const pinned = [...pinnedMode];
-			return pinned[Math.floor(Math.random() * pinned.length)];
-		}
-
-		// Blend global EMA with session-local rate (session rate weighted more as session grows)
-		const sessionRate =
-			sessionAnsweredCount > 0 ? sessionCorrectCount / sessionAnsweredCount : localEma;
-		const sessionWeight = Math.min(0.5, sessionAnsweredCount * 0.05); // grows to 0.5 after 10 answers
-		const effectiveScore = localEma * (1 - sessionWeight) + sessionRate * sessionWeight;
-
-		// Map [0,1] score to a target difficulty index [0,3]
-		const targetDifficulty = effectiveScore * 3;
-
-		// Gaussian weights centered at targetDifficulty
-		const weights = ALL_CYCLE_MODES.map((_, i) => {
-			const dist = i - targetDifficulty;
-			return Math.exp(-(dist * dist) / (2 * GAUSS_SIGMA * GAUSS_SIGMA));
-		});
-
-		// Weighted random sample
-		const total = weights.reduce((a, b) => a + b, 0);
-		let rand = Math.random() * total;
-		for (let i = 0; i < weights.length; i++) {
-			rand -= weights[i];
-			if (rand <= 0) return ALL_CYCLE_MODES[i];
-		}
-		return ALL_CYCLE_MODES[ALL_CYCLE_MODES.length - 1];
-	}
-
-	let fillBlankAnswers = $state<string[]>([]);
-	let selectedChoice = $state<string | null>(null);
-	let shuffledChoices = $state<string[]>([]);
-	let hasSubmittedMc = $state(false);
-
-	let currentLessonLanguage = $state<any>(null);
-	let lessonLanguage = $derived(currentLessonLanguage || data.language);
-
-	// ---------------------------------------------------------------------------
-	// Leitner within-session retry queue
-	// When the user answers incorrectly, failed items are enqueued to be shown
-	// again after an expanding interval: box 1 = 2 challenges later, box 2 = 5.
-	// ---------------------------------------------------------------------------
-	interface LeitnerItem {
-		vocabIds: string[]; // vocabulary IDs that were wrong
-		grammarIds: string[]; // grammar rule IDs that were wrong
-		dueAtChallenge: number; // show again when sessionChallenges reaches this value
-		box: 1 | 2; // Leitner box; items advance to box 2 on a second failure
-	}
-	let leitnerQueue: LeitnerItem[] = [];
-	const LEITNER_BOX_INTERVALS = { 1: 2, 2: 5 } as const;
-
-	// Assignment context
-	let assignment = $derived(data.assignment ?? null);
-	let assignmentProgress = $state<any>(null);
-
-	$effect(() => {
-		if (data.assignmentScore) {
-			assignmentProgress = {
-				score: data.assignmentScore.score,
-				targetScore: assignment?.targetScore ?? 0,
-				passed: data.assignmentScore.passed
-			};
-		} else if (assignment) {
-			assignmentProgress = { score: 0, targetScore: assignment.targetScore, passed: false };
-		} else {
-			assignmentProgress = null;
-		}
-	});
-
-	// Lock game mode to assignment's required mode when in assignment context
-	$effect(() => {
-		if (assignment) {
-			if (assignment.gamemode === 'immerse') {
-				gameMode = 'immerse';
-				showingImmerse = true;
-			} else {
-				gameMode = (assignment.gamemode as GameMode) ?? gameMode;
-			}
-		}
-	});
-
-	// Loading progress & cycling tips
-	let loadProgressPct = $state(0);
-	let loadTipIndex = $state(0);
-	let estimatedLoadMs = 9000;
-	let isLocalMode = $state(false);
-	let _loadProgressInterval: ReturnType<typeof setInterval> | null = null;
-	let _loadTipInterval: ReturnType<typeof setInterval> | null = null;
-	let expandedGrammarId = $state<string | null>(null);
-	let showGrammarRef = $state(false);
-
-	function toggleGrammar(id: string) {
-		expandedGrammarId = expandedGrammarId === id ? null : id;
-	}
-
-	const GENERAL_TIPS = [
-		"Originally, LingoLearn was called 'LernenDeutsch' — but we let the other languages stick around!",
-		'Spaced repetition (SRS) is proven to make vocabulary stick up to 3× faster.',
-		'Reading just 15 minutes a day in your target language dramatically speeds up fluency.',
-		'Context beats memorization — learning words in sentences helps retention by ~40%.',
-		'The i+1 principle: you learn best when input is just slightly above your current level.',
-		'Mistakes are part of the process — every error is your brain recalibrating.',
-		'Listening to music in your target language is a fun way to absorb natural phrasing.',
-		'Most polyglots agree: speaking on day one — even badly — accelerates learning.',
-		'Thinking in your target language (even simple thoughts) builds fluency faster than translation.',
-		'The forgetting curve shows you lose ~70% of new info in 24 hours without review.',
-		'Writing by hand activates more brain regions than typing, boosting word retention.',
-		"Immersion doesn't require travel — change your phone's language for instant practice.",
-		'You need roughly 3,000 words to understand ~95% of everyday conversation in most languages.'
-	];
-
-	const LANG_TIPS: Record<string, string[]> = {
-		German: [
-			'All nouns in German are capitalized — even in the middle of a sentence.',
-			"The word 'Schadenfreude' has no direct English equivalent: joy at others' misfortune.",
-			"German compound nouns can be infinitely long — 'Donaudampfschifffahrtsgesellschaft' is a real word.",
-			"'Fingerspitzengefühl' means 'fingertip feeling' — a delicate touch or sensitivity.",
-			'German has formal (Sie) and informal (du) ways of addressing people.',
-			'In German main clauses, the conjugated verb always sits in the second position.',
-			"'Weltschmerz' meaning world-weariness was coined by Jean Paul, a German author.",
-			'German and English share about 60% of their vocabulary roots.',
-			'The German alphabet adds 4 extra letters: ä, ö, ü, and ß.',
-			"'Doch' can contradict a negative question — like 'Oh yes it is!' in English.",
-			'Modal verbs (können, müssen, dürfen…) push the main verb to the very end of the clause.',
-			'German has 4 grammatical cases: Nominative, Accusative, Dative, and Genitive.',
-			'German word order in subordinate clauses sends the verb to the very end.',
-			"'Gemütlichkeit' describes a feeling of warmth, coziness, and belonging — untranslatable in English.",
-			"The longest German word in everyday use is 'Rechtsschutzversicherungsgesellschaften' (legal insurance companies).",
-			"German separable verbs split apart in main clauses — 'anfangen' becomes 'Ich fange an.'",
-			"The German 'ch' sound doesn't exist in English — it's like a soft hiss from the roof of your mouth.",
-			'In German, adjective endings change based on case, gender, and whether an article is present.',
-			"'Kummerspeck' literally means 'grief bacon' — weight gained from emotional eating.",
-			'German uses three genders: der (masculine), die (feminine), and das (neuter).',
-			'The Dative case is used after prepositions like mit, bei, nach, seit, von, zu, and aus.'
-		],
-		Spanish: [
-			'Spanish is the 2nd most spoken native language in the world with ~500 million speakers.',
-			"Spanish has two verbs for 'to be': ser (permanent) and estar (temporary).",
-			'In Spanish, nouns have grammatical gender — either masculine or feminine.',
-			'The ¡ and ¿ marks at the start of sentences are unique to Spanish.',
-			'Spanish is spoken in over 20 countries across 4 continents.',
-			"The subjunctive mood in Spanish expresses doubt, wishes, and hypotheticals — and it's used constantly.",
-			"'Sobremesa' is the time spent chatting at the table after a meal — there's no English word for it.",
-			"Spanish 'll' and 'y' sound the same in most dialects — a phenomenon called yeísmo.",
-			'The letter ñ is unique to Spanish and represents a palatal nasal sound.',
-			"In Spanish, adjectives usually come after the noun: 'casa blanca' not 'blanca casa.'",
-			"'Empalagar' means to feel sick from eating too much of something sweet.",
-			'The Spanish Royal Academy (RAE) officially regulates the language since 1713.',
-			'Spanish has about 10 million words, but you only need ~2,000 for everyday conversation.',
-			"The word 'ojalá' comes from Arabic (inshallah) and means 'hopefully' or 'God willing.'",
-			"Ser vs. estar: 'Estoy aburrido' = I am bored, but 'Soy aburrido' = I am boring!",
-			"Spanish uses the personal 'a' before direct objects that are people: 'Veo a María.'",
-			"'Madrugada' refers to the wee hours between midnight and dawn — a single word English lacks."
-		],
-		French: [
-			'French has two genders for nouns: masculine and feminine.',
-			'Adjectives in French usually come after the noun they describe.',
-			'The letter "h" is usually silent in French.',
-			'French is an official language in 29 countries across multiple continents.',
-			'The cedilla (ç) changes the "c" sound from a hard "k" to a soft "s" before a, o, or u.',
-			'Liaisons connect the final consonant of one word to the initial vowel of the next.',
-			'Many English words end in -tion because they were borrowed directly from French.',
-			'The word "voilà" means "there it is" or "here you go" and is widely used.',
-			'French has distinct formal (vous) and informal (tu) pronouns for "you".',
-			'Numbers from 70 to 99 are counted in a unique way in French (e.g., 80 is quatre-vingts, or four twenties).'
-		]
-	};
-
-	let loadingTips = $state<string[]>([]);
-
-	$effect(() => {
-		const langName = lessonLanguage?.name;
-		const specificTips = langName && LANG_TIPS[langName] ? LANG_TIPS[langName] : [];
-		loadingTips = [...specificTips, ...GENERAL_TIPS];
-	});
-
-	// User level tracking (populated from page data and updated from lesson metadata)
-	let userLevel = $state('A1');
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let isAbsoluteBeginner = $state(true);
-
-	$effect(() => {
-		if (data.cefrLevel) {
-			userLevel = data.cefrLevel;
-			isAbsoluteBeginner = data.cefrLevel === 'A1';
-		}
-	});
-	// Sentence difficulty: set from lesson metadata, cleared on each new challenge
-	let sentenceTooComplex = $state(false);
-	let sentenceEstimatedLevel = $state<string | null>(null);
-
-	// AbortControllers for in-flight API requests
-	let generateController: AbortController | null = null;
-	let submitController: AbortController | null = null;
-
-	function stopLoadingIntervals() {
-		if (_loadProgressInterval) {
-			clearInterval(_loadProgressInterval);
-			_loadProgressInterval = null;
-		}
-		if (_loadTipInterval) {
-			clearInterval(_loadTipInterval);
-			_loadTipInterval = null;
-		}
-	}
-
-	function cancelAllRequests() {
-		if (generateController) {
-			generateController.abort();
-			generateController = null;
-		}
-		// submitController is intentionally NOT aborted here — submit-answer awards
-		// credit (ELO, XP, DB writes) and must always run to completion.
-		stopLoadingIntervals();
-	}
-
-	onDestroy(() => {
-		cancelAllRequests();
-	});
-
-	// Language config — all language-specific data (articles, inflections, gender
-	// mappings, etc.) lives in src/lib/languages/. Adding a new language = adding
-	// one file there; no changes needed here.
-	let langConfig = $derived(getLanguageConfig(lessonLanguage?.name || 'German'));
-
-	function genderToArticle(gender: string | null | undefined): string | null {
-		if (!gender) return null;
-		return langConfig.genderToArticle(gender);
-	}
-	function getArticleMap() {
-		return langConfig.articleMap;
-	}
-	function getInflectionMap() {
-		return langConfig.inflectionMap;
-	}
-
-	// --- Inline language data removed — now in src/lib/languages/*.ts ---
-	// If you need to add a language, create a new file there.
-	function buildTooltipHtml(vocab: any, overrideArticle?: string, inflectionNote?: string): string {
-		const isNoun = vocab.partOfSpeech?.toLowerCase() === 'noun';
-		const lemmaDisplay = isNoun
-			? vocab.lemma.charAt(0).toUpperCase() + vocab.lemma.slice(1)
-			: vocab.lemma;
-
-		const genderDisplay = genderToArticle(vocab.gender);
-		const isAiGenerated = typeof vocab.id === 'string' && vocab.id.startsWith('ai_');
-		let html = `<span class="word-tooltip">`;
-		html += `<span class="word-tooltip-header">${overrideArticle ?? lemmaDisplay}${isAiGenerated ? '<span class="word-tooltip-ai-badge">AI</span>' : ''}</span>`;
-		html += `<span class="word-tooltip-body">`;
-
-		if (inflectionNote) {
-			html += `<span class="word-tooltip-row"><strong>Form:</strong> ${inflectionNote}</span>`;
-		}
-		if (overrideArticle) {
-			html += `<span class="word-tooltip-row"><strong>Noun:</strong> ${lemmaDisplay}</span>`;
-			if (genderDisplay)
-				html += `<span class="word-tooltip-row"><strong>Gender:</strong> ${genderDisplay}</span>`;
-		} else {
-			if (vocab.partOfSpeech)
-				html += `<span class="word-tooltip-row"><strong>POS:</strong> ${vocab.partOfSpeech}</span>`;
-			if (isNoun && genderDisplay)
-				html += `<span class="word-tooltip-row"><strong>Gender:</strong> ${genderDisplay}</span>`;
-		}
-		if (vocab.plural)
-			html += `<span class="word-tooltip-row"><strong>Plural:</strong> ${vocab.plural}</span>`;
-
-		const displayMeaning = vocab.meaning || vocab.meanings?.[0]?.value;
-		if (displayMeaning)
-			html += `<span class="word-tooltip-row"><strong>Meaning:</strong> ${displayMeaning}</span>`;
-		html += `</span></span>`;
-		return html;
-	}
-
-	function getBasicStems(word: string): string[] {
-		const stems: string[] = [];
-		const suffixes = [
-			'ung',
-			'te',
-			'ten',
-			'tet',
-			'test',
-			'en',
-			'er',
-			'es',
-			'em',
-			'et',
-			'st',
-			'e',
-			't',
-			'n',
-			's'
-		];
-		for (const suffix of suffixes) {
-			if (word.length >= suffix.length + 2 && word.endsWith(suffix)) {
-				const stem = word.slice(0, -suffix.length);
-				stems.push(stem);
-				if (suffix !== 'en') {
-					stems.push(stem + 'en');
-				}
-			}
-		}
-		// Past participle: ge-...-t or ge-...-en
-		if (word.startsWith('ge') && word.length > 4) {
-			const rest = word.slice(2);
-			stems.push(rest);
-			if (rest.endsWith('t') && rest.length > 2) {
-				stems.push(rest.slice(0, -1) + 'en');
-			}
-			if (rest.endsWith('en') && rest.length > 3) {
-				stems.push(rest);
-			}
-		}
-		// zu-infinitive: aufzugeben → aufgeben
-		const zuMatch = word.match(/^(.+?)zu(.+)$/);
-		if (zuMatch && zuMatch[1].length >= 2 && zuMatch[2].length >= 2) {
-			stems.push(zuMatch[1] + zuMatch[2]);
-		}
-		return stems;
-	}
-
-	function getBasicEnglishStems(word: string): string[] {
-		const stems: string[] = [];
-		// Plural / verb forms
-		if (word.endsWith('ies') && word.length > 4) stems.push(word.slice(0, -3) + 'y');
-		if (word.endsWith('ves') && word.length > 4)
-			stems.push(word.slice(0, -3) + 'f', word.slice(0, -3) + 'fe');
-		if (
-			word.endsWith('ses') ||
-			word.endsWith('xes') ||
-			word.endsWith('zes') ||
-			word.endsWith('ches') ||
-			word.endsWith('shes')
-		) {
-			stems.push(word.endsWith('es') ? word.slice(0, -2) : word);
-		}
-		if (word.endsWith('s') && !word.endsWith('ss')) stems.push(word.slice(0, -1));
-		if (word.endsWith('es') && word.length > 3) stems.push(word.slice(0, -2));
-		// -ing forms
-		if (word.endsWith('ing') && word.length > 5) {
-			stems.push(word.slice(0, -3));
-			stems.push(word.slice(0, -3) + 'e');
-			// double consonant: running → run
-			const base = word.slice(0, -3);
-			if (base.length >= 2 && base[base.length - 1] === base[base.length - 2]) {
-				stems.push(base.slice(0, -1));
-			}
-		}
-		// -ed forms
-		if (word.endsWith('ed') && word.length > 4) {
-			stems.push(word.slice(0, -2));
-			stems.push(word.slice(0, -1)); // e.g., "liked" → "like"
-			stems.push(word.slice(0, -2) + 'e');
-			const base = word.slice(0, -2);
-			if (base.length >= 2 && base[base.length - 1] === base[base.length - 2]) {
-				stems.push(base.slice(0, -1));
-			}
-		}
-		// -er comparative
-		if (word.endsWith('er') && word.length > 4) {
-			stems.push(word.slice(0, -2));
-			stems.push(word.slice(0, -1));
-		}
-		// -ly → adjective
-		if (word.endsWith('ly') && word.length > 4) {
-			stems.push(word.slice(0, -2));
-		}
-		return stems;
-	}
-
-	function levenshteinDistance(a: string, b: string): number {
-		const s1 = a;
-		const s2 = b;
-		if (s1.length === 0) return s2.length;
-		if (s2.length === 0) return s1.length;
-		const matrix: (number | null)[][] = Array(s2.length + 1)
-			.fill(null)
-			.map(() => Array(s1.length + 1).fill(null));
-		for (let i = 0; i <= s1.length; i += 1) matrix[0][i] = i;
-		for (let j = 0; j <= s2.length; j += 1) matrix[j][0] = j;
-		for (let j = 1; j <= s2.length; j += 1) {
-			for (let i = 1; i <= s1.length; i += 1) {
-				const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-				matrix[j][i] = Math.min(
-					(matrix[j][i - 1] as number) + 1,
-					(matrix[j - 1][i] as number) + 1,
-					(matrix[j - 1][i - 1] as number) + indicator
-				);
-			}
-		}
-		return matrix[s2.length][s1.length] as number;
-	}
-
-	function buildVocabMap(): Map<string, any[]> {
-		const map = new Map<string, any[]>();
-		const isEnToDe = challenge?.gameMode === 'native-to-target';
-
-		const add = (key: string, v: any) => {
-			if (!key) return;
-			if (!map.has(key)) map.set(key, []);
-			// Avoid duplicate entries
-			if (!map.get(key)!.some((existing) => existing.id === v.id)) {
-				map.get(key)!.push(v);
-			}
-		};
-
-		for (const v of challenge?.allVocabulary || []) {
-			add(v.lemma.toLowerCase(), v);
-			const meaningsStr = v.meaning || v.meanings?.[0]?.value;
-			if (isEnToDe && meaningsStr) {
-				for (const m of meaningsStr.split(',')) {
-					add(m.trim().toLowerCase(), v);
-				}
-			}
-		}
-		for (const v of challenge?.targetedVocabulary || []) {
-			add(v.lemma.toLowerCase(), v);
-			const meaningsStr = v.meaning || v.meanings?.[0]?.value;
-			if (isEnToDe && meaningsStr) {
-				for (const m of meaningsStr.split(',')) {
-					add(m.trim().toLowerCase(), v);
-				}
-			}
-		}
-		return map;
-	}
-
-	function parseTextWithTooltips(
-		text: string,
-		isTargetedVocab: boolean,
-		stillStreaming: boolean = false
-	): string {
-		if (assignment?.disableHoverTranslation) return text;
-		const vocabMap = buildVocabMap();
-		const _isDeToEn = challenge.gameMode === 'target-to-native';
-		// Whether this text is in the target language (to enable article/case tooltips)
-		const mode = challenge.gameMode as string;
-		const isTargetLangText =
-			mode === 'fill-blank'
-				? true
-				: mode === 'target-to-native'
-					? isTargetedVocab
-					: mode === 'native-to-target'
-						? !isTargetedVocab
-						: mode === 'multiple-choice'
-							? isTargetedVocab
-							: false;
-
-		const isEnToDe = challenge.gameMode === 'native-to-target';
-
-		// Extract target-language words from targetSentence for contextual tooltips in native-to-target mode.
-		// This lets us show the actual form (e.g. "den" instead of "der") from the LLM-generated answer.
-		const targetWords =
-			isEnToDe && challenge?.targetSentence
-				? challenge.targetSentence
-						.replace(/<[^>]+>/g, '')
-						.split(/\s+/)
-						.map((w: string) => w.replace(/[.,!?;:'"(){}\-\u2014\u2013[\]]/g, ''))
-				: [];
-
-		// Step 1: Replace <vocab> tags with placeholders to protect them
-		const vocabReplacements: string[] = [];
-		text = text.replace(
-			/<vocab(?:\s+[^>]*)?id="([^"]+)"(?:[^>]*)?>([^<]*)<\/vocab>/g,
-			(_match: string, id: string, word: string) => {
-				const vocab =
-					challenge.targetedVocabulary?.find((v: any) => v.id === id) ||
-					challenge.allVocabulary?.find((v: any) => v.id === id);
-				let tooltipHtml = '';
-				if (vocab) {
-					// For native-to-target, find the contextual form of this word in the targetSentence
-					let contextForm: string | undefined;
-					if (isEnToDe && targetWords.length > 0) {
-						const lemma = vocab.lemma?.toLowerCase();
-						// Find the word in targetSentence that matches this vocab's lemma or an inflected form
-						const match = targetWords.find((tw: string) => {
-							const twLower = tw.toLowerCase();
-							if (twLower === lemma) return true;
-							// Check if this target word is a known inflection of the lemma
-							const mapToUse = getInflectionMap();
-							const inf = mapToUse[twLower];
-							if (inf && inf.lemma.toLowerCase() === lemma) return true;
-							// Check if it starts with the lemma (common for German prefixed/conjugated forms)
-							if (
-								lemma &&
-								lemma.length >= 3 &&
-								twLower.startsWith(lemma.slice(0, Math.max(3, lemma.length - 2)))
-							)
-								return true;
-							return false;
-						});
-						if (match && match.toLowerCase() !== lemma) {
-							contextForm = match;
-						}
-					}
-					tooltipHtml = buildTooltipHtml(vocab, contextForm);
-				}
-				const replacement = `<span class="vocab-highlight tooltip-trigger">${word}${tooltipHtml}</span>`;
-				vocabReplacements.push(replacement);
-				return `\x00VOCAB_${vocabReplacements.length - 1}\x00`;
-			}
-		);
-
-		// Clean up incomplete tags from streaming
-		text = text.replace(/<vocab[^>]*>|<\/vocab>|<vocab[^>]*$/g, '');
-
-		const englishArticles = new Set(['the', 'a', 'an']);
-
-		// Helper: find vocab entry for a cleaned word
-		// Returns { vocab, inflectionNote? } or null
-		function findVocab(
-			cleanWord: string,
-			originalToken: string = ''
-		): { vocab: any; inflectionNote?: string } | null {
-			const pickBest = (list: any[] | undefined) => {
-				if (!list || list.length === 0) return null;
-				if (list.length === 1) return list[0];
-
-				// In German, nouns are always capitalized.
-				// For languages where nouns are capitalized (e.g. German), use capitalization
-				// to bias vocab matching. For others (French, Spanish) nouns are lowercase.
-				if (isTargetLangText && langConfig.capitalizeNouns) {
-					const isCapitalized = /^[A-ZÄÖÜ]/.test(originalToken.replace(/^[¿¡"'({[]+/, ''));
-					if (isCapitalized) {
-						const noun = list.find((v) => v.partOfSpeech?.toLowerCase() === 'noun');
-						if (noun) return noun;
-					} else {
-						const nonNoun = list.find((v) => v.partOfSpeech?.toLowerCase() !== 'noun');
-						if (nonNoun) return nonNoun;
-					}
-				}
-
-				return list[0]; // fallback
-			};
-
-			let vocab = pickBest(vocabMap.get(cleanWord));
-			if (vocab) return { vocab };
-
-			// Check the inflection map for conjugations/contractions
-			if (!isEnToDe) {
-				const mapToUse = getInflectionMap();
-
-				const inflection = mapToUse[cleanWord];
-				if (inflection) {
-					vocab = pickBest(vocabMap.get(inflection.lemma.toLowerCase()));
-					if (vocab) return { vocab, inflectionNote: inflection.note };
-					// Even if the lemma isn't in our vocabulary, create a synthetic entry
-					return {
-						vocab: { lemma: inflection.lemma, meaning: inflection.note, partOfSpeech: null },
-						inflectionNote: inflection.note
-					};
-				}
-			}
-
-			const stems = isEnToDe ? getBasicEnglishStems(cleanWord) : getBasicStems(cleanWord);
-			for (const stem of stems) {
-				vocab = pickBest(vocabMap.get(stem));
-				if (vocab) return { vocab };
-			}
-
-			// Fallback: Fuzzy search over all keys in vocabMap
-			if (cleanWord.length > 3) {
-				const maxDistance = cleanWord.length <= 5 ? 1 : 2;
-				let bestMatch: { vocab: any; distance: number } | null = null;
-
-				for (const [key, vList] of vocabMap.entries() as IterableIterator<[string, any[]]>) {
-					// Quick length filter to avoid calculating Levenshtein on vastly different strings
-					if (Math.abs(key.length - cleanWord.length) > maxDistance) continue;
-
-					const distance = levenshteinDistance(cleanWord, key);
-					if (distance <= maxDistance) {
-						if (!bestMatch || distance < bestMatch.distance) {
-							bestMatch = { vocab: pickBest(vList), distance };
-						}
-					}
-				}
-
-				if (bestMatch && bestMatch.vocab) {
-					return { vocab: bestMatch.vocab };
-				}
-			}
-
-			return null;
-		}
-
-		// Helper: find the next noun vocab by scanning upcoming words
-		function findNextNoun(words: string[], startIdx: number): any {
-			const skippablePOS = new Set(['adjective', 'adverb', 'article', 'determiner', 'pronoun']);
-			for (let j = startIdx; j < words.length && j < startIdx + 5; j++) {
-				const w = words[j];
-				// eslint-disable-next-line no-control-regex
-				if (w.match(/\x00VOCAB_\d+\x00/)) continue;
-				const clean = w.replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase();
-				if (!clean || englishArticles.has(clean)) continue;
-				const result = findVocab(clean, w);
-				const v = result?.vocab;
-				if (v && v.partOfSpeech?.toLowerCase() === 'noun') return v;
-				// Skip adjectives/adverbs that can appear between article and noun
-				if (v && skippablePOS.has(v.partOfSpeech?.toLowerCase())) continue;
-				// No vocab match at all — might be an adjective we don't know; keep scanning
-				if (!v) continue;
-				// Known non-noun, non-skippable POS — stop
-				break;
-			}
-			return null;
-		}
-
-		// Determine if a word is a plural English form pointing at a known noun
-		function isLikelyPlural(cleanWord: string): boolean {
-			if (cleanWord.endsWith('s') && !cleanWord.endsWith('ss')) {
-				const singular = cleanWord.slice(0, -1);
-				const list = vocabMap.get(singular);
-				if (list && list.some((v) => v.partOfSpeech?.toLowerCase() === 'noun')) return true;
-			}
-			if (cleanWord.endsWith('ies') && cleanWord.length > 4) {
-				const singular = cleanWord.slice(0, -3) + 'y';
-				const list = vocabMap.get(singular);
-				if (list && list.some((v) => v.partOfSpeech?.toLowerCase() === 'noun')) return true;
-			}
-			return false;
-		}
-
-		// Step 2: Split into tokens (words + whitespace) and process with lookahead
-		const tokens = text.split(/(\s+)/);
-		const result: string[] = [];
-
-		for (let i = 0; i < tokens.length; i++) {
-			const token = tokens[i];
-			// Preserve whitespace tokens
-			if (/^\s+$/.test(token)) {
-				result.push(token);
-				continue;
-			}
-			// Don't touch placeholders
-			// eslint-disable-next-line no-control-regex
-			if (token.match(/\x00VOCAB_\d+\x00/)) {
-				result.push(token);
-				continue;
-			}
-
-			const cleanWord = token.replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase();
-			if (!cleanWord) {
-				result.push(token);
-				continue;
-			}
-
-			// Handle English articles in native-to-target mode
-			if (isEnToDe && englishArticles.has(cleanWord)) {
-				// Get only non-whitespace tokens ahead
-				const upcomingWords = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
-				const nounVocab = findNextNoun(upcomingWords, 0);
-
-				if (nounVocab) {
-					const isPlural =
-						upcomingWords.length > 0 &&
-						isLikelyPlural(
-							upcomingWords[0].replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase()
-						);
-					let article: string;
-
-					// Try to find the actual article from the LLM-generated targetSentence
-					// so we show the correct case (e.g. "den" accusative instead of "der" nominative)
-					const artMap = getArticleMap();
-					const nounLemma = nounVocab.lemma?.toLowerCase();
-					let foundFromTarget = false;
-					if (targetWords.length > 0 && nounLemma) {
-						// Find the noun in the targetSentence, then look at the word before it for the article
-						for (let tw = 0; tw < targetWords.length; tw++) {
-							const twLower = targetWords[tw].toLowerCase();
-							if (twLower === nounLemma || twLower === nounVocab.plural?.toLowerCase()) {
-								// Look backwards for the nearest article
-								for (let back = tw - 1; back >= 0 && back >= tw - 3; back--) {
-									const candidate = targetWords[back].toLowerCase();
-									if (artMap[candidate]) {
-										article = targetWords[back];
-										foundFromTarget = true;
-										break;
-									}
-								}
-								break;
-							}
-						}
-					}
-
-					if (!foundFromTarget) {
-						const nomArt = genderToArticle(nounVocab.gender);
-						if (cleanWord === 'the') {
-							article = isPlural
-								? langConfig.pluralDefiniteArticle
-								: nomArt || langConfig.defaultDefiniteArticle;
-						} else {
-							const indef = nomArt ? langConfig.definiteToIndefinite[nomArt] : null;
-							article = indef || langConfig.defaultIndefiniteArticle;
-						}
-					}
-
-					const tooltip = buildTooltipHtml(nounVocab, article);
-					result.push(
-						`<span class="word-hover has-info tooltip-trigger">${token}${tooltip}</span>`
-					);
-					continue;
-				}
-				// Fallback: show generic article tooltip even when noun not found
-				// Try to find any article from the targetSentence as a better fallback
-				let genericArticle = '';
-				const artMapFallback = getArticleMap();
-				const isDefinite = cleanWord === 'the';
-				const targetArticle = targetWords.find((tw: string) => {
-					const entry = artMapFallback[tw.toLowerCase()];
-					return entry && entry.definite === isDefinite;
-				});
-				if (targetArticle) {
-					genericArticle = targetArticle;
-				} else {
-					genericArticle = isDefinite
-						? langConfig.defaultDefiniteArticle
-						: langConfig.defaultIndefiniteArticle;
-				}
-				const genericTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${genericArticle}</span><span class="word-tooltip-body"><span class="word-tooltip-row"><strong>Article:</strong> ${cleanWord === 'the' ? 'definite' : 'indefinite'}</span></span></span>`;
-				result.push(
-					`<span class="word-hover has-info tooltip-trigger">${token}${genericTooltip}</span>`
-				);
-				continue;
-			}
-
-			// Handle target-language article forms — show case + gender tooltip
-			if (isTargetLangText) {
-				const artMap = getArticleMap();
-
-				const artEntry = artMap[cleanWord];
-				if (artEntry) {
-					const upcomingGerman = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
-					const nounVocab = findNextNoun(upcomingGerman, 0);
-					const nomArt = nounVocab ? genderToArticle(nounVocab.gender) : null;
-					// Narrow down possible case forms using the noun's gender
-					const matchedForms = nomArt
-						? artEntry.forms.filter((f) => f.nomArticle === nomArt)
-						: artEntry.forms;
-					const caseLabel = (matchedForms.length > 0 ? matchedForms : artEntry.forms)
-						.map((f) => f.caseLabel)
-						.join(' / ');
-					const artType = artEntry.definite
-						? 'Definite'
-						: cleanWord.startsWith('k')
-							? 'Negative'
-							: 'Indefinite';
-					let ttHtml = `<span class="word-tooltip">`;
-					ttHtml += `<span class="word-tooltip-header">${token}</span>`;
-					ttHtml += `<span class="word-tooltip-body">`;
-					ttHtml += `<span class="word-tooltip-row"><strong>Article:</strong> ${artType}</span>`;
-					ttHtml += `<span class="word-tooltip-row"><strong>Form:</strong> ${caseLabel}</span>`;
-					if (nounVocab) {
-						const nDisplay = nounVocab.lemma.charAt(0).toUpperCase() + nounVocab.lemma.slice(1);
-						const nGender = genderToArticle(nounVocab.gender);
-						ttHtml += `<span class="word-tooltip-row"><strong>Noun:</strong> ${nDisplay}</span>`;
-						if (nGender)
-							ttHtml += `<span class="word-tooltip-row"><strong>Gender:</strong> ${nGender}</span>`;
-						const nMeaning = nounVocab.meaning || nounVocab.meanings?.[0]?.value;
-						if (nMeaning)
-							ttHtml += `<span class="word-tooltip-row"><strong>Meaning:</strong> ${nMeaning}</span>`;
-					}
-					ttHtml += `</span></span>`;
-					result.push(`<span class="word-hover has-info tooltip-trigger">${token}${ttHtml}</span>`);
-					continue;
-				}
-			}
-
-			// Try multi-word English matches (e.g. "television program" → Fernsehprogramm)
-			// This handles cases where a German compound word has a multi-word English meaning
-			if (isEnToDe) {
-				let multiWordVocab: any = null;
-				let multiWordEnd = i;
-				for (let len = 5; len >= 2 && !multiWordVocab; len--) {
-					const wordIndices: number[] = [i];
-					for (let j = i + 1; j < tokens.length && wordIndices.length < len; j++) {
-						// eslint-disable-next-line no-control-regex
-						if (!/^\s+$/.test(tokens[j]) && !tokens[j].match(/\x00VOCAB_\d+\x00/)) {
-							wordIndices.push(j);
-						}
-					}
-					if (wordIndices.length < len) continue;
-					const phrase = wordIndices
-						.map((idx) => tokens[idx].replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase())
-						.join(' ');
-					const vList = vocabMap.get(phrase);
-					if (vList && vList.length > 0) {
-						multiWordVocab = vList[0];
-						multiWordEnd = wordIndices[len - 1];
-					}
-				}
-				if (multiWordVocab) {
-					const combinedText = tokens.slice(i, multiWordEnd + 1).join('');
-					result.push(
-						`<span class="word-hover has-info tooltip-trigger">${combinedText}${buildTooltipHtml(multiWordVocab)}</span>`
-					);
-					i = multiWordEnd;
-					continue;
-				}
-			}
-
-			const vocabResult = findVocab(cleanWord, token);
-			if (vocabResult) {
-				result.push(
-					`<span class="word-hover has-info tooltip-trigger">${token}${buildTooltipHtml(vocabResult.vocab, undefined, vocabResult.inflectionNote)}</span>`
-				);
-			} else if (stillStreaming) {
-				const loadingTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${token}</span><span class="word-tooltip-body"><span class="word-tooltip-row ai-magic-text"><span class="sparkle">✨</span> AI analyzing...</span></span></span>`;
-				result.push(
-					`<span class="word-hover has-info tooltip-trigger">${token}${loadingTooltip}</span>`
-				);
-			} else {
-				result.push(`<span class="word-hover">${token}</span>`);
-			}
-		}
-		text = result.join('');
-
-		// Step 3: Restore vocab placeholders
-		text = text.replace(
-			// eslint-disable-next-line no-control-regex
-			/\x00VOCAB_(\d+)\x00/g,
-			(_: string, idx: string) => vocabReplacements[parseInt(idx)]
-		);
-
-		return text;
-	}
-
-	let parsedChallengeText = $derived(
-		(() => {
-			if (!challenge?.challengeText) return '';
-			try {
-				// Capitalize the first character when the challenge text is in the target language
-				// (not native-to-target, where challengeText is English).
-				const isTargetLangText = challenge.gameMode !== 'native-to-target';
-				let text = challenge.challengeText;
-				if (isTargetLangText && text.length > 0) {
-					text = text.charAt(0).toUpperCase() + text.slice(1);
-				}
-				return parseTextWithTooltips(text, true, isStreaming);
-			} catch (e) {
-				console.error('Error in parseTextWithTooltips for challengeText:', e);
-				return challenge.challengeText;
-			}
-		})()
-	);
-
-	let parsedTargetSentence = $derived(
-		(() => {
-			if (!challenge?.targetSentence) return '';
-			try {
-				return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);
-			} catch (e) {
-				console.error('Error in parseTextWithTooltips for targetSentence:', e);
-				return challenge.targetSentence;
-			}
-		})()
-	);
-
-	let showAfterElo = $state(false);
-
-	function calculateEloProgress(elo: number) {
-		const level = elo < 1050 ? 'LEARNING' : elo < 1150 ? 'KNOWN' : 'MASTERED';
-		return Math.max(
-			0,
-			Math.min(
-				100,
-				level === 'LEARNING'
-					? ((elo - 1000) / 50) * 100
-					: level === 'KNOWN'
-						? ((elo - 1050) / 100) * 100
-						: 100
-			)
-		);
-	}
-
-	function getEloLevelClass(elo: number): string {
-		const levels: Record<string, string> = {
-			LOCKED: 'locked',
-			UNSEEN: 'unseen',
-			LEARNING: 'learning',
-			KNOWN: 'known',
-			MASTERED: 'mastered'
-		};
-		const e = Number(elo);
-		if (e < 1050) return levels['LEARNING'] || 'learning';
-		if (e < 1150) return levels['KNOWN'] || 'known';
-		return levels['MASTERED'] || 'mastered';
-	}
-
-	$effect(() => {
-		if (feedback) {
-			// Delay to start animation after feedback is displayed
-			setTimeout(() => {
-				showAfterElo = true;
-			}, 100);
-		} else {
-			showAfterElo = false;
-		}
-	});
-
-	async function generateChallenge(retryVocabIds: string[] = [], retryGrammarIds: string[] = []) {
-		// Cancel any in-flight requests before starting a new one
-		cancelAllRequests();
-
-		currentLessonLanguage = data.language;
-		loading = true;
-		isStreaming = true;
-		feedback = null;
-		userInput = '';
-		challenge = null;
-		fillBlankAnswers = [];
-		selectedChoice = null;
-		shuffledChoices = [];
-		hasSubmittedMc = false;
-		sentenceTooComplex = false;
-		sentenceEstimatedLevel = null;
-
-		// Fetch average load time for accurate progress bar
-		try {
-			const statRes = await fetch('/api/load-time-stat');
-			if (statRes.ok) {
-				const statData = await statRes.json();
-				estimatedLoadMs = statData.averageMs || 9000;
-				isLocalMode = statData.isLocalMode || false;
-			}
-		} catch {
-			/* use default */
-		}
-
-		// Start progress bar
-		loadProgressPct = 0;
-		const progressStart = Date.now();
-		_loadProgressInterval = setInterval(() => {
-			const elapsed = Date.now() - progressStart;
-			if (elapsed < estimatedLoadMs) {
-				loadProgressPct = Math.min(88, (elapsed / estimatedLoadMs) * 88);
-			} else {
-				// Logarithmic crawl toward 99% once past the estimate
-				const extra = elapsed - estimatedLoadMs;
-				loadProgressPct = Math.min(99, 88 + 11 * (1 - Math.exp(-extra / 6000)));
-			}
-		}, 80);
-
-		// Start cycling tips
-		loadTipIndex = Math.floor(Math.random() * loadingTips.length);
-		_loadTipInterval = setInterval(() => {
-			loadTipIndex = (loadTipIndex + 1) % loadingTips.length;
-		}, 3500);
-
-		generateController = new AbortController();
-
-		try {
-			const res = await fetch('/api/generate-lesson', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					gameMode,
-					assignmentId: assignment?.id ?? undefined,
-					...(retryVocabIds.length > 0 ? { retryVocabIds } : {}),
-					...(retryGrammarIds.length > 0 ? { retryGrammarIds } : {})
-				}),
-				signal: generateController.signal
-			});
-
-			if (!res.ok) {
-				const error = await res.json();
-				toast.error(`Error: ${error.error}`);
-				return;
-			}
-
-			const reader = res.body?.getReader();
-			if (!reader) throw new Error('No readable stream available');
-			const decoder = new TextDecoder();
-			let accumulatedJson = '';
-			let buffer = '';
-			let idMap: Record<string, string> = {};
-
-			displayedChallengeNumber = sessionChallenges + 1;
-			challenge = {
-				challengeText: '',
-				targetSentence: '',
-				targetedVocabulary: [],
-				targetedGrammar: [],
-				userId: ''
-			};
-
-			// Keep loading=true until we actually have visible challenge text
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
-
-				for (const line of lines) {
-					if (!line.trim()) continue;
-					try {
-						const msg = JSON.parse(line);
-						if (msg.type === 'metadata') {
-							challenge.userId = msg.data.userId;
-							challenge.targetedVocabulary = msg.data.targetedVocabulary;
-							challenge.targetedGrammar = msg.data.targetedGrammar;
-							challenge.allVocabulary = msg.data.allVocabulary || [];
-							challenge.gameMode = msg.data.gameMode;
-							idMap = msg.data.idMap || {};
-							userLevel = msg.data.userLevel || 'A1';
-							isAbsoluteBeginner = msg.data.isAbsoluteBeginner || false;
-							if (msg.data.sentenceDifficulty) {
-								sentenceTooComplex = msg.data.sentenceDifficulty.tooComplex || false;
-								sentenceEstimatedLevel = msg.data.sentenceDifficulty.estimatedLevel || null;
-							}
-						} else if (msg.type === 'vocab_enrichment') {
-							if (msg.status === 'searching') {
-								toast.success('AI generating vocabulary... 🤖');
-							}
-							const existingIds = new Set((challenge.allVocabulary || []).map((v: any) => v.id));
-							const newVocab = (msg.data || []).filter((v: any) => !existingIds.has(v.id));
-							challenge.allVocabulary = [...(challenge.allVocabulary || []), ...newVocab];
-						} else if (msg.type === 'chunk') {
-							accumulatedJson += msg.content;
-
-							// Try to extract challengeText for progressive display
-							const challengeMatch = accumulatedJson.match(
-								/"challengeText"\s*:\s*"((?:[^"\\]|\\.)*)/
-							);
-							if (challengeMatch && challengeMatch[1]) {
-								let extractedText = challengeMatch[1]
-									.replace(/\\n/g, '\n')
-									.replace(/\\"/g, '"')
-									.replace(/\\\\/g, '\\');
-								// Remap short vocab IDs (v0, v1, ...) to real UUIDs so tooltips work during streaming
-								if (idMap && Object.keys(idMap).length > 0) {
-									extractedText = extractedText.replace(
-										/<vocab\s+id="([^"]+)">/g,
-										(_m: string, shortId: string) => `<vocab id="${idMap[shortId] || shortId}">`
-									);
-								}
-								challenge.challengeText = extractedText;
-
-								if (challenge.gameMode === 'fill-blank') {
-									const blanksCount = (extractedText.match(/___/g) || []).length;
-									if (blanksCount > fillBlankAnswers.length) {
-										const newAnswers = [...fillBlankAnswers];
-										while (newAnswers.length < blanksCount) {
-											newAnswers.push('');
-										}
-										fillBlankAnswers = newAnswers;
-									}
-								}
-
-								// Only stop loading once we have actual text to show
-								if (loading) {
-									loading = false;
-									tick().then(() => {
-										fetch('/api/load-time-stat', {
-											method: 'POST',
-											headers: { 'Content-Type': 'application/json' },
-											body: JSON.stringify({ loadTimeMs: Date.now() - progressStart })
-										}).catch(() => {});
-									});
-								}
-							}
-
-							// Progressive extraction of other fields to allow early submission
-							const targetMatch = accumulatedJson.match(
-								/"targetSentence"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/
-							);
-							if (targetMatch && targetMatch[1] !== undefined) {
-								challenge.targetSentence = targetMatch[1]
-									.replace(/\\n/g, '\n')
-									.replace(/\\"/g, '"')
-									.replace(/\\\\/g, '\\');
-							}
-
-							const vocabIdsMatch = accumulatedJson.match(
-								/"targetedVocabularyIds"\s*:\s*\[([^\]]*)\]/
-							);
-							if (vocabIdsMatch && vocabIdsMatch[1]) {
-								const rawIds = vocabIdsMatch[1]
-									.split(',')
-									.map((s) => s.trim().replace(/^"|"$/g, ''))
-									.filter(Boolean);
-								if (rawIds.length > 0) {
-									challenge.targetedVocabularyIds = rawIds.map((id) => idMap[id] || id);
-
-									// Immediate filtering of vocabulary
-									if (
-										challenge.targetedVocabularyIds.length > 0 &&
-										challenge.targetedVocabulary?.length > 0
-									) {
-										const usedIds = new Set(challenge.targetedVocabularyIds);
-										// Store the original metadata-sourced list if we haven't yet, so we can re-filter if needed
-										if (!challenge._allMetadataVocab)
-											challenge._allMetadataVocab = [...challenge.targetedVocabulary];
-										challenge.targetedVocabulary = challenge._allMetadataVocab.filter((v: any) =>
-											usedIds.has(v.id)
-										);
-									}
-								}
-							}
-
-							const grammarIdsMatch = accumulatedJson.match(
-								/"targetedGrammarIds"\s*:\s*\[([^\]]*)\]/
-							);
-							if (grammarIdsMatch && grammarIdsMatch[1]) {
-								const rawIds = grammarIdsMatch[1]
-									.split(',')
-									.map((s) => s.trim().replace(/^"|"$/g, ''))
-									.filter(Boolean);
-								if (rawIds.length > 0) {
-									challenge.targetedGrammarIds = rawIds.map((id) => idMap[id] || id);
-
-									// Immediate filtering of grammar
-									if (
-										challenge.targetedGrammarIds.length > 0 &&
-										challenge.targetedGrammar?.length > 0
-									) {
-										const usedIds = new Set(challenge.targetedGrammarIds);
-										// Store original
-										if (!challenge._allMetadataGrammar)
-											challenge._allMetadataGrammar = [...challenge.targetedGrammar];
-										challenge.targetedGrammar = challenge._allMetadataGrammar.filter((g: any) =>
-											usedIds.has(g.id)
-										);
-									}
-								}
-							}
-
-							// Progressive extraction of distractors for multiple-choice
-							const distractorsMatch = accumulatedJson.match(/"distractors"\s*:\s*\[([^\]]*)\]/);
-							if (distractorsMatch && distractorsMatch[1] && challenge.targetSentence) {
-								const distractors = distractorsMatch[1]
-									.split(',')
-									.map((s) => s.trim().replace(/^"|"$/g, ''))
-									.filter(Boolean);
-								if (distractors.length > 0 && (!shuffledChoices || shuffledChoices.length === 0)) {
-									const allChoices = [...distractors, challenge.targetSentence];
-									shuffledChoices = allChoices.sort(() => Math.random() - 0.5);
-								}
-							}
-
-							// Progressive extraction of hints for fill-blank
-							const hintsMatch = accumulatedJson.match(/"hints"\s*:\s*\[(.*?)\]\s*(?:,|$)/);
-							if (hintsMatch && hintsMatch[1]) {
-								try {
-									// Try to parse the partial hints array
-									const hints = JSON.parse(`[${hintsMatch[1]}]`);
-									if (hints.length > 0 && fillBlankAnswers.length === 0) {
-										challenge.hints = hints.map((h: any) => ({
-											...h,
-											vocabId: idMap[h.vocabId] || h.vocabId
-										}));
-										fillBlankAnswers = challenge.hints.map(() => '');
-									}
-								} catch (_) {
-									// Partial hints array might not be valid JSON yet, ignore
-								}
-							}
-						}
-					} catch (_) {
-						// Ignore parse errors on partial lines
-					}
-				}
-
-				challenge = challenge; // trigger reactivity
-			}
-
-			if (buffer.trim()) {
-				try {
-					const msg = JSON.parse(buffer);
-					if (msg.type === 'chunk') {
-						accumulatedJson += msg.content;
-					} else if (msg.type === 'vocab_enrichment') {
-						if (msg.status === 'searching') {
-							toast.success('AI generating vocabulary... 🤖');
-						}
-						const existingIds = new Set((challenge.allVocabulary || []).map((v: any) => v.id));
-						const newVocab = (msg.data || []).filter((v: any) => !existingIds.has(v.id));
-						challenge.allVocabulary = [...(challenge.allVocabulary || []), ...newVocab];
-					}
-				} catch (_) {
-					/* JSON parse failed, skip */
-				}
-			}
-
-			// Try to parse the complete JSON at the end to get everything (targetSentence, etc)
-			try {
-				let cleaned = accumulatedJson;
-				const firstBrace = cleaned.indexOf('{');
-				const lastBrace = cleaned.lastIndexOf('}');
-				if (firstBrace !== -1 && lastBrace !== -1) {
-					cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-				}
-				const parsed = JSON.parse(cleaned);
-				challenge = { ...challenge, ...parsed };
-				challengeStartMs = Date.now(); // start timing from when challenge is fully ready
-
-				// Remap short IDs (v0, g0, ...) from LLM back to real UUIDs
-				if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds)) {
-					parsed.targetedVocabularyIds = parsed.targetedVocabularyIds.map(
-						(id: string) => idMap[id] || id
-					);
-					challenge.targetedVocabularyIds = parsed.targetedVocabularyIds;
-				}
-				if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds)) {
-					parsed.targetedGrammarIds = parsed.targetedGrammarIds.map(
-						(id: string) => idMap[id] || id
-					);
-					challenge.targetedGrammarIds = parsed.targetedGrammarIds;
-				}
-				// Remap vocab tags in challengeText: <vocab id="v0"> -> <vocab id="real-uuid">
-				if (challenge.challengeText) {
-					challenge.challengeText = challenge.challengeText.replace(
-						/<vocab\s+id="([^"]+)">/g,
-						(_match: string, shortId: string) => `<vocab id="${idMap[shortId] || shortId}">`
-					);
-				}
-				// Remap fill-blank hint vocabIds
-				if (challenge.hints && Array.isArray(challenge.hints)) {
-					challenge.hints = challenge.hints.map((h: any) => ({
-						...h,
-						vocabId: idMap[h.vocabId] || h.vocabId
-					}));
-				}
-
-				// Filter targeted vocab/grammar to only IDs the LLM actually used in the sentence.
-				// The LLM returns targetedVocabularyIds/targetedGrammarIds listing only what it used.
-				// Discard any vocab/grammar the LLM didn't use so they aren't graded or shown.
-				if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds)) {
-					const usedVocabIds = new Set(parsed.targetedVocabularyIds);
-					challenge.targetedVocabulary = (
-						challenge._allMetadataVocab ||
-						challenge.targetedVocabulary ||
-						[]
-					).filter((v: any) => usedVocabIds.has(v.id));
-				}
-				if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds)) {
-					const usedGrammarIds = new Set(parsed.targetedGrammarIds);
-					challenge.targetedGrammar = (
-						challenge._allMetadataGrammar ||
-						challenge.targetedGrammar ||
-						[]
-					).filter((g: any) => usedGrammarIds.has(g.id));
-				}
-
-				// Initialize fill-blank answers array
-				if (challenge.gameMode === 'fill-blank' && challenge.hints) {
-					fillBlankAnswers = challenge.hints.map(() => '');
-				}
-
-				// Shuffle multiple-choice options
-				if (
-					challenge.gameMode === 'multiple-choice' &&
-					challenge.distractors &&
-					challenge.targetSentence
-				) {
-					const allChoices = [...challenge.distractors, challenge.targetSentence];
-					shuffledChoices = allChoices.sort(() => Math.random() - 0.5);
-				}
-			} catch (e) {
-				console.error('Failed to parse final JSON', e);
-				throw new Error('Incomplete response from AI.');
-			}
-
-			if (!challenge.challengeText || !challenge.targetSentence) {
-				throw new Error('AI failed to generate a complete challenge.');
-			}
-		} catch (error) {
-			if (error instanceof DOMException && error.name === 'AbortError') {
-				// Request was intentionally cancelled — don't show an error
-				return;
-			}
-			console.error(error);
-			toast.error(
-				`Failed to generate challenge: ${error instanceof Error ? error.message : 'Unknown error'}`
-			);
-			challenge = null;
-		} finally {
-			generateController = null;
-			// Complete progress bar then clean up
-			stopLoadingIntervals();
-			loadProgressPct = 100;
-			setTimeout(() => {
-				loadProgressPct = 0;
-			}, 500);
-			loading = false;
-			isStreaming = false;
-		}
-	}
-
-	async function submitAnswer() {
-		if (submitting) return;
-		const mode = challenge?.gameMode || 'native-to-target';
-
-		// Build userInput based on mode
-		let effectiveInput = userInput;
-		if (mode === 'fill-blank') {
-			if (fillBlankAnswers.some((a) => !a.trim())) return;
-			// Reconstruct the full sentence by substituting each blank answer back into
-			// challengeText in order. Sending the complete sentence to the grader means
-			// it can evaluate the whole answer in context, not just isolated blank values.
-			let reconstructed = challenge?.challengeText || '';
-			for (const answer of fillBlankAnswers) {
-				reconstructed = reconstructed.replace('___', answer);
-			}
-			effectiveInput = reconstructed;
-		} else if (mode === 'multiple-choice') {
-			if (!selectedChoice) return;
-			effectiveInput = selectedChoice;
-		} else {
-			if (!userInput.trim()) return;
-		}
-
-		if (isStreaming) {
-			// Removed restriction to allow early submission
-			console.warn('Challenge is still generating, but submission is allowed.');
-		}
-		if (!challenge?.targetSentence) {
-			toast.error(
-				'Challenge was not properly generated (missing target sentence). Please generate a new challenge.'
-			);
-			return;
-		}
-
-		if (mode === 'multiple-choice') {
-			hasSubmittedMc = true;
-		}
-
-		submitting = true;
-		feedback = null;
-
-		submitController = new AbortController();
-
-		const responseTimeMs = challengeStartMs !== null ? Date.now() - challengeStartMs : null;
-		challengeStartMs = null;
-
-		try {
-			const res = await fetch('/api/submit-answer', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					userId: challenge.userId,
-					userInput: effectiveInput,
-					targetSentence: challenge.targetSentence,
-					targetedVocabularyIds: challenge.targetedVocabulary?.map((v: any) => v.id) || [],
-					targetedGrammarIds: challenge.targetedGrammar?.map((g: any) => g.id) || [],
-					gameMode: challenge.gameMode || 'native-to-target',
-					assignmentId: assignment?.id ?? null,
-					activeLanguageName: lessonLanguage?.name || 'German',
-					responseTimeMs
-				}),
-				signal: submitController.signal
-			});
-
-			if (!res.ok) {
-				const error = await res.json();
-				toast.error(`Error: ${error.error}`);
-				feedback = null;
-				return;
-			}
-
-			const reader = res.body?.getReader();
-			if (!reader) throw new Error('Failed to get readable stream');
-
-			const decoder = new TextDecoder();
-			let responseText = '';
-
-			// Keep submitting=true until we have actual feedback text to show
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				responseText += decoder.decode(value, { stream: true });
-
-				// Progressively extract the "feedback" field from the streaming JSON
-				const feedbackMatch = responseText.match(/"feedback"\s*:\s*"((?:[^"\\]|\\.)*)/);
-				if (feedbackMatch) {
-					let feedbackText: string;
-					try {
-						feedbackText = JSON.parse(`"${feedbackMatch[1]}"`);
-					} catch (_) {
-						feedbackText = feedbackMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-					}
-					if (!feedback) {
-						feedback = {
-							globalScore: null,
-							vocabularyUpdates: [],
-							grammarUpdates: [],
-							feedback: feedbackText
-						};
-					} else {
-						feedback.feedback = feedbackText;
-					}
-					// Only stop showing "Evaluating..." once we have visible feedback
-					if (submitting) submitting = false;
-					feedback = feedback; // trigger reactivity
-				}
-			}
-
-			// Parse the complete JSON response for all structured data
-			try {
-				// For streaming responses, the server appends \n\nJSON_PAYLOAD:{...} at the end
-				const payloadMarker = '\n\nJSON_PAYLOAD:';
-				const payloadIdx = responseText.indexOf(payloadMarker);
-				const jsonToParse =
-					payloadIdx >= 0 ? responseText.slice(payloadIdx + payloadMarker.length) : responseText;
-				const data = JSON.parse(jsonToParse);
-				// Build grader idMap from the order of IDs we sent (same order the grader used)
-				const graderIdMap: Record<string, string> = {};
-				(challenge.targetedVocabulary || []).forEach((v: any, i: number) => {
-					graderIdMap[`v${i}`] = v.id;
-				});
-				(challenge.targetedGrammar || []).forEach((g: any, i: number) => {
-					graderIdMap[`g${i}`] = g.id;
-				});
-				feedback = {
-					globalScore: data.globalScore ?? 0,
-					vocabularyUpdates: (data.vocabularyUpdates || []).map((u: any) => ({
-						...u,
-						id: graderIdMap[u.id] || u.id
-					})),
-					grammarUpdates: (data.grammarUpdates || []).map((u: any) => ({
-						...u,
-						id: graderIdMap[u.id] || u.id
-					})),
-					feedback: data.feedback || ''
-				};
-				// Update assignment progress if we got it back
-				if (data.assignmentProgress && assignmentProgress) {
-					assignmentProgress = data.assignmentProgress;
-				}
-				// Accumulate session XP (1 XP per score point, rounded)
-				sessionChallenges += 1;
-				const xpEarned = Math.round((data.globalScore ?? 0) * 10);
-				sessionXp += xpEarned;
-				// Update local EMA for adaptive mode selection
-				recordModeOutcome((data.globalScore ?? 0) >= 0.5);
-
-				// Leitner queue: enqueue any items answered incorrectly (score < 0.5).
-				// Items are re-presented after LEITNER_BOX_INTERVALS[box] more challenges.
-				// A second failure on the same item promotes it to box 2 (longer delay).
-				const wrongVocabIds = (data.vocabularyUpdates || [])
-					.filter((u: any) => u.score < 0.5)
-					.map((u: any) => u.id)
-					.filter(Boolean);
-				const wrongGrammarIds = (data.grammarUpdates || [])
-					.filter((u: any) => u.score < 0.5)
-					.map((u: any) => u.id)
-					.filter(Boolean);
-				if (wrongVocabIds.length > 0 || wrongGrammarIds.length > 0) {
-					const surviving = leitnerQueue.filter((item) => {
-						const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
-						const grammarHit = item.grammarIds.some((id: string) => wrongGrammarIds.includes(id));
-						return !vocabHit && !grammarHit;
-					});
-					const repeated = leitnerQueue.filter((item) => {
-						const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
-						const grammarHit = item.grammarIds.some((id: string) => wrongGrammarIds.includes(id));
-						return vocabHit || grammarHit;
-					});
-					// Re-queue items that were already in box 1 → promote to box 2
-					for (const existing of repeated) {
-						surviving.push({
-							vocabIds: existing.vocabIds,
-							grammarIds: existing.grammarIds,
-							dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[2],
-							box: 2
-						});
-					}
-					// Enqueue brand-new failures at box 1
-					const freshVocab = wrongVocabIds.filter(
-						(id: string) => !repeated.some((q) => q.vocabIds.includes(id))
-					);
-					const freshGrammar = wrongGrammarIds.filter(
-						(id: string) => !repeated.some((q) => q.grammarIds.includes(id))
-					);
-					if (freshVocab.length > 0 || freshGrammar.length > 0) {
-						surviving.push({
-							vocabIds: freshVocab,
-							grammarIds: freshGrammar,
-							dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[1],
-							box: 1
-						});
-					}
-					leitnerQueue = surviving;
-				}
-
-				// Level Up Celebration
-				if (data.levelUp) {
-					userLevel = data.levelUp.newLevel;
-					isAbsoluteBeginner = userLevel === 'A1';
-					modal.alert(
-						`Congratulations! You've leveled up from ${data.levelUp.oldLevel} to ${data.levelUp.newLevel}!`,
-						'🎉 Level Up!'
-					);
-				}
-			} catch (e) {
-				console.error('Failed to parse full feedback response', e, responseText);
-			}
-		} catch (error) {
-			if (error instanceof DOMException && error.name === 'AbortError') {
-				return;
-			}
-			console.error(error);
-			toast.error(
-				`Failed to submit answer: ${error instanceof Error ? error.message : 'Unknown error'}`
-			);
-			feedback = null;
-			hasSubmittedMc = false;
-		} finally {
-			submitController = null;
-			submitting = false;
-		}
-	}
+  import { onMount, onDestroy, tick } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
+  import toast from 'svelte-french-toast';
+  import { marked } from 'marked';
+  import { modal } from '$lib/modal.svelte';
+  import type { PageData } from './$types';
+
+  import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
+  import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
+  import TranslationView from '$lib/components/play/TranslationView.svelte';
+  import ImmersionView from '$lib/components/play/ImmersionView.svelte';
+  import BookmarkButton from '$lib/components/BookmarkButton.svelte';
+  import { getLanguageConfig } from '$lib/languages';
+
+  let { data } = $props<{ data: PageData }>();
+
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  let activeTab = $state<'learn' | 'games'>('learn');
+
+  $effect(() => {
+    const tabParam = $page.url.searchParams.get('tab');
+    if (tabParam === 'games') {
+      activeTab = 'games';
+    } else if (tabParam === 'immerse') {
+      // Legacy URL — redirect to learn with immerse mode active
+      activeTab = 'learn';
+      gameMode = 'immerse';
+      showingImmerse = true;
+    } else {
+      activeTab = 'learn';
+    }
+  });
+  let myGames = $derived(data.myGames);
+  let communityGames = $derived(data.communityGames);
+  let totalCommunityGames = $state(0);
+  $effect(() => {
+    if (data.totalCommunityGames) {
+      totalCommunityGames = data.totalCommunityGames;
+    }
+  });
+  let teacherClasses = $derived(data.teacherClasses);
+
+  let currentCategory = $state('All');
+  const categories = ['All', 'Vocabulary', 'Grammar', 'Culture', 'Conversation', 'General'];
+  let currentPage = $state(1);
+  let loadingMore = $state(false);
+
+  async function loadGames(page = 1, append = false) {
+    loadingMore = true;
+    try {
+      const res = await fetch(`/api/games?page=${page}&limit=10&category=${currentCategory}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (append) {
+          communityGames = [...communityGames, ...json.games];
+        } else {
+          communityGames = json.games;
+        }
+        totalCommunityGames = json.pagination.total;
+        currentPage = page;
+      }
+    } catch (error) {
+      console.error('Failed to load games', error);
+    } finally {
+      loadingMore = false;
+    }
+  }
+
+  function handleCategoryChange(category: string) {
+    currentCategory = category;
+    loadGames(1, false);
+  }
+
+  function loadMore() {
+    loadGames(currentPage + 1, true);
+  }
+
+  // Modal state for selecting a class
+  let showClassModal = $state(false);
+  let selectedGameIdForLive = $state<string | null>(null);
+
+  // No longer dependent on classId in the URL
+  let canPlayLive = $derived(data.userRole === 'ADMIN' || data.userRole === 'TEACHER');
+
+  async function startLiveSession(gameId: string, targetClassId: string) {
+    try {
+      const res = await fetch(`/api/classes/${targetClassId}/live-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', gameId })
+      });
+      if (res.ok) {
+        toast.success('Live session started! Students can now join.');
+        window.location.href = `/classes/${targetClassId}/live/teacher`;
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Failed to start live session');
+      }
+    } catch (_) {
+      toast.error('An error occurred');
+    }
+  }
+
+  function handlePlayLive(gameId: string) {
+    const urlClassId = $page.url.searchParams.get('classId');
+    if (urlClassId) {
+      startLiveSession(gameId, urlClassId);
+      return;
+    }
+
+    if (teacherClasses.length === 0) {
+      toast.error('You need to create a class first.');
+      return;
+    }
+
+    if (teacherClasses.length === 1) {
+      startLiveSession(gameId, teacherClasses[0].id);
+    } else {
+      selectedGameIdForLive = gameId;
+      showClassModal = true;
+    }
+  }
+
+  function getFlagEmoji(language: string) {
+    if (!language) return '🌍';
+    const lang = language.toLowerCase();
+    if (lang === 'german' || lang === 'de') return '🇩🇪';
+    if (lang === 'french' || lang === 'fr') return '🇫🇷';
+    if (lang === 'spanish' || lang === 'es') return '🇪🇸';
+    if (lang === 'english' || lang === 'en') return '🇺🇸';
+    if (lang === 'italian' || lang === 'it') return '🇮🇹';
+    if (lang === 'portuguese' || lang === 'pt') return '🇵🇹';
+    if (lang === 'russian' || lang === 'ru') return '🇷🇺';
+    if (lang === 'japanese' || lang === 'ja') return '🇯🇵';
+    if (lang === 'korean' || lang === 'ko') return '🇰🇷';
+    if (lang === 'chinese' || lang === 'zh') return '🇨🇳';
+    return '🌍';
+  }
+
+  type GameMode =
+    | 'native-to-target'
+    | 'target-to-native'
+    | 'fill-blank'
+    | 'multiple-choice'
+    | 'chat'
+    | 'immerse';
+
+  let englishFlag = $state('🇬🇧');
+
+  onMount(async () => {
+    try {
+      if (
+        'keyboard' in navigator &&
+        typeof (navigator as any).keyboard?.getLayoutMap === 'function'
+      ) {
+        await (navigator as any).keyboard.getLayoutMap(); // layout map available but locale detection not used
+        // Keyboard Layout Map doesn't directly expose locale, but we can check navigator.language as primary signal
+      }
+    } catch (_) {
+      /* keyboard layout API unavailable */
+    }
+    // Fall back to navigator.language / navigator.languages
+    const langs = [...(navigator.languages || []), navigator.language].map((l) => l.toLowerCase());
+    if (langs.some((l) => l === 'en-us' || l.startsWith('en-us'))) {
+      englishFlag = '🇺🇸';
+    }
+  });
+
+  let challenge = $state<any>(null);
+  let loading = $state(false);
+  let isStreaming = $state(false);
+  let userInput = $state('');
+  let feedback = $state<any>(null);
+  let submitting = $state(false);
+  let challengeStartMs = $state<number | null>(null); // timestamp when challenge became ready for input
+  let sessionXp = $state(0);
+  let sessionChallenges = $state(0);
+  let displayedChallengeNumber = $state(1);
+  let gameMode: GameMode = $state('native-to-target');
+  let showingImmerse = $state(false); // true when immerse mode is active inline
+  // null = adaptive (algorithm picks each round); set = user has pinned a specific cycle mode
+  let pinnedMode = $state(new Set<CyclableMode>());
+
+  // ── Adaptive mode selection ──────────────────────────────────────────────
+  // Modes ordered from easiest (0) to hardest (3).
+  // The selection algorithm uses a Gaussian-weighted probability distribution
+  // centered at a "target difficulty" derived from the user's recent performance.
+  //
+  // Target difficulty = blend(sessionSuccessEma, sessionCorrectRate) × 3
+  //   - Low performance → target near 0 → favours multiple-choice
+  //   - High performance → target near 3 → favours native-to-target
+  //
+  // Gaussian kernel: weight[i] = exp(-((i - target)^2) / (2σ²))
+  // σ = 1.2 gives reasonable spread so no mode is ever fully excluded.
+  type CyclableMode = 'multiple-choice' | 'target-to-native' | 'fill-blank' | 'native-to-target';
+  const ALL_CYCLE_MODES: CyclableMode[] = [
+    'multiple-choice', // difficulty index 0
+    'target-to-native', // difficulty index 1
+    'fill-blank', // difficulty index 2
+    'native-to-target' // difficulty index 3
+  ];
+  const EMA_ALPHA = 0.2; // matches server-side SESSION_SUCCESS_EMA_ALPHA
+  const GAUSS_SIGMA = 1.2; // spread of the Gaussian; higher = more mode variety
+
+  // Local EMA — starts from last-known server value, updated after each answer
+  let localEma = $state(0.75);
+  $effect(() => {
+    if (data.sessionSuccessEma !== undefined) {
+      localEma = data.sessionSuccessEma;
+    }
+  });
+
+  // Per-session tracking for immediate feedback within a session
+  let sessionCorrectCount = $state(0);
+  let sessionAnsweredCount = $state(0);
+
+  function recordModeOutcome(wasCorrect: boolean) {
+    // Update per-session counters
+    sessionAnsweredCount++;
+    if (wasCorrect) sessionCorrectCount++;
+    // Update local EMA using the same rule as the server
+    localEma = localEma + EMA_ALPHA * ((wasCorrect ? 1.0 : 0.0) - localEma);
+  }
+
+  function getNextCycleMode(): CyclableMode {
+    // If the user pinned specific modes, pick randomly from those only
+    if (pinnedMode.size > 0) {
+      const pinned = [...pinnedMode];
+      return pinned[Math.floor(Math.random() * pinned.length)];
+    }
+
+    // Blend global EMA with session-local rate (session rate weighted more as session grows)
+    const sessionRate =
+      sessionAnsweredCount > 0 ? sessionCorrectCount / sessionAnsweredCount : localEma;
+    const sessionWeight = Math.min(0.5, sessionAnsweredCount * 0.05); // grows to 0.5 after 10 answers
+    const effectiveScore = localEma * (1 - sessionWeight) + sessionRate * sessionWeight;
+
+    // Map [0,1] score to a target difficulty index [0,3]
+    const targetDifficulty = effectiveScore * 3;
+
+    // Gaussian weights centered at targetDifficulty
+    const weights = ALL_CYCLE_MODES.map((_, i) => {
+      const dist = i - targetDifficulty;
+      return Math.exp(-(dist * dist) / (2 * GAUSS_SIGMA * GAUSS_SIGMA));
+    });
+
+    // Weighted random sample
+    const total = weights.reduce((a, b) => a + b, 0);
+    let rand = Math.random() * total;
+    for (let i = 0; i < weights.length; i++) {
+      rand -= weights[i];
+      if (rand <= 0) return ALL_CYCLE_MODES[i];
+    }
+    return ALL_CYCLE_MODES[ALL_CYCLE_MODES.length - 1];
+  }
+
+  let fillBlankAnswers = $state<string[]>([]);
+  let selectedChoice = $state<string | null>(null);
+  let shuffledChoices = $state<string[]>([]);
+  let hasSubmittedMc = $state(false);
+
+  let currentLessonLanguage = $state<any>(null);
+  let lessonLanguage = $derived(currentLessonLanguage || data.language);
+
+  // ---------------------------------------------------------------------------
+  // Leitner within-session retry queue
+  // When the user answers incorrectly, failed items are enqueued to be shown
+  // again after an expanding interval: box 1 = 2 challenges later, box 2 = 5.
+  // ---------------------------------------------------------------------------
+  interface LeitnerItem {
+    vocabIds: string[]; // vocabulary IDs that were wrong
+    grammarIds: string[]; // grammar rule IDs that were wrong
+    dueAtChallenge: number; // show again when sessionChallenges reaches this value
+    box: 1 | 2; // Leitner box; items advance to box 2 on a second failure
+  }
+  let leitnerQueue: LeitnerItem[] = [];
+  const LEITNER_BOX_INTERVALS = { 1: 2, 2: 5 } as const;
+
+  // Assignment context
+  let assignment = $derived(data.assignment ?? null);
+  let assignmentProgress = $state<any>(null);
+
+  $effect(() => {
+    if (data.assignmentScore) {
+      assignmentProgress = {
+        score: data.assignmentScore.score,
+        targetScore: assignment?.targetScore ?? 0,
+        passed: data.assignmentScore.passed
+      };
+    } else if (assignment) {
+      assignmentProgress = { score: 0, targetScore: assignment.targetScore, passed: false };
+    } else {
+      assignmentProgress = null;
+    }
+  });
+
+  // Lock game mode to assignment's required mode when in assignment context
+  $effect(() => {
+    if (assignment) {
+      if (assignment.gamemode === 'immerse') {
+        gameMode = 'immerse';
+        showingImmerse = true;
+      } else {
+        gameMode = (assignment.gamemode as GameMode) ?? gameMode;
+      }
+    }
+  });
+
+  // Loading progress & cycling tips
+  let loadProgressPct = $state(0);
+  let loadTipIndex = $state(0);
+  let estimatedLoadMs = 9000;
+  let isLocalMode = $state(false);
+  let _loadProgressInterval: ReturnType<typeof setInterval> | null = null;
+  let _loadTipInterval: ReturnType<typeof setInterval> | null = null;
+  let expandedGrammarId = $state<string | null>(null);
+  let showGrammarRef = $state(false);
+
+  function toggleGrammar(id: string) {
+    expandedGrammarId = expandedGrammarId === id ? null : id;
+  }
+
+  const GENERAL_TIPS = [
+    "Originally, LingoLearn was called 'LernenDeutsch' — but we let the other languages stick around!",
+    'Spaced repetition (SRS) is proven to make vocabulary stick up to 3× faster.',
+    'Reading just 15 minutes a day in your target language dramatically speeds up fluency.',
+    'Context beats memorization — learning words in sentences helps retention by ~40%.',
+    'The i+1 principle: you learn best when input is just slightly above your current level.',
+    'Mistakes are part of the process — every error is your brain recalibrating.',
+    'Listening to music in your target language is a fun way to absorb natural phrasing.',
+    'Most polyglots agree: speaking on day one — even badly — accelerates learning.',
+    'Thinking in your target language (even simple thoughts) builds fluency faster than translation.',
+    'The forgetting curve shows you lose ~70% of new info in 24 hours without review.',
+    'Writing by hand activates more brain regions than typing, boosting word retention.',
+    "Immersion doesn't require travel — change your phone's language for instant practice.",
+    'You need roughly 3,000 words to understand ~95% of everyday conversation in most languages.'
+  ];
+
+  const LANG_TIPS: Record<string, string[]> = {
+    German: [
+      'All nouns in German are capitalized — even in the middle of a sentence.',
+      "The word 'Schadenfreude' has no direct English equivalent: joy at others' misfortune.",
+      "German compound nouns can be infinitely long — 'Donaudampfschifffahrtsgesellschaft' is a real word.",
+      "'Fingerspitzengefühl' means 'fingertip feeling' — a delicate touch or sensitivity.",
+      'German has formal (Sie) and informal (du) ways of addressing people.',
+      'In German main clauses, the conjugated verb always sits in the second position.',
+      "'Weltschmerz' meaning world-weariness was coined by Jean Paul, a German author.",
+      'German and English share about 60% of their vocabulary roots.',
+      'The German alphabet adds 4 extra letters: ä, ö, ü, and ß.',
+      "'Doch' can contradict a negative question — like 'Oh yes it is!' in English.",
+      'Modal verbs (können, müssen, dürfen…) push the main verb to the very end of the clause.',
+      'German has 4 grammatical cases: Nominative, Accusative, Dative, and Genitive.',
+      'German word order in subordinate clauses sends the verb to the very end.',
+      "'Gemütlichkeit' describes a feeling of warmth, coziness, and belonging — untranslatable in English.",
+      "The longest German word in everyday use is 'Rechtsschutzversicherungsgesellschaften' (legal insurance companies).",
+      "German separable verbs split apart in main clauses — 'anfangen' becomes 'Ich fange an.'",
+      "The German 'ch' sound doesn't exist in English — it's like a soft hiss from the roof of your mouth.",
+      'In German, adjective endings change based on case, gender, and whether an article is present.',
+      "'Kummerspeck' literally means 'grief bacon' — weight gained from emotional eating.",
+      'German uses three genders: der (masculine), die (feminine), and das (neuter).',
+      'The Dative case is used after prepositions like mit, bei, nach, seit, von, zu, and aus.'
+    ],
+    Spanish: [
+      'Spanish is the 2nd most spoken native language in the world with ~500 million speakers.',
+      "Spanish has two verbs for 'to be': ser (permanent) and estar (temporary).",
+      'In Spanish, nouns have grammatical gender — either masculine or feminine.',
+      'The ¡ and ¿ marks at the start of sentences are unique to Spanish.',
+      'Spanish is spoken in over 20 countries across 4 continents.',
+      "The subjunctive mood in Spanish expresses doubt, wishes, and hypotheticals — and it's used constantly.",
+      "'Sobremesa' is the time spent chatting at the table after a meal — there's no English word for it.",
+      "Spanish 'll' and 'y' sound the same in most dialects — a phenomenon called yeísmo.",
+      'The letter ñ is unique to Spanish and represents a palatal nasal sound.',
+      "In Spanish, adjectives usually come after the noun: 'casa blanca' not 'blanca casa.'",
+      "'Empalagar' means to feel sick from eating too much of something sweet.",
+      'The Spanish Royal Academy (RAE) officially regulates the language since 1713.',
+      'Spanish has about 10 million words, but you only need ~2,000 for everyday conversation.',
+      "The word 'ojalá' comes from Arabic (inshallah) and means 'hopefully' or 'God willing.'",
+      "Ser vs. estar: 'Estoy aburrido' = I am bored, but 'Soy aburrido' = I am boring!",
+      "Spanish uses the personal 'a' before direct objects that are people: 'Veo a María.'",
+      "'Madrugada' refers to the wee hours between midnight and dawn — a single word English lacks."
+    ],
+    French: [
+      'French has two genders for nouns: masculine and feminine.',
+      'Adjectives in French usually come after the noun they describe.',
+      'The letter "h" is usually silent in French.',
+      'French is an official language in 29 countries across multiple continents.',
+      'The cedilla (ç) changes the "c" sound from a hard "k" to a soft "s" before a, o, or u.',
+      'Liaisons connect the final consonant of one word to the initial vowel of the next.',
+      'Many English words end in -tion because they were borrowed directly from French.',
+      'The word "voilà" means "there it is" or "here you go" and is widely used.',
+      'French has distinct formal (vous) and informal (tu) pronouns for "you".',
+      'Numbers from 70 to 99 are counted in a unique way in French (e.g., 80 is quatre-vingts, or four twenties).'
+    ]
+  };
+
+  let loadingTips = $state<string[]>([]);
+
+  $effect(() => {
+    const langName = lessonLanguage?.name;
+    const specificTips = langName && LANG_TIPS[langName] ? LANG_TIPS[langName] : [];
+    loadingTips = [...specificTips, ...GENERAL_TIPS];
+  });
+
+  // User level tracking (populated from page data and updated from lesson metadata)
+  let userLevel = $state('A1');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let isAbsoluteBeginner = $state(true);
+
+  $effect(() => {
+    if (data.cefrLevel) {
+      userLevel = data.cefrLevel;
+      isAbsoluteBeginner = data.cefrLevel === 'A1';
+    }
+  });
+  // Sentence difficulty: set from lesson metadata, cleared on each new challenge
+  let sentenceTooComplex = $state(false);
+  let sentenceEstimatedLevel = $state<string | null>(null);
+
+  // AbortControllers for in-flight API requests
+  let generateController: AbortController | null = null;
+  let submitController: AbortController | null = null;
+
+  function stopLoadingIntervals() {
+    if (_loadProgressInterval) {
+      clearInterval(_loadProgressInterval);
+      _loadProgressInterval = null;
+    }
+    if (_loadTipInterval) {
+      clearInterval(_loadTipInterval);
+      _loadTipInterval = null;
+    }
+  }
+
+  function cancelAllRequests() {
+    if (generateController) {
+      generateController.abort();
+      generateController = null;
+    }
+    // submitController is intentionally NOT aborted here — submit-answer awards
+    // credit (ELO, XP, DB writes) and must always run to completion.
+    stopLoadingIntervals();
+  }
+
+  onDestroy(() => {
+    cancelAllRequests();
+  });
+
+  // Language config — all language-specific data (articles, inflections, gender
+  // mappings, etc.) lives in src/lib/languages/. Adding a new language = adding
+  // one file there; no changes needed here.
+  let langConfig = $derived(getLanguageConfig(lessonLanguage?.name || 'German'));
+
+  function genderToArticle(gender: string | null | undefined): string | null {
+    if (!gender) return null;
+    return langConfig.genderToArticle(gender);
+  }
+  function getArticleMap() {
+    return langConfig.articleMap;
+  }
+  function getInflectionMap() {
+    return langConfig.inflectionMap;
+  }
+
+  // --- Inline language data removed — now in src/lib/languages/*.ts ---
+  // If you need to add a language, create a new file there.
+  function buildTooltipHtml(vocab: any, overrideArticle?: string, inflectionNote?: string): string {
+    const isNoun = vocab.partOfSpeech?.toLowerCase() === 'noun';
+    const lemmaDisplay = isNoun
+      ? vocab.lemma.charAt(0).toUpperCase() + vocab.lemma.slice(1)
+      : vocab.lemma;
+
+    const genderDisplay = genderToArticle(vocab.gender);
+    const isAiGenerated = typeof vocab.id === 'string' && vocab.id.startsWith('ai_');
+    let html = `<span class="word-tooltip">`;
+    html += `<span class="word-tooltip-header">${overrideArticle ?? lemmaDisplay}${isAiGenerated ? '<span class="word-tooltip-ai-badge">AI</span>' : ''}</span>`;
+    html += `<span class="word-tooltip-body">`;
+
+    if (inflectionNote) {
+      html += `<span class="word-tooltip-row"><strong>Form:</strong> ${inflectionNote}</span>`;
+    }
+    if (overrideArticle) {
+      html += `<span class="word-tooltip-row"><strong>Noun:</strong> ${lemmaDisplay}</span>`;
+      if (genderDisplay)
+        html += `<span class="word-tooltip-row"><strong>Gender:</strong> ${genderDisplay}</span>`;
+    } else {
+      if (vocab.partOfSpeech)
+        html += `<span class="word-tooltip-row"><strong>POS:</strong> ${vocab.partOfSpeech}</span>`;
+      if (isNoun && genderDisplay)
+        html += `<span class="word-tooltip-row"><strong>Gender:</strong> ${genderDisplay}</span>`;
+    }
+    if (vocab.plural)
+      html += `<span class="word-tooltip-row"><strong>Plural:</strong> ${vocab.plural}</span>`;
+
+    const displayMeaning = vocab.meaning || vocab.meanings?.[0]?.value;
+    if (displayMeaning)
+      html += `<span class="word-tooltip-row"><strong>Meaning:</strong> ${displayMeaning}</span>`;
+    html += `</span></span>`;
+    return html;
+  }
+
+  function getBasicStems(word: string): string[] {
+    const stems: string[] = [];
+    const suffixes = [
+      'ung',
+      'te',
+      'ten',
+      'tet',
+      'test',
+      'en',
+      'er',
+      'es',
+      'em',
+      'et',
+      'st',
+      'e',
+      't',
+      'n',
+      's'
+    ];
+    for (const suffix of suffixes) {
+      if (word.length >= suffix.length + 2 && word.endsWith(suffix)) {
+        const stem = word.slice(0, -suffix.length);
+        stems.push(stem);
+        if (suffix !== 'en') {
+          stems.push(stem + 'en');
+        }
+      }
+    }
+    // Past participle: ge-...-t or ge-...-en
+    if (word.startsWith('ge') && word.length > 4) {
+      const rest = word.slice(2);
+      stems.push(rest);
+      if (rest.endsWith('t') && rest.length > 2) {
+        stems.push(rest.slice(0, -1) + 'en');
+      }
+      if (rest.endsWith('en') && rest.length > 3) {
+        stems.push(rest);
+      }
+    }
+    // zu-infinitive: aufzugeben → aufgeben
+    const zuMatch = word.match(/^(.+?)zu(.+)$/);
+    if (zuMatch && zuMatch[1].length >= 2 && zuMatch[2].length >= 2) {
+      stems.push(zuMatch[1] + zuMatch[2]);
+    }
+    return stems;
+  }
+
+  function getBasicEnglishStems(word: string): string[] {
+    const stems: string[] = [];
+    // Plural / verb forms
+    if (word.endsWith('ies') && word.length > 4) stems.push(word.slice(0, -3) + 'y');
+    if (word.endsWith('ves') && word.length > 4)
+      stems.push(word.slice(0, -3) + 'f', word.slice(0, -3) + 'fe');
+    if (
+      word.endsWith('ses') ||
+      word.endsWith('xes') ||
+      word.endsWith('zes') ||
+      word.endsWith('ches') ||
+      word.endsWith('shes')
+    ) {
+      stems.push(word.endsWith('es') ? word.slice(0, -2) : word);
+    }
+    if (word.endsWith('s') && !word.endsWith('ss')) stems.push(word.slice(0, -1));
+    if (word.endsWith('es') && word.length > 3) stems.push(word.slice(0, -2));
+    // -ing forms
+    if (word.endsWith('ing') && word.length > 5) {
+      stems.push(word.slice(0, -3));
+      stems.push(word.slice(0, -3) + 'e');
+      // double consonant: running → run
+      const base = word.slice(0, -3);
+      if (base.length >= 2 && base[base.length - 1] === base[base.length - 2]) {
+        stems.push(base.slice(0, -1));
+      }
+    }
+    // -ed forms
+    if (word.endsWith('ed') && word.length > 4) {
+      stems.push(word.slice(0, -2));
+      stems.push(word.slice(0, -1)); // e.g., "liked" → "like"
+      stems.push(word.slice(0, -2) + 'e');
+      const base = word.slice(0, -2);
+      if (base.length >= 2 && base[base.length - 1] === base[base.length - 2]) {
+        stems.push(base.slice(0, -1));
+      }
+    }
+    // -er comparative
+    if (word.endsWith('er') && word.length > 4) {
+      stems.push(word.slice(0, -2));
+      stems.push(word.slice(0, -1));
+    }
+    // -ly → adjective
+    if (word.endsWith('ly') && word.length > 4) {
+      stems.push(word.slice(0, -2));
+    }
+    return stems;
+  }
+
+  function levenshteinDistance(a: string, b: string): number {
+    const s1 = a;
+    const s2 = b;
+    if (s1.length === 0) return s2.length;
+    if (s2.length === 0) return s1.length;
+    const matrix: (number | null)[][] = Array(s2.length + 1)
+      .fill(null)
+      .map(() => Array(s1.length + 1).fill(null));
+    for (let i = 0; i <= s1.length; i += 1) matrix[0][i] = i;
+    for (let j = 0; j <= s2.length; j += 1) matrix[j][0] = j;
+    for (let j = 1; j <= s2.length; j += 1) {
+      for (let i = 1; i <= s1.length; i += 1) {
+        const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          (matrix[j][i - 1] as number) + 1,
+          (matrix[j - 1][i] as number) + 1,
+          (matrix[j - 1][i - 1] as number) + indicator
+        );
+      }
+    }
+    return matrix[s2.length][s1.length] as number;
+  }
+
+  function buildVocabMap(): Map<string, any[]> {
+    const map = new Map<string, any[]>();
+    const isEnToDe = challenge?.gameMode === 'native-to-target';
+
+    const add = (key: string, v: any) => {
+      if (!key) return;
+      if (!map.has(key)) map.set(key, []);
+      // Avoid duplicate entries
+      if (!map.get(key)!.some((existing) => existing.id === v.id)) {
+        map.get(key)!.push(v);
+      }
+    };
+
+    for (const v of challenge?.allVocabulary || []) {
+      add(v.lemma.toLowerCase(), v);
+      const meaningsStr = v.meaning || v.meanings?.[0]?.value;
+      if (isEnToDe && meaningsStr) {
+        for (const m of meaningsStr.split(',')) {
+          add(m.trim().toLowerCase(), v);
+        }
+      }
+    }
+    for (const v of challenge?.targetedVocabulary || []) {
+      add(v.lemma.toLowerCase(), v);
+      const meaningsStr = v.meaning || v.meanings?.[0]?.value;
+      if (isEnToDe && meaningsStr) {
+        for (const m of meaningsStr.split(',')) {
+          add(m.trim().toLowerCase(), v);
+        }
+      }
+    }
+    return map;
+  }
+
+  function parseTextWithTooltips(
+    text: string,
+    isTargetedVocab: boolean,
+    stillStreaming: boolean = false
+  ): string {
+    if (assignment?.disableHoverTranslation) return text;
+    const vocabMap = buildVocabMap();
+    const _isDeToEn = challenge.gameMode === 'target-to-native';
+    // Whether this text is in the target language (to enable article/case tooltips)
+    const mode = challenge.gameMode as string;
+    const isTargetLangText =
+      mode === 'fill-blank'
+        ? true
+        : mode === 'target-to-native'
+          ? isTargetedVocab
+          : mode === 'native-to-target'
+            ? !isTargetedVocab
+            : mode === 'multiple-choice'
+              ? isTargetedVocab
+              : false;
+
+    const isEnToDe = challenge.gameMode === 'native-to-target';
+
+    // Extract target-language words from targetSentence for contextual tooltips in native-to-target mode.
+    // This lets us show the actual form (e.g. "den" instead of "der") from the LLM-generated answer.
+    const targetWords =
+      isEnToDe && challenge?.targetSentence
+        ? challenge.targetSentence
+            .replace(/<[^>]+>/g, '')
+            .split(/\s+/)
+            .map((w: string) => w.replace(/[.,!?;:'"(){}\-\u2014\u2013[\]]/g, ''))
+        : [];
+
+    // Step 1: Replace <vocab> tags with placeholders to protect them
+    const vocabReplacements: string[] = [];
+    text = text.replace(
+      /<vocab(?:\s+[^>]*)?id="([^"]+)"(?:[^>]*)?>([^<]*)<\/vocab>/g,
+      (_match: string, id: string, word: string) => {
+        const vocab =
+          challenge.targetedVocabulary?.find((v: any) => v.id === id) ||
+          challenge.allVocabulary?.find((v: any) => v.id === id);
+        let tooltipHtml = '';
+        if (vocab) {
+          // For native-to-target, find the contextual form of this word in the targetSentence
+          let contextForm: string | undefined;
+          if (isEnToDe && targetWords.length > 0) {
+            const lemma = vocab.lemma?.toLowerCase();
+            // Find the word in targetSentence that matches this vocab's lemma or an inflected form
+            const match = targetWords.find((tw: string) => {
+              const twLower = tw.toLowerCase();
+              if (twLower === lemma) return true;
+              // Check if this target word is a known inflection of the lemma
+              const mapToUse = getInflectionMap();
+              const inf = mapToUse[twLower];
+              if (inf && inf.lemma.toLowerCase() === lemma) return true;
+              // Check if it starts with the lemma (common for German prefixed/conjugated forms)
+              if (
+                lemma &&
+                lemma.length >= 3 &&
+                twLower.startsWith(lemma.slice(0, Math.max(3, lemma.length - 2)))
+              )
+                return true;
+              return false;
+            });
+            if (match && match.toLowerCase() !== lemma) {
+              contextForm = match;
+            }
+          }
+          tooltipHtml = buildTooltipHtml(vocab, contextForm);
+        }
+        const replacement = `<span class="vocab-highlight tooltip-trigger">${word}${tooltipHtml}</span>`;
+        vocabReplacements.push(replacement);
+        return `\x00VOCAB_${vocabReplacements.length - 1}\x00`;
+      }
+    );
+
+    // Clean up incomplete tags from streaming
+    text = text.replace(/<vocab[^>]*>|<\/vocab>|<vocab[^>]*$/g, '');
+
+    const englishArticles = new Set(['the', 'a', 'an']);
+
+    // Helper: find vocab entry for a cleaned word
+    // Returns { vocab, inflectionNote? } or null
+    function findVocab(
+      cleanWord: string,
+      originalToken: string = ''
+    ): { vocab: any; inflectionNote?: string } | null {
+      const pickBest = (list: any[] | undefined) => {
+        if (!list || list.length === 0) return null;
+        if (list.length === 1) return list[0];
+
+        // In German, nouns are always capitalized.
+        // For languages where nouns are capitalized (e.g. German), use capitalization
+        // to bias vocab matching. For others (French, Spanish) nouns are lowercase.
+        if (isTargetLangText && langConfig.capitalizeNouns) {
+          const isCapitalized = /^[A-ZÄÖÜ]/.test(originalToken.replace(/^[¿¡"'({[]+/, ''));
+          if (isCapitalized) {
+            const noun = list.find((v) => v.partOfSpeech?.toLowerCase() === 'noun');
+            if (noun) return noun;
+          } else {
+            const nonNoun = list.find((v) => v.partOfSpeech?.toLowerCase() !== 'noun');
+            if (nonNoun) return nonNoun;
+          }
+        }
+
+        return list[0]; // fallback
+      };
+
+      let vocab = pickBest(vocabMap.get(cleanWord));
+      if (vocab) return { vocab };
+
+      // Check the inflection map for conjugations/contractions
+      if (!isEnToDe) {
+        const mapToUse = getInflectionMap();
+
+        const inflection = mapToUse[cleanWord];
+        if (inflection) {
+          vocab = pickBest(vocabMap.get(inflection.lemma.toLowerCase()));
+          if (vocab) return { vocab, inflectionNote: inflection.note };
+          // Even if the lemma isn't in our vocabulary, create a synthetic entry
+          return {
+            vocab: { lemma: inflection.lemma, meaning: inflection.note, partOfSpeech: null },
+            inflectionNote: inflection.note
+          };
+        }
+      }
+
+      const stems = isEnToDe ? getBasicEnglishStems(cleanWord) : getBasicStems(cleanWord);
+      for (const stem of stems) {
+        vocab = pickBest(vocabMap.get(stem));
+        if (vocab) return { vocab };
+      }
+
+      // Fallback: Fuzzy search over all keys in vocabMap
+      if (cleanWord.length > 3) {
+        const maxDistance = cleanWord.length <= 5 ? 1 : 2;
+        let bestMatch: { vocab: any; distance: number } | null = null;
+
+        for (const [key, vList] of vocabMap.entries() as IterableIterator<[string, any[]]>) {
+          // Quick length filter to avoid calculating Levenshtein on vastly different strings
+          if (Math.abs(key.length - cleanWord.length) > maxDistance) continue;
+
+          const distance = levenshteinDistance(cleanWord, key);
+          if (distance <= maxDistance) {
+            if (!bestMatch || distance < bestMatch.distance) {
+              bestMatch = { vocab: pickBest(vList), distance };
+            }
+          }
+        }
+
+        if (bestMatch && bestMatch.vocab) {
+          return { vocab: bestMatch.vocab };
+        }
+      }
+
+      return null;
+    }
+
+    // Helper: find the next noun vocab by scanning upcoming words
+    function findNextNoun(words: string[], startIdx: number): any {
+      const skippablePOS = new Set(['adjective', 'adverb', 'article', 'determiner', 'pronoun']);
+      for (let j = startIdx; j < words.length && j < startIdx + 5; j++) {
+        const w = words[j];
+        // eslint-disable-next-line no-control-regex
+        if (w.match(/\x00VOCAB_\d+\x00/)) continue;
+        const clean = w.replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase();
+        if (!clean || englishArticles.has(clean)) continue;
+        const result = findVocab(clean, w);
+        const v = result?.vocab;
+        if (v && v.partOfSpeech?.toLowerCase() === 'noun') return v;
+        // Skip adjectives/adverbs that can appear between article and noun
+        if (v && skippablePOS.has(v.partOfSpeech?.toLowerCase())) continue;
+        // No vocab match at all — might be an adjective we don't know; keep scanning
+        if (!v) continue;
+        // Known non-noun, non-skippable POS — stop
+        break;
+      }
+      return null;
+    }
+
+    // Determine if a word is a plural English form pointing at a known noun
+    function isLikelyPlural(cleanWord: string): boolean {
+      if (cleanWord.endsWith('s') && !cleanWord.endsWith('ss')) {
+        const singular = cleanWord.slice(0, -1);
+        const list = vocabMap.get(singular);
+        if (list && list.some((v) => v.partOfSpeech?.toLowerCase() === 'noun')) return true;
+      }
+      if (cleanWord.endsWith('ies') && cleanWord.length > 4) {
+        const singular = cleanWord.slice(0, -3) + 'y';
+        const list = vocabMap.get(singular);
+        if (list && list.some((v) => v.partOfSpeech?.toLowerCase() === 'noun')) return true;
+      }
+      return false;
+    }
+
+    // Step 2: Split into tokens (words + whitespace) and process with lookahead
+    const tokens = text.split(/(\s+)/);
+    const result: string[] = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      // Preserve whitespace tokens
+      if (/^\s+$/.test(token)) {
+        result.push(token);
+        continue;
+      }
+      // Don't touch placeholders
+      // eslint-disable-next-line no-control-regex
+      if (token.match(/\x00VOCAB_\d+\x00/)) {
+        result.push(token);
+        continue;
+      }
+
+      const cleanWord = token.replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase();
+      if (!cleanWord) {
+        result.push(token);
+        continue;
+      }
+
+      // Handle English articles in native-to-target mode
+      if (isEnToDe && englishArticles.has(cleanWord)) {
+        // Get only non-whitespace tokens ahead
+        const upcomingWords = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
+        const nounVocab = findNextNoun(upcomingWords, 0);
+
+        if (nounVocab) {
+          const isPlural =
+            upcomingWords.length > 0 &&
+            isLikelyPlural(
+              upcomingWords[0].replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase()
+            );
+          let article: string;
+
+          // Try to find the actual article from the LLM-generated targetSentence
+          // so we show the correct case (e.g. "den" accusative instead of "der" nominative)
+          const artMap = getArticleMap();
+          const nounLemma = nounVocab.lemma?.toLowerCase();
+          let foundFromTarget = false;
+          if (targetWords.length > 0 && nounLemma) {
+            // Find the noun in the targetSentence, then look at the word before it for the article
+            for (let tw = 0; tw < targetWords.length; tw++) {
+              const twLower = targetWords[tw].toLowerCase();
+              if (twLower === nounLemma || twLower === nounVocab.plural?.toLowerCase()) {
+                // Look backwards for the nearest article
+                for (let back = tw - 1; back >= 0 && back >= tw - 3; back--) {
+                  const candidate = targetWords[back].toLowerCase();
+                  if (artMap[candidate]) {
+                    article = targetWords[back];
+                    foundFromTarget = true;
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+          }
+
+          if (!foundFromTarget) {
+            const nomArt = genderToArticle(nounVocab.gender);
+            if (cleanWord === 'the') {
+              article = isPlural
+                ? langConfig.pluralDefiniteArticle
+                : nomArt || langConfig.defaultDefiniteArticle;
+            } else {
+              const indef = nomArt ? langConfig.definiteToIndefinite[nomArt] : null;
+              article = indef || langConfig.defaultIndefiniteArticle;
+            }
+          }
+
+          const tooltip = buildTooltipHtml(nounVocab, article);
+          result.push(
+            `<span class="word-hover has-info tooltip-trigger">${token}${tooltip}</span>`
+          );
+          continue;
+        }
+        // Fallback: show generic article tooltip even when noun not found
+        // Try to find any article from the targetSentence as a better fallback
+        let genericArticle = '';
+        const artMapFallback = getArticleMap();
+        const isDefinite = cleanWord === 'the';
+        const targetArticle = targetWords.find((tw: string) => {
+          const entry = artMapFallback[tw.toLowerCase()];
+          return entry && entry.definite === isDefinite;
+        });
+        if (targetArticle) {
+          genericArticle = targetArticle;
+        } else {
+          genericArticle = isDefinite
+            ? langConfig.defaultDefiniteArticle
+            : langConfig.defaultIndefiniteArticle;
+        }
+        const genericTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${genericArticle}</span><span class="word-tooltip-body"><span class="word-tooltip-row"><strong>Article:</strong> ${cleanWord === 'the' ? 'definite' : 'indefinite'}</span></span></span>`;
+        result.push(
+          `<span class="word-hover has-info tooltip-trigger">${token}${genericTooltip}</span>`
+        );
+        continue;
+      }
+
+      // Handle target-language article forms — show case + gender tooltip
+      if (isTargetLangText) {
+        const artMap = getArticleMap();
+
+        const artEntry = artMap[cleanWord];
+        if (artEntry) {
+          const upcomingGerman = tokens.slice(i + 1).filter((t: string) => !/^\s+$/.test(t));
+          const nounVocab = findNextNoun(upcomingGerman, 0);
+          const nomArt = nounVocab ? genderToArticle(nounVocab.gender) : null;
+          // Narrow down possible case forms using the noun's gender
+          const matchedForms = nomArt
+            ? artEntry.forms.filter((f) => f.nomArticle === nomArt)
+            : artEntry.forms;
+          const caseLabel = (matchedForms.length > 0 ? matchedForms : artEntry.forms)
+            .map((f) => f.caseLabel)
+            .join(' / ');
+          const artType = artEntry.definite
+            ? 'Definite'
+            : cleanWord.startsWith('k')
+              ? 'Negative'
+              : 'Indefinite';
+          let ttHtml = `<span class="word-tooltip">`;
+          ttHtml += `<span class="word-tooltip-header">${token}</span>`;
+          ttHtml += `<span class="word-tooltip-body">`;
+          ttHtml += `<span class="word-tooltip-row"><strong>Article:</strong> ${artType}</span>`;
+          ttHtml += `<span class="word-tooltip-row"><strong>Form:</strong> ${caseLabel}</span>`;
+          if (nounVocab) {
+            const nDisplay = nounVocab.lemma.charAt(0).toUpperCase() + nounVocab.lemma.slice(1);
+            const nGender = genderToArticle(nounVocab.gender);
+            ttHtml += `<span class="word-tooltip-row"><strong>Noun:</strong> ${nDisplay}</span>`;
+            if (nGender)
+              ttHtml += `<span class="word-tooltip-row"><strong>Gender:</strong> ${nGender}</span>`;
+            const nMeaning = nounVocab.meaning || nounVocab.meanings?.[0]?.value;
+            if (nMeaning)
+              ttHtml += `<span class="word-tooltip-row"><strong>Meaning:</strong> ${nMeaning}</span>`;
+          }
+          ttHtml += `</span></span>`;
+          result.push(`<span class="word-hover has-info tooltip-trigger">${token}${ttHtml}</span>`);
+          continue;
+        }
+      }
+
+      // Try multi-word English matches (e.g. "television program" → Fernsehprogramm)
+      // This handles cases where a German compound word has a multi-word English meaning
+      if (isEnToDe) {
+        let multiWordVocab: any = null;
+        let multiWordEnd = i;
+        for (let len = 5; len >= 2 && !multiWordVocab; len--) {
+          const wordIndices: number[] = [i];
+          for (let j = i + 1; j < tokens.length && wordIndices.length < len; j++) {
+            // eslint-disable-next-line no-control-regex
+            if (!/^\s+$/.test(tokens[j]) && !tokens[j].match(/\x00VOCAB_\d+\x00/)) {
+              wordIndices.push(j);
+            }
+          }
+          if (wordIndices.length < len) continue;
+          const phrase = wordIndices
+            .map((idx) => tokens[idx].replace(/[.,!?;:'"|()[{}\-\u2014\u2013]/g, '').toLowerCase())
+            .join(' ');
+          const vList = vocabMap.get(phrase);
+          if (vList && vList.length > 0) {
+            multiWordVocab = vList[0];
+            multiWordEnd = wordIndices[len - 1];
+          }
+        }
+        if (multiWordVocab) {
+          const combinedText = tokens.slice(i, multiWordEnd + 1).join('');
+          result.push(
+            `<span class="word-hover has-info tooltip-trigger">${combinedText}${buildTooltipHtml(multiWordVocab)}</span>`
+          );
+          i = multiWordEnd;
+          continue;
+        }
+      }
+
+      const vocabResult = findVocab(cleanWord, token);
+      if (vocabResult) {
+        result.push(
+          `<span class="word-hover has-info tooltip-trigger">${token}${buildTooltipHtml(vocabResult.vocab, undefined, vocabResult.inflectionNote)}</span>`
+        );
+      } else if (stillStreaming) {
+        const loadingTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${token}</span><span class="word-tooltip-body"><span class="word-tooltip-row ai-magic-text"><span class="sparkle">✨</span> AI analyzing...</span></span></span>`;
+        result.push(
+          `<span class="word-hover has-info tooltip-trigger">${token}${loadingTooltip}</span>`
+        );
+      } else {
+        result.push(`<span class="word-hover">${token}</span>`);
+      }
+    }
+    text = result.join('');
+
+    // Step 3: Restore vocab placeholders
+    text = text.replace(
+      // eslint-disable-next-line no-control-regex
+      /\x00VOCAB_(\d+)\x00/g,
+      (_: string, idx: string) => vocabReplacements[parseInt(idx)]
+    );
+
+    return text;
+  }
+
+  let parsedChallengeText = $derived(
+    (() => {
+      if (!challenge?.challengeText) return '';
+      try {
+        // Capitalize the first character when the challenge text is in the target language
+        // (not native-to-target, where challengeText is English).
+        const isTargetLangText = challenge.gameMode !== 'native-to-target';
+        let text = challenge.challengeText;
+        if (isTargetLangText && text.length > 0) {
+          text = text.charAt(0).toUpperCase() + text.slice(1);
+        }
+        return parseTextWithTooltips(text, true, isStreaming);
+      } catch (e) {
+        console.error('Error in parseTextWithTooltips for challengeText:', e);
+        return challenge.challengeText;
+      }
+    })()
+  );
+
+  let parsedTargetSentence = $derived(
+    (() => {
+      if (!challenge?.targetSentence) return '';
+      try {
+        return parseTextWithTooltips(challenge.targetSentence, false, isStreaming);
+      } catch (e) {
+        console.error('Error in parseTextWithTooltips for targetSentence:', e);
+        return challenge.targetSentence;
+      }
+    })()
+  );
+
+  let showAfterElo = $state(false);
+
+  function calculateEloProgress(elo: number) {
+    const level = elo < 1050 ? 'LEARNING' : elo < 1150 ? 'KNOWN' : 'MASTERED';
+    return Math.max(
+      0,
+      Math.min(
+        100,
+        level === 'LEARNING'
+          ? ((elo - 1000) / 50) * 100
+          : level === 'KNOWN'
+            ? ((elo - 1050) / 100) * 100
+            : 100
+      )
+    );
+  }
+
+  function getEloLevelClass(elo: number): string {
+    const levels: Record<string, string> = {
+      LOCKED: 'locked',
+      UNSEEN: 'unseen',
+      LEARNING: 'learning',
+      KNOWN: 'known',
+      MASTERED: 'mastered'
+    };
+    const e = Number(elo);
+    if (e < 1050) return levels['LEARNING'] || 'learning';
+    if (e < 1150) return levels['KNOWN'] || 'known';
+    return levels['MASTERED'] || 'mastered';
+  }
+
+  $effect(() => {
+    if (feedback) {
+      // Delay to start animation after feedback is displayed
+      setTimeout(() => {
+        showAfterElo = true;
+      }, 100);
+    } else {
+      showAfterElo = false;
+    }
+  });
+
+  async function generateChallenge(retryVocabIds: string[] = [], retryGrammarIds: string[] = []) {
+    // Cancel any in-flight requests before starting a new one
+    cancelAllRequests();
+
+    currentLessonLanguage = data.language;
+    loading = true;
+    isStreaming = true;
+    feedback = null;
+    userInput = '';
+    challenge = null;
+    fillBlankAnswers = [];
+    selectedChoice = null;
+    shuffledChoices = [];
+    hasSubmittedMc = false;
+    sentenceTooComplex = false;
+    sentenceEstimatedLevel = null;
+
+    // Fetch average load time for accurate progress bar
+    try {
+      const statRes = await fetch('/api/load-time-stat');
+      if (statRes.ok) {
+        const statData = await statRes.json();
+        estimatedLoadMs = statData.averageMs || 9000;
+        isLocalMode = statData.isLocalMode || false;
+      }
+    } catch {
+      /* use default */
+    }
+
+    // Start progress bar
+    loadProgressPct = 0;
+    const progressStart = Date.now();
+    _loadProgressInterval = setInterval(() => {
+      const elapsed = Date.now() - progressStart;
+      if (elapsed < estimatedLoadMs) {
+        loadProgressPct = Math.min(88, (elapsed / estimatedLoadMs) * 88);
+      } else {
+        // Logarithmic crawl toward 99% once past the estimate
+        const extra = elapsed - estimatedLoadMs;
+        loadProgressPct = Math.min(99, 88 + 11 * (1 - Math.exp(-extra / 6000)));
+      }
+    }, 80);
+
+    // Start cycling tips
+    loadTipIndex = Math.floor(Math.random() * loadingTips.length);
+    _loadTipInterval = setInterval(() => {
+      loadTipIndex = (loadTipIndex + 1) % loadingTips.length;
+    }, 3500);
+
+    generateController = new AbortController();
+
+    try {
+      const res = await fetch('/api/generate-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameMode,
+          assignmentId: assignment?.id ?? undefined,
+          ...(retryVocabIds.length > 0 ? { retryVocabIds } : {}),
+          ...(retryGrammarIds.length > 0 ? { retryGrammarIds } : {})
+        }),
+        signal: generateController.signal
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(`Error: ${error.error}`);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No readable stream available');
+      const decoder = new TextDecoder();
+      let accumulatedJson = '';
+      let buffer = '';
+      let idMap: Record<string, string> = {};
+
+      displayedChallengeNumber = sessionChallenges + 1;
+      challenge = {
+        challengeText: '',
+        targetSentence: '',
+        targetedVocabulary: [],
+        targetedGrammar: [],
+        userId: ''
+      };
+
+      // Keep loading=true until we actually have visible challenge text
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const msg = JSON.parse(line);
+            if (msg.type === 'metadata') {
+              challenge.userId = msg.data.userId;
+              challenge.targetedVocabulary = msg.data.targetedVocabulary;
+              challenge.targetedGrammar = msg.data.targetedGrammar;
+              challenge.allVocabulary = msg.data.allVocabulary || [];
+              challenge.gameMode = msg.data.gameMode;
+              idMap = msg.data.idMap || {};
+              userLevel = msg.data.userLevel || 'A1';
+              isAbsoluteBeginner = msg.data.isAbsoluteBeginner || false;
+              if (msg.data.sentenceDifficulty) {
+                sentenceTooComplex = msg.data.sentenceDifficulty.tooComplex || false;
+                sentenceEstimatedLevel = msg.data.sentenceDifficulty.estimatedLevel || null;
+              }
+            } else if (msg.type === 'vocab_enrichment') {
+              if (msg.status === 'searching') {
+                toast.success('AI generating vocabulary... 🤖');
+              }
+              const existingIds = new Set((challenge.allVocabulary || []).map((v: any) => v.id));
+              const newVocab = (msg.data || []).filter((v: any) => !existingIds.has(v.id));
+              challenge.allVocabulary = [...(challenge.allVocabulary || []), ...newVocab];
+            } else if (msg.type === 'chunk') {
+              accumulatedJson += msg.content;
+
+              // Try to extract challengeText for progressive display
+              const challengeMatch = accumulatedJson.match(
+                /"challengeText"\s*:\s*"((?:[^"\\]|\\.)*)/
+              );
+              if (challengeMatch && challengeMatch[1]) {
+                let extractedText = challengeMatch[1]
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\"/g, '"')
+                  .replace(/\\\\/g, '\\');
+                // Remap short vocab IDs (v0, v1, ...) to real UUIDs so tooltips work during streaming
+                if (idMap && Object.keys(idMap).length > 0) {
+                  extractedText = extractedText.replace(
+                    /<vocab\s+id="([^"]+)">/g,
+                    (_m: string, shortId: string) => `<vocab id="${idMap[shortId] || shortId}">`
+                  );
+                }
+                challenge.challengeText = extractedText;
+
+                if (challenge.gameMode === 'fill-blank') {
+                  const blanksCount = (extractedText.match(/___/g) || []).length;
+                  if (blanksCount > fillBlankAnswers.length) {
+                    const newAnswers = [...fillBlankAnswers];
+                    while (newAnswers.length < blanksCount) {
+                      newAnswers.push('');
+                    }
+                    fillBlankAnswers = newAnswers;
+                  }
+                }
+
+                // Only stop loading once we have actual text to show
+                if (loading) {
+                  loading = false;
+                  tick().then(() => {
+                    fetch('/api/load-time-stat', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ loadTimeMs: Date.now() - progressStart })
+                    }).catch(() => {});
+                  });
+                }
+              }
+
+              // Progressive extraction of other fields to allow early submission
+              const targetMatch = accumulatedJson.match(
+                /"targetSentence"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/
+              );
+              if (targetMatch && targetMatch[1] !== undefined) {
+                challenge.targetSentence = targetMatch[1]
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\"/g, '"')
+                  .replace(/\\\\/g, '\\');
+              }
+
+              const vocabIdsMatch = accumulatedJson.match(
+                /"targetedVocabularyIds"\s*:\s*\[([^\]]*)\]/
+              );
+              if (vocabIdsMatch && vocabIdsMatch[1]) {
+                const rawIds = vocabIdsMatch[1]
+                  .split(',')
+                  .map((s) => s.trim().replace(/^"|"$/g, ''))
+                  .filter(Boolean);
+                if (rawIds.length > 0) {
+                  challenge.targetedVocabularyIds = rawIds.map((id) => idMap[id] || id);
+
+                  // Immediate filtering of vocabulary
+                  if (
+                    challenge.targetedVocabularyIds.length > 0 &&
+                    challenge.targetedVocabulary?.length > 0
+                  ) {
+                    const usedIds = new Set(challenge.targetedVocabularyIds);
+                    // Store the original metadata-sourced list if we haven't yet, so we can re-filter if needed
+                    if (!challenge._allMetadataVocab)
+                      challenge._allMetadataVocab = [...challenge.targetedVocabulary];
+                    challenge.targetedVocabulary = challenge._allMetadataVocab.filter((v: any) =>
+                      usedIds.has(v.id)
+                    );
+                  }
+                }
+              }
+
+              const grammarIdsMatch = accumulatedJson.match(
+                /"targetedGrammarIds"\s*:\s*\[([^\]]*)\]/
+              );
+              if (grammarIdsMatch && grammarIdsMatch[1]) {
+                const rawIds = grammarIdsMatch[1]
+                  .split(',')
+                  .map((s) => s.trim().replace(/^"|"$/g, ''))
+                  .filter(Boolean);
+                if (rawIds.length > 0) {
+                  challenge.targetedGrammarIds = rawIds.map((id) => idMap[id] || id);
+
+                  // Immediate filtering of grammar
+                  if (
+                    challenge.targetedGrammarIds.length > 0 &&
+                    challenge.targetedGrammar?.length > 0
+                  ) {
+                    const usedIds = new Set(challenge.targetedGrammarIds);
+                    // Store original
+                    if (!challenge._allMetadataGrammar)
+                      challenge._allMetadataGrammar = [...challenge.targetedGrammar];
+                    challenge.targetedGrammar = challenge._allMetadataGrammar.filter((g: any) =>
+                      usedIds.has(g.id)
+                    );
+                  }
+                }
+              }
+
+              // Progressive extraction of distractors for multiple-choice
+              const distractorsMatch = accumulatedJson.match(/"distractors"\s*:\s*\[([^\]]*)\]/);
+              if (distractorsMatch && distractorsMatch[1] && challenge.targetSentence) {
+                const distractors = distractorsMatch[1]
+                  .split(',')
+                  .map((s) => s.trim().replace(/^"|"$/g, ''))
+                  .filter(Boolean);
+                if (distractors.length > 0 && (!shuffledChoices || shuffledChoices.length === 0)) {
+                  const allChoices = [...distractors, challenge.targetSentence];
+                  shuffledChoices = allChoices.sort(() => Math.random() - 0.5);
+                }
+              }
+
+              // Progressive extraction of hints for fill-blank
+              const hintsMatch = accumulatedJson.match(/"hints"\s*:\s*\[(.*?)\]\s*(?:,|$)/);
+              if (hintsMatch && hintsMatch[1]) {
+                try {
+                  // Try to parse the partial hints array
+                  const hints = JSON.parse(`[${hintsMatch[1]}]`);
+                  if (hints.length > 0 && fillBlankAnswers.length === 0) {
+                    challenge.hints = hints.map((h: any) => ({
+                      ...h,
+                      vocabId: idMap[h.vocabId] || h.vocabId
+                    }));
+                    fillBlankAnswers = challenge.hints.map(() => '');
+                  }
+                } catch (_) {
+                  // Partial hints array might not be valid JSON yet, ignore
+                }
+              }
+            }
+          } catch (_) {
+            // Ignore parse errors on partial lines
+          }
+        }
+
+        challenge = challenge; // trigger reactivity
+      }
+
+      if (buffer.trim()) {
+        try {
+          const msg = JSON.parse(buffer);
+          if (msg.type === 'chunk') {
+            accumulatedJson += msg.content;
+          } else if (msg.type === 'vocab_enrichment') {
+            if (msg.status === 'searching') {
+              toast.success('AI generating vocabulary... 🤖');
+            }
+            const existingIds = new Set((challenge.allVocabulary || []).map((v: any) => v.id));
+            const newVocab = (msg.data || []).filter((v: any) => !existingIds.has(v.id));
+            challenge.allVocabulary = [...(challenge.allVocabulary || []), ...newVocab];
+          }
+        } catch (_) {
+          /* JSON parse failed, skip */
+        }
+      }
+
+      // Try to parse the complete JSON at the end to get everything (targetSentence, etc)
+      try {
+        let cleaned = accumulatedJson;
+        const firstBrace = cleaned.indexOf('{');
+        const lastBrace = cleaned.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+        }
+        const parsed = JSON.parse(cleaned);
+        challenge = { ...challenge, ...parsed };
+        challengeStartMs = Date.now(); // start timing from when challenge is fully ready
+
+        // Remap short IDs (v0, g0, ...) from LLM back to real UUIDs
+        if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds)) {
+          parsed.targetedVocabularyIds = parsed.targetedVocabularyIds.map(
+            (id: string) => idMap[id] || id
+          );
+          challenge.targetedVocabularyIds = parsed.targetedVocabularyIds;
+        }
+        if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds)) {
+          parsed.targetedGrammarIds = parsed.targetedGrammarIds.map(
+            (id: string) => idMap[id] || id
+          );
+          challenge.targetedGrammarIds = parsed.targetedGrammarIds;
+        }
+        // Remap vocab tags in challengeText: <vocab id="v0"> -> <vocab id="real-uuid">
+        if (challenge.challengeText) {
+          challenge.challengeText = challenge.challengeText.replace(
+            /<vocab\s+id="([^"]+)">/g,
+            (_match: string, shortId: string) => `<vocab id="${idMap[shortId] || shortId}">`
+          );
+        }
+        // Remap fill-blank hint vocabIds
+        if (challenge.hints && Array.isArray(challenge.hints)) {
+          challenge.hints = challenge.hints.map((h: any) => ({
+            ...h,
+            vocabId: idMap[h.vocabId] || h.vocabId
+          }));
+        }
+
+        // Filter targeted vocab/grammar to only IDs the LLM actually used in the sentence.
+        // The LLM returns targetedVocabularyIds/targetedGrammarIds listing only what it used.
+        // Discard any vocab/grammar the LLM didn't use so they aren't graded or shown.
+        if (parsed.targetedVocabularyIds && Array.isArray(parsed.targetedVocabularyIds)) {
+          const usedVocabIds = new Set(parsed.targetedVocabularyIds);
+          challenge.targetedVocabulary = (
+            challenge._allMetadataVocab ||
+            challenge.targetedVocabulary ||
+            []
+          ).filter((v: any) => usedVocabIds.has(v.id));
+        }
+        if (parsed.targetedGrammarIds && Array.isArray(parsed.targetedGrammarIds)) {
+          const usedGrammarIds = new Set(parsed.targetedGrammarIds);
+          challenge.targetedGrammar = (
+            challenge._allMetadataGrammar ||
+            challenge.targetedGrammar ||
+            []
+          ).filter((g: any) => usedGrammarIds.has(g.id));
+        }
+
+        // Initialize fill-blank answers array
+        if (challenge.gameMode === 'fill-blank' && challenge.hints) {
+          fillBlankAnswers = challenge.hints.map(() => '');
+        }
+
+        // Shuffle multiple-choice options
+        if (
+          challenge.gameMode === 'multiple-choice' &&
+          challenge.distractors &&
+          challenge.targetSentence
+        ) {
+          const allChoices = [...challenge.distractors, challenge.targetSentence];
+          shuffledChoices = allChoices.sort(() => Math.random() - 0.5);
+        }
+      } catch (e) {
+        console.error('Failed to parse final JSON', e);
+        throw new Error('Incomplete response from AI.');
+      }
+
+      if (!challenge.challengeText || !challenge.targetSentence) {
+        throw new Error('AI failed to generate a complete challenge.');
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        // Request was intentionally cancelled — don't show an error
+        return;
+      }
+      console.error(error);
+      toast.error(
+        `Failed to generate challenge: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      challenge = null;
+    } finally {
+      generateController = null;
+      // Complete progress bar then clean up
+      stopLoadingIntervals();
+      loadProgressPct = 100;
+      setTimeout(() => {
+        loadProgressPct = 0;
+      }, 500);
+      loading = false;
+      isStreaming = false;
+    }
+  }
+
+  async function submitAnswer() {
+    if (submitting) return;
+    const mode = challenge?.gameMode || 'native-to-target';
+
+    // Build userInput based on mode
+    let effectiveInput = userInput;
+    if (mode === 'fill-blank') {
+      if (fillBlankAnswers.some((a) => !a.trim())) return;
+      // Reconstruct the full sentence by substituting each blank answer back into
+      // challengeText in order. Sending the complete sentence to the grader means
+      // it can evaluate the whole answer in context, not just isolated blank values.
+      let reconstructed = challenge?.challengeText || '';
+      for (const answer of fillBlankAnswers) {
+        reconstructed = reconstructed.replace('___', answer);
+      }
+      effectiveInput = reconstructed;
+    } else if (mode === 'multiple-choice') {
+      if (!selectedChoice) return;
+      effectiveInput = selectedChoice;
+    } else {
+      if (!userInput.trim()) return;
+    }
+
+    if (isStreaming) {
+      // Removed restriction to allow early submission
+      console.warn('Challenge is still generating, but submission is allowed.');
+    }
+    if (!challenge?.targetSentence) {
+      toast.error(
+        'Challenge was not properly generated (missing target sentence). Please generate a new challenge.'
+      );
+      return;
+    }
+
+    if (mode === 'multiple-choice') {
+      hasSubmittedMc = true;
+    }
+
+    submitting = true;
+    feedback = null;
+
+    submitController = new AbortController();
+
+    const responseTimeMs = challengeStartMs !== null ? Date.now() - challengeStartMs : null;
+    challengeStartMs = null;
+
+    try {
+      const res = await fetch('/api/submit-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: challenge.userId,
+          userInput: effectiveInput,
+          targetSentence: challenge.targetSentence,
+          targetedVocabularyIds: challenge.targetedVocabulary?.map((v: any) => v.id) || [],
+          targetedGrammarIds: challenge.targetedGrammar?.map((g: any) => g.id) || [],
+          gameMode: challenge.gameMode || 'native-to-target',
+          assignmentId: assignment?.id ?? null,
+          activeLanguageName: lessonLanguage?.name || 'German',
+          responseTimeMs
+        }),
+        signal: submitController.signal
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(`Error: ${error.error}`);
+        feedback = null;
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('Failed to get readable stream');
+
+      const decoder = new TextDecoder();
+      let responseText = '';
+
+      // Keep submitting=true until we have actual feedback text to show
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        responseText += decoder.decode(value, { stream: true });
+
+        // Progressively extract the "feedback" field from the streaming JSON
+        const feedbackMatch = responseText.match(/"feedback"\s*:\s*"((?:[^"\\]|\\.)*)/);
+        if (feedbackMatch) {
+          let feedbackText: string;
+          try {
+            feedbackText = JSON.parse(`"${feedbackMatch[1]}"`);
+          } catch (_) {
+            feedbackText = feedbackMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          }
+          if (!feedback) {
+            feedback = {
+              globalScore: null,
+              vocabularyUpdates: [],
+              grammarUpdates: [],
+              feedback: feedbackText
+            };
+          } else {
+            feedback.feedback = feedbackText;
+          }
+          // Only stop showing "Evaluating..." once we have visible feedback
+          if (submitting) submitting = false;
+          feedback = feedback; // trigger reactivity
+        }
+      }
+
+      // Parse the complete JSON response for all structured data
+      try {
+        // For streaming responses, the server appends \n\nJSON_PAYLOAD:{...} at the end
+        const payloadMarker = '\n\nJSON_PAYLOAD:';
+        const payloadIdx = responseText.indexOf(payloadMarker);
+        const jsonToParse =
+          payloadIdx >= 0 ? responseText.slice(payloadIdx + payloadMarker.length) : responseText;
+        const data = JSON.parse(jsonToParse);
+        // Build grader idMap from the order of IDs we sent (same order the grader used)
+        const graderIdMap: Record<string, string> = {};
+        (challenge.targetedVocabulary || []).forEach((v: any, i: number) => {
+          graderIdMap[`v${i}`] = v.id;
+        });
+        (challenge.targetedGrammar || []).forEach((g: any, i: number) => {
+          graderIdMap[`g${i}`] = g.id;
+        });
+        feedback = {
+          globalScore: data.globalScore ?? 0,
+          vocabularyUpdates: (data.vocabularyUpdates || []).map((u: any) => ({
+            ...u,
+            id: graderIdMap[u.id] || u.id
+          })),
+          grammarUpdates: (data.grammarUpdates || []).map((u: any) => ({
+            ...u,
+            id: graderIdMap[u.id] || u.id
+          })),
+          feedback: data.feedback || ''
+        };
+        // Update assignment progress if we got it back
+        if (data.assignmentProgress && assignmentProgress) {
+          assignmentProgress = data.assignmentProgress;
+        }
+        // Accumulate session XP (1 XP per score point, rounded)
+        sessionChallenges += 1;
+        const xpEarned = Math.round((data.globalScore ?? 0) * 10);
+        sessionXp += xpEarned;
+        // Update local EMA for adaptive mode selection
+        recordModeOutcome((data.globalScore ?? 0) >= 0.5);
+
+        // Leitner queue: enqueue any items answered incorrectly (score < 0.5).
+        // Items are re-presented after LEITNER_BOX_INTERVALS[box] more challenges.
+        // A second failure on the same item promotes it to box 2 (longer delay).
+        const wrongVocabIds = (data.vocabularyUpdates || [])
+          .filter((u: any) => u.score < 0.5)
+          .map((u: any) => u.id)
+          .filter(Boolean);
+        const wrongGrammarIds = (data.grammarUpdates || [])
+          .filter((u: any) => u.score < 0.5)
+          .map((u: any) => u.id)
+          .filter(Boolean);
+        if (wrongVocabIds.length > 0 || wrongGrammarIds.length > 0) {
+          const surviving = leitnerQueue.filter((item) => {
+            const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
+            const grammarHit = item.grammarIds.some((id: string) => wrongGrammarIds.includes(id));
+            return !vocabHit && !grammarHit;
+          });
+          const repeated = leitnerQueue.filter((item) => {
+            const vocabHit = item.vocabIds.some((id: string) => wrongVocabIds.includes(id));
+            const grammarHit = item.grammarIds.some((id: string) => wrongGrammarIds.includes(id));
+            return vocabHit || grammarHit;
+          });
+          // Re-queue items that were already in box 1 → promote to box 2
+          for (const existing of repeated) {
+            surviving.push({
+              vocabIds: existing.vocabIds,
+              grammarIds: existing.grammarIds,
+              dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[2],
+              box: 2
+            });
+          }
+          // Enqueue brand-new failures at box 1
+          const freshVocab = wrongVocabIds.filter(
+            (id: string) => !repeated.some((q) => q.vocabIds.includes(id))
+          );
+          const freshGrammar = wrongGrammarIds.filter(
+            (id: string) => !repeated.some((q) => q.grammarIds.includes(id))
+          );
+          if (freshVocab.length > 0 || freshGrammar.length > 0) {
+            surviving.push({
+              vocabIds: freshVocab,
+              grammarIds: freshGrammar,
+              dueAtChallenge: sessionChallenges + LEITNER_BOX_INTERVALS[1],
+              box: 1
+            });
+          }
+          leitnerQueue = surviving;
+        }
+
+        // Level Up Celebration
+        if (data.levelUp) {
+          userLevel = data.levelUp.newLevel;
+          isAbsoluteBeginner = userLevel === 'A1';
+          modal.alert(
+            `Congratulations! You've leveled up from ${data.levelUp.oldLevel} to ${data.levelUp.newLevel}!`,
+            '🎉 Level Up!'
+          );
+        }
+      } catch (e) {
+        console.error('Failed to parse full feedback response', e, responseText);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      console.error(error);
+      toast.error(
+        `Failed to submit answer: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      feedback = null;
+      hasSubmittedMc = false;
+    } finally {
+      submitController = null;
+      submitting = false;
+    }
+  }
 </script>
 
 <svelte:head>
-	<title>Play - LingoLearn</title>
+  <title>Play - LingoLearn</title>
 </svelte:head>
 
 <div class="page-container">
-	<div class="content-wrapper" class:games-active={activeTab === 'games'}>
-		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
-			<h1>Play Mode</h1>
-			<p>Test your skills with personalized challenges.</p>
-		</header>
+  <div class="content-wrapper" class:games-active={activeTab === 'games'}>
+    <header class="page-header" in:fly={{ y: 20, duration: 400 }}>
+      <h1>Play Mode</h1>
+      <p>Test your skills with personalized challenges.</p>
+    </header>
 
-		<div class="tabs-container" in:fly={{ y: 20, duration: 400 }}>
-			<div class="tabs">
-				<button
-					class="tab-btn"
-					class:active={activeTab === 'learn'}
-					onclick={() => (activeTab = 'learn')}
-				>
-					Learn
-				</button>
-				<button
-					class="tab-btn"
-					class:active={activeTab === 'games'}
-					onclick={() => (activeTab = 'games')}
-				>
-					Quizzes
-				</button>
-			</div>
-		</div>
+    <div class="tabs-container" in:fly={{ y: 20, duration: 400 }}>
+      <div class="tabs">
+        <button
+          class="tab-btn"
+          class:active={activeTab === 'learn'}
+          onclick={() => (activeTab = 'learn')}
+        >
+          Learn
+        </button>
+        <button
+          class="tab-btn"
+          class:active={activeTab === 'games'}
+          onclick={() => (activeTab = 'games')}
+        >
+          Quizzes
+        </button>
+      </div>
+    </div>
 
-		{#if activeTab === 'learn'}
-			<div class="learn-container">
-				{#if showingImmerse}
-					<!-- Immersive Reading mode (inline) -->
-					<div class="immerse-inline" in:fly={{ y: 20, duration: 400 }}>
-						<button
-							class="back-nav"
-							onclick={() => {
-								showingImmerse = false;
-								gameMode = 'multiple-choice';
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg
-							>
-							Back to Play
-						</button>
+    {#if activeTab === 'learn'}
+      <div class="learn-container">
+        {#if showingImmerse}
+          <!-- Immersive Reading mode (inline) -->
+          <div class="immerse-inline" in:fly={{ y: 20, duration: 400 }}>
+            <button
+              class="back-nav"
+              onclick={() => {
+                showingImmerse = false;
+                gameMode = 'multiple-choice';
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg
+              >
+              Back to Play
+            </button>
 
-						{#if assignment && assignment.gamemode === 'immerse' && assignmentProgress}
-							<div
-								class="card card-duo assignment-banner {assignmentProgress.passed
-									? 'passed'
-									: 'active'}"
-								in:fly={{ y: 20, duration: 400, delay: 100 }}
-							>
-								<div class="assignment-info">
-									<div class="assignment-icon">
-										{assignmentProgress.passed ? '🏆' : '📋'}
-									</div>
-									<div class="assignment-details">
-										<h2 class="assignment-title">{assignment.title}</h2>
-										<div class="assignment-meta">
-											<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
-											<span class="meta-badge gamemode">immerse</span>
-											<span class="meta-badge language">
-												{assignment.language === 'international'
-													? '🌍 International'
-													: `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
-											</span>
-										</div>
-									</div>
-								</div>
-								<div class="assignment-actions">
-									<div class="progress-box">
-										<p class="progress-label">Progress</p>
-										<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
-											{assignmentProgress.score}<span class="progress-target"
-												>/{assignmentProgress.targetScore}</span
-											>
-										</p>
-									</div>
-								</div>
-							</div>
-						{/if}
+            {#if assignment && assignment.gamemode === 'immerse' && assignmentProgress}
+              <div
+                class="card card-duo assignment-banner {assignmentProgress.passed
+                  ? 'passed'
+                  : 'active'}"
+                in:fly={{ y: 20, duration: 400, delay: 100 }}
+              >
+                <div class="assignment-info">
+                  <div class="assignment-icon">
+                    {assignmentProgress.passed ? '🏆' : '📋'}
+                  </div>
+                  <div class="assignment-details">
+                    <h2 class="assignment-title">{assignment.title}</h2>
+                    <div class="assignment-meta">
+                      <span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
+                      <span class="meta-badge gamemode">immerse</span>
+                      <span class="meta-badge language">
+                        {assignment.language === 'international'
+                          ? '🌍 International'
+                          : `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="assignment-actions">
+                  <div class="progress-box">
+                    <p class="progress-label">Progress</p>
+                    <p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
+                      {assignmentProgress.score}<span class="progress-target"
+                        >/{assignmentProgress.targetScore}</span
+                      >
+                    </p>
+                  </div>
+                </div>
+              </div>
+            {/if}
 
-						<ImmersionView
-							language={lessonLanguage}
-							cefrLevel={userLevel}
-							assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
-							disableHoverTranslation={assignment?.disableHoverTranslation ?? false}
-							bind:assignmentProgress
-						/>
-					</div>
-				{:else}
-					<!-- Assignment context banner -->
-					{#if assignment && assignmentProgress}
-						<div
-							class="card card-duo assignment-banner {assignmentProgress.passed
-								? 'passed'
-								: 'active'}"
-							in:fly={{ y: 20, duration: 400, delay: 100 }}
-						>
-							<div class="assignment-info">
-								<div class="assignment-icon">
-									{assignmentProgress.passed ? '🏆' : '📋'}
-								</div>
-								<div class="assignment-details">
-									<h2 class="assignment-title">{assignment.title}</h2>
-									<div class="assignment-meta">
-										<span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
-										<span class="meta-badge gamemode">{assignment.gamemode.replace(/-/g, ' ')}</span
-										>
-										<span class="meta-badge language">
-											{assignment.language === 'international'
-												? '🌍 International'
-												: `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
-										</span>
-									</div>
-								</div>
-							</div>
-							<div class="assignment-actions">
-								<div class="progress-box">
-									<p class="progress-label">Progress</p>
-									<p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
-										{assignmentProgress.score}<span class="progress-target"
-											>/{assignmentProgress.targetScore}</span
-										>
-									</p>
-								</div>
-								<a href="/classes/{assignment.classId}" class="btn-duo btn-secondary back-btn">
-									Back to Class
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="16"
-										height="16"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
-									>
-								</a>
-							</div>
-						</div>
-					{/if}
+            <ImmersionView
+              language={lessonLanguage}
+              cefrLevel={userLevel}
+              assignmentId={assignment?.gamemode === 'immerse' ? assignment.id : null}
+              disableHoverTranslation={assignment?.disableHoverTranslation ?? false}
+              bind:assignmentProgress
+            />
+          </div>
+        {:else}
+          <!-- Assignment context banner -->
+          {#if assignment && assignmentProgress}
+            <div
+              class="card card-duo assignment-banner {assignmentProgress.passed
+                ? 'passed'
+                : 'active'}"
+              in:fly={{ y: 20, duration: 400, delay: 100 }}
+            >
+              <div class="assignment-info">
+                <div class="assignment-icon">
+                  {assignmentProgress.passed ? '🏆' : '📋'}
+                </div>
+                <div class="assignment-details">
+                  <h2 class="assignment-title">{assignment.title}</h2>
+                  <div class="assignment-meta">
+                    <span class="meta-badge">{assignment.class?.name ?? 'Class'}</span>
+                    <span class="meta-badge gamemode">{assignment.gamemode.replace(/-/g, ' ')}</span
+                    >
+                    <span class="meta-badge language">
+                      {assignment.language === 'international'
+                        ? '🌍 International'
+                        : `${lessonLanguage?.flag || '🏁'} ${lessonLanguage?.name || 'Target'}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="assignment-actions">
+                <div class="progress-box">
+                  <p class="progress-label">Progress</p>
+                  <p class="progress-value {assignmentProgress.passed ? 'passed' : 'active'}">
+                    {assignmentProgress.score}<span class="progress-target"
+                      >/{assignmentProgress.targetScore}</span
+                    >
+                  </p>
+                </div>
+                <a href="/classes/{assignment.classId}" class="btn-duo btn-secondary back-btn">
+                  Back to Class
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
+                  >
+                </a>
+              </div>
+            </div>
+          {/if}
 
-					{#if !challenge && !loading}
-						<div class="card card-duo empty-state shadow-none" in:fly={{ y: 20, duration: 400 }}>
-							<h2>Ready to test your skills?</h2>
+          {#if !challenge && !loading}
+            <div class="card card-duo empty-state shadow-none" in:fly={{ y: 20, duration: 400 }}>
+              <h2>Ready to test your skills?</h2>
 
-							<div class="mode-selector">
-								<div class="mode-label-row">
-									<span class="mode-label">Adaptive Mode</span>
-									<span class="mode-ema-hint">
-										{#if localEma < 0.45}
-											Building confidence with easier modes
-										{:else if localEma < 0.65}
-											Mixing easy and medium modes
-										{:else if localEma < 0.82}
-											Balanced mix across all modes
-										{:else}
-											Favouring harder modes — you're on a roll!
-										{/if}
-									</span>
-								</div>
-								{#if assignment}
-									<p class="text-blue-600 capitalize">
-										{assignment.gamemode.replace(/-/g, ' ')}
-										<span class="font-normal">(set by assignment)</span>
-									</p>
-								{:else}
-									<div class="mode-buttons">
-										<button
-											class="mode-btn"
-											class:active={pinnedMode.has('multiple-choice')}
-											class:mode-favoured={pinnedMode.size === 0 &&
-												gameMode !== 'chat' &&
-												gameMode !== 'immerse' &&
-												localEma < 0.55}
-											onclick={() => {
-												const s = new Set(pinnedMode);
-												if (s.has('multiple-choice')) s.delete('multiple-choice');
-												else s.add('multiple-choice');
-												pinnedMode = s;
-											}}
-										>
-											🔘 Multiple Choice
-											<span class="mode-difficulty easy">Easiest</span>
-										</button>
-										<button
-											class="mode-btn"
-											class:active={pinnedMode.has('target-to-native')}
-											class:mode-favoured={pinnedMode.size === 0 &&
-												gameMode !== 'chat' &&
-												gameMode !== 'immerse' &&
-												localEma >= 0.4 &&
-												localEma < 0.7}
-											onclick={() => {
-												const s = new Set(pinnedMode);
-												if (s.has('target-to-native')) s.delete('target-to-native');
-												else s.add('target-to-native');
-												pinnedMode = s;
-											}}
-										>
-											{lessonLanguage?.flag || '🏁'} → {englishFlag}
-											{lessonLanguage?.name || 'Target'} to English
-											<span class="mode-difficulty easy">Easy</span>
-										</button>
-										<button
-											class="mode-btn"
-											class:active={pinnedMode.has('fill-blank')}
-											class:mode-favoured={pinnedMode.size === 0 &&
-												gameMode !== 'chat' &&
-												gameMode !== 'immerse' &&
-												localEma >= 0.55 &&
-												localEma < 0.85}
-											onclick={() => {
-												const s = new Set(pinnedMode);
-												if (s.has('fill-blank')) s.delete('fill-blank');
-												else s.add('fill-blank');
-												pinnedMode = s;
-											}}
-										>
-											✏️ Fill in the Blank
-											<span class="mode-difficulty medium">Medium</span>
-										</button>
-										<button
-											class="mode-btn"
-											class:active={pinnedMode.has('native-to-target')}
-											class:mode-favoured={pinnedMode.size === 0 &&
-												gameMode !== 'chat' &&
-												gameMode !== 'immerse' &&
-												localEma >= 0.7}
-											onclick={() => {
-												const s = new Set(pinnedMode);
-												if (s.has('native-to-target')) s.delete('native-to-target');
-												else s.add('native-to-target');
-												pinnedMode = s;
-											}}
-										>
-											{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
-												'Target'}
-											<span class="mode-difficulty hard">Hardest</span>
-										</button>
-									</div>
+              <div class="mode-selector">
+                <div class="mode-label-row">
+                  <span class="mode-label">Adaptive Mode</span>
+                  <span class="mode-ema-hint">
+                    {#if localEma < 0.45}
+                      Building confidence with easier modes
+                    {:else if localEma < 0.65}
+                      Mixing easy and medium modes
+                    {:else if localEma < 0.82}
+                      Balanced mix across all modes
+                    {:else}
+                      Favouring harder modes — you're on a roll!
+                    {/if}
+                  </span>
+                </div>
+                {#if assignment}
+                  <p class="text-blue-600 capitalize">
+                    {assignment.gamemode.replace(/-/g, ' ')}
+                    <span class="font-normal">(set by assignment)</span>
+                  </p>
+                {:else}
+                  <div class="mode-buttons">
+                    <button
+                      class="mode-btn"
+                      class:active={pinnedMode.has('multiple-choice')}
+                      class:mode-favoured={pinnedMode.size === 0 &&
+                        gameMode !== 'chat' &&
+                        gameMode !== 'immerse' &&
+                        localEma < 0.55}
+                      onclick={() => {
+                        const s = new Set(pinnedMode);
+                        if (s.has('multiple-choice')) s.delete('multiple-choice');
+                        else s.add('multiple-choice');
+                        pinnedMode = s;
+                      }}
+                    >
+                      🔘 Multiple Choice
+                      <span class="mode-difficulty easy">Easiest</span>
+                    </button>
+                    <button
+                      class="mode-btn"
+                      class:active={pinnedMode.has('target-to-native')}
+                      class:mode-favoured={pinnedMode.size === 0 &&
+                        gameMode !== 'chat' &&
+                        gameMode !== 'immerse' &&
+                        localEma >= 0.4 &&
+                        localEma < 0.7}
+                      onclick={() => {
+                        const s = new Set(pinnedMode);
+                        if (s.has('target-to-native')) s.delete('target-to-native');
+                        else s.add('target-to-native');
+                        pinnedMode = s;
+                      }}
+                    >
+                      {lessonLanguage?.flag || '🏁'} → {englishFlag}
+                      {lessonLanguage?.name || 'Target'} to English
+                      <span class="mode-difficulty easy">Easy</span>
+                    </button>
+                    <button
+                      class="mode-btn"
+                      class:active={pinnedMode.has('fill-blank')}
+                      class:mode-favoured={pinnedMode.size === 0 &&
+                        gameMode !== 'chat' &&
+                        gameMode !== 'immerse' &&
+                        localEma >= 0.55 &&
+                        localEma < 0.85}
+                      onclick={() => {
+                        const s = new Set(pinnedMode);
+                        if (s.has('fill-blank')) s.delete('fill-blank');
+                        else s.add('fill-blank');
+                        pinnedMode = s;
+                      }}
+                    >
+                      ✏️ Fill in the Blank
+                      <span class="mode-difficulty medium">Medium</span>
+                    </button>
+                    <button
+                      class="mode-btn"
+                      class:active={pinnedMode.has('native-to-target')}
+                      class:mode-favoured={pinnedMode.size === 0 &&
+                        gameMode !== 'chat' &&
+                        gameMode !== 'immerse' &&
+                        localEma >= 0.7}
+                      onclick={() => {
+                        const s = new Set(pinnedMode);
+                        if (s.has('native-to-target')) s.delete('native-to-target');
+                        else s.add('native-to-target');
+                        pinnedMode = s;
+                      }}
+                    >
+                      {englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
+                        'Target'}
+                      <span class="mode-difficulty hard">Hardest</span>
+                    </button>
+                  </div>
 
-									<div class="chat-separator">
-										<span class="separator-line"></span>
-										<span class="separator-text">or</span>
-										<span class="separator-line"></span>
-									</div>
+                  <div class="chat-separator">
+                    <span class="separator-line"></span>
+                    <span class="separator-text">or</span>
+                    <span class="separator-line"></span>
+                  </div>
 
-									<button
-										class="chat-cta-btn"
-										class:active={gameMode === 'chat'}
-										onclick={() => {
-											gameMode = gameMode === 'chat' ? 'native-to-target' : 'chat';
-										}}
-									>
-										💬 AI Chat Practice
-										<span class="chat-cta-subtitle">Practice conversation with an AI tutor</span>
-									</button>
+                  <button
+                    class="chat-cta-btn"
+                    class:active={gameMode === 'chat'}
+                    onclick={() => {
+                      gameMode = gameMode === 'chat' ? 'native-to-target' : 'chat';
+                    }}
+                  >
+                    💬 AI Chat Practice
+                    <span class="chat-cta-subtitle">Practice conversation with an AI tutor</span>
+                  </button>
 
-									<div class="immerse-gap"></div>
+                  <div class="immerse-gap"></div>
 
-									<button
-										class="chat-cta-btn immerse-cta-btn"
-										class:active={gameMode === 'immerse'}
-										onclick={() => {
-											gameMode = gameMode === 'immerse' ? 'native-to-target' : 'immerse';
-										}}
-									>
-										✈️ World Immersion
-										<span class="chat-cta-subtitle"
-											>Travel the world through authentic content — menus, news, letters & more</span
-										>
-									</button>
-								{/if}
-							</div>
-							<button
-								onclick={() => {
-									if (gameMode === 'chat') {
-										goto('/play/chat');
-										return;
-									}
-									if (gameMode === 'immerse') {
-										showingImmerse = true;
-										return;
-									}
-									// getNextCycleMode respects pinnedMode internally
-									gameMode = getNextCycleMode();
-									const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
-									leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
-									const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
-									const retryG = [...new Set(due.flatMap((q) => q.grammarIds))];
-									generateChallenge(retryV, retryG);
-								}}
-								class="btn-duo btn-ai"
-								style="margin-top: 1.5rem; width: 100%;"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"
-									><path
-										d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
-									/></svg
-								>
-								{gameMode === 'chat'
-									? 'Start Chat Session'
-									: gameMode === 'immerse'
-										? 'Start Immersive Reading'
-										: 'Generate Next Challenge'}
-							</button>
-						</div>
-					{/if}
+                  <button
+                    class="chat-cta-btn immerse-cta-btn"
+                    class:active={gameMode === 'immerse'}
+                    onclick={() => {
+                      gameMode = gameMode === 'immerse' ? 'native-to-target' : 'immerse';
+                    }}
+                  >
+                    ✈️ World Immersion
+                    <span class="chat-cta-subtitle"
+                      >Travel the world through authentic content — menus, news, letters & more</span
+                    >
+                  </button>
+                {/if}
+              </div>
+              <button
+                onclick={() => {
+                  if (gameMode === 'chat') {
+                    goto('/play/chat');
+                    return;
+                  }
+                  if (gameMode === 'immerse') {
+                    showingImmerse = true;
+                    return;
+                  }
+                  // getNextCycleMode respects pinnedMode internally
+                  gameMode = getNextCycleMode();
+                  const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
+                  leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
+                  const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
+                  const retryG = [...new Set(due.flatMap((q) => q.grammarIds))];
+                  generateChallenge(retryV, retryG);
+                }}
+                class="btn-duo btn-ai"
+                style="margin-top: 1.5rem; width: 100%;"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"
+                  ><path
+                    d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+                  /></svg
+                >
+                {gameMode === 'chat'
+                  ? 'Start Chat Session'
+                  : gameMode === 'immerse'
+                    ? 'Start Immersive Reading'
+                    : 'Generate Next Challenge'}
+              </button>
+            </div>
+          {/if}
 
-					{#if loading}
-						<div class="card card-duo loading-state" in:fade={{ duration: 300 }}>
-							<div class="loading-mode-badge">
-								{#if gameMode === 'multiple-choice'}
-									🔘 Multiple Choice
-								{:else if gameMode === 'target-to-native'}
-									{lessonLanguage?.flag || '🏁'} → {englishFlag}
-									{lessonLanguage?.name || 'Target'} to English
-								{:else if gameMode === 'fill-blank'}
-									✏️ Fill in the Blank
-								{:else if gameMode === 'native-to-target'}
-									{englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
-										'Target'}
-								{/if}
-							</div>
-							<div class="load-progress-track">
-								<div
-									class="load-progress-fill {isLocalMode ? 'local-mode-fill' : ''}"
-									style="width: {loadProgressPct}%"
-								></div>
-							</div>
-							<div class="load-tip-container">
-								{#key loadTipIndex}
-									<p
-										class="load-tip"
-										in:fade={{ duration: 350, delay: 50 }}
-										out:fade={{ duration: 300 }}
-									>
-										{loadingTips[loadTipIndex]}
-									</p>
-								{/key}
-							</div>
-						</div>
-					{/if}
+          {#if loading}
+            <div class="card card-duo loading-state" in:fade={{ duration: 300 }}>
+              <div class="loading-mode-badge">
+                {#if gameMode === 'multiple-choice'}
+                  🔘 Multiple Choice
+                {:else if gameMode === 'target-to-native'}
+                  {lessonLanguage?.flag || '🏁'} → {englishFlag}
+                  {lessonLanguage?.name || 'Target'} to English
+                {:else if gameMode === 'fill-blank'}
+                  ✏️ Fill in the Blank
+                {:else if gameMode === 'native-to-target'}
+                  {englishFlag} → {lessonLanguage?.flag || '🏁'} English to {lessonLanguage?.name ||
+                    'Target'}
+                {/if}
+              </div>
+              <div class="load-progress-track">
+                <div
+                  class="load-progress-fill {isLocalMode ? 'local-mode-fill' : ''}"
+                  style="width: {loadProgressPct}%"
+                ></div>
+              </div>
+              <div class="load-tip-container">
+                {#key loadTipIndex}
+                  <p
+                    class="load-tip"
+                    in:fade={{ duration: 350, delay: 50 }}
+                    out:fade={{ duration: 300 }}
+                  >
+                    {loadingTips[loadTipIndex]}
+                  </p>
+                {/key}
+              </div>
+            </div>
+          {/if}
 
-					{#if sessionChallenges > 0}
-						<div class="session-xp-strip" in:fly={{ y: -10, duration: 300 }}>
-							<span class="session-xp-stat">
-								<svg
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									style="width:0.875rem;height:0.875rem;"
-									><polygon
-										points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-									/></svg
-								>
-								+{sessionXp} XP
-							</span>
-							<span class="session-xp-divider"></span>
-							<span class="session-xp-stat">
-								{sessionChallenges}
-								{sessionChallenges === 1 ? 'challenge' : 'challenges'} this session
-							</span>
-						</div>
-					{/if}
+          {#if sessionChallenges > 0}
+            <div class="session-xp-strip" in:fly={{ y: -10, duration: 300 }}>
+              <span class="session-xp-stat">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width:0.875rem;height:0.875rem;"
+                  ><polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                  /></svg
+                >
+                +{sessionXp} XP
+              </span>
+              <span class="session-xp-divider"></span>
+              <span class="session-xp-stat">
+                {sessionChallenges}
+                {sessionChallenges === 1 ? 'challenge' : 'challenges'} this session
+              </span>
+            </div>
+          {/if}
 
-					{#if challenge && !loading}
-						<div class="card card-duo challenge-card" in:fly={{ y: 20, duration: 400 }}>
-							<div class="challenge-card-top">
-								<button
-									type="button"
-									class="change-mode-link"
-									onclick={() => {
-										challenge = null;
-										feedback = null;
-										showGrammarRef = false;
-									}}
-								>
-									&larr; Change Mode
-								</button>
-								<span class="session-progress-badge">Challenge {displayedChallengeNumber}</span>
-							</div>
-							{#if sentenceTooComplex && sentenceEstimatedLevel}
-								<div
-									class="difficulty-notice"
-									title="This sentence uses {sentenceEstimatedLevel}-level structures — a good stretch!"
-								>
-									⚡ Advanced structure ({sentenceEstimatedLevel})
-								</div>
-							{/if}
-							<div class="challenge-section">
-								{#if challenge.gameMode === 'fill-blank'}
-									<h3>Fill in the blanks:</h3>
-								{:else if challenge.gameMode === 'multiple-choice'}
-									<h3>Choose the correct English translation:</h3>
-								{:else if challenge.gameMode === 'target-to-native'}
-									<h3>Translate this to English:</h3>
-								{:else}
-									<h3>
-										Translate this to {lessonLanguage?.name || 'Target'}:
-									</h3>
-								{/if}
-								<p class="challenge-text">{@html parsedChallengeText}</p>
-							</div>
+          {#if challenge && !loading}
+            <div class="card card-duo challenge-card" in:fly={{ y: 20, duration: 400 }}>
+              <div class="challenge-card-top">
+                <button
+                  type="button"
+                  class="change-mode-link"
+                  onclick={() => {
+                    challenge = null;
+                    feedback = null;
+                    showGrammarRef = false;
+                  }}
+                >
+                  &larr; Change Mode
+                </button>
+                <span class="session-progress-badge">Challenge {displayedChallengeNumber}</span>
+              </div>
+              {#if sentenceTooComplex && sentenceEstimatedLevel}
+                <div
+                  class="difficulty-notice"
+                  title="This sentence uses {sentenceEstimatedLevel}-level structures — a good stretch!"
+                >
+                  ⚡ Advanced structure ({sentenceEstimatedLevel})
+                </div>
+              {/if}
+              <div class="challenge-section">
+                {#if challenge.gameMode === 'fill-blank'}
+                  <h3>Fill in the blanks:</h3>
+                {:else if challenge.gameMode === 'multiple-choice'}
+                  <h3>Choose the correct English translation:</h3>
+                {:else if challenge.gameMode === 'target-to-native'}
+                  <h3>Translate this to English:</h3>
+                {:else}
+                  <h3>
+                    Translate this to {lessonLanguage?.name || 'Target'}:
+                  </h3>
+                {/if}
+                <p class="challenge-text">{@html parsedChallengeText}</p>
+              </div>
 
-							{#if challenge.gameMode === 'fill-blank' && challenge.hints?.length > 0}
-								<div class="challenge-section">
-									<h3>Hints:</h3>
-									<ul class="hint-list">
-										{#each challenge.hints as hint, i}
-											<li>
-												<span class="hint-number">Blank {i + 1}:</span>
-												{hint.hint}
-											</li>
-										{/each}
-									</ul>
-								</div>
-							{/if}
+              {#if challenge.gameMode === 'fill-blank' && challenge.hints?.length > 0}
+                <div class="challenge-section">
+                  <h3>Hints:</h3>
+                  <ul class="hint-list">
+                    {#each challenge.hints as hint, i}
+                      <li>
+                        <span class="hint-number">Blank {i + 1}:</span>
+                        {hint.hint}
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
 
-							<div class="challenge-section grammar-ref-section">
-								{#if isStreaming}
-									<div class="ai-magic-loader">
-										<span class="sparkle">✨</span>
-										<span class="italic">AI is analyzing grammar & generating tooltips...</span>
-									</div>
-								{:else}
-									<button
-										type="button"
-										class="grammar-ref-toggle"
-										onclick={() => (showGrammarRef = !showGrammarRef)}
-									>
-										{showGrammarRef ? 'Hide help' : 'Need help?'}
-										<span class="grammar-ref-chevron" class:expanded={showGrammarRef}>&#9662;</span>
-									</button>
-									{#if showGrammarRef}
-										<div transition:fly={{ y: -5, duration: 200 }}>
-											<h3 style="margin-top: 0.75rem;">Grammar Reference:</h3>
-											{#if challenge.targetedGrammar?.length > 0}
-												<ul class="concept-list">
-													{#each challenge.targetedGrammar as grammar}
-														<li class="grammar-item">
-															<div class="grammar-header">
-																<span class="concept-type">Grammar</span>
-																<span class="grammar-title">{grammar.title}</span>
-																{#if grammar.guide}
-																	<button
-																		type="button"
-																		class="guide-toggle-btn"
-																		onclick={() => toggleGrammar(grammar.id)}
-																	>
-																		{expandedGrammarId === grammar.id ? 'Hide Guide' : 'Show Guide'}
-																	</button>
-																{/if}
-															</div>
-															{#if grammar.guide && expandedGrammarId === grammar.id}
-																<div
-																	class="grammar-guide markdown-body"
-																	transition:fly={{ y: -5, duration: 200 }}
-																>
-																	{@html marked(grammar.guide)}
-																</div>
-															{/if}
-														</li>
-													{/each}
-												</ul>
-											{:else}
-												<p class="italic">None found</p>
-											{/if}
-										</div>
-									{/if}
-								{/if}
-							</div>
+              <div class="challenge-section grammar-ref-section">
+                {#if isStreaming}
+                  <div class="ai-magic-loader">
+                    <span class="sparkle">✨</span>
+                    <span class="italic">AI is analyzing grammar & generating tooltips...</span>
+                  </div>
+                {:else}
+                  <button
+                    type="button"
+                    class="grammar-ref-toggle"
+                    onclick={() => (showGrammarRef = !showGrammarRef)}
+                  >
+                    {showGrammarRef ? 'Hide help' : 'Need help?'}
+                    <span class="grammar-ref-chevron" class:expanded={showGrammarRef}>&#9662;</span>
+                  </button>
+                  {#if showGrammarRef}
+                    <div transition:fly={{ y: -5, duration: 200 }}>
+                      <h3 style="margin-top: 0.75rem;">Grammar Reference:</h3>
+                      {#if challenge.targetedGrammar?.length > 0}
+                        <ul class="concept-list">
+                          {#each challenge.targetedGrammar as grammar}
+                            <li class="grammar-item">
+                              <div class="grammar-header">
+                                <span class="concept-type">Grammar</span>
+                                <span class="grammar-title">{grammar.title}</span>
+                                {#if grammar.guide}
+                                  <button
+                                    type="button"
+                                    class="guide-toggle-btn"
+                                    onclick={() => toggleGrammar(grammar.id)}
+                                  >
+                                    {expandedGrammarId === grammar.id ? 'Hide Guide' : 'Show Guide'}
+                                  </button>
+                                {/if}
+                              </div>
+                              {#if grammar.guide && expandedGrammarId === grammar.id}
+                                <div
+                                  class="grammar-guide markdown-body"
+                                  transition:fly={{ y: -5, duration: 200 }}
+                                >
+                                  {@html marked(grammar.guide)}
+                                </div>
+                              {/if}
+                            </li>
+                          {/each}
+                        </ul>
+                      {:else}
+                        <p class="italic">None found</p>
+                      {/if}
+                    </div>
+                  {/if}
+                {/if}
+              </div>
 
-							<form
-								onsubmit={(e) => {
-									e.preventDefault();
-									submitAnswer();
-								}}
-								class="answer-form"
-							>
-								{#if challenge.gameMode === 'fill-blank'}
-									<FillInBlankView
-										{challenge}
-										{submitting}
-										{feedback}
-										{loading}
-										bind:fillBlankAnswers
-										{lessonLanguage}
-									/>
-								{:else if challenge.gameMode === 'multiple-choice'}
-									<MultipleChoiceView
-										{challenge}
-										{submitting}
-										{feedback}
-										{loading}
-										{shuffledChoices}
-										bind:selectedChoice
-										{hasSubmittedMc}
-										{submitAnswer}
-									/>
-								{:else}
-									<TranslationView
-										{challenge}
-										{submitting}
-										{feedback}
-										{loading}
-										bind:userInput
-										{lessonLanguage}
-										onsubmit={submitAnswer}
-									/>
-								{/if}
+              <form
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  submitAnswer();
+                }}
+                class="answer-form"
+              >
+                {#if challenge.gameMode === 'fill-blank'}
+                  <FillInBlankView
+                    {challenge}
+                    {submitting}
+                    {feedback}
+                    {loading}
+                    bind:fillBlankAnswers
+                    {lessonLanguage}
+                  />
+                {:else if challenge.gameMode === 'multiple-choice'}
+                  <MultipleChoiceView
+                    {challenge}
+                    {submitting}
+                    {feedback}
+                    {loading}
+                    {shuffledChoices}
+                    bind:selectedChoice
+                    {hasSubmittedMc}
+                    {submitAnswer}
+                  />
+                {:else}
+                  <TranslationView
+                    {challenge}
+                    {submitting}
+                    {feedback}
+                    {loading}
+                    bind:userInput
+                    {lessonLanguage}
+                    onsubmit={submitAnswer}
+                  />
+                {/if}
 
-								{#if !feedback}
-									{#if challenge.gameMode !== 'multiple-choice'}
-										<button
-											type="submit"
-											disabled={submitting ||
-												!challenge?.targetSentence ||
-												(challenge.gameMode === 'fill-blank'
-													? fillBlankAnswers.length === 0 || fillBlankAnswers.some((a) => !a.trim())
-													: challenge.gameMode === 'multiple-choice'
-														? !selectedChoice
-														: !userInput.trim())}
-											class="btn-duo btn-primary submit-btn"
-											style="margin-top: 1.5rem; width: 100%;"
-										>
-											{submitting ? 'Evaluating...' : 'Submit Answer'}
-										</button>
-									{/if}
-								{/if}
-							</form>
-						</div>
-					{/if}
+                {#if !feedback}
+                  {#if challenge.gameMode !== 'multiple-choice'}
+                    <button
+                      type="submit"
+                      disabled={submitting ||
+                        !challenge?.targetSentence ||
+                        (challenge.gameMode === 'fill-blank'
+                          ? fillBlankAnswers.length === 0 || fillBlankAnswers.some((a) => !a.trim())
+                          : challenge.gameMode === 'multiple-choice'
+                            ? !selectedChoice
+                            : !userInput.trim())}
+                      class="btn-duo btn-primary submit-btn"
+                      style="margin-top: 1.5rem; width: 100%;"
+                    >
+                      {submitting ? 'Evaluating...' : 'Submit Answer'}
+                    </button>
+                  {/if}
+                {/if}
+              </form>
+            </div>
+          {/if}
 
-					{#if submitting}
-						<div class="card card-duo loading-state" in:fly={{ y: 20, duration: 400 }}>
-							<div class="spinner"></div>
-							<p>Evaluating your answer...</p>
-						</div>
-					{/if}
+          {#if submitting}
+            <div class="card card-duo loading-state" in:fly={{ y: 20, duration: 400 }}>
+              <div class="spinner"></div>
+              <p>Evaluating your answer...</p>
+            </div>
+          {/if}
 
-					{#if feedback}
-						<div class="card card-duo feedback-card" in:fly={{ y: 20, duration: 400 }}>
-							<div class="feedback-header">
-								<h2>Feedback</h2>
-								<div class="score-display">
-									<span class="score-label">Score:</span>
-									{#if feedback.globalScore === null}
-										<div class="score-spinner"></div>
-									{:else}
-										<span
-											class="score-value"
-											class:excellent={feedback.globalScore > 0.8}
-											class:good={feedback.globalScore <= 0.8 && feedback.globalScore > 0.5}
-											class:needs-work={feedback.globalScore <= 0.5}
-										>
-											{Math.round(feedback.globalScore * 100)}%
-										</span>
-									{/if}
-								</div>
-							</div>
+          {#if feedback}
+            <div class="card card-duo feedback-card" in:fly={{ y: 20, duration: 400 }}>
+              <div class="feedback-header">
+                <h2>Feedback</h2>
+                <div class="score-display">
+                  <span class="score-label">Score:</span>
+                  {#if feedback.globalScore === null}
+                    <div class="score-spinner"></div>
+                  {:else}
+                    <span
+                      class="score-value"
+                      class:excellent={feedback.globalScore > 0.8}
+                      class:good={feedback.globalScore <= 0.8 && feedback.globalScore > 0.5}
+                      class:needs-work={feedback.globalScore <= 0.5}
+                    >
+                      {Math.round(feedback.globalScore * 100)}%
+                    </span>
+                  {/if}
+                </div>
+              </div>
 
-							<div class="feedback-message">
-								<p>
-									{feedback.feedback}
-								</p>
-							</div>
+              <div class="feedback-message">
+                <p>
+                  {feedback.feedback}
+                </p>
+              </div>
 
-							<div class="feedback-section">
-								<h3>Expected Answer:</h3>
-								<div class="expected-answer">
-									<p>{@html parsedTargetSentence}</p>
-								</div>
-							</div>
+              <div class="feedback-section">
+                <h3>Expected Answer:</h3>
+                <div class="expected-answer">
+                  <p>{@html parsedTargetSentence}</p>
+                </div>
+              </div>
 
-							<div class="feedback-grid">
-								{#if feedback.vocabularyUpdates?.length > 0}
-									<div class="feedback-list-section">
-										<h3>Vocabulary Used</h3>
-										<ul>
-											{#each feedback.vocabularyUpdates as update}
-												{@const v = challenge.targetedVocabulary.find(
-													(v: any) => v.id === update.id
-												)}
-												<li>
-													<span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
-													<div class="item-info">
-														<div class="item-row">
-															<span class="item-label">
-																{#if v}
-																	{[genderToArticle(v.gender), v.lemma]
-																		.filter(Boolean)
-																		.join('\u00A0') +
-																		(v.plural ? '\u00A0(pl: ' + v.plural + ')' : '')}
-																	<BookmarkButton word={v.lemma} vocabularyId={v.id} />
-																{:else}
-																	{update.id}
-																{/if}
-															</span>
-															<span class="elo-display">
-																ELO {Math.round(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}
-																{#if showAfterElo && update.eloAfter !== update.eloBefore}
-																	{@const delta = Math.round(update.eloAfter - update.eloBefore)}
-																	<span
-																		class="elo-delta"
-																		class:positive={delta > 0}
-																		class:negative={delta < 0}
-																	>
-																		{delta > 0 ? '+' : ''}{delta}
-																	</span>
-																{/if}
-															</span>
-														</div>
-														<div class="progress-bar-">
-															<div
-																class="progress-bar-fill {getEloLevelClass(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}"
-																style="width: {calculateEloProgress(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}%"
-															></div>
-														</div>
-													</div>
-												</li>
-											{/each}
-										</ul>
-									</div>
-								{/if}
+              <div class="feedback-grid">
+                {#if feedback.vocabularyUpdates?.length > 0}
+                  <div class="feedback-list-section">
+                    <h3>Vocabulary Used</h3>
+                    <ul>
+                      {#each feedback.vocabularyUpdates as update}
+                        {@const v = challenge.targetedVocabulary.find(
+                          (v: any) => v.id === update.id
+                        )}
+                        <li>
+                          <span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
+                          <div class="item-info">
+                            <div class="item-row">
+                              <span class="item-label">
+                                {#if v}
+                                  {[genderToArticle(v.gender), v.lemma]
+                                    .filter(Boolean)
+                                    .join('\u00A0') +
+                                    (v.plural ? '\u00A0(pl: ' + v.plural + ')' : '')}
+                                  <BookmarkButton word={v.lemma} vocabularyId={v.id} />
+                                {:else}
+                                  {update.id}
+                                {/if}
+                              </span>
+                              <span class="elo-display">
+                                ELO {Math.round(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}
+                                {#if showAfterElo && update.eloAfter !== update.eloBefore}
+                                  {@const delta = Math.round(update.eloAfter - update.eloBefore)}
+                                  <span
+                                    class="elo-delta"
+                                    class:positive={delta > 0}
+                                    class:negative={delta < 0}
+                                  >
+                                    {delta > 0 ? '+' : ''}{delta}
+                                  </span>
+                                {/if}
+                              </span>
+                            </div>
+                            <div class="progress-bar-">
+                              <div
+                                class="progress-bar-fill {getEloLevelClass(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}"
+                                style="width: {calculateEloProgress(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}%"
+                              ></div>
+                            </div>
+                          </div>
+                        </li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
 
-								{#if feedback.grammarUpdates?.length > 0}
-									<div class="feedback-list-section">
-										<h3>Grammar Rules Followed</h3>
-										<ul>
-											{#each feedback.grammarUpdates as update}
-												<li>
-													<span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
-													<div class="item-info">
-														<div class="item-row">
-															<span class="item-label">
-																{challenge.targetedGrammar.find((g: any) => g.id === update.id)
-																	?.title || update.id}
-															</span>
-															<span class="elo-display">
-																ELO {Math.round(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}
-																{#if showAfterElo && update.eloAfter !== update.eloBefore}
-																	{@const delta = Math.round(update.eloAfter - update.eloBefore)}
-																	<span
-																		class="elo-delta"
-																		class:positive={delta > 0}
-																		class:negative={delta < 0}
-																	>
-																		{delta > 0 ? '+' : ''}{delta}
-																	</span>
-																{/if}
-															</span>
-														</div>
-														<div class="progress-bar-">
-															<div
-																class="progress-bar-fill {getEloLevelClass(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}"
-																style="width: {calculateEloProgress(
-																	showAfterElo
-																		? (update.eloAfter ?? 1000)
-																		: (update.eloBefore ?? 1000)
-																)}%"
-															></div>
-														</div>
-													</div>
-												</li>
-											{/each}
-										</ul>
-									</div>
-								{/if}
-							</div>
+                {#if feedback.grammarUpdates?.length > 0}
+                  <div class="feedback-list-section">
+                    <h3>Grammar Rules Followed</h3>
+                    <ul>
+                      {#each feedback.grammarUpdates as update}
+                        <li>
+                          <span class="icon">{(update.score ?? 0) >= 0.5 ? '✅' : '❌'}</span>
+                          <div class="item-info">
+                            <div class="item-row">
+                              <span class="item-label">
+                                {challenge.targetedGrammar.find((g: any) => g.id === update.id)
+                                  ?.title || update.id}
+                              </span>
+                              <span class="elo-display">
+                                ELO {Math.round(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}
+                                {#if showAfterElo && update.eloAfter !== update.eloBefore}
+                                  {@const delta = Math.round(update.eloAfter - update.eloBefore)}
+                                  <span
+                                    class="elo-delta"
+                                    class:positive={delta > 0}
+                                    class:negative={delta < 0}
+                                  >
+                                    {delta > 0 ? '+' : ''}{delta}
+                                  </span>
+                                {/if}
+                              </span>
+                            </div>
+                            <div class="progress-bar-">
+                              <div
+                                class="progress-bar-fill {getEloLevelClass(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}"
+                                style="width: {calculateEloProgress(
+                                  showAfterElo
+                                    ? (update.eloAfter ?? 1000)
+                                    : (update.eloBefore ?? 1000)
+                                )}%"
+                              ></div>
+                            </div>
+                          </div>
+                        </li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+              </div>
 
-							<button
-								onclick={() => {
-									gameMode = getNextCycleMode();
-									const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
-									leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
-									const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
-									const retryG = [...new Set(due.flatMap((q) => q.grammarIds))];
-									generateChallenge(retryV, retryG);
-								}}
-								class="btn-duo btn-ai next-btn"
-								style="margin-top: 1.5rem; width: 100%;"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"
-									><path
-										d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
-									/></svg
-								>
-								Next Challenge
-							</button>
-						</div>
-					{/if}
-				{/if}
-			</div>
-		{:else}
-			<div class="games-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-				<div class="header-section">
-					<h2>Quiz Library</h2>
-					<a href="/play/games/create" class="btn-primary create-btn"> + Create Quiz </a>
-				</div>
+              <button
+                onclick={() => {
+                  gameMode = getNextCycleMode();
+                  const due = leitnerQueue.filter((q) => q.dueAtChallenge <= sessionChallenges);
+                  leitnerQueue = leitnerQueue.filter((q) => q.dueAtChallenge > sessionChallenges);
+                  const retryV = [...new Set(due.flatMap((q) => q.vocabIds))];
+                  const retryG = [...new Set(due.flatMap((q) => q.grammarIds))];
+                  generateChallenge(retryV, retryG);
+                }}
+                class="btn-duo btn-ai next-btn"
+                style="margin-top: 1.5rem; width: 100%;"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width:1.25rem;height:1.25rem;flex-shrink:0;margin-right:0.5rem;"
+                  ><path
+                    d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+                  /></svg
+                >
+                Next Challenge
+              </button>
+            </div>
+          {/if}
+        {/if}
+      </div>
+    {:else}
+      <div class="games-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
+        <div class="header-section">
+          <h2>Quiz Library</h2>
+          <a href="/play/games/create" class="btn-primary create-btn"> + Create Quiz </a>
+        </div>
 
-				<div class="games-section">
-					<h2>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-							/>
-						</svg>
-						My Quizzes
-					</h2>
+        <div class="games-section">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            My Quizzes
+          </h2>
 
-					{#if myGames.length === 0}
-						<div class="empty-state-rich">
-							<div class="empty-state-icon">🎮</div>
-							<p class="empty-state-title">No quizzes yet</p>
-							<p class="empty-state-desc">
-								Create your own vocabulary quiz to practice or share with your class.
-							</p>
-							<a href="/play/games/create" class="empty-state-btn">Create a Quiz</a>
-						</div>
-					{:else}
-						<div class="games-grid">
-							{#each myGames as game}
-								<div class="card-duo game-card">
-									<div class="game-card-content">
-										<div class="game-card-header">
-											<h3>{game.title}</h3>
-											<span class="language-badge" title={game.language}>
-												{getFlagEmoji(game.language)}
-											</span>
-										</div>
-										<p class="game-description">
-											{game.description || 'No description provided.'}
-										</p>
-										<div class="game-meta">
-											<span>
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-													><path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-													/></svg
-												>
-												{game._count.questions} questions
-											</span>
-											<span>
-												{#if game.isPublished}
-													<span class="status-published"
-														><span class="status-dot published-dot"></span> Published</span
-													>
-												{:else}
-													<span class="status-draft"
-														><span class="status-dot draft-dot"></span> Draft</span
-													>
-												{/if}
-											</span>
-										</div>
-									</div>
-									<div class="game-actions">
-										{#if canPlayLive}
-											<button
-												type="button"
-												class="btn-action live-btn"
-												onclick={() => handlePlayLive(game.id)}
-											>
-												Play Live
-											</button>
-										{/if}
-										<a href="/play/games/{game.id}/play" class="btn-action"> Solo </a>
-										<a href="/play/games/{game.id}/edit" class="btn-action"> Edit </a>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
+          {#if myGames.length === 0}
+            <div class="empty-state-rich">
+              <div class="empty-state-icon">🎮</div>
+              <p class="empty-state-title">No quizzes yet</p>
+              <p class="empty-state-desc">
+                Create your own vocabulary quiz to practice or share with your class.
+              </p>
+              <a href="/play/games/create" class="empty-state-btn">Create a Quiz</a>
+            </div>
+          {:else}
+            <div class="games-grid">
+              {#each myGames as game}
+                <div class="card-duo game-card">
+                  <div class="game-card-content">
+                    <div class="game-card-header">
+                      <h3>{game.title}</h3>
+                      <span class="language-badge" title={game.language}>
+                        {getFlagEmoji(game.language)}
+                      </span>
+                    </div>
+                    <p class="game-description">
+                      {game.description || 'No description provided.'}
+                    </p>
+                    <div class="game-meta">
+                      <span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          /></svg
+                        >
+                        {game._count.questions} questions
+                      </span>
+                      <span>
+                        {#if game.isPublished}
+                          <span class="status-published"
+                            ><span class="status-dot published-dot"></span> Published</span
+                          >
+                        {:else}
+                          <span class="status-draft"
+                            ><span class="status-dot draft-dot"></span> Draft</span
+                          >
+                        {/if}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="game-actions">
+                    {#if canPlayLive}
+                      <button
+                        type="button"
+                        class="btn-action live-btn"
+                        onclick={() => handlePlayLive(game.id)}
+                      >
+                        Play Live
+                      </button>
+                    {/if}
+                    <a href="/play/games/{game.id}/play" class="btn-action"> Solo </a>
+                    <a href="/play/games/{game.id}/edit" class="btn-action"> Edit </a>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
 
-				<hr class="games-divider" />
+        <hr class="games-divider" />
 
-				<div class="games-section community-games-section">
-					<h2>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-							/>
-						</svg>
-						Community Quizzes
-					</h2>
+        <div class="games-section community-games-section">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+              />
+            </svg>
+            Community Quizzes
+          </h2>
 
-					<div class="category-pills">
-						{#each categories as category}
-							<button
-								class="filter-pill"
-								class:active={currentCategory === category}
-								onclick={() => handleCategoryChange(category)}
-							>
-								{category}
-							</button>
-						{/each}
-					</div>
+          <div class="category-pills">
+            {#each categories as category}
+              <button
+                class="filter-pill"
+                class:active={currentCategory === category}
+                onclick={() => handleCategoryChange(category)}
+              >
+                {category}
+              </button>
+            {/each}
+          </div>
 
-					{#if communityGames.length === 0}
-						<div class="empty-state-rich">
-							<div class="empty-state-icon">🌐</div>
-							<p class="empty-state-title">No quizzes in this category</p>
-							<p class="empty-state-desc">
-								Try a different category, or be the first to create one!
-							</p>
-							<a href="/play/games/create" class="empty-state-btn">Create a Quiz</a>
-						</div>
-					{:else}
-						<div class="games-grid">
-							{#each data.communityGames as game}
-								<div class="card-duo game-card">
-									<div class="game-card-content">
-										<div class="game-card-header">
-											<h3>{game.title}</h3>
-											<span class="language-badge" title={game.language}>
-												{getFlagEmoji(game.language)}
-											</span>
-										</div>
-										<p class="game-author">by {game.creator?.username || 'Unknown'}</p>
-										<p class="game-description">
-											{game.description || 'No description provided.'}
-										</p>
-										<div
-											class="game-meta"
-											style="justify-content: space-between; align-items: center;"
-										>
-											<span>
-												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-													><path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-													/></svg
-												>
-												{(game as { _count?: { questions: number } })._count?.questions || 0} questions
-											</span>
-											{#if game.category && game.category !== 'General'}
-												<span class="meta-badge">{game.category}</span>
-											{/if}
-										</div>
-									</div>
-									<div class="game-actions">
-										{#if canPlayLive}
-											<button
-												type="button"
-												class="btn-action live-btn"
-												onclick={() => handlePlayLive(game.id)}
-											>
-												Play Live
-											</button>
-										{/if}
-										<a href="/play/games/{game.id}/play" class="btn-action"> Solo </a>
-									</div>
-								</div>
-							{/each}
-						</div>
+          {#if communityGames.length === 0}
+            <div class="empty-state-rich">
+              <div class="empty-state-icon">🌐</div>
+              <p class="empty-state-title">No quizzes in this category</p>
+              <p class="empty-state-desc">
+                Try a different category, or be the first to create one!
+              </p>
+              <a href="/play/games/create" class="empty-state-btn">Create a Quiz</a>
+            </div>
+          {:else}
+            <div class="games-grid">
+              {#each data.communityGames as game}
+                <div class="card-duo game-card">
+                  <div class="game-card-content">
+                    <div class="game-card-header">
+                      <h3>{game.title}</h3>
+                      <span class="language-badge" title={game.language}>
+                        {getFlagEmoji(game.language)}
+                      </span>
+                    </div>
+                    <p class="game-author">by {game.creator?.username || 'Unknown'}</p>
+                    <p class="game-description">
+                      {game.description || 'No description provided.'}
+                    </p>
+                    <div
+                      class="game-meta"
+                      style="justify-content: space-between; align-items: center;"
+                    >
+                      <span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          /></svg
+                        >
+                        {(game as { _count?: { questions: number } })._count?.questions || 0} questions
+                      </span>
+                      {#if game.category && game.category !== 'General'}
+                        <span class="meta-badge">{game.category}</span>
+                      {/if}
+                    </div>
+                  </div>
+                  <div class="game-actions">
+                    {#if canPlayLive}
+                      <button
+                        type="button"
+                        class="btn-action live-btn"
+                        onclick={() => handlePlayLive(game.id)}
+                      >
+                        Play Live
+                      </button>
+                    {/if}
+                    <a href="/play/games/{game.id}/play" class="btn-action"> Solo </a>
+                  </div>
+                </div>
+              {/each}
+            </div>
 
-						{#if communityGames.length < totalCommunityGames}
-							<div class="load-more-container" style="text-align: center; margin-top: 2rem;">
-								<button class="btn-load-more" onclick={loadMore} disabled={loadingMore}>
-									{loadingMore ? 'Loading...' : 'Load More'}
-								</button>
-							</div>
-						{/if}
-					{/if}
-				</div>
-			</div>
-		{/if}
-	</div>
+            {#if communityGames.length < totalCommunityGames}
+              <div class="load-more-container" style="text-align: center; margin-top: 2rem;">
+                <button class="btn-load-more" onclick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? 'Loading...' : 'Load More'}
+                </button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
 </div>
 
 {#if showClassModal}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="modal-backdrop"
-		transition:fade={{ duration: 200 }}
-		onclick={() => (showClassModal = false)}
-	>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
-			<div class="modal-header">
-				<h2>Select a Class</h2>
-				<button class="close-btn" onclick={() => (showClassModal = false)}>×</button>
-			</div>
-			<div class="modal-body">
-				<p class="modal-desc">Which class do you want to start this live session for?</p>
-				<div class="class-list">
-					{#each teacherClasses as c}
-						<button
-							class="class-btn"
-							onclick={() => {
-								showClassModal = false;
-								if (selectedGameIdForLive) startLiveSession(selectedGameIdForLive, c.id);
-							}}
-						>
-							{c.name}
-						</button>
-					{/each}
-				</div>
-			</div>
-		</div>
-	</div>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="modal-backdrop"
+    transition:fade={{ duration: 200 }}
+    onclick={() => (showClassModal = false)}
+  >
+    <div class="modal" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h2>Select a Class</h2>
+        <button class="close-btn" onclick={() => (showClassModal = false)}>×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Which class do you want to start this live session for?</p>
+        <div class="class-list">
+          {#each teacherClasses as c}
+            <button
+              class="class-btn"
+              onclick={() => {
+                showClassModal = false;
+                if (selectedGameIdForLive) startLiveSession(selectedGameIdForLive, c.id);
+              }}
+            >
+              {c.name}
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
+  </div>
 {/if}
 
 <style>
-	.modal-backdrop {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-	}
-
-	.modal {
-		background: var(--card-bg, #ffffff);
-		border-radius: 12px;
-		padding: 1.5rem;
-		width: 90%;
-		max-width: 400px;
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-	}
-
-	:global(html[data-theme='dark']) .modal {
-		background: #1e293b;
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-	}
-
-	.modal-header h2 {
-		margin: 0;
-		font-size: 1.25rem;
-		color: var(--text-color, #0f172a);
-	}
-
-	:global(html[data-theme='dark']) .modal-header h2 {
-		color: #f8fafc;
-	}
-
-	.close-btn {
-		background: transparent;
-		border: none;
-		font-size: 1.5rem;
-		cursor: pointer;
-		color: #64748b;
-	}
-
-	.modal-desc {
-		color: #475569;
-		margin-top: 0;
-		margin-bottom: 1rem;
-		font-size: 0.95rem;
-	}
-
-	:global(html[data-theme='dark']) .modal-desc {
-		color: #94a3b8;
-	}
-
-	.class-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		margin-top: 1rem;
-	}
-
-	.class-btn {
-		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid #e2e8f0;
-		background: #f8fafc;
-		color: #1e293b;
-		text-align: left;
-		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s;
-	}
-
-	.class-btn:hover {
-		border-color: #3b82f6;
-		background: #eff6ff;
-	}
-
-	:global(html[data-theme='dark']) .class-btn {
-		background: #1e293b;
-		border-color: #334155;
-		color: #e2e8f0;
-	}
-
-	:global(html[data-theme='dark']) .class-btn:hover {
-		border-color: #60a5fa;
-		background: #334155;
-	}
-
-	.tabs-container {
-		display: flex;
-		justify-content: center;
-		margin-bottom: 2rem;
-	}
-
-	.tabs {
-		display: flex;
-		background: #f1f5f9;
-		padding: 0.5rem;
-		border-radius: 1rem;
-		gap: 0.5rem;
-	}
-
-	:global(html[data-theme='dark']) .tabs {
-		background: #1e293b;
-	}
-
-	.tab-btn {
-		padding: 0.75rem 2rem;
-		border-radius: 0.75rem;
-		font-weight: bold;
-		font-size: 1rem;
-		color: #64748b;
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.tab-btn:hover {
-		color: #1e293b;
-		background: #e2e8f0;
-	}
-
-	:global(html[data-theme='dark']) .tab-btn:hover {
-		color: #f8fafc;
-		background: #334155;
-	}
-
-	.tab-btn.active {
-		background: white;
-		color: #3b82f6;
-		box-shadow:
-			0 4px 6px -1px rgba(0, 0, 0, 0.1),
-			0 2px 4px -1px rgba(0, 0, 0, 0.06);
-	}
-
-	:global(html[data-theme='dark']) .tab-btn.active {
-		background: #0f172a;
-		color: #60a5fa;
-	}
-
-	.games-wrapper {
-		display: flex;
-		flex-direction: column;
-		gap: 2rem;
-	}
-
-	.immerse-wrapper {
-		max-width: 800px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.immerse-inline {
-		max-width: 800px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.header-section {
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-	}
-
-	@media (min-width: 768px) {
-		.header-section {
-			flex-direction: row;
-			align-items: center;
-		}
-	}
-
-	.header-section h2 {
-		font-size: 2rem;
-		color: var(--text-color, #0f172a);
-		margin: 0;
-		font-weight: 800;
-	}
-
-	.create-btn {
-		padding: 0.75rem 1.5rem;
-		border-radius: 0.75rem;
-		font-weight: bold;
-		text-decoration: none;
-		display: inline-block;
-	}
-
-	.games-section {
-		margin-bottom: 1rem;
-	}
-
-	.games-section h2 {
-		font-size: 1.5rem;
-		color: var(--text-color, #1e293b);
-		margin: 0 0 1.5rem;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.games-section h2 svg {
-		width: 1.5rem;
-		height: 1.5rem;
-		color: #3b82f6;
-	}
-
-	.link {
-		color: #3b82f6;
-		font-weight: bold;
-		text-decoration: none;
-	}
-
-	.link:hover {
-		text-decoration: underline;
-	}
-
-	.games-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 2rem;
-	}
-
-	@media (min-width: 640px) {
-		.games-grid {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.games-grid {
-			grid-template-columns: 1fr 1fr 1fr;
-		}
-	}
-
-	.game-card {
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-	}
-
-	.game-card:hover {
-		transform: translateY(-4px);
-		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-	}
-
-	.game-card-content {
-		flex: 1;
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.game-card-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 0.25rem;
-	}
-
-	.game-card-header h3 {
-		font-size: 1.25rem;
-		font-weight: bold;
-		margin: 0;
-		color: var(--text-color, #1e293b);
-		display: -webkit-box;
-		-webkit-line-clamp: 1;
-		-webkit-box-orient: vertical;
-		line-clamp: 1;
-		overflow: hidden;
-	}
-
-	.language-badge {
-		background: transparent;
-		font-size: 1.5rem;
-		line-height: 1;
-		cursor: help;
-	}
-
-	:global(html[data-theme='dark']) .language-badge {
-		background: transparent;
-	}
-
-	.game-author {
-		font-size: 0.875rem;
-		font-weight: bold;
-		color: #3b82f6;
-		margin: 0;
-	}
-
-	.game-description {
-		color: #64748b;
-		font-size: 0.875rem;
-		margin: 0;
-		flex-grow: 1;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		line-clamp: 2;
-		overflow: hidden;
-	}
-
-	.game-meta {
-		display: flex;
-		gap: 1rem;
-		font-size: 0.875rem;
-		font-weight: bold;
-		color: #64748b;
-		margin-top: auto;
-	}
-
-	.game-meta span {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
-
-	.game-meta svg {
-		width: 1rem;
-		height: 1rem;
-	}
-
-	.status-published {
-		color: #22c55e;
-	}
-
-	.status-draft {
-		color: #94a3b8;
-	}
-
-	.status-dot {
-		width: 0.5rem;
-		height: 0.5rem;
-		border-radius: 50%;
-		display: inline-block;
-	}
-
-	.published-dot {
-		background-color: #22c55e;
-	}
-
-	.draft-dot {
-		background-color: #94a3b8;
-	}
-
-	.game-actions {
-		padding: 1rem;
-		border-top: 1px solid var(--card-border, #f1f5f9);
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-	}
-
-	.btn-action {
-		flex: 1;
-		min-width: calc(50% - 0.75rem);
-		background: #eff6ff;
-		color: #1d4ed8;
-		font-weight: bold;
-		padding: 0.5rem 1rem;
-		border-radius: 0.75rem;
-		border: none;
-		text-align: center;
-		text-decoration: none;
-		transition: background-color 0.2s;
-		cursor: pointer;
-		font-family: inherit;
-		font-size: 1rem;
-		box-sizing: border-box;
-	}
-
-	.btn-action:hover {
-		background: #dbeafe;
-	}
-
-	.btn-action.live-btn {
-		flex: 1 1 100%;
-		background: #f97316;
-		color: #ffffff;
-	}
-
-	.btn-action.live-btn:hover {
-		background: #ea580c;
-	}
-
-	:global(html[data-theme='dark']) .btn-action {
-		background: #1e3a8a;
-		color: #bfdbfe;
-	}
-
-	:global(html[data-theme='dark']) .btn-action:hover {
-		background: #1e40af;
-	}
-
-	:global(html[data-theme='dark']) .btn-action.live-btn {
-		background: #ea580c;
-		color: #ffffff;
-	}
-
-	:global(html[data-theme='dark']) .btn-action.live-btn:hover {
-		background: #c2410c;
-	}
-
-	:global(body) {
-		margin: 0;
-		font-family:
-			'Inter',
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			Roboto,
-			Helvetica,
-			Arial,
-			sans-serif;
-		background-color: var(--bg-color, #f8fafc);
-		color: var(--text-color, #334155);
-	}
-
-	.page-container {
-		display: flex;
-		justify-content: center;
-		padding: 2rem 1rem;
-		min-height: calc(100vh - 4rem);
-		-webkit-user-select: none;
-		user-select: none;
-	}
-
-	.page-container :global(input) {
-		-webkit-user-select: text;
-		user-select: text;
-	}
-
-	.content-wrapper {
-		width: 100%;
-		max-width: 1200px;
-		transition: max-width 0.3s ease;
-	}
-
-	.learn-container {
-		max-width: 800px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.page-header {
-		margin-bottom: 2rem;
-	}
-
-	.page-header h1 {
-		font-size: 2.5rem;
-		color: #0f172a;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.page-header p {
-		color: #64748b;
-		font-size: 1.1rem;
-		margin: 0;
-	}
-
-	.card {
-		background: var(--card-bg, #ffffff);
-		border-radius: 12px;
-		box-shadow:
-			0 4px 6px -1px rgba(0, 0, 0, 0.1),
-			0 2px 4px -1px rgba(0, 0, 0, 0.06);
-		padding: 2rem;
-		border: 1px solid var(--card-border, #e2e8f0);
-		margin-bottom: 1.5rem;
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: 4rem 2rem;
-		background: #f8fafc;
-		border: 2px solid var(--card-border, #e2e8f0);
-		border-radius: 12px;
-	}
-
-	:global(html[data-theme='dark']) .empty-state {
-		background: #1e293b;
-	}
-
-	.empty-state h2 {
-		margin-top: 0;
-		margin-bottom: 1.5rem;
-		color: #1e293b;
-		font-size: 1.5rem;
-	}
-
-	:global(html[data-theme='dark']) .empty-state h2 {
-		color: #f1f5f9;
-	}
-
-	/* Rich empty states (#18) */
-	.empty-state-rich {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		padding: 3.5rem 2rem;
-		background: var(--card-bg, #f8fafc);
-		border: 3px dashed var(--card-border, #cbd5e1);
-		border-radius: 1.25rem;
-		gap: 0.5rem;
-	}
-
-	.empty-state-icon {
-		font-size: 3rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.empty-state-title {
-		font-size: 1.15rem;
-		font-weight: 800;
-		color: var(--text-color, #1e293b);
-		margin: 0;
-	}
-
-	.empty-state-desc {
-		font-size: 0.875rem;
-		color: #64748b;
-		margin: 0;
-		max-width: 300px;
-	}
-
-	.empty-state-btn {
-		display: inline-block;
-		margin-top: 0.75rem;
-		background: #3b82f6;
-		color: white;
-		text-decoration: none;
-		border-radius: 0.75rem;
-		padding: 0.6rem 1.25rem;
-		font-size: 0.875rem;
-		font-weight: 800;
-		box-shadow: 0 3px 0 #2563eb;
-		transition: background 0.15s;
-	}
-
-	.empty-state-btn:hover {
-		background: #2563eb;
-	}
-
-	.loading-state {
-		text-align: center;
-		padding: 4rem 2rem;
-	}
-
-	.loading-mode-badge {
-		display: inline-block;
-		font-size: 0.8rem;
-		font-weight: 700;
-		color: #6366f1;
-		background: #eef2ff;
-		border: 1px solid #c7d2fe;
-		border-radius: 999px;
-		padding: 0.3rem 0.9rem;
-		margin-bottom: 1rem;
-		letter-spacing: 0.02em;
-	}
-
-	:global(html[data-theme='dark']) .loading-mode-badge {
-		color: #a5b4fc;
-		background: #1e1b4b;
-		border-color: #3730a3;
-	}
-
-	.spinner {
-		display: inline-block;
-		width: 2rem;
-		height: 2rem;
-		border: 4px solid #e2e8f0;
-		border-top-color: #7c3aed;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin-bottom: 1rem;
-	}
-
-	.score-spinner {
-		display: inline-block;
-		width: 1.2rem;
-		height: 1.2rem;
-		border: 3px solid #e2e8f0;
-		border-top-color: #7c3aed;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.loading-state p {
-		color: #64748b;
-		margin: 0;
-	}
-
-	.load-progress-track {
-		width: 80%;
-		max-width: 320px;
-		height: 5px;
-		background: #e2e8f0;
-		border-radius: 999px;
-		margin: 1.25rem auto 0;
-		overflow: hidden;
-	}
-
-	.load-progress-fill {
-		height: 100%;
-		background: linear-gradient(to right, #7c3aed, #6d28d9);
-		border-radius: 999px;
-		transition: width 0.12s linear;
-	}
-
-	.load-progress-fill.local-mode-fill {
-		background: linear-gradient(to right, #f59e0b, #d97706);
-	}
-
-	.load-tip-container {
-		min-height: 3.5rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		position: relative;
-		margin-top: 1rem;
-		width: 100%;
-	}
-
-	.load-tip {
-		color: #64748b;
-		font-size: 0.85rem;
-		margin: 0;
-		max-width: 380px;
-		text-align: center;
-		line-height: 1.5;
-		position: absolute;
-		padding: 0 1rem;
-	}
-
-	.challenge-section {
-		margin-bottom: 1.5rem;
-	}
-
-	.challenge-section h3,
-	.feedback-section h3,
-	.feedback-list-section h3 {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #64748b;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.challenge-text {
-		font-size: 1.5rem;
-		font-weight: 500;
-		color: #0f172a;
-		margin: 0;
-	}
-
-	:global(html[data-theme='dark']) .challenge-text {
-		color: var(--text-color, #e2e8f0);
-	}
-
-	/* Tooltip trigger (shared by vocab-highlight and word-hover) */
-	:global(.tooltip-trigger) {
-		position: relative;
-		cursor: help;
-	}
-
-	:global(.word-tooltip) {
-		visibility: hidden;
-		opacity: 0;
-		position: absolute;
-		bottom: 100%;
-		left: 50%;
-		transform: translateX(-50%);
-		margin-bottom: 8px;
-		background-color: #1e293b;
-		color: #f8fafc;
-		text-align: left;
-		padding: 0.625rem 0.75rem;
-		border-radius: 6px;
-		width: max-content;
-		min-width: 140px;
-		max-width: 240px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-		transition:
-			opacity 0.15s,
-			visibility 0.15s;
-		z-index: 100;
-		pointer-events: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	:global(.word-tooltip::after) {
-		content: '';
-		position: absolute;
-		top: 100%;
-		left: 50%;
-		margin-left: -5px;
-		border-width: 5px;
-		border-style: solid;
-		border-color: #1e293b transparent transparent transparent;
-	}
-
-	.ai-magic-loader {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	:global(.sparkle) {
-		display: inline-block;
-		animation: pulse-sparkle 1.5s ease-in-out infinite;
-	}
-
-	:global(.ai-magic-text) {
-		color: #c084fc; /* purple-400 */
-		font-weight: 500;
-	}
-
-	@keyframes pulse-sparkle {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.8;
-		}
-		50% {
-			transform: scale(1.2);
-			opacity: 1;
-			filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
-		}
-	}
-
-	:global(.tooltip-trigger:hover > .word-tooltip) {
-		visibility: visible;
-		opacity: 1;
-	}
-
-	:global(.word-tooltip-header) {
-		font-weight: bold;
-		font-size: 0.95rem;
-		padding-bottom: 0.25rem;
-		border-bottom: 1px solid #475569;
-		margin-bottom: 0.125rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.4rem;
-	}
-
-	:global(.word-tooltip-ai-badge) {
-		font-size: 0.6rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		color: #c4b5fd;
-		background: rgba(124, 58, 237, 0.2);
-		border: 1px solid rgba(124, 58, 237, 0.35);
-		border-radius: 3px;
-		padding: 0 0.3em;
-		line-height: 1.6;
-		flex-shrink: 0;
-	}
-
-	:global(.word-tooltip-body) {
-		font-size: 0.8rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-	}
-
-	:global(.word-tooltip-row) {
-		display: block;
-	}
-
-	/* Targeted vocab words: yellow highlight */
-	:global(.vocab-highlight) {
-		background-color: #fef08a;
-		color: #1a1a1a;
-		border-radius: 4px;
-		padding: 0 4px;
-		border-bottom: 2px dashed #ca8a04;
-		transition: background-color 0.2s;
-	}
-
-	:global(.vocab-highlight:hover) {
-		background-color: #fde047;
-	}
-
-	/* Non-targeted words: subtle underline on hover */
-	:global(.word-hover) {
-		border-bottom: 1px solid transparent;
-		transition: border-color 0.15s;
-		border-radius: 2px;
-	}
-
-	:global(.word-hover:hover) {
-		border-bottom-color: #94a3b8;
-	}
-
-	:global(.word-hover.has-info) {
-		cursor: help;
-	}
-
-	:global(.word-hover.has-info:hover) {
-		border-bottom-color: #3b82f6;
-	}
-
-	.concept-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.concept-list li {
-		color: #475569;
-		margin-bottom: 0.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.grammar-header {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.grammar-title {
-		font-weight: 500;
-	}
-
-	.guide-toggle-btn {
-		background: none;
-		border: none;
-		font-size: 0.8rem;
-		text-decoration: underline;
-		cursor: pointer;
-		padding: 0;
-		margin-left: auto;
-	}
-
-	.grammar-guide {
-		padding: 1.25rem;
-		border-radius: 0.75rem;
-		font-size: 1rem;
-		line-height: 1.6;
-		overflow-x: auto;
-		background: #f8fafc;
-		border: 1px solid #e2e8f0;
-		color: #334155;
-		box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide {
-		background: #0f172a;
-		border-color: #1e293b;
-		color: #cbd5e1;
-	}
-
-	.grammar-guide :global(h1),
-	.grammar-guide :global(h2),
-	.grammar-guide :global(h3),
-	.grammar-guide :global(h4) {
-		color: #0f172a;
-		margin-top: 1.5rem;
-		margin-bottom: 0.75rem;
-		font-weight: 700;
-		line-height: 1.3;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(h1),
-	:global(html[data-theme='dark']) .grammar-guide :global(h2),
-	:global(html[data-theme='dark']) .grammar-guide :global(h3),
-	:global(html[data-theme='dark']) .grammar-guide :global(h4) {
-		color: #f8fafc;
-	}
-
-	.grammar-guide :global(h1:first-child),
-	.grammar-guide :global(h2:first-child),
-	.grammar-guide :global(h3:first-child) {
-		margin-top: 0;
-	}
-
-	.grammar-guide :global(h1) {
-		font-size: 1.5rem;
-		border-bottom: 1px solid #e2e8f0;
-		padding-bottom: 0.5rem;
-	}
-	.grammar-guide :global(h2) {
-		font-size: 1.25rem;
-		border-bottom: 1px solid #e2e8f0;
-		padding-bottom: 0.3rem;
-	}
-	.grammar-guide :global(h3) {
-		font-size: 1.1rem;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(h1),
-	:global(html[data-theme='dark']) .grammar-guide :global(h2) {
-		border-color: #1e293b;
-	}
-
-	.grammar-guide :global(p) {
-		margin-top: 0;
-		margin-bottom: 1rem;
-	}
-
-	.grammar-guide :global(p:last-child) {
-		margin-bottom: 0;
-	}
-
-	.grammar-guide :global(ul),
-	.grammar-guide :global(ol) {
-		margin-top: 0;
-		margin-bottom: 1rem;
-		padding-left: 1.5rem;
-	}
-
-	.grammar-guide :global(li) {
-		margin-bottom: 0.25rem;
-	}
-
-	.grammar-guide :global(strong),
-	.grammar-guide :global(b) {
-		font-weight: 700;
-		color: #0f172a;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(strong),
-	:global(html[data-theme='dark']) .grammar-guide :global(b) {
-		color: #f8fafc;
-	}
-
-	.grammar-guide :global(em),
-	.grammar-guide :global(i) {
-		color: #475569;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(em),
-	:global(html[data-theme='dark']) .grammar-guide :global(i) {
-		color: #94a3b8;
-	}
-
-	.grammar-guide :global(code) {
-		background: #e2e8f0;
-		padding: 0.1rem 0.3rem;
-		border-radius: 0.25rem;
-		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-		font-size: 0.85em;
-		color: #db2777;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(code) {
-		background: #2a303c;
-		color: #f472b6;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(code) {
-		background: #1e293b;
-		color: #f472b6;
-	}
-
-	.grammar-guide :global(pre) {
-		background: #1e293b;
-		padding: 1rem;
-		border-radius: 0.5rem;
-		overflow-x: auto;
-		margin-bottom: 1rem;
-	}
-
-	.grammar-guide :global(pre code) {
-		background: transparent;
-		color: #e2e8f0;
-		padding: 0;
-		font-size: 0.9em;
-	}
-
-	.grammar-guide :global(blockquote) {
-		border-left: 4px solid #3b82f6;
-		padding-left: 1rem;
-		margin-left: 0;
-		margin-right: 0;
-		background: #f1f5f9;
-		padding-top: 0.5rem;
-		padding-bottom: 0.5rem;
-		border-radius: 0 0.25rem 0.25rem 0;
-		font-style: italic;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(blockquote) {
-		background: #1e293b;
-		border-left-color: #60a5fa;
-	}
-
-	.grammar-guide :global(table) {
-		width: 100%;
-		border-collapse: collapse;
-		margin-bottom: 1rem;
-	}
-
-	.grammar-guide :global(th),
-	.grammar-guide :global(td) {
-		border: 1px solid #e2e8f0;
-		padding: 0.5rem;
-		text-align: left;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(th),
-	:global(html[data-theme='dark']) .grammar-guide :global(td) {
-		border-color: #334155;
-	}
-
-	.grammar-guide :global(th) {
-		background: #f1f5f9;
-		font-weight: 600;
-	}
-
-	:global(html[data-theme='dark']) .grammar-guide :global(th) {
-		background: #1e293b;
-	}
-
-	.concept-type {
-		background: #e2e8f0;
-		padding: 0.125rem 0.5rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #475569;
-	}
-
-	:global(html[data-theme='dark']) .concept-type {
-		background: #3a4150;
-		color: #cbd5e1;
-	}
-
-	.answer-form {
-		margin-top: 2rem;
-	}
-
-	.form-group {
-		margin-bottom: 1rem;
-	}
-
-	.btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.75rem 1.5rem;
-		font-size: 1rem;
-		font-weight: 600;
-		border-radius: 8px;
-		border: none;
-		cursor: pointer;
-		transition: all 0.2s;
-		text-decoration: none;
-	}
-
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.submit-btn {
-		width: 100%;
-	}
-
-	.next-btn {
-		width: 100%;
-		margin-top: 1rem;
-	}
-
-	.feedback-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.5rem;
-	}
-
-	.feedback-header h2 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: #0f172a;
-	}
-
-	:global(html[data-theme='dark']) .feedback-header h2 {
-		color: #f1f5f9;
-	}
-
-	.score-display {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.score-label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #64748b;
-	}
-
-	:global(html[data-theme='dark']) .score-label {
-		color: #94a3b8;
-	}
-
-	.score-value {
-		font-size: 1.25rem;
-		font-weight: 700;
-	}
-
-	.score-value.excellent {
-		color: #16a34a;
-	}
-	.score-value.good {
-		color: #ca8a04;
-	}
-	.score-value.needs-work {
-		color: #dc2626;
-	}
-
-	.feedback-message {
-		background-color: #eff6ff;
-		border-left: 4px solid #3b82f6;
-		padding: 1rem;
-		border-radius: 0 8px 8px 0;
-		margin-bottom: 1.5rem;
-		color: #1e3a8a;
-		line-height: 1.5;
-	}
-
-	:global(html[data-theme='dark']) .feedback-message {
-		background-color: #0c1a3a;
-		color: #93c5fd;
-	}
-
-	.feedback-message p {
-		margin: 0;
-	}
-
-	.expected-answer {
-		background-color: #f0fdf4;
-		border: 1px solid #bbf7d0;
-		padding: 1rem;
-		border-radius: 8px;
-		margin-bottom: 1.5rem;
-	}
-
-	:global(html[data-theme='dark']) .expected-answer {
-		background-color: #0d1f14;
-		border-color: #166534;
-	}
-
-	.expected-answer p {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 500;
-		color: #166534;
-	}
-
-	:global(html[data-theme='dark']) .expected-answer p {
-		color: #86efac;
-	}
-
-	.feedback-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 1.5rem;
-		margin-bottom: 1.5rem;
-	}
-
-	@media (min-width: 640px) {
-		.feedback-grid {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	.feedback-list-section ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.feedback-list-section li {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-		color: #334155;
-		font-size: 0.95rem;
-	}
-
-	.item-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		flex: 1;
-	}
-
-	.item-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-	}
-
-	.elo-display {
-		font-size: 0.8rem;
-		font-weight: 700;
-		color: #64748b;
-		background: #f1f5f9;
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		white-space: nowrap;
-	}
-
-	:global(html[data-theme='dark']) .elo-display {
-		background: #2a303c;
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .feedback-list-section li {
-		color: #cbd5e1;
-	}
-
-	.elo-delta {
-		font-size: 0.75rem;
-		font-weight: 800;
-		margin-left: 0.25rem;
-	}
-
-	.elo-delta.positive {
-		color: #16a34a;
-	}
-	.elo-delta.negative {
-		color: #dc2626;
-	}
-
-	.progress-bar-container {
-		height: 0.75rem;
-		background-color: #e2e8f0;
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1.5px solid #cbd5e1;
-		box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-		margin-top: 0.25rem;
-		width: 100%;
-	}
-
-	:global(html[data-theme='dark']) .progress-bar-container {
-		background-color: #1e293b;
-		border-color: #334155;
-	}
-
-	.progress-bar-fill {
-		height: 100%;
-		border-radius: 9999px;
-		transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-		animation: progress-stripes 1s linear infinite;
-	}
-
-	.progress-bar-fill.learning {
-		background-color: #facc15;
-		background-image: linear-gradient(
-			45deg,
-			rgba(255, 255, 255, 0.15) 25%,
-			transparent 25%,
-			transparent 50%,
-			rgba(255, 255, 255, 0.15) 50%,
-			rgba(255, 255, 255, 0.15) 75%,
-			transparent 75%,
-			transparent
-		);
-		background-size: 1rem 1rem;
-	}
-
-	.progress-bar-fill.known {
-		background-color: #34d399;
-		background-image: linear-gradient(
-			45deg,
-			rgba(255, 255, 255, 0.15) 25%,
-			transparent 25%,
-			transparent 50%,
-			rgba(255, 255, 255, 0.15) 50%,
-			rgba(255, 255, 255, 0.15) 75%,
-			transparent 75%,
-			transparent
-		);
-		background-size: 1rem 1rem;
-	}
-
-	.progress-bar-fill.mastered {
-		background-color: #10b981;
-		background-image: linear-gradient(
-			45deg,
-			rgba(255, 255, 255, 0.15) 25%,
-			transparent 25%,
-			transparent 50%,
-			rgba(255, 255, 255, 0.15) 50%,
-			rgba(255, 255, 255, 0.15) 75%,
-			transparent 75%,
-			transparent
-		);
-		background-size: 1rem 1rem;
-	}
-
-	@keyframes progress-stripes {
-		from {
-			background-position: 1rem 0;
-		}
-		to {
-			background-position: 0 0;
-		}
-	}
-
-	.feedback-list-section .icon {
-		flex-shrink: 0;
-	}
-
-	.mode-selector {
-		margin-bottom: 1.5rem;
-	}
-
-	.mode-label-row {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 0.75rem;
-		margin-bottom: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.mode-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #64748b;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		flex-shrink: 0;
-	}
-
-	.mode-ema-hint {
-		font-size: 0.78rem;
-		color: #94a3b8;
-		font-style: italic;
-	}
-
-	:global(html[data-theme='dark']) .mode-ema-hint {
-		color: #64748b;
-	}
-
-	/* Highlights the mode(s) that the algorithm currently favours */
-	.mode-favoured {
-		border-color: #1cb0f6;
-		border-width: 2px;
-		box-shadow: 0 3px 0 #1899d6;
-	}
-
-	:global(html[data-theme='dark']) .mode-favoured {
-		border-color: #38bdf8;
-		box-shadow: 0 3px 0 #0369a1;
-	}
-
-	/* "AI recommended" tooltip on hover for favoured mode buttons */
-	.mode-btn.mode-favoured {
-		position: relative;
-	}
-	.mode-btn.mode-favoured::after {
-		content: '✨ AI recommended';
-		position: absolute;
-		bottom: calc(100% + 8px);
-		left: 50%;
-		transform: translateX(-50%);
-		background: #0ea5e9;
-		color: #fff;
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.2rem 0.55rem;
-		border-radius: 0.5rem;
-		white-space: nowrap;
-		pointer-events: none;
-		opacity: 0;
-		transition: opacity 0.15s ease;
-		z-index: 10;
-	}
-	.mode-btn.mode-favoured:hover::after {
-		opacity: 1;
-	}
-	:global(html[data-theme='dark']) .mode-btn.mode-favoured::after {
-		background: #38bdf8;
-		color: #0f172a;
-	}
-
-	.mode-buttons {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: center;
-		flex-wrap: wrap;
-		overflow: visible;
-	}
-
-	.mode-btn {
-		padding: 0.75rem 1.25rem;
-		border-radius: 1rem;
-		border: 2px solid var(--card-border, #e2e8f0);
-		background: var(--card-bg, #ffffff);
-		color: var(--text-color, #475569);
-		font-size: 0.95rem;
-		font-family: inherit;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-		box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
-	}
-
-	.mode-btn:hover {
-		border-color: #93c5fd;
-		background: #eff6ff;
-		transform: translateY(-2px);
-		box-shadow: 0 6px 0 #93c5fd;
-	}
-
-	:global(html[data-theme='dark']) .mode-btn:hover {
-		border-color: #3b82f6;
-		background: #1e293b;
-		box-shadow: 0 6px 0 #1e3a5f;
-	}
-
-	.mode-btn.active {
-		border-color: #1cb0f6;
-		background: #ddf4ff;
-		color: #1cb0f6;
-		transform: translateY(2px);
-		box-shadow: 0 2px 0 #1899d6;
-	}
-
-	:global(html[data-theme='dark']) .mode-btn.active {
-		border-color: #38bdf8;
-		background: #0c2340;
-		color: #38bdf8;
-		box-shadow: 0 2px 0 #0e4166;
-	}
-
-	/* Fill in the Blank styles */
-	.fill-blank-inputs {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.blank-input {
-		width: 100%;
-		padding: 0.75rem;
-		border: 2px solid var(--input-border, #cbd5e1);
-		border-radius: 8px;
-		font-family: inherit;
-		font-size: 1rem;
-		color: var(--input-text, #0f172a);
-		background: var(--input-bg, #ffffff);
-		box-sizing: border-box;
-		transition:
-			border-color 0.15s,
-			box-shadow 0.15s;
-	}
-
-	.blank-input::placeholder {
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .blank-input {
-		border-color: var(--input-border, #3a4150);
-		color: var(--input-text, #e2e8f0);
-		background: var(--input-bg, #2a303c);
-	}
-
-	:global(html[data-theme='dark']) .blank-input::placeholder {
-		color: #4a5260;
-	}
-
-	.blank-input:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-
-	.blank-input:disabled {
-		background-color: #f1f5f9;
-		color: #94a3b8;
-		cursor: not-allowed;
-	}
-
-	:global(html[data-theme='dark']) .blank-input:disabled {
-		background-color: #2a303c;
-		color: #64748b;
-	}
-
-	.hint-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.hint-list li {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #475569;
-		font-size: 0.95rem;
-		background: #f8fafc;
-		padding: 0.5rem 0.75rem;
-		border-radius: 6px;
-		border: 1px solid #e2e8f0;
-	}
-
-	.hint-number {
-		font-weight: 600;
-		color: #2563eb;
-		white-space: nowrap;
-	}
-
-	/* Multiple Choice styles */
-	.mc-choices {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.mc-choice-btn {
-		width: 100%;
-		padding: 1rem 1.25rem;
-		border: 2px solid var(--card-border, #e2e8f0);
-		border-radius: 1rem;
-		background: var(--card-bg, #ffffff);
-		color: var(--text-color, #1e293b);
-		font-size: 1.05rem;
-		font-weight: 700;
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-		box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
-	}
-
-	.mc-choice-btn:hover:not(:disabled) {
-		border-color: #93c5fd;
-		background: #eff6ff;
-		transform: translateY(-2px);
-		box-shadow: 0 6px 0 #93c5fd;
-	}
-
-	.mc-choice-btn.selected {
-		border-color: #1cb0f6;
-		background: #ddf4ff;
-		color: #1cb0f6;
-		transform: translateY(2px);
-		box-shadow: 0 2px 0 #1899d6;
-	}
-
-	.mc-choice-btn.correct {
-		border-color: #16a34a;
-		background: #f0fdf4;
-		color: #166534;
-		box-shadow: 0 2px 0 #15803d;
-	}
-
-	.mc-choice-btn.incorrect {
-		border-color: #dc2626;
-		background: #fef2f2;
-		color: #991b1b;
-		box-shadow: 0 2px 0 #b91c1c;
-	}
-
-	.mc-choice-btn:disabled {
-		cursor: default;
-		opacity: 0.85;
-		transform: translateY(2px);
-		box-shadow: 0 2px 0 var(--card-border, #e2e8f0);
-	}
-
-	/* Beginner guidance styles */
-	.beginner-tip {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
-		background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-		border: 1px solid #bbf7d0;
-		border-radius: 12px;
-		padding: 1rem 1.25rem;
-		margin-bottom: 1.5rem;
-		font-size: 0.95rem;
-		line-height: 1.5;
-		color: #166534;
-	}
-
-	:global(html[data-theme='dark']) .beginner-tip {
-		background: linear-gradient(135deg, #0d1f14 0%, #0d2218 100%);
-		border-color: #166534;
-		color: #86efac;
-	}
-
-	.tip-icon {
-		font-size: 1.5rem;
-		flex-shrink: 0;
-		margin-top: 0.1rem;
-	}
-
-	.mode-difficulty {
-		font-size: 0.7rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 0.1rem 0.5rem;
-		border-radius: 9999px;
-	}
-
-	.mode-difficulty.easy {
-		background-color: #dcfce7;
-		color: #166534;
-	}
-
-	.mode-difficulty.medium {
-		background-color: #fef9c3;
-		color: #854d0e;
-	}
-
-	.mode-difficulty.hard {
-		background-color: #fee2e2;
-		color: #991b1b;
-	}
-
-	:global(html[data-theme='dark']) .mode-difficulty.easy {
-		background-color: rgba(22, 101, 52, 0.3);
-		color: #86efac;
-	}
-
-	:global(html[data-theme='dark']) .mode-difficulty.medium {
-		background-color: rgba(133, 77, 14, 0.3);
-		color: #fde68a;
-	}
-
-	:global(html[data-theme='dark']) .mode-difficulty.hard {
-		background-color: rgba(153, 27, 27, 0.3);
-		color: #fca5a5;
-	}
-
-	/* Assignment Banner Styles */
-	.assignment-banner {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		padding: 1.25rem;
-	}
-
-	@media (min-width: 640px) {
-		.assignment-banner {
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-		}
-	}
-
-	.assignment-banner.passed {
-		background-color: #f0fdf4;
-		border-color: #bbf7d0;
-	}
-
-	.assignment-banner.active {
-		background-color: #eff6ff;
-		border-color: #bfdbfe;
-	}
-
-	.assignment-info {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		min-width: 0;
-	}
-
-	.assignment-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 3rem;
-		height: 3rem;
-		border-radius: 50%;
-		font-size: 1.5rem;
-		flex-shrink: 0;
-	}
-
-	.assignment-banner.passed .assignment-icon {
-		background-color: #dcfce7;
-	}
-
-	.assignment-banner.active .assignment-icon {
-		background-color: #dbeafe;
-	}
-
-	.assignment-details {
-		min-width: 0;
-	}
-
-	.assignment-title {
-		font-weight: 700;
-		font-size: 1.125rem;
-		margin: 0;
-		color: #1e293b;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.assignment-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-	}
-
-	.meta-badge {
-		font-size: 0.75rem;
-		font-weight: 600;
-		padding: 0.125rem 0.5rem;
-		border-radius: 0.25rem;
-		background-color: rgba(255, 255, 255, 0.6);
-		color: #475569;
-	}
-
-	:global(html[data-theme='dark']) .meta-badge {
-		background-color: rgba(255, 255, 255, 0.08);
-		color: #94a3b8;
-	}
-
-	.meta-badge.gamemode {
-		text-transform: capitalize;
-	}
-
-	.assignment-actions {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		width: 100%;
-	}
-
-	@media (min-width: 640px) {
-		.assignment-actions {
-			flex-direction: row;
-			align-items: center;
-			width: auto;
-		}
-	}
-
-	.progress-box {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		background-color: rgba(255, 255, 255, 0.5);
-		border-radius: 0.75rem;
-		padding: 0.5rem 1rem;
-	}
-
-	@media (min-width: 640px) {
-		.progress-box {
-			flex-direction: column;
-			align-items: flex-end;
-			background-color: transparent;
-			padding: 0;
-		}
-	}
-
-	.progress-label {
-		font-size: 0.65rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: #64748b;
-		margin: 0 0 0.125rem 0;
-	}
-
-	.progress-value {
-		font-size: 1.5rem;
-		font-weight: 800;
-		line-height: 1;
-		margin: 0;
-	}
-
-	.progress-value.passed {
-		color: #16a34a;
-	}
-	.progress-value.active {
-		color: #2563eb;
-	}
-
-	.progress-target {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #94a3b8;
-		margin-left: 0.125rem;
-	}
-
-	.back-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.375rem;
-		padding: 0.625rem 1rem;
-		font-size: 0.875rem;
-	}
-
-	/* Dark mode support for assignment banner if implemented */
-	:global(html[data-theme='dark']) .assignment-banner.passed {
-		background-color: rgba(6, 78, 59, 0.2);
-		border-color: rgba(6, 95, 70, 0.5);
-	}
-
-	:global(html[data-theme='dark']) .assignment-banner.active {
-		background-color: rgba(30, 58, 138, 0.2);
-		border-color: rgba(30, 64, 175, 0.5);
-	}
-
-	:global(html[data-theme='dark']) .assignment-banner.passed .assignment-icon {
-		background-color: rgba(6, 78, 59, 0.5);
-	}
-
-	:global(html[data-theme='dark']) .assignment-banner.active .assignment-icon {
-		background-color: rgba(30, 58, 138, 0.5);
-	}
-
-	:global(html[data-theme='dark']) .assignment-title {
-		color: #f1f5f9;
-	}
-
-	:global(html[data-theme='dark']) .meta-badge {
-		background-color: rgba(30, 41, 59, 0.6);
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .progress-box {
-		background-color: rgba(30, 41, 59, 0.5);
-	}
-
-	@media (min-width: 640px) {
-		:global(html[data-theme='dark']) .progress-box {
-			background-color: transparent;
-		}
-	}
-
-	:global(html[data-theme='dark']) .progress-value.passed {
-		color: #34d399;
-	}
-	:global(html[data-theme='dark']) .progress-value.active {
-		color: #60a5fa;
-	}
-
-	@media (max-width: 768px) {
-		.page-container {
-			padding: 1rem 0.5rem;
-		}
-
-		.card {
-			padding: 1rem;
-		}
-
-		.page-header h1 {
-			font-size: 2rem;
-		}
-
-		.mode-buttons {
-			flex-direction: row;
-			flex-wrap: nowrap;
-			overflow-x: auto;
-			justify-content: flex-start;
-			padding-bottom: 0.375rem;
-			-webkit-overflow-scrolling: touch;
-			scrollbar-width: none;
-		}
-
-		.mode-buttons::-webkit-scrollbar {
-			display: none;
-		}
-
-		.mode-btn {
-			flex-shrink: 0;
-			white-space: nowrap;
-			font-size: 0.875rem;
-			padding: 0.625rem 1rem;
-		}
-
-		.btn-duo {
-			width: 100%;
-			box-sizing: border-box;
-		}
-
-		.feedback-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 1rem;
-		}
-
-		.assignment-banner {
-			padding: 1rem;
-		}
-	}
-
-	/* Fix 1 - Chat CTA separated from mode buttons */
-	.chat-separator {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin: 1.25rem 0;
-		color: #94a3b8;
-		font-size: 0.85rem;
-		font-weight: 600;
-	}
-
-	.separator-line {
-		flex: 1;
-		height: 1px;
-		background: #e2e8f0;
-	}
-
-	.chat-cta-btn {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
-		width: 100%;
-		padding: 1rem 1.25rem;
-		border-radius: 1rem;
-		border: 2px dashed #cbd5e1;
-		background: #f8fafc;
-		color: #475569;
-		font-size: 0.95rem;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-	}
-
-	.chat-cta-btn:hover {
-		border-color: #c4b5fd;
-		background: #f5f3ff;
-		transform: translateY(-2px);
-	}
-
-	:global(html[data-theme='dark']) .chat-cta-btn {
-		background: #0f172a;
-		border-color: #334155;
-		color: #cbd5e1;
-	}
-
-	:global(html[data-theme='dark']) .chat-cta-btn:hover {
-		border-color: #7c3aed;
-		background: #1e1533;
-	}
-
-	.chat-cta-btn.active {
-		border-color: #8b5cf6;
-		border-style: solid;
-		background: #f5f3ff;
-		color: #8b5cf6;
-	}
-
-	.immerse-gap {
-		height: 0.75rem;
-	}
-
-	.immerse-cta-btn {
-		border-color: #6ee7b7;
-		background: #f0fdf4;
-		color: #065f46;
-	}
-
-	.immerse-cta-btn:hover {
-		border-color: #10b981;
-		background: #d1fae5;
-		transform: translateY(-2px);
-	}
-
-	/* Active state must override .chat-cta-btn.active (which is purple) */
-	.chat-cta-btn.immerse-cta-btn.active {
-		border-color: #059669;
-		border-style: solid;
-		background: #d1fae5;
-		color: #065f46;
-		box-shadow: 0 3px 0 #059669;
-	}
-
-	:global(html[data-theme='dark']) .immerse-cta-btn {
-		background: #022c22;
-		border-color: #065f46;
-		color: #6ee7b7;
-	}
-
-	:global(html[data-theme='dark']) .immerse-cta-btn:hover {
-		border-color: #10b981;
-		background: #064e3b;
-	}
-
-	:global(html[data-theme='dark']) .chat-cta-btn.immerse-cta-btn.active {
-		border-color: #10b981;
-		background: #064e3b;
-		color: #6ee7b7;
-		box-shadow: 0 3px 0 #059669;
-	}
-
-	:global(html[data-theme='dark']) .chat-cta-btn.active {
-		border-color: #a78bfa;
-		background: #2e1065;
-		color: #a78bfa;
-	}
-
-	.chat-cta-subtitle {
-		font-size: 0.8rem;
-		font-weight: 400;
-		color: #94a3b8;
-	}
-
-	/* Fix 3 - Collapsible grammar reference */
-	.grammar-ref-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: none;
-		border: 1px solid #e2e8f0;
-		border-radius: 0.5rem;
-		padding: 0.4rem 0.75rem;
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: #64748b;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.grammar-ref-toggle:hover {
-		color: #3b82f6;
-		border-color: #93c5fd;
-		background: #eff6ff;
-	}
-
-	:global(html[data-theme='dark']) .grammar-ref-toggle {
-		color: #94a3b8;
-		border-color: #3a4150;
-	}
-
-	:global(html[data-theme='dark']) .grammar-ref-toggle:hover {
-		color: #60a5fa;
-		border-color: #3b82f6;
-		background: #2a303c;
-	}
-
-	.grammar-ref-chevron {
-		display: inline-block;
-		transition: transform 0.2s;
-		font-size: 0.75rem;
-	}
-
-	.grammar-ref-chevron.expanded {
-		transform: rotate(180deg);
-	}
-
-	.session-xp-strip {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.5rem 1rem;
-		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-		border: 1px solid #bbf7d0;
-		border-radius: 0.75rem;
-		margin-bottom: 0.75rem;
-	}
-
-	:global(html[data-theme='dark']) .session-xp-strip {
-		background: linear-gradient(135deg, rgba(20, 83, 45, 0.2) 0%, rgba(21, 128, 61, 0.2) 100%);
-		border-color: rgba(74, 222, 128, 0.25);
-	}
-
-	.session-xp-stat {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #15803d;
-	}
-
-	:global(html[data-theme='dark']) .session-xp-stat {
-		color: #4ade80;
-	}
-
-	.session-xp-divider {
-		width: 1px;
-		height: 1rem;
-		background-color: #86efac;
-		flex-shrink: 0;
-	}
-
-	:global(html[data-theme='dark']) .session-xp-divider {
-		background-color: rgba(74, 222, 128, 0.3);
-	}
-
-	/* Fix 4 - Change Mode link */
-	.challenge-card-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1rem;
-	}
-
-	.session-progress-badge {
-		font-size: 0.78rem;
-		font-weight: 700;
-		background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-		color: #1e40af;
-		padding: 0.25rem 0.65rem;
-		border-radius: 999px;
-	}
-
-	.difficulty-notice {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.72rem;
-		font-weight: 600;
-		color: #92400e;
-		background: #fef3c7;
-		border: 1px solid #fcd34d;
-		padding: 0.2rem 0.55rem;
-		border-radius: 999px;
-		margin-bottom: 0.5rem;
-		cursor: default;
-	}
-	:global(html[data-theme='dark']) .difficulty-notice {
-		background: rgba(120, 53, 15, 0.3);
-		color: #fcd34d;
-		border-color: rgba(252, 211, 77, 0.3);
-	}
-
-	:global(html[data-theme='dark']) .session-progress-badge {
-		background: rgba(30, 58, 138, 0.35);
-		color: #bfdbfe;
-	}
-
-	.change-mode-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		background: none;
-		border: none;
-		font-size: 0.85rem;
-		font-weight: 500;
-		color: #64748b;
-		cursor: pointer;
-		padding: 0;
-		margin-bottom: 0;
-		transition: color 0.15s;
-	}
-
-	.change-mode-link:hover {
-		color: #3b82f6;
-	}
-
-	:global(html[data-theme='dark']) .change-mode-link {
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .challenge-section h3,
-	:global(html[data-theme='dark']) .feedback-section h3,
-	:global(html[data-theme='dark']) .feedback-list-section h3 {
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .concept-list li {
-		color: #cbd5e1;
-	}
-
-	:global(html[data-theme='dark']) .grammar-title {
-		color: #e2e8f0;
-	}
-
-	:global(html[data-theme='dark']) .guide-toggle-btn {
-		color: #60a5fa;
-	}
-
-	:global(html[data-theme='dark']) .hint-list li {
-		color: #cbd5e1;
-		background: #2a303c;
-	}
-
-	/* Fix 5 - Load More button */
-	.btn-load-more {
-		padding: 0.625rem 1.75rem;
-		border-radius: 0.75rem;
-		font-weight: 600;
-		font-size: 0.95rem;
-		background: transparent;
-		color: #3b82f6;
-		border: 2px solid #3b82f6;
-		cursor: pointer;
-		transition: all 0.2s;
-		font-family: inherit;
-	}
-
-	.btn-load-more:hover {
-		background: #eff6ff;
-	}
-
-	.btn-load-more:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	:global(html[data-theme='dark']) .btn-load-more {
-		color: #60a5fa;
-		border-color: #60a5fa;
-	}
-
-	:global(html[data-theme='dark']) .btn-load-more:hover {
-		background: #1e293b;
-	}
-
-	/* Fix 6 - Category filter pills */
-	.category-pills {
-		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 1.5rem;
-		overflow-x: auto;
-		padding-bottom: 0.5rem;
-	}
-
-	.filter-pill {
-		padding: 0.4rem 1rem;
-		border-radius: 9999px;
-		font-size: 0.85rem;
-		font-weight: 600;
-		white-space: nowrap;
-		background: #f1f5f9;
-		color: #64748b;
-		border: 1px solid #e2e8f0;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.filter-pill:hover {
-		background: #e2e8f0;
-		color: #334155;
-	}
-
-	.filter-pill.active {
-		background: #dbeafe;
-		color: #1d4ed8;
-		border-color: #93c5fd;
-	}
-
-	:global(html[data-theme='dark']) .filter-pill {
-		background: #1e293b;
-		color: #94a3b8;
-		border-color: #334155;
-	}
-
-	:global(html[data-theme='dark']) .filter-pill:hover {
-		background: #334155;
-		color: #f1f5f9;
-	}
-
-	:global(html[data-theme='dark']) .filter-pill.active {
-		background: #1e3a8a;
-		color: #93c5fd;
-		border-color: #3b82f6;
-	}
-
-	/* Fix 7 - Visual divider between game sections */
-	.games-divider {
-		border: none;
-		border-top: 2px solid #e2e8f0;
-		margin: 1rem 0;
-	}
-
-	:global(html[data-theme='dark']) .games-divider {
-		border-top-color: #334155;
-	}
-
-	.community-games-section {
-		background: #f8fafc;
-		border-radius: 1rem;
-		padding: 1.5rem;
-		border: 1px solid #e2e8f0;
-	}
-
-	:global(html[data-theme='dark']) .community-games-section {
-		background: #0f172a;
-		border-color: #1e293b;
-	}
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html[data-theme='dark']) .modal {
+    background: #1e293b;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color, #0f172a);
+  }
+
+  :global(html[data-theme='dark']) .modal-header h2 {
+    color: #f8fafc;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+  }
+
+  .modal-desc {
+    color: #475569;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+  }
+
+  :global(html[data-theme='dark']) .modal-desc {
+    color: #94a3b8;
+  }
+
+  .class-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .class-btn {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #1e293b;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .class-btn:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  :global(html[data-theme='dark']) .class-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+
+  :global(html[data-theme='dark']) .class-btn:hover {
+    border-color: #60a5fa;
+    background: #334155;
+  }
+
+  .tabs-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .tabs {
+    display: flex;
+    background: #f1f5f9;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    gap: 0.5rem;
+  }
+
+  :global(html[data-theme='dark']) .tabs {
+    background: #1e293b;
+  }
+
+  .tab-btn {
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: bold;
+    font-size: 1rem;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+    color: #1e293b;
+    background: #e2e8f0;
+  }
+
+  :global(html[data-theme='dark']) .tab-btn:hover {
+    color: #f8fafc;
+    background: #334155;
+  }
+
+  .tab-btn.active {
+    background: white;
+    color: #3b82f6;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html[data-theme='dark']) .tab-btn.active {
+    background: #0f172a;
+    color: #60a5fa;
+  }
+
+  .games-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .immerse-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .immerse-inline {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .header-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .header-section {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  .header-section h2 {
+    font-size: 2rem;
+    color: var(--text-color, #0f172a);
+    margin: 0;
+    font-weight: 800;
+  }
+
+  .create-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .games-section {
+    margin-bottom: 1rem;
+  }
+
+  .games-section h2 {
+    font-size: 1.5rem;
+    color: var(--text-color, #1e293b);
+    margin: 0 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .games-section h2 svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #3b82f6;
+  }
+
+  .link {
+    color: #3b82f6;
+    font-weight: bold;
+    text-decoration: none;
+  }
+
+  .link:hover {
+    text-decoration: underline;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  @media (min-width: 640px) {
+    .games-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .games-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+  }
+
+  .game-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .game-card-content {
+    flex: 1;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .game-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.25rem;
+  }
+
+  .game-card-header h3 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin: 0;
+    color: var(--text-color, #1e293b);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    line-clamp: 1;
+    overflow: hidden;
+  }
+
+  .language-badge {
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: help;
+  }
+
+  :global(html[data-theme='dark']) .language-badge {
+    background: transparent;
+  }
+
+  .game-author {
+    font-size: 0.875rem;
+    font-weight: bold;
+    color: #3b82f6;
+    margin: 0;
+  }
+
+  .game-description {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .game-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    font-weight: bold;
+    color: #64748b;
+    margin-top: auto;
+  }
+
+  .game-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .game-meta svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .status-published {
+    color: #22c55e;
+  }
+
+  .status-draft {
+    color: #94a3b8;
+  }
+
+  .status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .published-dot {
+    background-color: #22c55e;
+  }
+
+  .draft-dot {
+    background-color: #94a3b8;
+  }
+
+  .game-actions {
+    padding: 1rem;
+    border-top: 1px solid var(--card-border, #f1f5f9);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .btn-action {
+    flex: 1;
+    min-width: calc(50% - 0.75rem);
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+
+  .btn-action:hover {
+    background: #dbeafe;
+  }
+
+  .btn-action.live-btn {
+    flex: 1 1 100%;
+    background: #f97316;
+    color: #ffffff;
+  }
+
+  .btn-action.live-btn:hover {
+    background: #ea580c;
+  }
+
+  :global(html[data-theme='dark']) .btn-action {
+    background: #1e3a8a;
+    color: #bfdbfe;
+  }
+
+  :global(html[data-theme='dark']) .btn-action:hover {
+    background: #1e40af;
+  }
+
+  :global(html[data-theme='dark']) .btn-action.live-btn {
+    background: #ea580c;
+    color: #ffffff;
+  }
+
+  :global(html[data-theme='dark']) .btn-action.live-btn:hover {
+    background: #c2410c;
+  }
+
+  :global(body) {
+    margin: 0;
+    font-family:
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    background-color: var(--bg-color, #f8fafc);
+    color: var(--text-color, #334155);
+  }
+
+  .page-container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+    min-height: calc(100vh - 4rem);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .page-container :global(input) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  .content-wrapper {
+    width: 100%;
+    max-width: 1200px;
+    transition: max-width 0.3s ease;
+  }
+
+  .learn-container {
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    color: #0f172a;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .page-header p {
+    color: #64748b;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 2rem;
+    border: 1px solid var(--card-border, #e2e8f0);
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #f8fafc;
+    border: 2px solid var(--card-border, #e2e8f0);
+    border-radius: 12px;
+  }
+
+  :global(html[data-theme='dark']) .empty-state {
+    background: #1e293b;
+  }
+
+  .empty-state h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #1e293b;
+    font-size: 1.5rem;
+  }
+
+  :global(html[data-theme='dark']) .empty-state h2 {
+    color: #f1f5f9;
+  }
+
+  /* Rich empty states (#18) */
+  .empty-state-rich {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3.5rem 2rem;
+    background: var(--card-bg, #f8fafc);
+    border: 3px dashed var(--card-border, #cbd5e1);
+    border-radius: 1.25rem;
+    gap: 0.5rem;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-color, #1e293b);
+    margin: 0;
+  }
+
+  .empty-state-desc {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+    max-width: 300px;
+  }
+
+  .empty-state-btn {
+    display: inline-block;
+    margin-top: 0.75rem;
+    background: #3b82f6;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.75rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 800;
+    box-shadow: 0 3px 0 #2563eb;
+    transition: background 0.15s;
+  }
+
+  .empty-state-btn:hover {
+    background: #2563eb;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .loading-mode-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #6366f1;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  :global(html[data-theme='dark']) .loading-mode-badge {
+    color: #a5b4fc;
+    background: #1e1b4b;
+    border-color: #3730a3;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    border: 4px solid #e2e8f0;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  .score-spinner {
+    display: inline-block;
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 3px solid #e2e8f0;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loading-state p {
+    color: #64748b;
+    margin: 0;
+  }
+
+  .load-progress-track {
+    width: 80%;
+    max-width: 320px;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    margin: 1.25rem auto 0;
+    overflow: hidden;
+  }
+
+  .load-progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, #7c3aed, #6d28d9);
+    border-radius: 999px;
+    transition: width 0.12s linear;
+  }
+
+  .load-progress-fill.local-mode-fill {
+    background: linear-gradient(to right, #f59e0b, #d97706);
+  }
+
+  .load-tip-container {
+    min-height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-top: 1rem;
+    width: 100%;
+  }
+
+  .load-tip {
+    color: #64748b;
+    font-size: 0.85rem;
+    margin: 0;
+    max-width: 380px;
+    text-align: center;
+    line-height: 1.5;
+    position: absolute;
+    padding: 0 1rem;
+  }
+
+  .challenge-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .challenge-section h3,
+  .feedback-section h3,
+  .feedback-list-section h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .challenge-text {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  :global(html[data-theme='dark']) .challenge-text {
+    color: var(--text-color, #e2e8f0);
+  }
+
+  /* Tooltip trigger (shared by vocab-highlight and word-hover) */
+  :global(.tooltip-trigger) {
+    position: relative;
+    cursor: help;
+  }
+
+  :global(.word-tooltip) {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background-color: #1e293b;
+    color: #f8fafc;
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    border-radius: 6px;
+    width: max-content;
+    min-width: 140px;
+    max-width: 240px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition:
+      opacity 0.15s,
+      visibility 0.15s;
+    z-index: 100;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  :global(.word-tooltip::after) {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1e293b transparent transparent transparent;
+  }
+
+  .ai-magic-loader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  :global(.sparkle) {
+    display: inline-block;
+    animation: pulse-sparkle 1.5s ease-in-out infinite;
+  }
+
+  :global(.ai-magic-text) {
+    color: #c084fc; /* purple-400 */
+    font-weight: 500;
+  }
+
+  @keyframes pulse-sparkle {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+      filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+    }
+  }
+
+  :global(.tooltip-trigger:hover > .word-tooltip) {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  :global(.word-tooltip-header) {
+    font-weight: bold;
+    font-size: 0.95rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #475569;
+    margin-bottom: 0.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  :global(.word-tooltip-ai-badge) {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #c4b5fd;
+    background: rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    border-radius: 3px;
+    padding: 0 0.3em;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  :global(.word-tooltip-body) {
+    font-size: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  :global(.word-tooltip-row) {
+    display: block;
+  }
+
+  /* Targeted vocab words: yellow highlight */
+  :global(.vocab-highlight) {
+    background-color: #fef08a;
+    color: #1a1a1a;
+    border-radius: 4px;
+    padding: 0 4px;
+    border-bottom: 2px dashed #ca8a04;
+    transition: background-color 0.2s;
+  }
+
+  :global(.vocab-highlight:hover) {
+    background-color: #fde047;
+  }
+
+  /* Non-targeted words: subtle underline on hover */
+  :global(.word-hover) {
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+    border-radius: 2px;
+  }
+
+  :global(.word-hover:hover) {
+    border-bottom-color: #94a3b8;
+  }
+
+  :global(.word-hover.has-info) {
+    cursor: help;
+  }
+
+  :global(.word-hover.has-info:hover) {
+    border-bottom-color: #3b82f6;
+  }
+
+  .concept-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .concept-list li {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .grammar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .grammar-title {
+    font-weight: 500;
+  }
+
+  .guide-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+  }
+
+  .grammar-guide {
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide {
+    background: #0f172a;
+    border-color: #1e293b;
+    color: #cbd5e1;
+  }
+
+  .grammar-guide :global(h1),
+  .grammar-guide :global(h2),
+  .grammar-guide :global(h3),
+  .grammar-guide :global(h4) {
+    color: #0f172a;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(h1),
+  :global(html[data-theme='dark']) .grammar-guide :global(h2),
+  :global(html[data-theme='dark']) .grammar-guide :global(h3),
+  :global(html[data-theme='dark']) .grammar-guide :global(h4) {
+    color: #f8fafc;
+  }
+
+  .grammar-guide :global(h1:first-child),
+  .grammar-guide :global(h2:first-child),
+  .grammar-guide :global(h3:first-child) {
+    margin-top: 0;
+  }
+
+  .grammar-guide :global(h1) {
+    font-size: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+  }
+  .grammar-guide :global(h2) {
+    font-size: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.3rem;
+  }
+  .grammar-guide :global(h3) {
+    font-size: 1.1rem;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(h1),
+  :global(html[data-theme='dark']) .grammar-guide :global(h2) {
+    border-color: #1e293b;
+  }
+
+  .grammar-guide :global(p) {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+
+  .grammar-guide :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .grammar-guide :global(ul),
+  .grammar-guide :global(ol) {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .grammar-guide :global(li) {
+    margin-bottom: 0.25rem;
+  }
+
+  .grammar-guide :global(strong),
+  .grammar-guide :global(b) {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(strong),
+  :global(html[data-theme='dark']) .grammar-guide :global(b) {
+    color: #f8fafc;
+  }
+
+  .grammar-guide :global(em),
+  .grammar-guide :global(i) {
+    color: #475569;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(em),
+  :global(html[data-theme='dark']) .grammar-guide :global(i) {
+    color: #94a3b8;
+  }
+
+  .grammar-guide :global(code) {
+    background: #e2e8f0;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85em;
+    color: #db2777;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(code) {
+    background: #2a303c;
+    color: #f472b6;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(code) {
+    background: #1e293b;
+    color: #f472b6;
+  }
+
+  .grammar-guide :global(pre) {
+    background: #1e293b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+
+  .grammar-guide :global(pre code) {
+    background: transparent;
+    color: #e2e8f0;
+    padding: 0;
+    font-size: 0.9em;
+  }
+
+  .grammar-guide :global(blockquote) {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-right: 0;
+    background: #f1f5f9;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    font-style: italic;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(blockquote) {
+    background: #1e293b;
+    border-left-color: #60a5fa;
+  }
+
+  .grammar-guide :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+
+  .grammar-guide :global(th),
+  .grammar-guide :global(td) {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem;
+    text-align: left;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(th),
+  :global(html[data-theme='dark']) .grammar-guide :global(td) {
+    border-color: #334155;
+  }
+
+  .grammar-guide :global(th) {
+    background: #f1f5f9;
+    font-weight: 600;
+  }
+
+  :global(html[data-theme='dark']) .grammar-guide :global(th) {
+    background: #1e293b;
+  }
+
+  .concept-type {
+    background: #e2e8f0;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  :global(html[data-theme='dark']) .concept-type {
+    background: #3a4150;
+    color: #cbd5e1;
+  }
+
+  .answer-form {
+    margin-top: 2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .submit-btn {
+    width: 100%;
+  }
+
+  .next-btn {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .feedback-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #0f172a;
+  }
+
+  :global(html[data-theme='dark']) .feedback-header h2 {
+    color: #f1f5f9;
+  }
+
+  .score-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .score-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+  }
+
+  :global(html[data-theme='dark']) .score-label {
+    color: #94a3b8;
+  }
+
+  .score-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .score-value.excellent {
+    color: #16a34a;
+  }
+  .score-value.good {
+    color: #ca8a04;
+  }
+  .score-value.needs-work {
+    color: #dc2626;
+  }
+
+  .feedback-message {
+    background-color: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+    color: #1e3a8a;
+    line-height: 1.5;
+  }
+
+  :global(html[data-theme='dark']) .feedback-message {
+    background-color: #0c1a3a;
+    color: #93c5fd;
+  }
+
+  .feedback-message p {
+    margin: 0;
+  }
+
+  .expected-answer {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  :global(html[data-theme='dark']) .expected-answer {
+    background-color: #0d1f14;
+    border-color: #166534;
+  }
+
+  .expected-answer p {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #166534;
+  }
+
+  :global(html[data-theme='dark']) .expected-answer p {
+    color: #86efac;
+  }
+
+  .feedback-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .feedback-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .feedback-list-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .feedback-list-section li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: #334155;
+    font-size: 0.95rem;
+  }
+
+  .item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .elo-display {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  :global(html[data-theme='dark']) .elo-display {
+    background: #2a303c;
+    color: #94a3b8;
+  }
+
+  :global(html[data-theme='dark']) .feedback-list-section li {
+    color: #cbd5e1;
+  }
+
+  .elo-delta {
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-left: 0.25rem;
+  }
+
+  .elo-delta.positive {
+    color: #16a34a;
+  }
+  .elo-delta.negative {
+    color: #dc2626;
+  }
+
+  .progress-bar-container {
+    height: 0.75rem;
+    background-color: #e2e8f0;
+    border-radius: 9999px;
+    overflow: hidden;
+    border: 1.5px solid #cbd5e1;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    margin-top: 0.25rem;
+    width: 100%;
+  }
+
+  :global(html[data-theme='dark']) .progress-bar-container {
+    background-color: #1e293b;
+    border-color: #334155;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: progress-stripes 1s linear infinite;
+  }
+
+  .progress-bar-fill.learning {
+    background-color: #facc15;
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+  }
+
+  .progress-bar-fill.known {
+    background-color: #34d399;
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+  }
+
+  .progress-bar-fill.mastered {
+    background-color: #10b981;
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+  }
+
+  @keyframes progress-stripes {
+    from {
+      background-position: 1rem 0;
+    }
+    to {
+      background-position: 0 0;
+    }
+  }
+
+  .feedback-list-section .icon {
+    flex-shrink: 0;
+  }
+
+  .mode-selector {
+    margin-bottom: 1.5rem;
+  }
+
+  .mode-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .mode-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  .mode-ema-hint {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  :global(html[data-theme='dark']) .mode-ema-hint {
+    color: #64748b;
+  }
+
+  /* Highlights the mode(s) that the algorithm currently favours */
+  .mode-favoured {
+    border-color: #1cb0f6;
+    border-width: 2px;
+    box-shadow: 0 3px 0 #1899d6;
+  }
+
+  :global(html[data-theme='dark']) .mode-favoured {
+    border-color: #38bdf8;
+    box-shadow: 0 3px 0 #0369a1;
+  }
+
+  /* "AI recommended" tooltip on hover for favoured mode buttons */
+  .mode-btn.mode-favoured {
+    position: relative;
+  }
+  .mode-btn.mode-favoured::after {
+    content: '✨ AI recommended';
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0ea5e9;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.5rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+  }
+  .mode-btn.mode-favoured:hover::after {
+    opacity: 1;
+  }
+  :global(html[data-theme='dark']) .mode-btn.mode-favoured::after {
+    background: #38bdf8;
+    color: #0f172a;
+  }
+
+  .mode-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .mode-btn {
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem;
+    border: 2px solid var(--card-border, #e2e8f0);
+    background: var(--card-bg, #ffffff);
+    color: var(--text-color, #475569);
+    font-size: 0.95rem;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
+  }
+
+  .mode-btn:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #93c5fd;
+  }
+
+  :global(html[data-theme='dark']) .mode-btn:hover {
+    border-color: #3b82f6;
+    background: #1e293b;
+    box-shadow: 0 6px 0 #1e3a5f;
+  }
+
+  .mode-btn.active {
+    border-color: #1cb0f6;
+    background: #ddf4ff;
+    color: #1cb0f6;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #1899d6;
+  }
+
+  :global(html[data-theme='dark']) .mode-btn.active {
+    border-color: #38bdf8;
+    background: #0c2340;
+    color: #38bdf8;
+    box-shadow: 0 2px 0 #0e4166;
+  }
+
+  /* Fill in the Blank styles */
+  .fill-blank-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .blank-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--input-border, #cbd5e1);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--input-text, #0f172a);
+    background: var(--input-bg, #ffffff);
+    box-sizing: border-box;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .blank-input::placeholder {
+    color: #94a3b8;
+  }
+
+  :global(html[data-theme='dark']) .blank-input {
+    border-color: var(--input-border, #3a4150);
+    color: var(--input-text, #e2e8f0);
+    background: var(--input-bg, #2a303c);
+  }
+
+  :global(html[data-theme='dark']) .blank-input::placeholder {
+    color: #4a5260;
+  }
+
+  .blank-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .blank-input:disabled {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  :global(html[data-theme='dark']) .blank-input:disabled {
+    background-color: #2a303c;
+    color: #64748b;
+  }
+
+  .hint-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .hint-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #475569;
+    font-size: 0.95rem;
+    background: #f8fafc;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .hint-number {
+    font-weight: 600;
+    color: #2563eb;
+    white-space: nowrap;
+  }
+
+  /* Multiple Choice styles */
+  .mc-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mc-choice-btn {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--card-border, #e2e8f0);
+    border-radius: 1rem;
+    background: var(--card-bg, #ffffff);
+    color: var(--text-color, #1e293b);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 0 var(--card-border, #e2e8f0);
+  }
+
+  .mc-choice-btn:hover:not(:disabled) {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #93c5fd;
+  }
+
+  .mc-choice-btn.selected {
+    border-color: #1cb0f6;
+    background: #ddf4ff;
+    color: #1cb0f6;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #1899d6;
+  }
+
+  .mc-choice-btn.correct {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #166534;
+    box-shadow: 0 2px 0 #15803d;
+  }
+
+  .mc-choice-btn.incorrect {
+    border-color: #dc2626;
+    background: #fef2f2;
+    color: #991b1b;
+    box-shadow: 0 2px 0 #b91c1c;
+  }
+
+  .mc-choice-btn:disabled {
+    cursor: default;
+    opacity: 0.85;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--card-border, #e2e8f0);
+  }
+
+  /* Beginner guidance styles */
+  .beginner-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #166534;
+  }
+
+  :global(html[data-theme='dark']) .beginner-tip {
+    background: linear-gradient(135deg, #0d1f14 0%, #0d2218 100%);
+    border-color: #166534;
+    color: #86efac;
+  }
+
+  .tip-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .mode-difficulty {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.1rem 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .mode-difficulty.easy {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .mode-difficulty.medium {
+    background-color: #fef9c3;
+    color: #854d0e;
+  }
+
+  .mode-difficulty.hard {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  :global(html[data-theme='dark']) .mode-difficulty.easy {
+    background-color: rgba(22, 101, 52, 0.3);
+    color: #86efac;
+  }
+
+  :global(html[data-theme='dark']) .mode-difficulty.medium {
+    background-color: rgba(133, 77, 14, 0.3);
+    color: #fde68a;
+  }
+
+  :global(html[data-theme='dark']) .mode-difficulty.hard {
+    background-color: rgba(153, 27, 27, 0.3);
+    color: #fca5a5;
+  }
+
+  /* Assignment Banner Styles */
+  .assignment-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .assignment-banner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .assignment-banner.passed {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .assignment-banner.active {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+  }
+
+  .assignment-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .assignment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .assignment-banner.passed .assignment-icon {
+    background-color: #dcfce7;
+  }
+
+  .assignment-banner.active .assignment-icon {
+    background-color: #dbeafe;
+  }
+
+  .assignment-details {
+    min-width: 0;
+  }
+
+  .assignment-title {
+    font-weight: 700;
+    font-size: 1.125rem;
+    margin: 0;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .assignment-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .meta-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: rgba(255, 255, 255, 0.6);
+    color: #475569;
+  }
+
+  :global(html[data-theme='dark']) .meta-badge {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+  }
+
+  .meta-badge.gamemode {
+    text-transform: capitalize;
+  }
+
+  .assignment-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  @media (min-width: 640px) {
+    .assignment-actions {
+      flex-direction: row;
+      align-items: center;
+      width: auto;
+    }
+  }
+
+  .progress-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .progress-box {
+      flex-direction: column;
+      align-items: flex-end;
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+
+  .progress-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin: 0 0 0.125rem 0;
+  }
+
+  .progress-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .progress-value.passed {
+    color: #16a34a;
+  }
+  .progress-value.active {
+    color: #2563eb;
+  }
+
+  .progress-target {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-left: 0.125rem;
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Dark mode support for assignment banner if implemented */
+  :global(html[data-theme='dark']) .assignment-banner.passed {
+    background-color: rgba(6, 78, 59, 0.2);
+    border-color: rgba(6, 95, 70, 0.5);
+  }
+
+  :global(html[data-theme='dark']) .assignment-banner.active {
+    background-color: rgba(30, 58, 138, 0.2);
+    border-color: rgba(30, 64, 175, 0.5);
+  }
+
+  :global(html[data-theme='dark']) .assignment-banner.passed .assignment-icon {
+    background-color: rgba(6, 78, 59, 0.5);
+  }
+
+  :global(html[data-theme='dark']) .assignment-banner.active .assignment-icon {
+    background-color: rgba(30, 58, 138, 0.5);
+  }
+
+  :global(html[data-theme='dark']) .assignment-title {
+    color: #f1f5f9;
+  }
+
+  :global(html[data-theme='dark']) .meta-badge {
+    background-color: rgba(30, 41, 59, 0.6);
+    color: #94a3b8;
+  }
+
+  :global(html[data-theme='dark']) .progress-box {
+    background-color: rgba(30, 41, 59, 0.5);
+  }
+
+  @media (min-width: 640px) {
+    :global(html[data-theme='dark']) .progress-box {
+      background-color: transparent;
+    }
+  }
+
+  :global(html[data-theme='dark']) .progress-value.passed {
+    color: #34d399;
+  }
+  :global(html[data-theme='dark']) .progress-value.active {
+    color: #60a5fa;
+  }
+
+  @media (max-width: 768px) {
+    .page-container {
+      padding: 1rem 0.5rem;
+    }
+
+    .card {
+      padding: 1rem;
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+    }
+
+    .mode-buttons {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      justify-content: flex-start;
+      padding-bottom: 0.375rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .mode-buttons::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mode-btn {
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-size: 0.875rem;
+      padding: 0.625rem 1rem;
+    }
+
+    .btn-duo {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .feedback-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .assignment-banner {
+      padding: 1rem;
+    }
+  }
+
+  /* Fix 1 - Chat CTA separated from mode buttons */
+  .chat-separator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .separator-line {
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+
+  .chat-cta-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border: 2px dashed #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .chat-cta-btn:hover {
+    border-color: #c4b5fd;
+    background: #f5f3ff;
+    transform: translateY(-2px);
+  }
+
+  :global(html[data-theme='dark']) .chat-cta-btn {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+  }
+
+  :global(html[data-theme='dark']) .chat-cta-btn:hover {
+    border-color: #7c3aed;
+    background: #1e1533;
+  }
+
+  .chat-cta-btn.active {
+    border-color: #8b5cf6;
+    border-style: solid;
+    background: #f5f3ff;
+    color: #8b5cf6;
+  }
+
+  .immerse-gap {
+    height: 0.75rem;
+  }
+
+  .immerse-cta-btn {
+    border-color: #6ee7b7;
+    background: #f0fdf4;
+    color: #065f46;
+  }
+
+  .immerse-cta-btn:hover {
+    border-color: #10b981;
+    background: #d1fae5;
+    transform: translateY(-2px);
+  }
+
+  /* Active state must override .chat-cta-btn.active (which is purple) */
+  .chat-cta-btn.immerse-cta-btn.active {
+    border-color: #059669;
+    border-style: solid;
+    background: #d1fae5;
+    color: #065f46;
+    box-shadow: 0 3px 0 #059669;
+  }
+
+  :global(html[data-theme='dark']) .immerse-cta-btn {
+    background: #022c22;
+    border-color: #065f46;
+    color: #6ee7b7;
+  }
+
+  :global(html[data-theme='dark']) .immerse-cta-btn:hover {
+    border-color: #10b981;
+    background: #064e3b;
+  }
+
+  :global(html[data-theme='dark']) .chat-cta-btn.immerse-cta-btn.active {
+    border-color: #10b981;
+    background: #064e3b;
+    color: #6ee7b7;
+    box-shadow: 0 3px 0 #059669;
+  }
+
+  :global(html[data-theme='dark']) .chat-cta-btn.active {
+    border-color: #a78bfa;
+    background: #2e1065;
+    color: #a78bfa;
+  }
+
+  .chat-cta-subtitle {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #94a3b8;
+  }
+
+  /* Fix 3 - Collapsible grammar reference */
+  .grammar-ref-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .grammar-ref-toggle:hover {
+    color: #3b82f6;
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+
+  :global(html[data-theme='dark']) .grammar-ref-toggle {
+    color: #94a3b8;
+    border-color: #3a4150;
+  }
+
+  :global(html[data-theme='dark']) .grammar-ref-toggle:hover {
+    color: #60a5fa;
+    border-color: #3b82f6;
+    background: #2a303c;
+  }
+
+  .grammar-ref-chevron {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.75rem;
+  }
+
+  .grammar-ref-chevron.expanded {
+    transform: rotate(180deg);
+  }
+
+  .session-xp-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  :global(html[data-theme='dark']) .session-xp-strip {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.2) 0%, rgba(21, 128, 61, 0.2) 100%);
+    border-color: rgba(74, 222, 128, 0.25);
+  }
+
+  .session-xp-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #15803d;
+  }
+
+  :global(html[data-theme='dark']) .session-xp-stat {
+    color: #4ade80;
+  }
+
+  .session-xp-divider {
+    width: 1px;
+    height: 1rem;
+    background-color: #86efac;
+    flex-shrink: 0;
+  }
+
+  :global(html[data-theme='dark']) .session-xp-divider {
+    background-color: rgba(74, 222, 128, 0.3);
+  }
+
+  /* Fix 4 - Change Mode link */
+  .challenge-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .session-progress-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .difficulty-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    margin-bottom: 0.5rem;
+    cursor: default;
+  }
+  :global(html[data-theme='dark']) .difficulty-notice {
+    background: rgba(120, 53, 15, 0.3);
+    color: #fcd34d;
+    border-color: rgba(252, 211, 77, 0.3);
+  }
+
+  :global(html[data-theme='dark']) .session-progress-badge {
+    background: rgba(30, 58, 138, 0.35);
+    color: #bfdbfe;
+  }
+
+  .change-mode-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 0;
+    transition: color 0.15s;
+  }
+
+  .change-mode-link:hover {
+    color: #3b82f6;
+  }
+
+  :global(html[data-theme='dark']) .change-mode-link {
+    color: #94a3b8;
+  }
+
+  :global(html[data-theme='dark']) .challenge-section h3,
+  :global(html[data-theme='dark']) .feedback-section h3,
+  :global(html[data-theme='dark']) .feedback-list-section h3 {
+    color: #94a3b8;
+  }
+
+  :global(html[data-theme='dark']) .concept-list li {
+    color: #cbd5e1;
+  }
+
+  :global(html[data-theme='dark']) .grammar-title {
+    color: #e2e8f0;
+  }
+
+  :global(html[data-theme='dark']) .guide-toggle-btn {
+    color: #60a5fa;
+  }
+
+  :global(html[data-theme='dark']) .hint-list li {
+    color: #cbd5e1;
+    background: #2a303c;
+  }
+
+  /* Fix 5 - Load More button */
+  .btn-load-more {
+    padding: 0.625rem 1.75rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    background: transparent;
+    color: #3b82f6;
+    border: 2px solid #3b82f6;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .btn-load-more:hover {
+    background: #eff6ff;
+  }
+
+  .btn-load-more:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(html[data-theme='dark']) .btn-load-more {
+    color: #60a5fa;
+    border-color: #60a5fa;
+  }
+
+  :global(html[data-theme='dark']) .btn-load-more:hover {
+    background: #1e293b;
+  }
+
+  /* Fix 6 - Category filter pills */
+  .category-pills {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  .filter-pill {
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-pill:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .filter-pill.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+  }
+
+  :global(html[data-theme='dark']) .filter-pill {
+    background: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
+  }
+
+  :global(html[data-theme='dark']) .filter-pill:hover {
+    background: #334155;
+    color: #f1f5f9;
+  }
+
+  :global(html[data-theme='dark']) .filter-pill.active {
+    background: #1e3a8a;
+    color: #93c5fd;
+    border-color: #3b82f6;
+  }
+
+  /* Fix 7 - Visual divider between game sections */
+  .games-divider {
+    border: none;
+    border-top: 2px solid #e2e8f0;
+    margin: 1rem 0;
+  }
+
+  :global(html[data-theme='dark']) .games-divider {
+    border-top-color: #334155;
+  }
+
+  .community-games-section {
+    background: #f8fafc;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  :global(html[data-theme='dark']) .community-games-section {
+    background: #0f172a;
+    border-color: #1e293b;
+  }
 </style>

@@ -3,94 +3,94 @@ import type { PageServerLoad } from './$types';
 import { prisma } from '$lib/server/prisma';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) {
-		redirect(302, '/login');
-	}
+  if (!locals.user) {
+    redirect(302, '/login');
+  }
 
-	const { id: classId, assignmentId } = params;
+  const { id: classId, assignmentId } = params;
 
-	// Verify class and get assignment with member scores
-	const classDetails = await prisma.class.findUnique({
-		where: { id: classId },
-		include: {
-			members: {
-				include: {
-					user: {
-						select: {
-							id: true,
-							name: true,
-							username: true
-						}
-					}
-				},
-				orderBy: {
-					createdAt: 'asc'
-				}
-			}
-		}
-	});
+  // Verify class and get assignment with member scores
+  const classDetails = await prisma.class.findUnique({
+    where: { id: classId },
+    include: {
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        }
+      }
+    }
+  });
 
-	if (!classDetails) {
-		error(404, 'Class not found');
-	}
+  if (!classDetails) {
+    error(404, 'Class not found');
+  }
 
-	// Check if current user is teacher
-	const currentUserMember = classDetails.members.find((m) => m.userId === locals.user?.id);
-	if (!currentUserMember || currentUserMember.role !== 'TEACHER') {
-		error(403, 'Only teachers can view assignment details');
-	}
+  // Check if current user is teacher
+  const currentUserMember = classDetails.members.find((m) => m.userId === locals.user?.id);
+  if (!currentUserMember || currentUserMember.role !== 'TEACHER') {
+    error(403, 'Only teachers can view assignment details');
+  }
 
-	const assignment = await prisma.assignment.findUnique({
-		where: { id: assignmentId },
-		include: {
-			scores: {
-				include: {
-					user: {
-						select: {
-							id: true,
-							name: true,
-							username: true
-						}
-					}
-				},
-				orderBy: {
-					score: 'desc'
-				}
-			}
-		}
-	});
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      scores: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true
+            }
+          }
+        },
+        orderBy: {
+          score: 'desc'
+        }
+      }
+    }
+  });
 
-	if (!assignment || assignment.classId !== classId) {
-		error(404, 'Assignment not found');
-	}
+  if (!assignment || assignment.classId !== classId) {
+    error(404, 'Assignment not found');
+  }
 
-	const [languages, teacherGames] = await Promise.all([
-		prisma.language.findMany({
-			include: {
-				grammarRules: {
-					orderBy: [{ level: 'asc' }, { title: 'asc' }]
-				}
-			}
-		}),
-		prisma.game.findMany({
-			where: {
-				OR: [{ creatorId: locals.user!.id }, { isPublished: true }]
-			},
-			select: {
-				id: true,
-				title: true,
-				language: true,
-				isPublished: true,
-				_count: { select: { questions: true } }
-			},
-			orderBy: { createdAt: 'desc' }
-		})
-	]);
+  const [languages, teacherGames] = await Promise.all([
+    prisma.language.findMany({
+      include: {
+        grammarRules: {
+          orderBy: [{ level: 'asc' }, { title: 'asc' }]
+        }
+      }
+    }),
+    prisma.game.findMany({
+      where: {
+        OR: [{ creatorId: locals.user!.id }, { isPublished: true }]
+      },
+      select: {
+        id: true,
+        title: true,
+        language: true,
+        isPublished: true,
+        _count: { select: { questions: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
 
-	return {
-		assignment,
-		classDetails,
-		languages,
-		teacherGames
-	};
+  return {
+    assignment,
+    classDetails,
+    languages,
+    teacherGames
+  };
 };

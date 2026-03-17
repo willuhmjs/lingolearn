@@ -8,10 +8,10 @@ import { loadRetentionStats } from '$lib/server/retentionStats';
  * See src/lib/server/retentionStats.ts for the full metric definitions.
  */
 export async function GET({ locals }) {
-	if (!locals.user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  if (!locals.user) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	const stats = await loadRetentionStats(locals.user.id);
-	return json(stats);
+  const stats = await loadRetentionStats(locals.user.id);
+  return json(stats);
 }

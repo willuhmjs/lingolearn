@@ -31,9 +31,9 @@
 import { prisma } from './prisma';
 
 export interface HlrWeights {
-	theta: number[]; // 8 weights matching the feature vector above
-	trainedAt: string; // ISO date string
-	sampleSize: number;
+  theta: number[]; // 8 weights matching the feature vector above
+  trainedAt: string; // ISO date string
+  sampleSize: number;
 }
 
 const N_FEATURES = 8;
@@ -44,18 +44,18 @@ const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 /** Frequency rank bucketed into [0, 10] — 10 = most common, 0 = unknown/rare */
 function freqBucket(rank: number | null): number {
-	if (rank === null) return 0;
-	if (rank <= 100) return 10;
-	if (rank <= 500) return 8;
-	if (rank <= 1000) return 6;
-	if (rank <= 3000) return 4;
-	if (rank <= 10000) return 2;
-	return 1;
+  if (rank === null) return 0;
+  if (rank <= 100) return 10;
+  if (rank <= 500) return 8;
+  if (rank <= 1000) return 6;
+  if (rank <= 3000) return 4;
+  if (rank <= 10000) return 2;
+  return 1;
 }
 
 function cefrIndex(level: string): number {
-	const idx = CEFR_LEVELS.indexOf(level);
-	return idx >= 0 ? idx : 0;
+  const idx = CEFR_LEVELS.indexOf(level);
+  return idx >= 0 ? idx : 0;
 }
 
 /**
@@ -63,30 +63,30 @@ function cefrIndex(level: string): number {
  * All features are log-transformed or normalized to keep gradients stable.
  */
 export function buildFeatureVector(
-	correctReviews: number,
-	wrongReviews: number,
-	daysSinceLast: number,
-	frequencyRank: number | null,
-	cefrLevel: string,
-	partOfSpeech: string | null
+  correctReviews: number,
+  wrongReviews: number,
+  daysSinceLast: number,
+  frequencyRank: number | null,
+  cefrLevel: string,
+  partOfSpeech: string | null
 ): number[] {
-	return [
-		1, // bias term
-		Math.log2(correctReviews + 1),
-		Math.log2(wrongReviews + 1),
-		Math.log2(Math.max(daysSinceLast, 0) + 1),
-		Math.log2(freqBucket(frequencyRank) + 1),
-		cefrIndex(cefrLevel) / 5, // normalized 0..1
-		partOfSpeech === 'verb' ? 1 : 0,
-		partOfSpeech === 'noun' ? 1 : 0
-	];
+  return [
+    1, // bias term
+    Math.log2(correctReviews + 1),
+    Math.log2(wrongReviews + 1),
+    Math.log2(Math.max(daysSinceLast, 0) + 1),
+    Math.log2(freqBucket(frequencyRank) + 1),
+    cefrIndex(cefrLevel) / 5, // normalized 0..1
+    partOfSpeech === 'verb' ? 1 : 0,
+    partOfSpeech === 'noun' ? 1 : 0
+  ];
 }
 
 /** Dot product of two equal-length arrays */
 function dot(a: number[], b: number[]): number {
-	let s = 0;
-	for (let i = 0; i < a.length; i++) s += a[i] * b[i];
-	return s;
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+  return s;
 }
 
 /**
@@ -97,11 +97,11 @@ function dot(a: number[], b: number[]): number {
  * for incorrect we use r = 0.2 (lower — the card was already well below threshold).
  */
 function estimateHalfLife(elapsedDays: number, correct: boolean): number | null {
-	if (elapsedDays <= 0) return null;
-	const r = correct ? 0.5 : 0.2;
-	const denom = Math.log2(1 / r);
-	if (denom <= 0) return null;
-	return Math.max(0.1, elapsedDays / denom);
+  if (elapsedDays <= 0) return null;
+  const r = correct ? 0.5 : 0.2;
+  const denom = Math.log2(1 / r);
+  if (denom <= 0) return null;
+  return Math.max(0.1, elapsedDays / denom);
 }
 
 /**
@@ -110,93 +110,93 @@ function estimateHalfLife(elapsedDays: number, correct: boolean): number | null 
  * Returns null if there is insufficient data.
  */
 export async function fitHlrWeights(): Promise<HlrWeights | null> {
-	// Fetch review logs with real vocabulary metadata via join.
-	// We join itemId → Vocabulary when itemType = 'vocabulary'.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const logs = await (prisma as unknown as Record<string, any>).reviewLog.findMany({
-		where: {
-			elapsedDays: { gt: 0 },
-			itemType: 'vocabulary'
-		},
-		select: {
-			rating: true,
-			elapsedDays: true,
-			stability: true,
-			difficulty: true,
-			itemId: true
-		},
-		take: 10_000,
-		orderBy: { createdAt: 'desc' }
-	});
+  // Fetch review logs with real vocabulary metadata via join.
+  // We join itemId → Vocabulary when itemType = 'vocabulary'.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const logs = await (prisma as unknown as Record<string, any>).reviewLog.findMany({
+    where: {
+      elapsedDays: { gt: 0 },
+      itemType: 'vocabulary'
+    },
+    select: {
+      rating: true,
+      elapsedDays: true,
+      stability: true,
+      difficulty: true,
+      itemId: true
+    },
+    take: 10_000,
+    orderBy: { createdAt: 'desc' }
+  });
 
-	if (logs.length < MIN_SAMPLES) return null;
+  if (logs.length < MIN_SAMPLES) return null;
 
-	// Collect unique vocabularyIds and batch-fetch their metadata in one query.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const vocabIds: string[] = [...new Set((logs as any[]).map((l) => l.itemId as string))];
-	const vocabRows = await prisma.vocabulary.findMany({
-		where: { id: { in: vocabIds } },
-		select: { id: true, frequency: true, cefrLevel: true, partOfSpeech: true }
-	});
-	const vocabMeta = new Map(vocabRows.map((v) => [v.id, v]));
+  // Collect unique vocabularyIds and batch-fetch their metadata in one query.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vocabIds: string[] = [...new Set((logs as any[]).map((l) => l.itemId as string))];
+  const vocabRows = await prisma.vocabulary.findMany({
+    where: { id: { in: vocabIds } },
+    select: { id: true, frequency: true, cefrLevel: true, partOfSpeech: true }
+  });
+  const vocabMeta = new Map(vocabRows.map((v) => [v.id, v]));
 
-	type Sample = { features: number[]; actualHalfLife: number };
-	const samples: Sample[] = [];
+  type Sample = { features: number[]; actualHalfLife: number };
+  const samples: Sample[] = [];
 
-	for (const log of logs) {
-		const correct = log.rating >= 2;
-		const halfLife = estimateHalfLife(log.elapsedDays, correct);
-		if (halfLife === null) continue;
+  for (const log of logs) {
+    const correct = log.rating >= 2;
+    const halfLife = estimateHalfLife(log.elapsedDays, correct);
+    if (halfLife === null) continue;
 
-		// Use real vocabulary metadata when available; fall back to proxy values
-		// for review log rows whose vocabulary has since been deleted.
-		const meta = vocabMeta.get(log.itemId);
-		const correctProxy = Math.max(0, log.stability / 2);
-		const wrongProxy = log.difficulty - 1;
-		const features = buildFeatureVector(
-			Math.round(correctProxy),
-			Math.round(wrongProxy),
-			log.elapsedDays,
-			meta?.frequency ?? null,
-			meta?.cefrLevel ?? 'A1',
-			meta?.partOfSpeech ?? null
-		);
+    // Use real vocabulary metadata when available; fall back to proxy values
+    // for review log rows whose vocabulary has since been deleted.
+    const meta = vocabMeta.get(log.itemId);
+    const correctProxy = Math.max(0, log.stability / 2);
+    const wrongProxy = log.difficulty - 1;
+    const features = buildFeatureVector(
+      Math.round(correctProxy),
+      Math.round(wrongProxy),
+      log.elapsedDays,
+      meta?.frequency ?? null,
+      meta?.cefrLevel ?? 'A1',
+      meta?.partOfSpeech ?? null
+    );
 
-		samples.push({ features, actualHalfLife: halfLife });
-	}
+    samples.push({ features, actualHalfLife: halfLife });
+  }
 
-	if (samples.length < MIN_SAMPLES) return null;
+  if (samples.length < MIN_SAMPLES) return null;
 
-	// Gradient descent (MSE on log2 half-life)
-	const theta = new Array(N_FEATURES).fill(0.1);
+  // Gradient descent (MSE on log2 half-life)
+  const theta = new Array(N_FEATURES).fill(0.1);
 
-	for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-		const grad = new Array(N_FEATURES).fill(0);
-		let loss = 0;
+  for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+    const grad = new Array(N_FEATURES).fill(0);
+    let loss = 0;
 
-		for (const { features, actualHalfLife } of samples) {
-			const predicted = dot(theta, features);
-			const actual = Math.log2(Math.max(actualHalfLife, 0.01));
-			const err = predicted - actual;
-			loss += err * err;
-			for (let j = 0; j < N_FEATURES; j++) {
-				grad[j] += (2 * err * features[j]) / samples.length;
-			}
-		}
+    for (const { features, actualHalfLife } of samples) {
+      const predicted = dot(theta, features);
+      const actual = Math.log2(Math.max(actualHalfLife, 0.01));
+      const err = predicted - actual;
+      loss += err * err;
+      for (let j = 0; j < N_FEATURES; j++) {
+        grad[j] += (2 * err * features[j]) / samples.length;
+      }
+    }
 
-		for (let j = 0; j < N_FEATURES; j++) {
-			theta[j] -= LEARNING_RATE * grad[j];
-		}
+    for (let j = 0; j < N_FEATURES; j++) {
+      theta[j] -= LEARNING_RATE * grad[j];
+    }
 
-		// Early exit if loss is very small
-		if (loss / samples.length < 1e-6) break;
-	}
+    // Early exit if loss is very small
+    if (loss / samples.length < 1e-6) break;
+  }
 
-	return {
-		theta,
-		trainedAt: new Date().toISOString(),
-		sampleSize: samples.length
-	};
+  return {
+    theta,
+    trainedAt: new Date().toISOString(),
+    sampleSize: samples.length
+  };
 }
 
 /**
@@ -207,38 +207,38 @@ export async function fitHlrWeights(): Promise<HlrWeights | null> {
  * FSRS's own update equations take over.
  */
 export function hlrInitialStability(
-	frequencyRank: number | null,
-	cefrLevel: string,
-	partOfSpeech: string | null,
-	weights: HlrWeights
+  frequencyRank: number | null,
+  cefrLevel: string,
+  partOfSpeech: string | null,
+  weights: HlrWeights
 ): number {
-	// For a brand-new item: 0 correct, 0 wrong, 0 days since last
-	const features = buildFeatureVector(0, 0, 0, frequencyRank, cefrLevel, partOfSpeech);
-	const logHalfLife = dot(weights.theta, features);
-	const halfLifeDays = Math.pow(2, logHalfLife);
+  // For a brand-new item: 0 correct, 0 wrong, 0 days since last
+  const features = buildFeatureVector(0, 0, 0, frequencyRank, cefrLevel, partOfSpeech);
+  const logHalfLife = dot(weights.theta, features);
+  const halfLifeDays = Math.pow(2, logHalfLife);
 
-	// Convert half-life to FSRS stability:
-	// At stability S, retrievability at time t is R(t) = (1 + t/9S)^-1
-	// Half-life h satisfies R(h) = 0.5 → h = 9S(2^(1/1) - 1) = 9S
-	// So S = h / 9
-	const stability = Math.max(0.1, Math.min(halfLifeDays / 9, 30));
-	return stability;
+  // Convert half-life to FSRS stability:
+  // At stability S, retrievability at time t is R(t) = (1 + t/9S)^-1
+  // Half-life h satisfies R(h) = 0.5 → h = 9S(2^(1/1) - 1) = 9S
+  // So S = h / 9
+  const stability = Math.max(0.1, Math.min(halfLifeDays / 9, 30));
+  return stability;
 }
 
 /**
  * Load HLR weights from SiteSettings. Returns null if not yet fitted.
  */
 export async function loadHlrWeights(): Promise<HlrWeights | null> {
-	const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
-	if (!settings) return null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const raw = (settings as any).hlrWeights;
-	if (!raw) return null;
-	try {
-		return typeof raw === 'string' ? JSON.parse(raw) : (raw as HlrWeights);
-	} catch {
-		return null;
-	}
+  const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
+  if (!settings) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = (settings as any).hlrWeights;
+  if (!raw) return null;
+  try {
+    return typeof raw === 'string' ? JSON.parse(raw) : (raw as HlrWeights);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -246,21 +246,21 @@ export async function loadHlrWeights(): Promise<HlrWeights | null> {
  * Fire-and-forget safe — designed to be called from maintenance.
  */
 export async function runHlrFit(): Promise<void> {
-	const weights = await fitHlrWeights();
-	if (!weights) {
-		console.log('[HLR] Insufficient data to fit weights — skipping.');
-		return;
-	}
+  const weights = await fitHlrWeights();
+  if (!weights) {
+    console.log('[HLR] Insufficient data to fit weights — skipping.');
+    return;
+  }
 
-	await prisma.siteSettings.upsert({
-		where: { id: 'singleton' },
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		create: { id: 'singleton', loadTimeSamples: [], hlrWeights: JSON.stringify(weights) } as any,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		update: { hlrWeights: JSON.stringify(weights) } as any
-	});
+  await prisma.siteSettings.upsert({
+    where: { id: 'singleton' },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    create: { id: 'singleton', loadTimeSamples: [], hlrWeights: JSON.stringify(weights) } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    update: { hlrWeights: JSON.stringify(weights) } as any
+  });
 
-	console.log(
-		`[HLR] Fitted weights from ${weights.sampleSize} samples. theta=${weights.theta.map((v) => v.toFixed(4)).join(', ')}`
-	);
+  console.log(
+    `[HLR] Fitted weights from ${weights.sampleSize} samples. theta=${weights.theta.map((v) => v.toFixed(4)).join(', ')}`
+  );
 }

@@ -38,16 +38,16 @@ const PRUNE_THRESHOLD = 0.05;
  * Returns an empty object on null or invalid JSON.
  */
 export function parseErrorCounts(raw: string | null | undefined): ErrorCountVector {
-	if (!raw) return {};
-	try {
-		const parsed = JSON.parse(raw);
-		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-			return parsed as ErrorCountVector;
-		}
-	} catch {
-		// fall through
-	}
-	return {};
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as ErrorCountVector;
+    }
+  } catch {
+    // fall through
+  }
+  return {};
 }
 
 /**
@@ -55,16 +55,16 @@ export function parseErrorCounts(raw: string | null | undefined): ErrorCountVect
  * Prunes entries below PRUNE_THRESHOLD to keep the JSON footprint small.
  */
 function decayCounts(counts: ErrorCountVector, elapsedDays: number): ErrorCountVector {
-	if (elapsedDays <= 0) return counts;
-	const factor = Math.exp(-DECAY_LAMBDA * elapsedDays);
-	const result: ErrorCountVector = {};
-	for (const [key, value] of Object.entries(counts) as [ErrorType, number][]) {
-		const decayed = (value ?? 0) * factor;
-		if (decayed >= PRUNE_THRESHOLD) {
-			result[key] = decayed;
-		}
-	}
-	return result;
+  if (elapsedDays <= 0) return counts;
+  const factor = Math.exp(-DECAY_LAMBDA * elapsedDays);
+  const result: ErrorCountVector = {};
+  for (const [key, value] of Object.entries(counts) as [ErrorType, number][]) {
+    const decayed = (value ?? 0) * factor;
+    if (decayed >= PRUNE_THRESHOLD) {
+      result[key] = decayed;
+    }
+  }
+  return result;
 }
 
 /**
@@ -77,24 +77,24 @@ function decayCounts(counts: ErrorCountVector, elapsedDays: number): ErrorCountV
  * @returns Updated vector, serialized as JSON for storage
  */
 export function updateErrorCounts(
-	currentCounts: ErrorCountVector,
-	lastReviewDate: Date | null,
-	errorType: ErrorType | null,
-	reviewDate: Date = new Date()
+  currentCounts: ErrorCountVector,
+  lastReviewDate: Date | null,
+  errorType: ErrorType | null,
+  reviewDate: Date = new Date()
 ): string {
-	const elapsedDays = lastReviewDate
-		? (reviewDate.getTime() - lastReviewDate.getTime()) / (1000 * 60 * 60 * 24)
-		: 0;
+  const elapsedDays = lastReviewDate
+    ? (reviewDate.getTime() - lastReviewDate.getTime()) / (1000 * 60 * 60 * 24)
+    : 0;
 
-	// Decay existing counts
-	const decayed = decayCounts(currentCounts, elapsedDays);
+  // Decay existing counts
+  const decayed = decayCounts(currentCounts, elapsedDays);
 
-	// Increment the count for the observed error type
-	if (errorType) {
-		decayed[errorType] = (decayed[errorType] ?? 0) + 1;
-	}
+  // Increment the count for the observed error type
+  if (errorType) {
+    decayed[errorType] = (decayed[errorType] ?? 0) + 1;
+  }
 
-	return JSON.stringify(decayed);
+  return JSON.stringify(decayed);
 }
 
 /**
@@ -103,8 +103,8 @@ export function updateErrorCounts(
  * the last half-life).
  */
 export function getDominantErrors(counts: ErrorCountVector, threshold = 0.5): ErrorType[] {
-	return (Object.entries(counts) as [ErrorType, number][])
-		.filter(([, v]) => v >= threshold)
-		.sort((a, b) => b[1] - a[1])
-		.map(([k]) => k);
+  return (Object.entries(counts) as [ErrorType, number][])
+    .filter(([, v]) => v >= threshold)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k]) => k);
 }

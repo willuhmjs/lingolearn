@@ -19,56 +19,56 @@ import { env } from '$env/dynamic/private';
  * Recommended schedule: once daily (e.g. 02:00 UTC).
  */
 export async function GET({ request }) {
-	const secret = env.CRON_SECRET;
-	if (!secret) {
-		return json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-	}
+  const secret = env.CRON_SECRET;
+  if (!secret) {
+    return json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
 
-	const authHeader = request.headers.get('authorization');
-	if (authHeader !== `Bearer ${secret}`) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${secret}`) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	try {
-		// Find all (userId, languageId) pairs for users who have any vocabulary progress.
-		// We use userProgress (CEFR progress records) as the source of truth for which
-		// language each user is actively learning — this is more reliable than activeLanguageId
-		// since a user may learn multiple languages over time.
-		const activeProgresses = await prisma.userProgress.findMany({
-			where: { hasOnboarded: true },
-			select: { userId: true, languageId: true }
-		});
+  try {
+    // Find all (userId, languageId) pairs for users who have any vocabulary progress.
+    // We use userProgress (CEFR progress records) as the source of truth for which
+    // language each user is actively learning — this is more reliable than activeLanguageId
+    // since a user may learn multiple languages over time.
+    const activeProgresses = await prisma.userProgress.findMany({
+      where: { hasOnboarded: true },
+      select: { userId: true, languageId: true }
+    });
 
-		if (activeProgresses.length === 0) {
-			return json({ processed: 0, message: 'No active users to process' });
-		}
+    if (activeProgresses.length === 0) {
+      return json({ processed: 0, message: 'No active users to process' });
+    }
 
-		let successCount = 0;
-		let errorCount = 0;
+    let successCount = 0;
+    let errorCount = 0;
 
-		// Process users in serial to avoid overwhelming the DB with parallel transactions.
-		// Decay is a background job with no latency requirements, so throughput > concurrency.
-		for (const { userId, languageId } of activeProgresses) {
-			try {
-				await CefrService.applyEloDecay(userId, languageId);
-				successCount++;
-			} catch (err) {
-				console.error(`[ELO Decay Cron] Failed for user=${userId} lang=${languageId}:`, err);
-				errorCount++;
-			}
-		}
+    // Process users in serial to avoid overwhelming the DB with parallel transactions.
+    // Decay is a background job with no latency requirements, so throughput > concurrency.
+    for (const { userId, languageId } of activeProgresses) {
+      try {
+        await CefrService.applyEloDecay(userId, languageId);
+        successCount++;
+      } catch (err) {
+        console.error(`[ELO Decay Cron] Failed for user=${userId} lang=${languageId}:`, err);
+        errorCount++;
+      }
+    }
 
-		console.log(
-			`[ELO Decay Cron] Completed: ${successCount} succeeded, ${errorCount} failed out of ${activeProgresses.length} user-language pairs`
-		);
+    console.log(
+      `[ELO Decay Cron] Completed: ${successCount} succeeded, ${errorCount} failed out of ${activeProgresses.length} user-language pairs`
+    );
 
-		return json({
-			processed: activeProgresses.length,
-			succeeded: successCount,
-			failed: errorCount
-		});
-	} catch (err) {
-		console.error('[ELO Decay Cron] Fatal error:', err);
-		return json({ error: 'Internal server error' }, { status: 500 });
-	}
+    return json({
+      processed: activeProgresses.length,
+      succeeded: successCount,
+      failed: errorCount
+    });
+  } catch (err) {
+    console.error('[ELO Decay Cron] Fatal error:', err);
+    return json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

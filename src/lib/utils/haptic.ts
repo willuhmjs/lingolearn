@@ -10,29 +10,29 @@ const isVibrateSupported = typeof navigator !== 'undefined' && 'vibrate' in navi
  * Haptic feedback patterns
  */
 export const HapticPattern = {
-	// Light tap for button presses
-	LIGHT: [10],
+  // Light tap for button presses
+  LIGHT: [10],
 
-	// Medium tap for selections
-	MEDIUM: [20],
+  // Medium tap for selections
+  MEDIUM: [20],
 
-	// Strong tap for important actions
-	STRONG: [30],
+  // Strong tap for important actions
+  STRONG: [30],
 
-	// Success pattern (double tap)
-	SUCCESS: [15, 50, 15],
+  // Success pattern (double tap)
+  SUCCESS: [15, 50, 15],
 
-	// Error pattern (triple tap)
-	ERROR: [10, 30, 10, 30, 10],
+  // Error pattern (triple tap)
+  ERROR: [10, 30, 10, 30, 10],
 
-	// Warning pattern
-	WARNING: [20, 40, 20],
+  // Warning pattern
+  WARNING: [20, 40, 20],
 
-	// Notification pattern
-	NOTIFICATION: [10, 20, 10],
+  // Notification pattern
+  NOTIFICATION: [10, 20, 10],
 
-	// Selection pattern (short burst)
-	SELECTION: [5, 10, 5]
+  // Selection pattern (short burst)
+  SELECTION: [5, 10, 5]
 } as const;
 
 /**
@@ -40,45 +40,45 @@ export const HapticPattern = {
  * @param pattern - The vibration pattern to use
  */
 export function haptic(pattern: number | readonly number[]): void {
-	if (!isVibrateSupported) return;
+  if (!isVibrateSupported) return;
 
-	try {
-		navigator.vibrate(Array.isArray(pattern) ? [...pattern] : (pattern as number));
-	} catch (error) {
-		console.warn('Haptic feedback failed:', error);
-	}
+  try {
+    navigator.vibrate(Array.isArray(pattern) ? [...pattern] : (pattern as number));
+  } catch (error) {
+    console.warn('Haptic feedback failed:', error);
+  }
 }
 
 /**
  * Cancel any ongoing vibration
  */
 export function cancelHaptic(): void {
-	if (!isVibrateSupported) return;
+  if (!isVibrateSupported) return;
 
-	try {
-		navigator.vibrate(0);
-	} catch (error) {
-		console.warn('Cancel haptic failed:', error);
-	}
+  try {
+    navigator.vibrate(0);
+  } catch (error) {
+    console.warn('Cancel haptic failed:', error);
+  }
 }
 
 /**
  * Check if device supports haptic feedback
  */
 export function isHapticSupported(): boolean {
-	return isVibrateSupported;
+  return isVibrateSupported;
 }
 
 /**
  * Convenience functions for common patterns
  */
 export const haptics = {
-	light: () => haptic(HapticPattern.LIGHT),
-	medium: () => haptic(HapticPattern.MEDIUM),
-	strong: () => haptic(HapticPattern.STRONG),
-	success: () => haptic(HapticPattern.SUCCESS),
-	error: () => haptic(HapticPattern.ERROR),
-	warning: () => haptic(HapticPattern.WARNING),
-	notification: () => haptic(HapticPattern.NOTIFICATION),
-	selection: () => haptic(HapticPattern.SELECTION)
+  light: () => haptic(HapticPattern.LIGHT),
+  medium: () => haptic(HapticPattern.MEDIUM),
+  strong: () => haptic(HapticPattern.STRONG),
+  success: () => haptic(HapticPattern.SUCCESS),
+  error: () => haptic(HapticPattern.ERROR),
+  warning: () => haptic(HapticPattern.WARNING),
+  notification: () => haptic(HapticPattern.NOTIFICATION),
+  selection: () => haptic(HapticPattern.SELECTION)
 };

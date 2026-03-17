@@ -1,268 +1,268 @@
 <script lang="ts">
-	const srsColors: Record<string, string> = {
-		LOCKED: 'var(--color-locked, #94a3b8)',
-		UNSEEN: 'var(--color-unseen, #e2e8f0)',
-		LEARNING: 'var(--color-learning, #fef08a)',
-		KNOWN: 'var(--color-known, #6ee7b7)',
-		MASTERED: 'var(--color-mastered, #10b981)'
-	};
+  const srsColors: Record<string, string> = {
+    LOCKED: 'var(--color-locked, #94a3b8)',
+    UNSEEN: 'var(--color-unseen, #e2e8f0)',
+    LEARNING: 'var(--color-learning, #fef08a)',
+    KNOWN: 'var(--color-known, #6ee7b7)',
+    MASTERED: 'var(--color-mastered, #10b981)'
+  };
 
-	interface Props {
-		vocabularies: any[];
-		grammarRules: any[];
-	}
+  interface Props {
+    vocabularies: any[];
+    grammarRules: any[];
+  }
 
-	let { vocabularies, grammarRules }: Props = $props();
+  let { vocabularies, grammarRules }: Props = $props();
 
-	let totalVocab = $derived(vocabularies.length);
-	let avgVocabElo = $derived(
-		totalVocab > 0
-			? Math.ceil(vocabularies.reduce((acc: number, v: any) => acc + v.eloRating, 0) / totalVocab)
-			: 0
-	);
-	let vocabSrsBreakdown = $derived(
-		vocabularies.reduce(
-			(acc: Record<string, number>, v: any) => {
-				acc[v.srsState] = (acc[v.srsState] || 0) + 1;
-				return acc;
-			},
-			{} as Record<string, number>
-		)
-	);
+  let totalVocab = $derived(vocabularies.length);
+  let avgVocabElo = $derived(
+    totalVocab > 0
+      ? Math.ceil(vocabularies.reduce((acc: number, v: any) => acc + v.eloRating, 0) / totalVocab)
+      : 0
+  );
+  let vocabSrsBreakdown = $derived(
+    vocabularies.reduce(
+      (acc: Record<string, number>, v: any) => {
+        acc[v.srsState] = (acc[v.srsState] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    )
+  );
 
-	let totalGrammar = $derived(grammarRules.length);
-	let avgGrammarElo = $derived(
-		totalGrammar > 0
-			? Math.ceil(grammarRules.reduce((acc: number, r: any) => acc + r.eloRating, 0) / totalGrammar)
-			: 0
-	);
-	let grammarSrsBreakdown = $derived(
-		grammarRules.reduce(
-			(acc: Record<string, number>, r: any) => {
-				acc[r.srsState] = (acc[r.srsState] || 0) + 1;
-				return acc;
-			},
-			{} as Record<string, number>
-		)
-	);
+  let totalGrammar = $derived(grammarRules.length);
+  let avgGrammarElo = $derived(
+    totalGrammar > 0
+      ? Math.ceil(grammarRules.reduce((acc: number, r: any) => acc + r.eloRating, 0) / totalGrammar)
+      : 0
+  );
+  let grammarSrsBreakdown = $derived(
+    grammarRules.reduce(
+      (acc: Record<string, number>, r: any) => {
+        acc[r.srsState] = (acc[r.srsState] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    )
+  );
 </script>
 
 <section class="summary-section">
-	<h2>Summary Statistics</h2>
-	<div class="summary-grid">
-		<div class="summary-card">
-			<h3>Vocabulary</h3>
-			<div class="stat-row">
-				<span class="stat-label">Total Terms:</span>
-				<span class="stat-value">{totalVocab}</span>
-			</div>
-			<div class="stat-row">
-				<span class="stat-label">Average ELO:</span>
-				<span class="stat-value">{avgVocabElo}</span>
-			</div>
-			<div class="srs-breakdown">
-				<h4>SRS State Breakdown</h4>
-				{#each Object.entries(srsColors) as [state, color]}
-					<div class="breakdown-row">
-						<div class="breakdown-label">
-							<span class="color-box" style="background-color: {color}"></span>
-							{state}
-						</div>
-						<span>{vocabSrsBreakdown[state] || 0}</span>
-					</div>
-				{/each}
-			</div>
-		</div>
-		<div class="summary-card">
-			<h3>Grammar</h3>
-			<div class="stat-row">
-				<span class="stat-label">Total Rules:</span>
-				<span class="stat-value">{totalGrammar}</span>
-			</div>
-			<div class="stat-row">
-				<span class="stat-label">Average ELO:</span>
-				<span class="stat-value">{avgGrammarElo}</span>
-			</div>
-			<div class="srs-breakdown">
-				<h4>SRS State Breakdown</h4>
-				{#each Object.entries(srsColors) as [state, color]}
-					<div class="breakdown-row">
-						<div class="breakdown-label">
-							<span class="color-box" style="background-color: {color}"></span>
-							{state}
-						</div>
-						<span>{grammarSrsBreakdown[state] || 0}</span>
-					</div>
-				{/each}
-			</div>
-		</div>
-	</div>
+  <h2>Summary Statistics</h2>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h3>Vocabulary</h3>
+      <div class="stat-row">
+        <span class="stat-label">Total Terms:</span>
+        <span class="stat-value">{totalVocab}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Average ELO:</span>
+        <span class="stat-value">{avgVocabElo}</span>
+      </div>
+      <div class="srs-breakdown">
+        <h4>SRS State Breakdown</h4>
+        {#each Object.entries(srsColors) as [state, color]}
+          <div class="breakdown-row">
+            <div class="breakdown-label">
+              <span class="color-box" style="background-color: {color}"></span>
+              {state}
+            </div>
+            <span>{vocabSrsBreakdown[state] || 0}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+    <div class="summary-card">
+      <h3>Grammar</h3>
+      <div class="stat-row">
+        <span class="stat-label">Total Rules:</span>
+        <span class="stat-value">{totalGrammar}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Average ELO:</span>
+        <span class="stat-value">{avgGrammarElo}</span>
+      </div>
+      <div class="srs-breakdown">
+        <h4>SRS State Breakdown</h4>
+        {#each Object.entries(srsColors) as [state, color]}
+          <div class="breakdown-row">
+            <div class="breakdown-label">
+              <span class="color-box" style="background-color: {color}"></span>
+              {state}
+            </div>
+            <span>{grammarSrsBreakdown[state] || 0}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
 </section>
 
 <style>
-	.summary-section {
-		margin-bottom: 3rem;
-	}
+  .summary-section {
+    margin-bottom: 3rem;
+  }
 
-	h2 {
-		font-size: 1.75rem;
-		color: var(--text-color, #0f172a);
-		margin-bottom: 1.5rem;
-		font-weight: 800;
-		letter-spacing: -0.025em;
-		position: relative;
-		display: inline-block;
-	}
+  h2 {
+    font-size: 1.75rem;
+    color: var(--text-color, #0f172a);
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    position: relative;
+    display: inline-block;
+  }
 
-	.summary-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 2rem;
-	}
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
 
-	@media (min-width: 768px) {
-		.summary-grid {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
+  @media (min-width: 768px) {
+    .summary-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
 
-	.summary-card {
-		background: var(--card-bg, #ffffff);
-		border-radius: 1rem;
-		padding: 2rem;
-		box-shadow:
-			0 10px 15px -3px rgba(0, 0, 0, 0.05),
-			0 4px 6px -4px rgba(0, 0, 0, 0.05);
-		transition:
-			transform 0.3s ease,
-			box-shadow 0.3s ease;
-		position: relative;
-		overflow: hidden;
-		border: 1px solid rgba(0, 0, 0, 0.05);
-	}
+  .summary-card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.05),
+      0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
 
-	.summary-card::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 4px;
-		background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-	}
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  }
 
-	.summary-card:hover {
-		transform: translateY(-4px);
-		box-shadow:
-			0 20px 25px -5px rgba(0, 0, 0, 0.1),
-			0 8px 10px -6px rgba(0, 0, 0, 0.05);
-	}
+  .summary-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
 
-	.summary-card h3 {
-		margin-top: 0;
-		margin-bottom: 1.5rem;
-		color: var(--text-color, #0f172a);
-		font-size: 1.5rem;
-		font-weight: 700;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
+  .summary-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--text-color, #0f172a);
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 
-	.stat-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-		font-size: 1.1rem;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-	}
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
 
-	.stat-row:last-of-type {
-		border-bottom: none;
-	}
+  .stat-row:last-of-type {
+    border-bottom: none;
+  }
 
-	.stat-label {
-		color: #64748b;
-		font-weight: 500;
-	}
+  .stat-label {
+    color: #64748b;
+    font-weight: 500;
+  }
 
-	:global(html[data-theme='dark']) .stat-label {
-		color: #94a3b8;
-	}
+  :global(html[data-theme='dark']) .stat-label {
+    color: #94a3b8;
+  }
 
-	.stat-value {
-		color: #0f172a;
-		font-weight: 700;
-		font-size: 1.25rem;
-		background: #f1f5f9;
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-	}
+  .stat-value {
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 1.25rem;
+    background: #f1f5f9;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+  }
 
-	:global(html[data-theme='dark']) .stat-value {
-		background: #1e293b;
-		color: #f1f5f9;
-	}
+  :global(html[data-theme='dark']) .stat-value {
+    background: #1e293b;
+    color: #f1f5f9;
+  }
 
-	.srs-breakdown {
-		margin-top: 2rem;
-		background: #f8fafc;
-		padding: 1.5rem;
-		border-radius: 0.75rem;
-	}
+  .srs-breakdown {
+    margin-top: 2rem;
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+  }
 
-	:global(html[data-theme='dark']) .srs-breakdown {
-		background: #1e293b;
-	}
+  :global(html[data-theme='dark']) .srs-breakdown {
+    background: #1e293b;
+  }
 
-	.srs-breakdown h4 {
-		font-size: 1rem;
-		color: #475569;
-		margin-bottom: 1rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		font-weight: 600;
-	}
+  .srs-breakdown h4 {
+    font-size: 1rem;
+    color: #475569;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
 
-	:global(html[data-theme='dark']) .srs-breakdown h4 {
-		color: #94a3b8;
-	}
+  :global(html[data-theme='dark']) .srs-breakdown h4 {
+    color: #94a3b8;
+  }
 
-	.breakdown-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-		font-size: 0.95rem;
-	}
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+  }
 
-	.breakdown-row:last-child {
-		margin-bottom: 0;
-	}
+  .breakdown-row:last-child {
+    margin-bottom: 0;
+  }
 
-	.breakdown-label {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		color: #334155;
-		font-weight: 500;
-	}
+  .breakdown-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #334155;
+    font-weight: 500;
+  }
 
-	:global(html[data-theme='dark']) .breakdown-label {
-		color: #94a3b8;
-	}
+  :global(html[data-theme='dark']) .breakdown-label {
+    color: #94a3b8;
+  }
 
-	:global(html[data-theme='dark']) .breakdown-row > span {
-		color: #94a3b8;
-	}
+  :global(html[data-theme='dark']) .breakdown-row > span {
+    color: #94a3b8;
+  }
 
-	.color-box {
-		width: 1.25rem;
-		height: 1.25rem;
-		border-radius: 4px;
-		display: inline-block;
-		box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
+  .color-box {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 4px;
+    display: inline-block;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 </style>

@@ -21,36 +21,36 @@ import type { RequestEvent } from './$types';
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
 function buildSystemPrompt(
-	langName: string,
-	tentativeLevel: string,
-	wrongVocabLemmas: string[],
-	wrongGrammarTitles: string[],
-	scoresByLevel: Record<string, number>
+  langName: string,
+  tentativeLevel: string,
+  wrongVocabLemmas: string[],
+  wrongGrammarTitles: string[],
+  scoresByLevel: Record<string, number>
 ): string {
-	const scoresText = Object.entries(scoresByLevel)
-		.map(([lvl, pct]) => `${lvl}: ${Math.round(pct * 100)}%`)
-		.join(', ');
+  const scoresText = Object.entries(scoresByLevel)
+    .map(([lvl, pct]) => `${lvl}: ${Math.round(pct * 100)}%`)
+    .join(', ');
 
-	const vocabText =
-		wrongVocabLemmas.length > 0
-			? `Words the user got wrong: ${wrongVocabLemmas.slice(0, 6).join(', ')}`
-			: 'No specific vocabulary errors recorded.';
+  const vocabText =
+    wrongVocabLemmas.length > 0
+      ? `Words the user got wrong: ${wrongVocabLemmas.slice(0, 6).join(', ')}`
+      : 'No specific vocabulary errors recorded.';
 
-	const grammarText =
-		wrongGrammarTitles.length > 0
-			? `Grammar concepts the user struggled with: ${wrongGrammarTitles.slice(0, 4).join(', ')}`
-			: 'No specific grammar errors recorded.';
+  const grammarText =
+    wrongGrammarTitles.length > 0
+      ? `Grammar concepts the user struggled with: ${wrongGrammarTitles.slice(0, 4).join(', ')}`
+      : 'No specific grammar errors recorded.';
 
-	const levelAbove =
-		CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) < CEFR_LEVELS.length - 1
-			? CEFR_LEVELS[CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) + 1]
-			: null;
-	const levelBelow =
-		CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) > 0
-			? CEFR_LEVELS[CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) - 1]
-			: null;
+  const levelAbove =
+    CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) < CEFR_LEVELS.length - 1
+      ? CEFR_LEVELS[CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) + 1]
+      : null;
+  const levelBelow =
+    CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) > 0
+      ? CEFR_LEVELS[CEFR_LEVELS.indexOf(tentativeLevel as (typeof CEFR_LEVELS)[number]) - 1]
+      : null;
 
-	return `You are a friendly ${langName} language teacher doing a brief follow-up after a placement quiz.
+  return `You are a friendly ${langName} language teacher doing a brief follow-up after a placement quiz.
 
 QUIZ RESULTS CONTEXT:
 - Tentative level from quiz: ${tentativeLevel}
@@ -84,162 +84,162 @@ You MUST respond with ONLY a JSON object:
 }
 
 export async function POST({ request, locals }: RequestEvent) {
-	if (!locals.user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  if (!locals.user) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	const userId = locals.user.id;
-	const activeLanguage = locals.user.activeLanguage;
-	if (!activeLanguage) {
-		return json({ error: 'Active language is required' }, { status: 400 });
-	}
+  const userId = locals.user.id;
+  const activeLanguage = locals.user.activeLanguage;
+  if (!activeLanguage) {
+    return json({ error: 'Active language is required' }, { status: 400 });
+  }
 
-	const langId = activeLanguage.id;
-	const langName = activeLanguage.name;
+  const langId = activeLanguage.id;
+  const langName = activeLanguage.name;
 
-	const dbUser = await prisma.user.findUnique({
-		where: { id: userId },
-		select: { useLocalLlm: true }
-	});
-	const useLocalLlm = dbUser?.useLocalLlm ?? false;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { useLocalLlm: true }
+  });
+  const useLocalLlm = dbUser?.useLocalLlm ?? false;
 
-	if (!useLocalLlm && (await isQuotaExceeded(userId, false))) {
-		return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
-	}
+  if (!useLocalLlm && (await isQuotaExceeded(userId, false))) {
+    return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
+  }
 
-	const body = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => ({}));
 
-	const messages: Array<{ role: 'user' | 'assistant'; content: string }> = Array.isArray(
-		body.messages
-	)
-		? body.messages
-		: [];
-	const tentativeLevel: string = CEFR_LEVELS.includes(body.tentativeLevel)
-		? body.tentativeLevel
-		: 'A1';
-	const quizSummary: {
-		levelsAttempted?: string[];
-		scoresByLevel?: Record<string, number>;
-		wrongVocabLemmas?: string[];
-		wrongGrammarTitles?: string[];
-	} = body.quizSummary ?? {};
+  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = Array.isArray(
+    body.messages
+  )
+    ? body.messages
+    : [];
+  const tentativeLevel: string = CEFR_LEVELS.includes(body.tentativeLevel)
+    ? body.tentativeLevel
+    : 'A1';
+  const quizSummary: {
+    levelsAttempted?: string[];
+    scoresByLevel?: Record<string, number>;
+    wrongVocabLemmas?: string[];
+    wrongGrammarTitles?: string[];
+  } = body.quizSummary ?? {};
 
-	const scoresByLevel = quizSummary.scoresByLevel ?? {};
-	const wrongVocabLemmas = quizSummary.wrongVocabLemmas ?? [];
-	const wrongGrammarTitles = quizSummary.wrongGrammarTitles ?? [];
+  const scoresByLevel = quizSummary.scoresByLevel ?? {};
+  const wrongVocabLemmas = quizSummary.wrongVocabLemmas ?? [];
+  const wrongGrammarTitles = quizSummary.wrongGrammarTitles ?? [];
 
-	// First turn — no user message yet, generate the opening question
-	if (messages.length === 0) {
-		const systemPrompt = buildSystemPrompt(
-			langName,
-			tentativeLevel,
-			wrongVocabLemmas,
-			wrongGrammarTitles,
-			scoresByLevel
-		);
+  // First turn — no user message yet, generate the opening question
+  if (messages.length === 0) {
+    const systemPrompt = buildSystemPrompt(
+      langName,
+      tentativeLevel,
+      wrongVocabLemmas,
+      wrongGrammarTitles,
+      scoresByLevel
+    );
 
-		const resp = await generateChatCompletion({
-			userId,
-			messages: [{ role: 'user', content: '[start]' }],
-			systemPrompt,
-			jsonMode: true,
-			stream: false,
-			temperature: 0.7,
-			onUsage: useLocalLlm
-				? undefined
-				: ({ totalTokens }) => {
-						recordTokenUsage(userId, totalTokens);
-					}
-		});
+    const resp = await generateChatCompletion({
+      userId,
+      messages: [{ role: 'user', content: '[start]' }],
+      systemPrompt,
+      jsonMode: true,
+      stream: false,
+      temperature: 0.7,
+      onUsage: useLocalLlm
+        ? undefined
+        : ({ totalTokens }) => {
+            recordTokenUsage(userId, totalTokens);
+          }
+    });
 
-		const parsed = JSON.parse(resp.choices[0].message.content);
-		return json({
-			message: parsed.message,
-			completed: false,
-			currentLevelGuess: parsed.currentLevelGuess ?? tentativeLevel
-		});
-	}
+    const parsed = JSON.parse(resp.choices[0].message.content);
+    return json({
+      message: parsed.message,
+      completed: false,
+      currentLevelGuess: parsed.currentLevelGuess ?? tentativeLevel
+    });
+  }
 
-	// Subsequent turns — stream the reply so the UI feels responsive
-	const systemPrompt = buildSystemPrompt(
-		langName,
-		tentativeLevel,
-		wrongVocabLemmas,
-		wrongGrammarTitles,
-		scoresByLevel
-	);
+  // Subsequent turns — stream the reply so the UI feels responsive
+  const systemPrompt = buildSystemPrompt(
+    langName,
+    tentativeLevel,
+    wrongVocabLemmas,
+    wrongGrammarTitles,
+    scoresByLevel
+  );
 
-	const llmStream = await generateChatCompletion({
-		userId,
-		messages,
-		systemPrompt,
-		jsonMode: true,
-		stream: true
-	});
+  const llmStream = await generateChatCompletion({
+    userId,
+    messages,
+    systemPrompt,
+    jsonMode: true,
+    stream: true
+  });
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			let fullContent = '';
-			let totalTokens = 0;
+  const stream = new ReadableStream({
+    async start(controller) {
+      let fullContent = '';
+      let totalTokens = 0;
 
-			try {
-				for await (const chunk of llmStream) {
-					if (chunk.usage?.total_tokens) totalTokens = chunk.usage.total_tokens;
-					const content = chunk.choices[0]?.delta?.content || '';
-					if (content) {
-						fullContent += content;
-						// Stream the raw chunk so the client can show partial "message" text
-						controller.enqueue(new TextEncoder().encode(content));
-					}
-				}
-			} catch (err) {
-				console.error('[PlacementChat] stream error:', err);
-			}
+      try {
+        for await (const chunk of llmStream) {
+          if (chunk.usage?.total_tokens) totalTokens = chunk.usage.total_tokens;
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            fullContent += content;
+            // Stream the raw chunk so the client can show partial "message" text
+            controller.enqueue(new TextEncoder().encode(content));
+          }
+        }
+      } catch (err) {
+        console.error('[PlacementChat] stream error:', err);
+      }
 
-			if (!useLocalLlm && totalTokens > 0) {
-				recordTokenUsage(userId, totalTokens);
-			}
+      if (!useLocalLlm && totalTokens > 0) {
+        recordTokenUsage(userId, totalTokens);
+      }
 
-			// After stream: finalize placement if completed
-			try {
-				const parsed = JSON.parse(fullContent);
+      // After stream: finalize placement if completed
+      try {
+        const parsed = JSON.parse(fullContent);
 
-				if (parsed.completed) {
-					const validLevels = [...CEFR_LEVELS];
-					const finalLevel: string = validLevels.includes(parsed.level)
-						? parsed.level
-						: tentativeLevel;
+        if (parsed.completed) {
+          const validLevels = [...CEFR_LEVELS];
+          const finalLevel: string = validLevels.includes(parsed.level)
+            ? parsed.level
+            : tentativeLevel;
 
-					const existingProgress = await prisma.userProgress.findUnique({
-						where: { userId_languageId: { userId, languageId: langId } },
-						select: { cefrLevel: true }
-					});
-					const oldLevel = existingProgress?.cefrLevel;
+          const existingProgress = await prisma.userProgress.findUnique({
+            where: { userId_languageId: { userId, languageId: langId } },
+            select: { cefrLevel: true }
+          });
+          const oldLevel = existingProgress?.cefrLevel;
 
-					await prisma.userProgress.upsert({
-						where: { userId_languageId: { userId, languageId: langId } },
-						create: { userId, languageId: langId, hasOnboarded: true, cefrLevel: finalLevel },
-						update: { hasOnboarded: true, cefrLevel: finalLevel }
-					});
+          await prisma.userProgress.upsert({
+            where: { userId_languageId: { userId, languageId: langId } },
+            create: { userId, languageId: langId, hasOnboarded: true, cefrLevel: finalLevel },
+            update: { hasOnboarded: true, cefrLevel: finalLevel }
+          });
 
-					await CefrService.applyGrammarMasteryForLevel(userId, langId, finalLevel, oldLevel);
+          await CefrService.applyGrammarMasteryForLevel(userId, langId, finalLevel, oldLevel);
 
-					console.log(
-						`[PlacementChat] User ${userId} finalized at ${finalLevel} (tentative was ${tentativeLevel})`
-					);
-				}
-			} catch (e) {
-				console.error('[PlacementChat] post-stream finalize error:', e);
-			}
+          console.log(
+            `[PlacementChat] User ${userId} finalized at ${finalLevel} (tentative was ${tentativeLevel})`
+          );
+        }
+      } catch (e) {
+        console.error('[PlacementChat] post-stream finalize error:', e);
+      }
 
-			controller.close();
-		}
-	});
+      controller.close();
+    }
+  });
 
-	return new Response(stream, {
-		headers: {
-			'Content-Type': 'text/plain; charset=utf-8',
-			'Cache-Control': 'no-cache'
-		}
-	});
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache'
+    }
+  });
 }

@@ -17,13 +17,13 @@ import { FREQUENCY_MAPS, estimateFrequencyRank } from '$lib/frequency/index';
  * statically — nothing needs to be initialised at runtime.
  */
 export function initFrequencyForLanguage(langName: string, _langCode: string): Promise<void> {
-	if (!FREQUENCY_MAPS[langName]) {
-		console.warn(
-			`[frequency] No bundled data for "${langName}". ` +
-				`Run: pnpm fetch:frequency <code> && pnpm build:frequency`
-		);
-	}
-	return Promise.resolve();
+  if (!FREQUENCY_MAPS[langName]) {
+    console.warn(
+      `[frequency] No bundled data for "${langName}". ` +
+        `Run: pnpm fetch:frequency <code> && pnpm build:frequency`
+    );
+  }
+  return Promise.resolve();
 }
 
 /**
@@ -31,9 +31,9 @@ export function initFrequencyForLanguage(langName: string, _langCode: string): P
  * Returns null if the language has no bundled data or the word is absent.
  */
 export function getFrequencyRankDynamic(lemma: string, langName: string): number | null {
-	const map = FREQUENCY_MAPS[langName];
-	if (!map) return null;
-	return map[lemma.toLowerCase()] ?? null;
+  const map = FREQUENCY_MAPS[langName];
+  if (!map) return null;
+  return map[lemma.toLowerCase()] ?? null;
 }
 
 export { estimateFrequencyRank };

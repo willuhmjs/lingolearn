@@ -69,91 +69,91 @@ let lastLiveSessionPrune = 0;
 // ---------------------------------------------------------------------------
 
 async function runFsrsOptimization(): Promise<void> {
-	const progresses = await prisma.userProgress.findMany({
-		where: { hasOnboarded: true },
-		select: { userId: true }
-	});
+  const progresses = await prisma.userProgress.findMany({
+    where: { hasOnboarded: true },
+    select: { userId: true }
+  });
 
-	// Deduplicate userIds (a user can have progress for multiple languages)
-	const userIds = [...new Set(progresses.map((p) => p.userId))];
+  // Deduplicate userIds (a user can have progress for multiple languages)
+  const userIds = [...new Set(progresses.map((p) => p.userId))];
 
-	let succeeded = 0;
-	let skipped = 0;
-	let failed = 0;
-	for (const userId of userIds) {
-		try {
-			const result = await optimizeFsrsWeightsForUser(userId);
-			if (result) succeeded++;
-			else skipped++;
-		} catch (err) {
-			console.error(`[maintenance] FSRS optimize failed user=${userId}:`, err);
-			failed++;
-		}
-	}
-	console.log(
-		`[maintenance] FSRS optimization complete: ${succeeded} optimized, ${skipped} skipped (insufficient data), ${failed} failed / ${userIds.length} total`
-	);
+  let succeeded = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const userId of userIds) {
+    try {
+      const result = await optimizeFsrsWeightsForUser(userId);
+      if (result) succeeded++;
+      else skipped++;
+    } catch (err) {
+      console.error(`[maintenance] FSRS optimize failed user=${userId}:`, err);
+      failed++;
+    }
+  }
+  console.log(
+    `[maintenance] FSRS optimization complete: ${succeeded} optimized, ${skipped} skipped (insufficient data), ${failed} failed / ${userIds.length} total`
+  );
 }
 
 async function runEloDecay(): Promise<void> {
-	const progresses = await prisma.userProgress.findMany({
-		where: { hasOnboarded: true },
-		select: { userId: true, languageId: true }
-	});
+  const progresses = await prisma.userProgress.findMany({
+    where: { hasOnboarded: true },
+    select: { userId: true, languageId: true }
+  });
 
-	let succeeded = 0;
-	let failed = 0;
-	for (const { userId, languageId } of progresses) {
-		try {
-			await CefrService.applyEloDecay(userId, languageId);
-			succeeded++;
-		} catch (err) {
-			console.error(`[maintenance] ELO decay failed user=${userId} lang=${languageId}:`, err);
-			failed++;
-		}
-	}
-	console.log(
-		`[maintenance] ELO decay complete: ${succeeded} ok, ${failed} failed / ${progresses.length} total`
-	);
+  let succeeded = 0;
+  let failed = 0;
+  for (const { userId, languageId } of progresses) {
+    try {
+      await CefrService.applyEloDecay(userId, languageId);
+      succeeded++;
+    } catch (err) {
+      console.error(`[maintenance] ELO decay failed user=${userId} lang=${languageId}:`, err);
+      failed++;
+    }
+  }
+  console.log(
+    `[maintenance] ELO decay complete: ${succeeded} ok, ${failed} failed / ${progresses.length} total`
+  );
 }
 
 async function pruneReviewLogs(): Promise<void> {
-	const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const result = await (prisma as any).reviewLog.deleteMany({
-		where: { createdAt: { lt: cutoff } }
-	});
-	console.log(`[maintenance] ReviewLog prune: deleted ${result.count} rows older than 1 year`);
+  const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await (prisma as any).reviewLog.deleteMany({
+    where: { createdAt: { lt: cutoff } }
+  });
+  console.log(`[maintenance] ReviewLog prune: deleted ${result.count} rows older than 1 year`);
 }
 
 async function pruneMessages(): Promise<void> {
-	const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-	// Delete sessions (cascades to messages) that haven't been touched in 90 days.
-	const result = await prisma.conversationSession.deleteMany({
-		where: { updatedAt: { lt: cutoff } }
-	});
-	console.log(
-		`[maintenance] ConversationSession prune: deleted ${result.count} sessions older than 90 days (messages cascade)`
-	);
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  // Delete sessions (cascades to messages) that haven't been touched in 90 days.
+  const result = await prisma.conversationSession.deleteMany({
+    where: { updatedAt: { lt: cutoff } }
+  });
+  console.log(
+    `[maintenance] ConversationSession prune: deleted ${result.count} sessions older than 90 days (messages cascade)`
+  );
 }
 
 async function pruneAiUsage(): Promise<void> {
-	const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-	const result = await prisma.userAiUsage.deleteMany({
-		where: { date: { lt: cutoff } }
-	});
-	console.log(`[maintenance] UserAiUsage prune: deleted ${result.count} rows older than 30 days`);
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const result = await prisma.userAiUsage.deleteMany({
+    where: { date: { lt: cutoff } }
+  });
+  console.log(`[maintenance] UserAiUsage prune: deleted ${result.count} rows older than 30 days`);
 }
 
 async function pruneLiveSessions(): Promise<void> {
-	const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-	// Cascade deletes LiveSessionParticipant rows too.
-	const result = await prisma.liveSession.deleteMany({
-		where: { status: 'finished', updatedAt: { lt: cutoff } }
-	});
-	console.log(
-		`[maintenance] LiveSession prune: deleted ${result.count} finished sessions older than 90 days`
-	);
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  // Cascade deletes LiveSessionParticipant rows too.
+  const result = await prisma.liveSession.deleteMany({
+    where: { status: 'finished', updatedAt: { lt: cutoff } }
+  });
+  console.log(
+    `[maintenance] LiveSession prune: deleted ${result.count} finished sessions older than 90 days`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -165,77 +165,77 @@ async function pruneLiveSessions(): Promise<void> {
  * non-blocking background promises. Returns immediately — zero request latency.
  */
 export function runMaintenanceIfDue(): void {
-	const now = Date.now();
+  const now = Date.now();
 
-	if (now - lastEloDecay > ELO_DECAY_INTERVAL_MS) {
-		lastEloDecay = now;
-		runEloDecay().catch((err) => {
-			console.error('[maintenance] ELO decay job failed:', err);
-			lastEloDecay = 0; // reset so it retries next time
-		});
-	}
+  if (now - lastEloDecay > ELO_DECAY_INTERVAL_MS) {
+    lastEloDecay = now;
+    runEloDecay().catch((err) => {
+      console.error('[maintenance] ELO decay job failed:', err);
+      lastEloDecay = 0; // reset so it retries next time
+    });
+  }
 
-	if (now - lastFsrsOptimize > FSRS_OPTIMIZE_INTERVAL_MS) {
-		lastFsrsOptimize = now;
-		runFsrsOptimization().catch((err) => {
-			console.error('[maintenance] FSRS optimization job failed:', err);
-			lastFsrsOptimize = 0;
-		});
-	}
+  if (now - lastFsrsOptimize > FSRS_OPTIMIZE_INTERVAL_MS) {
+    lastFsrsOptimize = now;
+    runFsrsOptimization().catch((err) => {
+      console.error('[maintenance] FSRS optimization job failed:', err);
+      lastFsrsOptimize = 0;
+    });
+  }
 
-	if (now - lastHlrFit > HLR_FIT_INTERVAL_MS) {
-		lastHlrFit = now;
-		runHlrFit().catch((err) => {
-			console.error('[maintenance] HLR fit job failed:', err);
-			lastHlrFit = 0;
-		});
-	}
+  if (now - lastHlrFit > HLR_FIT_INTERVAL_MS) {
+    lastHlrFit = now;
+    runHlrFit().catch((err) => {
+      console.error('[maintenance] HLR fit job failed:', err);
+      lastHlrFit = 0;
+    });
+  }
 
-	if (now - lastPfaFit > PFA_FIT_INTERVAL_MS) {
-		lastPfaFit = now;
-		runPfaFit().catch((err) => {
-			console.error('[maintenance] PFA fit job failed:', err);
-			lastPfaFit = 0;
-		});
-	}
+  if (now - lastPfaFit > PFA_FIT_INTERVAL_MS) {
+    lastPfaFit = now;
+    runPfaFit().catch((err) => {
+      console.error('[maintenance] PFA fit job failed:', err);
+      lastPfaFit = 0;
+    });
+  }
 
-	if (now - lastErrorCoMatrixFit > ERROR_CO_MATRIX_INTERVAL_MS) {
-		lastErrorCoMatrixFit = now;
-		runErrorCoMatrixFit().catch((err) => {
-			console.error('[maintenance] Error co-occurrence matrix fit failed:', err);
-			lastErrorCoMatrixFit = 0;
-		});
-	}
+  if (now - lastErrorCoMatrixFit > ERROR_CO_MATRIX_INTERVAL_MS) {
+    lastErrorCoMatrixFit = now;
+    runErrorCoMatrixFit().catch((err) => {
+      console.error('[maintenance] Error co-occurrence matrix fit failed:', err);
+      lastErrorCoMatrixFit = 0;
+    });
+  }
 
-	if (now - lastReviewLogPrune > REVIEW_LOG_PRUNE_INTERVAL_MS) {
-		lastReviewLogPrune = now;
-		pruneReviewLogs().catch((err) => {
-			console.error('[maintenance] ReviewLog prune failed:', err);
-			lastReviewLogPrune = 0;
-		});
-	}
+  if (now - lastReviewLogPrune > REVIEW_LOG_PRUNE_INTERVAL_MS) {
+    lastReviewLogPrune = now;
+    pruneReviewLogs().catch((err) => {
+      console.error('[maintenance] ReviewLog prune failed:', err);
+      lastReviewLogPrune = 0;
+    });
+  }
 
-	if (now - lastMessagePrune > MESSAGE_PRUNE_INTERVAL_MS) {
-		lastMessagePrune = now;
-		pruneMessages().catch((err) => {
-			console.error('[maintenance] Message prune failed:', err);
-			lastMessagePrune = 0;
-		});
-	}
+  if (now - lastMessagePrune > MESSAGE_PRUNE_INTERVAL_MS) {
+    lastMessagePrune = now;
+    pruneMessages().catch((err) => {
+      console.error('[maintenance] Message prune failed:', err);
+      lastMessagePrune = 0;
+    });
+  }
 
-	if (now - lastAiUsagePrune > AI_USAGE_PRUNE_INTERVAL_MS) {
-		lastAiUsagePrune = now;
-		pruneAiUsage().catch((err) => {
-			console.error('[maintenance] AI usage prune failed:', err);
-			lastAiUsagePrune = 0;
-		});
-	}
+  if (now - lastAiUsagePrune > AI_USAGE_PRUNE_INTERVAL_MS) {
+    lastAiUsagePrune = now;
+    pruneAiUsage().catch((err) => {
+      console.error('[maintenance] AI usage prune failed:', err);
+      lastAiUsagePrune = 0;
+    });
+  }
 
-	if (now - lastLiveSessionPrune > LIVE_SESSION_PRUNE_INTERVAL_MS) {
-		lastLiveSessionPrune = now;
-		pruneLiveSessions().catch((err) => {
-			console.error('[maintenance] LiveSession prune failed:', err);
-			lastLiveSessionPrune = 0;
-		});
-	}
+  if (now - lastLiveSessionPrune > LIVE_SESSION_PRUNE_INTERVAL_MS) {
+    lastLiveSessionPrune = now;
+    pruneLiveSessions().catch((err) => {
+      console.error('[maintenance] LiveSession prune failed:', err);
+      lastLiveSessionPrune = 0;
+    });
+  }
 }

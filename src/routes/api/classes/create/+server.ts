@@ -4,73 +4,73 @@ import { prisma } from '$lib/server/prisma';
 import { randomBytes } from 'crypto';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	if (!locals.user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  if (!locals.user) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	try {
-		const { name, description, primaryLanguage } = await request.json();
+  try {
+    const { name, description, primaryLanguage } = await request.json();
 
-		if (!name || typeof name !== 'string') {
-			return json({ error: 'Name is required' }, { status: 400 });
-		}
+    if (!name || typeof name !== 'string') {
+      return json({ error: 'Name is required' }, { status: 400 });
+    }
 
-		// Enforce max class ownership (20)
-		const ownedClassesCount = await prisma.classMember.count({
-			where: {
-				userId: locals.user.id,
-				role: 'TEACHER'
-			}
-		});
+    // Enforce max class ownership (20)
+    const ownedClassesCount = await prisma.classMember.count({
+      where: {
+        userId: locals.user.id,
+        role: 'TEACHER'
+      }
+    });
 
-		if (ownedClassesCount >= 20) {
-			return json({ error: 'Maximum class ownership limit reached (20)' }, { status: 403 });
-		}
+    if (ownedClassesCount >= 20) {
+      return json({ error: 'Maximum class ownership limit reached (20)' }, { status: 403 });
+    }
 
-		// Generate a cryptographically secure 6-character alphanumeric invite code
-		const generateInviteCode = () => {
-			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-			const bytes = randomBytes(6);
-			let code = '';
-			for (let i = 0; i < 6; i++) {
-				code += chars[bytes[i] % chars.length];
-			}
-			return code;
-		};
+    // Generate a cryptographically secure 6-character alphanumeric invite code
+    const generateInviteCode = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const bytes = randomBytes(6);
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[bytes[i] % chars.length];
+      }
+      return code;
+    };
 
-		let inviteCode = generateInviteCode();
-		let isUnique = false;
+    let inviteCode = generateInviteCode();
+    let isUnique = false;
 
-		// Ensure invite code uniqueness
-		while (!isUnique) {
-			const existingClass = await prisma.class.findUnique({
-				where: { inviteCode }
-			});
-			if (!existingClass) {
-				isUnique = true;
-			} else {
-				inviteCode = generateInviteCode();
-			}
-		}
+    // Ensure invite code uniqueness
+    while (!isUnique) {
+      const existingClass = await prisma.class.findUnique({
+        where: { inviteCode }
+      });
+      if (!existingClass) {
+        isUnique = true;
+      } else {
+        inviteCode = generateInviteCode();
+      }
+    }
 
-		const newClass = await prisma.class.create({
-			data: {
-				name,
-				description: description || null,
-				primaryLanguage: primaryLanguage || 'international',
-				inviteCode,
-				members: {
-					create: {
-						userId: locals.user.id,
-						role: 'TEACHER'
-					}
-				}
-			}
-		});
+    const newClass = await prisma.class.create({
+      data: {
+        name,
+        description: description || null,
+        primaryLanguage: primaryLanguage || 'international',
+        inviteCode,
+        members: {
+          create: {
+            userId: locals.user.id,
+            role: 'TEACHER'
+          }
+        }
+      }
+    });
 
-		return json({ class: newClass });
-	} catch (error) {
-		console.error('Failed to create class:', error);
-		return json({ error: 'Failed to create class' }, { status: 500 });
-	}
+    return json({ class: newClass });
+  } catch (error) {
+    console.error('Failed to create class:', error);
+    return json({ error: 'Failed to create class' }, { status: 500 });
+  }
 };

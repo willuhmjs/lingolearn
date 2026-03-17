@@ -16,17 +16,17 @@ export const DAILY_TOKEN_QUOTA = 500_000;
  * Returns null if there is no usage record yet (i.e. 0 used).
  */
 export async function getDailyUsage(
-	userId: string
+  userId: string
 ): Promise<{ tokensUsed: number; goodWillTokens: number; effectiveUsage: number } | null> {
-	const record = await prisma.userAiUsage.findUnique({
-		where: { userId_date: { userId, date: todayUtc() } }
-	});
-	if (!record) return null;
-	return {
-		tokensUsed: record.tokensUsed,
-		goodWillTokens: record.goodWillTokens,
-		effectiveUsage: Math.max(0, record.tokensUsed - record.goodWillTokens)
-	};
+  const record = await prisma.userAiUsage.findUnique({
+    where: { userId_date: { userId, date: todayUtc() } }
+  });
+  if (!record) return null;
+  return {
+    tokensUsed: record.tokensUsed,
+    goodWillTokens: record.goodWillTokens,
+    effectiveUsage: Math.max(0, record.tokensUsed - record.goodWillTokens)
+  };
 }
 
 /**
@@ -34,10 +34,10 @@ export async function getDailyUsage(
  * Users on a local/custom LLM are never quota-limited.
  */
 export async function isQuotaExceeded(userId: string, useLocalLlm: boolean): Promise<boolean> {
-	if (useLocalLlm) return false;
-	const usage = await getDailyUsage(userId);
-	if (!usage) return false;
-	return usage.effectiveUsage >= DAILY_TOKEN_QUOTA;
+  if (useLocalLlm) return false;
+  const usage = await getDailyUsage(userId);
+  if (!usage) return false;
+  return usage.effectiveUsage >= DAILY_TOKEN_QUOTA;
 }
 
 /**
@@ -50,26 +50,26 @@ export async function isQuotaExceeded(userId: string, useLocalLlm: boolean): Pro
  *                  the call directly benefited the shared database.
  */
 export async function recordTokenUsage(
-	userId: string,
-	tokens: number,
-	goodWill = false
+  userId: string,
+  tokens: number,
+  goodWill = false
 ): Promise<void> {
-	if (tokens <= 0) return;
-	try {
-		await prisma.userAiUsage.upsert({
-			where: { userId_date: { userId, date: todayUtc() } },
-			create: {
-				userId,
-				date: todayUtc(),
-				tokensUsed: tokens,
-				goodWillTokens: goodWill ? tokens : 0
-			},
-			update: {
-				tokensUsed: { increment: tokens },
-				...(goodWill ? { goodWillTokens: { increment: tokens } } : {})
-			}
-		});
-	} catch (err) {
-		console.error('[aiQuota] Failed to record token usage', err);
-	}
+  if (tokens <= 0) return;
+  try {
+    await prisma.userAiUsage.upsert({
+      where: { userId_date: { userId, date: todayUtc() } },
+      create: {
+        userId,
+        date: todayUtc(),
+        tokensUsed: tokens,
+        goodWillTokens: goodWill ? tokens : 0
+      },
+      update: {
+        tokensUsed: { increment: tokens },
+        ...(goodWill ? { goodWillTokens: { increment: tokens } } : {})
+      }
+    });
+  } catch (err) {
+    console.error('[aiQuota] Failed to record token usage', err);
+  }
 }

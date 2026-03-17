@@ -6,21 +6,21 @@ import { isQuotaExceeded, recordTokenUsage } from '$lib/server/aiQuota';
 import { stemWord } from '$lib/server/vocabProcessor';
 
 const MEDIA_TYPES = [
-	'news_article',
-	'advertisement',
-	'restaurant_menu',
-	'social_post',
-	'recipe',
-	'review',
-	'letter'
+  'news_article',
+  'advertisement',
+  'restaurant_menu',
+  'social_post',
+  'recipe',
+  'review',
+  'letter'
 ] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataSchema: string }> = {
-	news_article: {
-		description: 'A newspaper or online news article with headline, byline, and body text.',
-		templateDataSchema: `{
+  news_article: {
+    description: 'A newspaper or online news article with headline, byline, and body text.',
+    templateDataSchema: `{
   "source": "<newspaper name, e.g. Berliner Tageszeitung>",
   "date": "<formatted date in target language, e.g. 11. März 2026>",
   "headline": "<compelling news headline>",
@@ -28,10 +28,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "lead": "<first paragraph summarizing the story (2-3 sentences)>",
   "body": "<2-3 more paragraphs of article body>"
 }`
-	},
-	advertisement: {
-		description: 'A print or digital advertisement for a product or service.',
-		templateDataSchema: `{
+  },
+  advertisement: {
+    description: 'A print or digital advertisement for a product or service.',
+    templateDataSchema: `{
   "brand": "<brand or company name>",
   "product": "<product or service name>",
   "slogan": "<catchy advertising slogan>",
@@ -40,10 +40,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "price": "<price string, e.g. Nur €29,99! — optional>",
   "disclaimer": "<small print disclaimer — optional, can be empty string>"
 }`
-	},
-	restaurant_menu: {
-		description: 'A restaurant menu with sections and dishes.',
-		templateDataSchema: `{
+  },
+  restaurant_menu: {
+    description: 'A restaurant menu with sections and dishes.',
+    templateDataSchema: `{
   "restaurantName": "<restaurant name>",
   "tagline": "<short restaurant tagline or description>",
   "sections": [
@@ -55,10 +55,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
     }
   ]
 }`
-	},
-	social_post: {
-		description: 'A social media post (Instagram/Twitter style).',
-		templateDataSchema: `{
+  },
+  social_post: {
+    description: 'A social media post (Instagram/Twitter style).',
+    templateDataSchema: `{
   "username": "<display name>",
   "handle": "<@handle>",
   "content": "<the post text, can include line breaks>",
@@ -67,10 +67,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "comments": "<number as string, e.g. 47>",
   "timestamp": "<relative time in target language, e.g. vor 3 Stunden>"
 }`
-	},
-	recipe: {
-		description: 'A cooking recipe with ingredients and steps.',
-		templateDataSchema: `{
+  },
+  recipe: {
+    description: 'A cooking recipe with ingredients and steps.',
+    templateDataSchema: `{
   "title": "<recipe name>",
   "servings": "<number, e.g. 4>",
   "prepTime": "<e.g. 15 Min.>",
@@ -80,10 +80,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "steps": ["<step 1>", "<step 2>", "<step 3>"],
   "tips": "<optional cooking tip, can be empty string>"
 }`
-	},
-	review: {
-		description: 'A written review of a product, restaurant, book, or film.',
-		templateDataSchema: `{
+  },
+  review: {
+    description: 'A written review of a product, restaurant, book, or film.',
+    templateDataSchema: `{
   "subject": "<what is being reviewed, e.g. Das Hotel Adlon or Der Film Oppenheimer>",
   "rating": <integer 1-5>,
   "author": "<reviewer name>",
@@ -91,10 +91,10 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "body": "<2-3 paragraph review text>",
   "verdict": "<one-sentence summary verdict>"
 }`
-	},
-	letter: {
-		description: 'A personal or formal letter.',
-		templateDataSchema: `{
+  },
+  letter: {
+    description: 'A personal or formal letter.',
+    templateDataSchema: `{
   "location": "<city name>",
   "date": "<formatted date in target language>",
   "salutation": "<e.g. Liebe Maria, or Sehr geehrte Damen und Herren,>",
@@ -102,47 +102,47 @@ const MEDIA_TYPE_SCHEMAS: Record<MediaType, { description: string; templateDataS
   "closing": "<e.g. Mit freundlichen Grüßen, or Herzliche Grüße,>",
   "signature": "<sender name>"
 }`
-	}
+  }
 };
 
 function buildImmersionPrompt(
-	mediaType: MediaType,
-	cefrLevel: string,
-	languageName: string,
-	vocabHints: string[],
-	grammarHints: string[],
-	destination: { city: string; country: string; emoji: string; description: string } | null
+  mediaType: MediaType,
+  cefrLevel: string,
+  languageName: string,
+  vocabHints: string[],
+  grammarHints: string[],
+  destination: { city: string; country: string; emoji: string; description: string } | null
 ): string {
-	const schema = MEDIA_TYPE_SCHEMAS[mediaType];
-	const isLowerLevel = cefrLevel === 'A1' || cefrLevel === 'A2';
+  const schema = MEDIA_TYPE_SCHEMAS[mediaType];
+  const isLowerLevel = cefrLevel === 'A1' || cefrLevel === 'A2';
 
-	let vocabSection = '';
-	if (vocabHints.length > 0) {
-		vocabSection = `\nThe learner is currently studying these vocabulary words. Try to naturally incorporate a few of them where they fit, but do NOT force them — authenticity comes first:\n${vocabHints.map((v) => `- ${v}`).join('\n')}\n`;
-	}
+  let vocabSection = '';
+  if (vocabHints.length > 0) {
+    vocabSection = `\nThe learner is currently studying these vocabulary words. Try to naturally incorporate a few of them where they fit, but do NOT force them — authenticity comes first:\n${vocabHints.map((v) => `- ${v}`).join('\n')}\n`;
+  }
 
-	let grammarSection = '';
-	if (grammarHints.length > 0) {
-		grammarSection = `\nThe learner is practicing these grammar concepts. Where it feels natural, use sentence structures that demonstrate some of them:\n${grammarHints.map((g) => `- ${g}`).join('\n')}\n`;
-	}
+  let grammarSection = '';
+  if (grammarHints.length > 0) {
+    grammarSection = `\nThe learner is practicing these grammar concepts. Where it feels natural, use sentence structures that demonstrate some of them:\n${grammarHints.map((g) => `- ${g}`).join('\n')}\n`;
+  }
 
-	const destinationSection = destination
-		? `\nSETTING: The learner is virtually visiting ${destination.city}, ${destination.country} ${destination.emoji}. Ground the content in this location — use it as the real-world setting for the ${schema.description.toLowerCase()}. References to local places, food, culture, and customs from ${destination.city} are encouraged where natural.\n`
-		: '';
+  const destinationSection = destination
+    ? `\nSETTING: The learner is virtually visiting ${destination.city}, ${destination.country} ${destination.emoji}. Ground the content in this location — use it as the real-world setting for the ${schema.description.toLowerCase()}. References to local places, food, culture, and customs from ${destination.city} are encouraged where natural.\n`
+    : '';
 
-	return `You are a language learning content generator. Generate an authentic, realistic ${schema.description.toLowerCase()} written entirely in ${languageName}, appropriate for a ${cefrLevel} language learner.
+  return `You are a language learning content generator. Generate an authentic, realistic ${schema.description.toLowerCase()} written entirely in ${languageName}, appropriate for a ${cefrLevel} language learner.
 
 Language complexity guidelines for ${cefrLevel}:
 ${
-	cefrLevel === 'A1'
-		? '- Use very simple, short sentences. Basic vocabulary only. Present tense mostly.'
-		: cefrLevel === 'A2'
-			? '- Use simple sentences. Common vocabulary. Present and simple past tense.'
-			: cefrLevel === 'B1'
-				? '- Use moderately complex sentences. Everyday vocabulary. Mix of tenses.'
-				: cefrLevel === 'B2'
-					? '- Use complex sentences. Wider vocabulary. Natural tense usage.'
-					: '- Use sophisticated, native-level language.'
+  cefrLevel === 'A1'
+    ? '- Use very simple, short sentences. Basic vocabulary only. Present tense mostly.'
+    : cefrLevel === 'A2'
+      ? '- Use simple sentences. Common vocabulary. Present and simple past tense.'
+      : cefrLevel === 'B1'
+        ? '- Use moderately complex sentences. Everyday vocabulary. Mix of tenses.'
+        : cefrLevel === 'B2'
+          ? '- Use complex sentences. Wider vocabulary. Natural tense usage.'
+          : '- Use sophisticated, native-level language.'
 }
 ${destinationSection}
 Make the content feel authentic — like something that would actually appear in the real world in ${destination ? `${destination.city}, ${destination.country}` : 'an everyday context'}.
@@ -174,9 +174,9 @@ Generate a JSON response with this EXACT structure:
       "sampleAnswer": "<1-2 sentence ideal answer in English>",
       "points": 10
     }${
-			isLowerLevel
-				? ''
-				: `,
+      isLowerLevel
+        ? ''
+        : `,
     {
       "type": "multiple_choice",
       "question": "<inference or context question in English>",
@@ -191,7 +191,7 @@ Generate a JSON response with this EXACT structure:
       "sampleAnswer": "<ideal answer demonstrating understanding>",
       "points": 10
     }`
-		}
+    }
   ]
 }
 
@@ -199,188 +199,188 @@ Output ONLY valid JSON. No markdown, no extra text.`;
 }
 
 export async function POST(event) {
-	const { request, locals } = event;
+  const { request, locals } = event;
 
-	if (!locals.user) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
+  if (!locals.user) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-	const user = await prisma.user.findUnique({
-		where: { id: locals.user.id },
-		select: { useLocalLlm: true }
-	});
+  const user = await prisma.user.findUnique({
+    where: { id: locals.user.id },
+    select: { useLocalLlm: true }
+  });
 
-	if (!user?.useLocalLlm && (await generateLessonRateLimiter.isLimited(event))) {
-		return json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
-	}
+  if (!user?.useLocalLlm && (await generateLessonRateLimiter.isLimited(event))) {
+    return json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
 
-	if (!user?.useLocalLlm && (await isQuotaExceeded(locals.user.id, false))) {
-		return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
-	}
+  if (!user?.useLocalLlm && (await isQuotaExceeded(locals.user.id, false))) {
+    return json({ error: 'Daily AI quota exceeded. Please try again tomorrow.' }, { status: 429 });
+  }
 
-	try {
-		const body = await request.json().catch(() => ({}));
-		const requestedMediaType = body.mediaType as MediaType | 'random' | undefined;
+  try {
+    const body = await request.json().catch(() => ({}));
+    const requestedMediaType = body.mediaType as MediaType | 'random' | undefined;
 
-		const mediaType: MediaType =
-			!requestedMediaType || requestedMediaType === 'random'
-				? MEDIA_TYPES[Math.floor(Math.random() * MEDIA_TYPES.length)]
-				: MEDIA_TYPES.includes(requestedMediaType as MediaType)
-					? (requestedMediaType as MediaType)
-					: MEDIA_TYPES[Math.floor(Math.random() * MEDIA_TYPES.length)];
+    const mediaType: MediaType =
+      !requestedMediaType || requestedMediaType === 'random'
+        ? MEDIA_TYPES[Math.floor(Math.random() * MEDIA_TYPES.length)]
+        : MEDIA_TYPES.includes(requestedMediaType as MediaType)
+          ? (requestedMediaType as MediaType)
+          : MEDIA_TYPES[Math.floor(Math.random() * MEDIA_TYPES.length)];
 
-		const cefrLevel = locals.user.cefrLevel || 'A1';
-		const languageName = locals.user.activeLanguage?.name || 'German';
-		const activeLanguageId = locals.user.activeLanguage?.id;
+    const cefrLevel = locals.user.cefrLevel || 'A1';
+    const languageName = locals.user.activeLanguage?.name || 'German';
+    const activeLanguageId = locals.user.activeLanguage?.id;
 
-		// Pick a random travel destination for this session
-		let destination: { city: string; country: string; emoji: string; description: string } | null =
-			null;
-		if (activeLanguageId) {
-			const destinations = await prisma.immersionDestination.findMany({
-				where: { languageId: activeLanguageId },
-				select: { city: true, country: true, emoji: true, description: true }
-			});
-			if (destinations.length > 0) {
-				destination = destinations[Math.floor(Math.random() * destinations.length)];
-			}
-		}
+    // Pick a random travel destination for this session
+    let destination: { city: string; country: string; emoji: string; description: string } | null =
+      null;
+    if (activeLanguageId) {
+      const destinations = await prisma.immersionDestination.findMany({
+        where: { languageId: activeLanguageId },
+        select: { city: true, country: true, emoji: true, description: true }
+      });
+      if (destinations.length > 0) {
+        destination = destinations[Math.floor(Math.random() * destinations.length)];
+      }
+    }
 
-		let vocabHints: string[] = [];
-		let vocabIds: string[] = [];
-		let grammarHints: string[] = [];
+    let vocabHints: string[] = [];
+    let vocabIds: string[] = [];
+    let grammarHints: string[] = [];
 
-		if (activeLanguageId) {
-			const userVocabs = await prisma.userVocabulary.findMany({
-				where: {
-					userId: locals.user.id,
-					vocabulary: { languageId: activeLanguageId }
-				},
-				include: { vocabulary: true },
-				take: 15,
-				orderBy: { nextReviewDate: 'asc' }
-			});
-			vocabHints = userVocabs.map((uv) => uv.vocabulary.lemma);
-			vocabIds = userVocabs.map((uv) => uv.vocabularyId);
+    if (activeLanguageId) {
+      const userVocabs = await prisma.userVocabulary.findMany({
+        where: {
+          userId: locals.user.id,
+          vocabulary: { languageId: activeLanguageId }
+        },
+        include: { vocabulary: true },
+        take: 15,
+        orderBy: { nextReviewDate: 'asc' }
+      });
+      vocabHints = userVocabs.map((uv) => uv.vocabulary.lemma);
+      vocabIds = userVocabs.map((uv) => uv.vocabularyId);
 
-			const userGrammars = await prisma.userGrammarRule.findMany({
-				where: {
-					userId: locals.user.id,
-					grammarRule: { languageId: activeLanguageId }
-				},
-				include: { grammarRule: true },
-				take: 8,
-				orderBy: { nextReviewDate: 'asc' }
-			});
-			grammarHints = userGrammars.map((ug) => ug.grammarRule.title);
-		}
+      const userGrammars = await prisma.userGrammarRule.findMany({
+        where: {
+          userId: locals.user.id,
+          grammarRule: { languageId: activeLanguageId }
+        },
+        include: { grammarRule: true },
+        take: 8,
+        orderBy: { nextReviewDate: 'asc' }
+      });
+      grammarHints = userGrammars.map((ug) => ug.grammarRule.title);
+    }
 
-		const systemPrompt = buildImmersionPrompt(
-			mediaType,
-			cefrLevel,
-			languageName,
-			vocabHints,
-			grammarHints,
-			destination
-		);
+    const systemPrompt = buildImmersionPrompt(
+      mediaType,
+      cefrLevel,
+      languageName,
+      vocabHints,
+      grammarHints,
+      destination
+    );
 
-		const userId = locals.user.id;
-		const useLocalLlm = user?.useLocalLlm ?? false;
-		const response = await generateChatCompletion({
-			userId,
-			messages: [
-				{
-					role: 'user',
-					content: `Generate a ${mediaType.replace(/_/g, ' ')} in ${languageName} for a ${cefrLevel} learner.`
-				}
-			],
-			systemPrompt,
-			jsonMode: true,
-			temperature: 0.85,
-			onUsage: useLocalLlm
-				? undefined
-				: ({ totalTokens }) => {
-						recordTokenUsage(userId, totalTokens);
-					}
-		});
+    const userId = locals.user.id;
+    const useLocalLlm = user?.useLocalLlm ?? false;
+    const response = await generateChatCompletion({
+      userId,
+      messages: [
+        {
+          role: 'user',
+          content: `Generate a ${mediaType.replace(/_/g, ' ')} in ${languageName} for a ${cefrLevel} learner.`
+        }
+      ],
+      systemPrompt,
+      jsonMode: true,
+      temperature: 0.85,
+      onUsage: useLocalLlm
+        ? undefined
+        : ({ totalTokens }) => {
+            recordTokenUsage(userId, totalTokens);
+          }
+    });
 
-		const raw = response.choices[0].message.content;
-		const result = JSON.parse(raw);
+    const raw = response.choices[0].message.content;
+    const result = JSON.parse(raw);
 
-		// Attach unique IDs to questions for client-side tracking
-		const questions = (result.questions || []).map((q: Record<string, unknown>, i: number) => ({
-			...q,
-			id: `q${i}`
-		}));
+    // Attach unique IDs to questions for client-side tracking
+    const questions = (result.questions || []).map((q: Record<string, unknown>, i: number) => ({
+      ...q,
+      id: `q${i}`
+    }));
 
-		// Extract all text from the generated templateData so we can scan it for
-		// vocabulary the user already knows. This runs after LLM generation at zero
-		// extra API cost — it's a pure DB + stemmer operation.
-		const textVocabIds: string[] = [];
-		if (activeLanguageId && result.templateData) {
-			try {
-				// Flatten all string values out of the templateData object (any depth).
-				const allText = JSON.stringify(result.templateData).replace(/"[^"]*":/g, ' ');
+    // Extract all text from the generated templateData so we can scan it for
+    // vocabulary the user already knows. This runs after LLM generation at zero
+    // extra API cost — it's a pure DB + stemmer operation.
+    const textVocabIds: string[] = [];
+    if (activeLanguageId && result.templateData) {
+      try {
+        // Flatten all string values out of the templateData object (any depth).
+        const allText = JSON.stringify(result.templateData).replace(/"[^"]*":/g, ' ');
 
-				// Tokenise: split on whitespace and strip punctuation.
-				const rawTokens = allText
-					.replace(/[«»„"‹›"'<>]/g, ' ')
-					.split(/[\s,;:!?.()[\]{}"'/\\]+/)
-					.map((w) => w.trim())
-					.filter((w) => w.length >= 2);
+        // Tokenise: split on whitespace and strip punctuation.
+        const rawTokens = allText
+          .replace(/[«»„"‹›"'<>]/g, ' ')
+          .split(/[\s,;:!?.()[\]{}"'/\\]+/)
+          .map((w) => w.trim())
+          .filter((w) => w.length >= 2);
 
-				// Build candidate lemma set via the same stemmer used elsewhere.
-				const candidates = new Set<string>();
-				for (const token of rawTokens) {
-					for (const stem of stemWord(token, languageName)) {
-						candidates.add(stem);
-					}
-				}
+        // Build candidate lemma set via the same stemmer used elsewhere.
+        const candidates = new Set<string>();
+        for (const token of rawTokens) {
+          for (const stem of stemWord(token, languageName)) {
+            candidates.add(stem);
+          }
+        }
 
-				if (candidates.size > 0) {
-					// Find which of the user's known vocab appears in the text.
-					// We limit to the user's own vocab (not the full dictionary) so we
-					// only credit words already in their learning/mastery pipeline.
-					const matchingUserVocabs = await prisma.userVocabulary.findMany({
-						where: {
-							userId: locals.user.id,
-							vocabulary: {
-								languageId: activeLanguageId,
-								lemma: { in: Array.from(candidates) }
-							}
-						},
-						select: { vocabularyId: true }
-					});
+        if (candidates.size > 0) {
+          // Find which of the user's known vocab appears in the text.
+          // We limit to the user's own vocab (not the full dictionary) so we
+          // only credit words already in their learning/mastery pipeline.
+          const matchingUserVocabs = await prisma.userVocabulary.findMany({
+            where: {
+              userId: locals.user.id,
+              vocabulary: {
+                languageId: activeLanguageId,
+                lemma: { in: Array.from(candidates) }
+              }
+            },
+            select: { vocabularyId: true }
+          });
 
-					// Merge with the pre-fetched hint vocabIds, deduplicating.
-					const existingSet = new Set(vocabIds);
-					for (const { vocabularyId } of matchingUserVocabs) {
-						if (!existingSet.has(vocabularyId)) {
-							existingSet.add(vocabularyId);
-							textVocabIds.push(vocabularyId);
-						}
-					}
-				}
-			} catch (scanErr) {
-				// Non-critical — if scanning fails the original vocabIds still work.
-				console.error('Immersion text vocab scan failed:', scanErr);
-			}
-		}
+          // Merge with the pre-fetched hint vocabIds, deduplicating.
+          const existingSet = new Set(vocabIds);
+          for (const { vocabularyId } of matchingUserVocabs) {
+            if (!existingSet.has(vocabularyId)) {
+              existingSet.add(vocabularyId);
+              textVocabIds.push(vocabularyId);
+            }
+          }
+        }
+      } catch (scanErr) {
+        // Non-critical — if scanning fails the original vocabIds still work.
+        console.error('Immersion text vocab scan failed:', scanErr);
+      }
+    }
 
-		// Return both the pre-fetched hint IDs and any additional IDs found in the text.
-		// The grade endpoint will call updateSrsMetrics for all of them.
-		const allVocabIds = [...vocabIds, ...textVocabIds];
+    // Return both the pre-fetched hint IDs and any additional IDs found in the text.
+    // The grade endpoint will call updateSrsMetrics for all of them.
+    const allVocabIds = [...vocabIds, ...textVocabIds];
 
-		return json({
-			mediaType,
-			templateData: result.templateData,
-			questions,
-			vocabIds: allVocabIds,
-			destination
-		});
-	} catch (error) {
-		console.error('Immersion generate error:', error);
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		return json({ error: message }, { status: 500 });
-	}
+    return json({
+      mediaType,
+      templateData: result.templateData,
+      questions,
+      vocabIds: allVocabIds,
+      destination
+    });
+  } catch (error) {
+    console.error('Immersion generate error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return json({ error: message }, { status: 500 });
+  }
 }

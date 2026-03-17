@@ -3,147 +3,147 @@ import { redirect } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.user) {
-		throw redirect(302, '/login');
-	}
+  if (!locals.user) {
+    throw redirect(302, '/login');
+  }
 
-	// Load assignment context if assignmentId is provided
-	const assignmentId = url.searchParams.get('assignmentId');
-	let assignment = null;
-	let assignmentScore = null;
-	let activeLanguage = locals.user.activeLanguage;
+  // Load assignment context if assignmentId is provided
+  const assignmentId = url.searchParams.get('assignmentId');
+  let assignment = null;
+  let assignmentScore = null;
+  let activeLanguage = locals.user.activeLanguage;
 
-	if (assignmentId) {
-		assignment = await prisma.assignment.findUnique({
-			where: { id: assignmentId },
-			include: {
-				class: {
-					select: { id: true, name: true }
-				}
-			}
-		});
+  if (assignmentId) {
+    assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        class: {
+          select: { id: true, name: true }
+        }
+      }
+    });
 
-		if (assignment) {
-			// Verify the user is a member of this class
-			const member = await prisma.classMember.findUnique({
-				where: {
-					classId_userId: {
-						classId: assignment.classId,
-						userId: locals.user.id
-					}
-				}
-			});
-			if (!member) {
-				assignment = null; // Hide assignment if user is not a member
-			} else {
-				// Quiz assignments are played on the quiz play page directly
-				if (assignment.gamemode === 'quiz' && assignment.gameId) {
-					throw redirect(302, `/play/games/${assignment.gameId}/play?assignmentId=${assignmentId}`);
-				}
+    if (assignment) {
+      // Verify the user is a member of this class
+      const member = await prisma.classMember.findUnique({
+        where: {
+          classId_userId: {
+            classId: assignment.classId,
+            userId: locals.user.id
+          }
+        }
+      });
+      if (!member) {
+        assignment = null; // Hide assignment if user is not a member
+      } else {
+        // Quiz assignments are played on the quiz play page directly
+        if (assignment.gamemode === 'quiz' && assignment.gameId) {
+          throw redirect(302, `/play/games/${assignment.gameId}/play?assignmentId=${assignmentId}`);
+        }
 
-				assignmentScore = await prisma.assignmentScore.findUnique({
-					where: {
-						assignmentId_userId: {
-							assignmentId,
-							userId: locals.user.id
-						}
-					}
-				});
+        assignmentScore = await prisma.assignmentScore.findUnique({
+          where: {
+            assignmentId_userId: {
+              assignmentId,
+              userId: locals.user.id
+            }
+          }
+        });
 
-				// Use assignment's language instead of user's active language if it's not international
-				if (assignment.language && assignment.language !== 'international') {
-					const assignmentLanguage = await prisma.language.findUnique({
-						where: { code: assignment.language }
-					});
-					if (assignmentLanguage) {
-						activeLanguage = assignmentLanguage;
-					}
-				}
-			}
-		}
-	}
+        // Use assignment's language instead of user's active language if it's not international
+        if (assignment.language && assignment.language !== 'international') {
+          const assignmentLanguage = await prisma.language.findUnique({
+            where: { code: assignment.language }
+          });
+          if (assignmentLanguage) {
+            activeLanguage = assignmentLanguage;
+          }
+        }
+      }
+    }
+  }
 
-	const userRecord = await prisma.user.findUnique({
-		where: { id: locals.user.id },
-		select: { sessionSuccessEma: true }
-	});
-	const sessionSuccessEma = userRecord?.sessionSuccessEma ?? 0.75;
+  const userRecord = await prisma.user.findUnique({
+    where: { id: locals.user.id },
+    select: { sessionSuccessEma: true }
+  });
+  const sessionSuccessEma = userRecord?.sessionSuccessEma ?? 0.75;
 
-	let cefrLevel = 'A1';
+  let cefrLevel = 'A1';
 
-	if (activeLanguage?.id) {
-		const progress = await prisma.userProgress.findUnique({
-			where: {
-				userId_languageId: {
-					userId: locals.user.id,
-					languageId: activeLanguage.id
-				}
-			}
-		});
+  if (activeLanguage?.id) {
+    const progress = await prisma.userProgress.findUnique({
+      where: {
+        userId_languageId: {
+          userId: locals.user.id,
+          languageId: activeLanguage.id
+        }
+      }
+    });
 
-		if (progress) {
-			if (!progress.hasOnboarded) {
-				throw redirect(302, `/onboarding?languageId=${activeLanguage.id}`);
-			}
-			cefrLevel = progress.cefrLevel;
-		} else {
-			// If playing an assignment, they might not have onboarded for this language yet
-			if (assignment) {
-				cefrLevel = assignment.targetCefrLevel || 'A1';
-			} else {
-				throw redirect(302, `/onboarding?languageId=${activeLanguage.id}`);
-			}
-		}
-	} else {
-		throw redirect(302, '/onboarding');
-	}
+    if (progress) {
+      if (!progress.hasOnboarded) {
+        throw redirect(302, `/onboarding?languageId=${activeLanguage.id}`);
+      }
+      cefrLevel = progress.cefrLevel;
+    } else {
+      // If playing an assignment, they might not have onboarded for this language yet
+      if (assignment) {
+        cefrLevel = assignment.targetCefrLevel || 'A1';
+      } else {
+        throw redirect(302, `/onboarding?languageId=${activeLanguage.id}`);
+      }
+    }
+  } else {
+    throw redirect(302, '/onboarding');
+  }
 
-	const myGames = await prisma.game.findMany({
-		where: { creatorId: locals.user.id },
-		orderBy: { createdAt: 'desc' },
-		include: {
-			_count: { select: { questions: true } }
-		}
-	});
+  const myGames = await prisma.game.findMany({
+    where: { creatorId: locals.user.id },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { select: { questions: true } }
+    }
+  });
 
-	const [communityGames, totalCommunityGames] = await Promise.all([
-		prisma.game.findMany({
-			where: { isPublished: true },
-			orderBy: { createdAt: 'desc' },
-			take: 10,
-			include: {
-				_count: { select: { questions: true } },
-				creator: { select: { username: true, name: true, image: true } }
-			}
-		}),
-		prisma.game.count({ where: { isPublished: true } })
-	]);
+  const [communityGames, totalCommunityGames] = await Promise.all([
+    prisma.game.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: {
+        _count: { select: { questions: true } },
+        creator: { select: { username: true, name: true, image: true } }
+      }
+    }),
+    prisma.game.count({ where: { isPublished: true } })
+  ]);
 
-	const teacherClasses = await prisma.class.findMany({
-		where: {
-			members: {
-				some: {
-					userId: locals.user.id,
-					role: 'TEACHER'
-				}
-			}
-		},
-		select: {
-			id: true,
-			name: true
-		}
-	});
+  const teacherClasses = await prisma.class.findMany({
+    where: {
+      members: {
+        some: {
+          userId: locals.user.id,
+          role: 'TEACHER'
+        }
+      }
+    },
+    select: {
+      id: true,
+      name: true
+    }
+  });
 
-	return {
-		cefrLevel,
-		sessionSuccessEma,
-		language: activeLanguage,
-		assignment,
-		assignmentScore,
-		myGames,
-		communityGames,
-		totalCommunityGames,
-		teacherClasses,
-		userRole: locals.user.role
-	};
+  return {
+    cefrLevel,
+    sessionSuccessEma,
+    language: activeLanguage,
+    assignment,
+    assignmentScore,
+    myGames,
+    communityGames,
+    totalCommunityGames,
+    teacherClasses,
+    userRole: locals.user.role
+  };
 };

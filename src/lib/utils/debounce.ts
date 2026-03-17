@@ -5,14 +5,14 @@
  * @returns Debounced function
  */
 export function debounce<T extends (...args: any[]) => any>(
-	fn: T,
-	ms = 300
+  fn: T,
+  ms = 300
 ): (...args: Parameters<T>) => void {
-	let timeoutId: ReturnType<typeof setTimeout>;
-	return function (this: any, ...args: Parameters<T>) {
-		clearTimeout(timeoutId);
-		timeoutId = setTimeout(() => fn.apply(this, args), ms);
-	};
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function (this: any, ...args: Parameters<T>) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+  };
 }
 
 /**
@@ -22,13 +22,13 @@ export function debounce<T extends (...args: any[]) => any>(
  * @returns Guarded function
  */
 export function once<T extends (...args: any[]) => any>(
-	fn: T
+  fn: T
 ): (...args: Parameters<T>) => ReturnType<T> | undefined {
-	let called = false;
-	return function (this: any, ...args: Parameters<T>): ReturnType<T> | undefined {
-		if (!called) {
-			called = true;
-			return fn.apply(this, args);
-		}
-	};
+  let called = false;
+  return function (this: any, ...args: Parameters<T>): ReturnType<T> | undefined {
+    if (!called) {
+      called = true;
+      return fn.apply(this, args);
+    }
+  };
 }

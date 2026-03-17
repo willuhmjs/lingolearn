@@ -13,22 +13,22 @@ import type { ClassRole } from '@prisma/client';
  * @returns The class member record if authorized
  */
 export async function requireClassRole(classId: string, userId: string, requiredRole?: ClassRole) {
-	const member = await prisma.classMember.findUnique({
-		where: {
-			classId_userId: {
-				classId,
-				userId
-			}
-		}
-	});
+  const member = await prisma.classMember.findUnique({
+    where: {
+      classId_userId: {
+        classId,
+        userId
+      }
+    }
+  });
 
-	if (!member) {
-		throw error(404, 'Class not found or you are not a member');
-	}
+  if (!member) {
+    throw error(404, 'Class not found or you are not a member');
+  }
 
-	if (requiredRole && member.role !== requiredRole) {
-		throw error(403, `Requires ${requiredRole} role`);
-	}
+  if (requiredRole && member.role !== requiredRole) {
+    throw error(403, `Requires ${requiredRole} role`);
+  }
 
-	return member;
+  return member;
 }

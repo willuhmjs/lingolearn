@@ -36,77 +36,77 @@ type CefrLevel = (typeof CEFR_ORDER)[number];
 
 // Subordinating conjunctions across German, Spanish, French
 const SUBORDINATORS = new Set([
-	// German
-	'dass',
-	'weil',
-	'obwohl',
-	'obgleich',
-	'obschon',
-	'wenn',
-	'als',
-	'ob',
-	'damit',
-	'sodass',
-	'so dass',
-	'nachdem',
-	'bevor',
-	'während',
-	'seitdem',
-	'falls',
-	'sofern',
-	'solange',
-	'sobald',
-	'bis',
-	'ehe',
-	'indem',
-	'inwiefern',
-	'wozu',
-	'weshalb',
-	// Spanish
-	'que',
-	'porque',
-	'aunque',
-	'cuando',
-	'si',
-	'mientras',
-	'antes',
-	'después',
-	'para que',
-	'sin que',
-	'a menos que',
-	'con tal de que',
-	'puesto que',
-	'dado que',
-	'ya que',
-	'como',
-	'según',
-	// French
-	'quand',
-	'puisque',
-	'parce que',
-	'bien que',
-	'quoique',
-	'lorsque',
-	'dès que',
-	'depuis que',
-	'pendant que',
-	'afin que',
-	'pour que',
-	'à moins que',
-	'si',
-	// English (for target-to-native mode input checking)
-	'although',
-	'because',
-	'since',
-	'whereas',
-	'whether',
-	'unless',
-	'until',
-	'whenever',
-	'wherever',
-	'however',
-	'despite',
-	'notwithstanding'
+  // German
+  'dass',
+  'weil',
+  'obwohl',
+  'obgleich',
+  'obschon',
+  'wenn',
+  'als',
+  'ob',
+  'damit',
+  'sodass',
+  'so dass',
+  'nachdem',
+  'bevor',
+  'während',
+  'seitdem',
+  'falls',
+  'sofern',
+  'solange',
+  'sobald',
+  'bis',
+  'ehe',
+  'indem',
+  'inwiefern',
+  'wozu',
+  'weshalb',
+  // Spanish
+  'que',
+  'porque',
+  'aunque',
+  'cuando',
+  'si',
+  'mientras',
+  'antes',
+  'después',
+  'para que',
+  'sin que',
+  'a menos que',
+  'con tal de que',
+  'puesto que',
+  'dado que',
+  'ya que',
+  'como',
+  'según',
+  // French
+  'quand',
+  'puisque',
+  'parce que',
+  'bien que',
+  'quoique',
+  'lorsque',
+  'dès que',
+  'depuis que',
+  'pendant que',
+  'afin que',
+  'pour que',
+  'à moins que',
+  'si',
+  // English (for target-to-native mode input checking)
+  'although',
+  'because',
+  'since',
+  'whereas',
+  'whether',
+  'unless',
+  'until',
+  'whenever',
+  'wherever',
+  'however',
+  'despite',
+  'notwithstanding'
 ]);
 
 // Relative pronoun patterns that signal a relative clause (preceded by a comma or noun)
@@ -122,60 +122,60 @@ const ETANT_AYANT = /\b(étant|ayant|siendo|habiendo)\b/gi;
 const COMPLEX_PUNCT = /[;—–()[\]]/g;
 
 export interface DifficultyResult {
-	estimatedLevel: string;
-	tooComplex: boolean;
-	complexityScore: number;
+  estimatedLevel: string;
+  tooComplex: boolean;
+  complexityScore: number;
 }
 
 export function estimateSentenceDifficulty(sentence: string, userLevel: string): DifficultyResult {
-	if (!sentence || sentence.trim().length === 0) {
-		return { estimatedLevel: userLevel, tooComplex: false, complexityScore: 0 };
-	}
+  if (!sentence || sentence.trim().length === 0) {
+    return { estimatedLevel: userLevel, tooComplex: false, complexityScore: 0 };
+  }
 
-	const lower = sentence.toLowerCase();
-	const tokens = sentence.split(/\s+/).filter(Boolean);
-	let score = 0;
+  const lower = sentence.toLowerCase();
+  const tokens = sentence.split(/\s+/).filter(Boolean);
+  let score = 0;
 
-	// 1. Token count contribution
-	if (tokens.length > 20) score += 3;
-	else if (tokens.length > 14) score += 2;
-	else if (tokens.length > 9) score += 1;
+  // 1. Token count contribution
+  if (tokens.length > 20) score += 3;
+  else if (tokens.length > 14) score += 2;
+  else if (tokens.length > 9) score += 1;
 
-	// 2. Subordinating conjunctions — each one adds 1 point (heavy signal)
-	for (const sub of SUBORDINATORS) {
-		// Word-boundary check: the conjunction must appear as a whole word
-		const re = new RegExp(`\\b${sub}\\b`, 'gi');
-		const matches = lower.match(re);
-		if (matches) score += matches.length;
-	}
+  // 2. Subordinating conjunctions — each one adds 1 point (heavy signal)
+  for (const sub of SUBORDINATORS) {
+    // Word-boundary check: the conjunction must appear as a whole word
+    const re = new RegExp(`\\b${sub}\\b`, 'gi');
+    const matches = lower.match(re);
+    if (matches) score += matches.length;
+  }
 
-	// 3. Relative clause markers (comma + relative pronoun)
-	const relDe = sentence.match(RELATIVE_PRONOUNS_DE) ?? [];
-	const relEs = sentence.match(RELATIVE_PRONOUNS_ES) ?? [];
-	const relFr = sentence.match(RELATIVE_PRONOUNS_FR) ?? [];
-	score += relDe.length + relEs.length + relFr.length;
+  // 3. Relative clause markers (comma + relative pronoun)
+  const relDe = sentence.match(RELATIVE_PRONOUNS_DE) ?? [];
+  const relEs = sentence.match(RELATIVE_PRONOUNS_ES) ?? [];
+  const relFr = sentence.match(RELATIVE_PRONOUNS_FR) ?? [];
+  score += relDe.length + relEs.length + relFr.length;
 
-	// 4. Participial / zu-infinitive clusters
-	const zuMatches = sentence.match(ZU_INFINITIVE) ?? [];
-	const etantMatches = sentence.match(ETANT_AYANT) ?? [];
-	score += zuMatches.length + etantMatches.length;
+  // 4. Participial / zu-infinitive clusters
+  const zuMatches = sentence.match(ZU_INFINITIVE) ?? [];
+  const etantMatches = sentence.match(ETANT_AYANT) ?? [];
+  score += zuMatches.length + etantMatches.length;
 
-	// 5. Complex punctuation (each occurrence +1, max 2 to avoid double-counting)
-	const punctMatches = sentence.match(COMPLEX_PUNCT) ?? [];
-	score += Math.min(2, punctMatches.length);
+  // 5. Complex punctuation (each occurrence +1, max 2 to avoid double-counting)
+  const punctMatches = sentence.match(COMPLEX_PUNCT) ?? [];
+  score += Math.min(2, punctMatches.length);
 
-	// Map score → estimated CEFR band
-	let estimatedLevel: CefrLevel;
-	if (score <= 1) estimatedLevel = 'A1';
-	else if (score <= 3) estimatedLevel = 'A2';
-	else if (score <= 5) estimatedLevel = 'B1';
-	else if (score <= 8) estimatedLevel = 'B2';
-	else estimatedLevel = 'C1';
+  // Map score → estimated CEFR band
+  let estimatedLevel: CefrLevel;
+  if (score <= 1) estimatedLevel = 'A1';
+  else if (score <= 3) estimatedLevel = 'A2';
+  else if (score <= 5) estimatedLevel = 'B1';
+  else if (score <= 8) estimatedLevel = 'B2';
+  else estimatedLevel = 'C1';
 
-	const userIdx = CEFR_ORDER.indexOf(userLevel as CefrLevel);
-	const estIdx = CEFR_ORDER.indexOf(estimatedLevel);
-	// Flag if the sentence is more than 1 band above the user's level
-	const tooComplex = estIdx > (userIdx >= 0 ? userIdx : 0) + 1;
+  const userIdx = CEFR_ORDER.indexOf(userLevel as CefrLevel);
+  const estIdx = CEFR_ORDER.indexOf(estimatedLevel);
+  // Flag if the sentence is more than 1 band above the user's level
+  const tooComplex = estIdx > (userIdx >= 0 ? userIdx : 0) + 1;
 
-	return { estimatedLevel, tooComplex, complexityScore: score };
+  return { estimatedLevel, tooComplex, complexityScore: score };
 }
