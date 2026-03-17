@@ -4735,9 +4735,9 @@
     width: 100%;
     padding: 1rem 1.25rem;
     border-radius: 1rem;
-    border: 2px dashed #cbd5e1;
-    background: #f8fafc;
-    color: #475569;
+    border: 2px dashed #c4b5fd;
+    background: #f5f3ff;
+    color: #5b21b6;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
@@ -4745,27 +4745,28 @@
   }
 
   .chat-cta-btn:hover {
-    border-color: #c4b5fd;
-    background: #f5f3ff;
+    border-color: #8b5cf6;
+    background: #ede9fe;
     transform: translateY(-2px);
   }
 
   :global(html[data-theme='dark']) .chat-cta-btn {
-    background: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    background: #1e1533;
+    border-color: #7c3aed;
+    color: #c4b5fd;
   }
 
   :global(html[data-theme='dark']) .chat-cta-btn:hover {
-    border-color: #7c3aed;
-    background: #1e1533;
+    border-color: #8b5cf6;
+    background: #2e1065;
   }
 
   .chat-cta-btn.active {
-    border-color: #8b5cf6;
+    border-color: #7c3aed;
     border-style: solid;
-    background: #f5f3ff;
-    color: #8b5cf6;
+    background: #ede9fe;
+    color: #4c1d95;
+    box-shadow: 0 3px 0 #7c3aed;
   }
 
   .immerse-gap {
@@ -4812,9 +4813,10 @@
   }
 
   :global(html[data-theme='dark']) .chat-cta-btn.active {
-    border-color: #a78bfa;
+    border-color: #8b5cf6;
     background: #2e1065;
-    color: #a78bfa;
+    color: #c4b5fd;
+    box-shadow: 0 3px 0 #7c3aed;
   }
 
   .chat-cta-subtitle {
