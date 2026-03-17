@@ -18,6 +18,7 @@
 	let isGrading = $state(false);
 	let typedAnswer = $state('');
 	let reviewCardStartMs: number | null = $state(null);
+	let reviewDirection: 'forward' | 'back' = $state('forward');
 
 	let gradeResult: { correct: boolean; score: number } | null = $state(null);
 	let userOverride: boolean | null = $state(null);
@@ -205,6 +206,7 @@
 				undoStack = [...undoStack, { index: currentReviewIndex, result }];
 				sessionResults = [...sessionResults, result];
 
+				reviewDirection = 'forward';
 				currentReviewIndex++;
 				gradeResult = null;
 				userOverride = null;
@@ -224,42 +226,11 @@
 		userOverride = userOverride !== null ? !userOverride : !gradeResult?.correct;
 	}
 
-	async function skipWord() {
-		if (isSubmitting || !currentReview) return;
-		isSubmitting = true;
-
+	function skipWord() {
+		if (isGrading || showingAnswer || !currentReview) return;
 		haptics.light();
-
-		try {
-			const res = await fetch('/api/review/submit', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					vocabularyId: currentReview.vocabulary.id,
-					score: 0
-				})
-			});
-
-			if (res.ok) {
-				const result: ReviewResult = {
-					lemma: currentReview.vocabulary.lemma,
-					correct: false,
-					answer: '',
-					correctMeaning: (currentReview.vocabulary as any).meanings?.[0]?.value || ''
-				};
-				undoStack = [...undoStack, { index: currentReviewIndex, result }];
-				sessionResults = [...sessionResults, result];
-
-				currentReviewIndex++;
-				gradeResult = null;
-				userOverride = null;
-				typedAnswer = '';
-			}
-		} catch (e) {
-			console.error('Failed to skip review', e);
-		} finally {
-			isSubmitting = false;
-		}
+		typedAnswer = '';
+		gradeResult = { correct: false, score: 0 };
 	}
 
 	// Undo last submitted card
@@ -269,6 +240,7 @@
 		const last = undoStack[undoStack.length - 1];
 		undoStack = undoStack.slice(0, -1);
 		sessionResults = sessionResults.slice(0, -1);
+		reviewDirection = 'back';
 		currentReviewIndex = last.index;
 		typedAnswer = '';
 		gradeResult = null;
@@ -325,6 +297,7 @@
 				{isSubmitting}
 				{activeLangName}
 				{reviewCopied}
+				direction={reviewDirection}
 				oncopyword={copyReviewWord}
 				onshowanswer={showAnswer}
 				onskip={skipWord}

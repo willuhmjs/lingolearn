@@ -17,8 +17,6 @@ LingoLearn is an AI-powered language learning platform built with SvelteKit 5 + 
 - **Package manager**: pnpm (always use pnpm, never npm or yarn)
 - **Styling**: Plain CSS with CSS custom properties for theming (no Tailwind)
 
-We use tabs, not spaces.
-
 ## Directory structure
 
 ```

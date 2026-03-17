@@ -49,7 +49,7 @@
 		type="text"
 		class="review-input"
 		placeholder="Type translation here..."
-		onkeydown={(e) => e.key === 'Enter' && onshowanswer()}
+		onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onshowanswer(); } }}
 	/>
 </div>
 <button class="btn-duo btn-primary show-answer-btn" onclick={onshowanswer} disabled={isGrading}>

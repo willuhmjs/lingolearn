@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { fly, fade } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
+	import { cubicOut, cubicIn } from 'svelte/easing';
 	import SrsPanel from './SrsPanel.svelte';
 	import AnswerReveal from './AnswerReveal.svelte';
 	import ReviewInput from './ReviewInput.svelte';
@@ -15,6 +16,7 @@
 		isSubmitting,
 		activeLangName,
 		reviewCopied,
+		direction = 'forward',
 		oncopyword,
 		onshowanswer,
 		onskip,
@@ -31,6 +33,7 @@
 		isSubmitting: boolean;
 		activeLangName: string;
 		reviewCopied: boolean;
+		direction?: 'forward' | 'back';
 		oncopyword: () => void;
 		onshowanswer: () => void;
 		onskip: () => void;
@@ -38,14 +41,18 @@
 		onsubmitnext: () => void;
 	} = $props();
 
+	let xIn = $derived(direction === 'forward' ? 80 : -80);
+	let xOut = $derived(direction === 'forward' ? -80 : 80);
+
 	let showSrsPanel = $state(false);
 
 	let progressPct = $derived((currentIndex / totalCount) * 100);
 	let correctMeaning = $derived((review.vocabulary as any).meanings?.[0]?.value || '');
 </script>
 
+<div class="review-shell">
 {#key review.vocabulary.id}
-	<div class="card-duo review-card" in:fly={{ x: 50, duration: 300 }} out:fade={{ duration: 150 }}>
+	<div class="card-duo review-card" in:fly={{ x: xIn, duration: 280, easing: cubicOut }} out:fly={{ x: xOut, duration: 200, easing: cubicIn }}>
 		<!-- Progress Bar -->
 		<div class="progress-track">
 			<div class="progress-fill" style="width: {progressPct}%"></div>
@@ -120,9 +127,17 @@
 		</div>
 	</div>
 {/key}
+</div>
 
 <style>
+	.review-shell {
+		display: grid;
+		overflow: hidden;
+	}
+
 	.review-card {
+		grid-row: 1;
+		grid-column: 1;
 		position: relative;
 		overflow: hidden;
 		padding: 0;
