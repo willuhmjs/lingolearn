@@ -208,7 +208,10 @@ export class CefrService {
       })
     ]);
 
-    const minGrammarInteraction = Math.min(totalGrammarAtLevel, CEFR_CONFIG.GRAMMAR_MIN_INTERACTION);
+    const minGrammarInteraction = Math.min(
+      totalGrammarAtLevel,
+      CEFR_CONFIG.GRAMMAR_MIN_INTERACTION
+    );
     const grammarMastery =
       interactedGrammarCount > 0 ? masteredGrammarCount / interactedGrammarCount : 0;
     const isGrammarMet =
@@ -466,10 +469,7 @@ export class CefrService {
     const grammarMastery = interactedGrammar > 0 ? masteredGrammar / interactedGrammar : 0;
     const grammarExposure = totalGrammar > 0 ? interactedGrammar / totalGrammar : 0;
 
-    const allElos = [
-      ...vocabElos.map((v) => v.eloRating),
-      ...grammarElos.map((g) => g.eloRating)
-    ];
+    const allElos = [...vocabElos.map((v) => v.eloRating), ...grammarElos.map((g) => g.eloRating)];
     const averageElo =
       allElos.length > 0 ? allElos.reduce((a, b) => a + b, 0) / allElos.length : 1000;
 
@@ -479,9 +479,7 @@ export class CefrService {
     const minGrammarInteraction = Math.min(totalGrammar, CEFR_CONFIG.GRAMMAR_MIN_INTERACTION);
     const freqProgress = freqCoverageTarget > 0 ? freqCoverageCount / freqCoverageTarget : 0;
     const grammarInteractionProgress =
-      minGrammarInteraction > 0
-        ? Math.min(1, interactedGrammar / minGrammarInteraction)
-        : 1;
+      minGrammarInteraction > 0 ? Math.min(1, interactedGrammar / minGrammarInteraction) : 1;
     const grammarMasteryProgress =
       interactedGrammar > 0
         ? Math.min(1, grammarMastery / CEFR_CONFIG.GRAMMAR_MASTERY_THRESHOLD)

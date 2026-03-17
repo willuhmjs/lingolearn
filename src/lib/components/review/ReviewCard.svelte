@@ -57,79 +57,79 @@
       in:fly={{ x: xIn, duration: 280, easing: cubicOut }}
       out:fly={{ x: xOut, duration: 200, easing: cubicIn }}
     >
-    <!-- Progress Bar -->
-    <div class="progress-track">
-      <div class="progress-fill" style="width: {progressPct}%"></div>
-    </div>
+      <!-- Progress Bar -->
+      <div class="progress-track">
+        <div class="progress-fill" style="width: {progressPct}%"></div>
+      </div>
 
-    <div class="review-content">
-      <!-- Question Area -->
-      <div class="question-area">
-        <div class="lemma-row">
-          <h2 class="lemma-text">{review.vocabulary.lemma}</h2>
-          <button
-            class="copy-btn-lemma"
-            onclick={oncopyword}
-            title="Copy word"
-            aria-label="Copy {review.vocabulary.lemma}"
-            >{#if reviewCopied}✓{:else}<svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                style="width:1rem;height:1rem"
-                ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
-                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                ></path></svg
-              >{/if}</button
-          >
+      <div class="review-content">
+        <!-- Question Area -->
+        <div class="question-area">
+          <div class="lemma-row">
+            <h2 class="lemma-text">{review.vocabulary.lemma}</h2>
+            <button
+              class="copy-btn-lemma"
+              onclick={oncopyword}
+              title="Copy word"
+              aria-label="Copy {review.vocabulary.lemma}"
+              >{#if reviewCopied}✓{:else}<svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width:1rem;height:1rem"
+                  ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  ></path></svg
+                >{/if}</button
+            >
+          </div>
+
+          <div class="question-area-meta">
+            {#if review.vocabulary.partOfSpeech}
+              <span class="pos-badge">
+                {review.vocabulary.partOfSpeech}
+              </span>
+            {/if}
+            <button
+              class="srs-info-btn"
+              onclick={() => (showSrsPanel = !showSrsPanel)}
+              title="SRS info"
+              aria-label="Show SRS data">ⓘ</button
+            >
+          </div>
+
+          <SrsPanel show={showSrsPanel} {review} />
         </div>
 
-        <div class="question-area-meta">
-          {#if review.vocabulary.partOfSpeech}
-            <span class="pos-badge">
-              {review.vocabulary.partOfSpeech}
-            </span>
+        <div class="answer-section">
+          {#if showingAnswer}
+            <AnswerReveal
+              {effectiveCorrect}
+              {typedAnswer}
+              {correctMeaning}
+              gender={review.vocabulary.gender}
+              plural={review.vocabulary.plural}
+              {isSubmitting}
+              {ontoggleoverride}
+              {onsubmitnext}
+            />
+          {:else}
+            <ReviewInput
+              bind:typedAnswer
+              lemma={review.vocabulary.lemma}
+              {activeLangName}
+              {isGrading}
+              {isSubmitting}
+              {onshowanswer}
+              {onskip}
+            />
           {/if}
-          <button
-            class="srs-info-btn"
-            onclick={() => (showSrsPanel = !showSrsPanel)}
-            title="SRS info"
-            aria-label="Show SRS data">ⓘ</button
-          >
         </div>
-
-        <SrsPanel show={showSrsPanel} {review} />
-      </div>
-
-      <div class="answer-section">
-        {#if showingAnswer}
-          <AnswerReveal
-            {effectiveCorrect}
-            {typedAnswer}
-            {correctMeaning}
-            gender={review.vocabulary.gender}
-            plural={review.vocabulary.plural}
-            {isSubmitting}
-            {ontoggleoverride}
-            {onsubmitnext}
-          />
-        {:else}
-          <ReviewInput
-            bind:typedAnswer
-            lemma={review.vocabulary.lemma}
-            {activeLangName}
-            {isGrading}
-            {isSubmitting}
-            {onshowanswer}
-            {onskip}
-          />
-        {/if}
       </div>
     </div>
-  </div>
   {/key}
 </div>
 
