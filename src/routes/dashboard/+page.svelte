@@ -2189,6 +2189,7 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
+    box-sizing: border-box;
     font-family:
       system-ui,
       -apple-system,
@@ -2694,6 +2695,11 @@
     grid-template-columns: 1fr;
     gap: 3rem;
     margin-bottom: 2rem;
+    min-width: 0;
+  }
+
+  .dashboard-content > section {
+    min-width: 0;
   }
 
   @media (min-width: 1024px) {
@@ -2756,6 +2762,8 @@
       0 10px 15px -3px rgba(0, 0, 0, 0.05),
       0 4px 6px -4px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.05);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .heatmap-cell {
@@ -2812,17 +2820,9 @@
     border-color: #0f172a transparent transparent transparent;
   }
 
-  /* Ensure tooltip stays within viewport on mobile */
   @media (max-width: 768px) {
     .tooltip-content {
-      left: auto;
-      right: -40px;
-      transform: translateX(0) translateY(5px);
-    }
-
-    .tooltip-content::after {
-      left: auto;
-      right: 46px;
+      display: none;
     }
   }
 
@@ -3265,41 +3265,142 @@
 
   @media (max-width: 768px) {
     .dashboard-container {
-      padding: 1rem;
+      padding: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
     }
 
     .grammar-header-row {
       flex-direction: column;
       align-items: flex-start;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
     .dashboard-header {
-      padding: 2rem 1rem;
+      padding: 1.25rem 0.75rem;
+      margin-bottom: 1rem;
     }
 
     .dashboard-header h1 {
-      font-size: 2rem;
+      font-size: 1.5rem;
+    }
+
+    .dashboard-header p {
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
 
     .dashboard-header .btn-duo {
       width: 100%;
       box-sizing: border-box;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .cefr-progress-container {
+      max-width: 100%;
+      padding: 0;
+      margin-bottom: 1.5rem;
+    }
+
+    .cefr-labels {
+      font-size: 1rem;
+    }
+
+    .cefr-bar-track {
+      height: 1rem;
+    }
+
+    .detail-bar-label {
+      width: 75px;
+      font-size: 0.55rem;
+    }
+
+    .detail-bar-value {
+      width: 45px;
+      font-size: 0.55rem;
+    }
+
+    .summary-card {
+      padding: 1rem;
+    }
+
+    .dashboard-content {
+      gap: 1.5rem;
+    }
+
+    .heatmap-legend {
+      gap: 0.5rem;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      justify-content: flex-start;
+    }
+
+    .legend-item {
+      font-size: 0.7rem;
+      gap: 0.25rem;
+    }
+
+    .color-box {
+      width: 0.75rem;
+      height: 0.75rem;
     }
 
     .heatmap-grid {
-      padding: 1rem;
+      padding: 0.75rem;
       gap: 6px;
       justify-content: center;
     }
 
     .heatmap-cell {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .insights-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .retention-kpi-row {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .retention-kpi {
+      padding: 0.75rem;
+    }
+
+    .retention-kpi-value {
+      font-size: 1.25rem;
     }
 
     .web-node-wrapper {
       flex: 1 1 100%;
+    }
+
+    .grammar-web-container {
+      height: 350px;
+    }
+
+    .quick-stats-row {
+      gap: 0.5rem;
+    }
+
+    .qstat {
+      flex: 1 1 100px;
+      padding: 0.75rem;
+    }
+
+    .qstat-value {
+      font-size: 1.25rem;
+    }
+
+    .qstat-label {
+      font-size: 0.65rem;
     }
   }
 

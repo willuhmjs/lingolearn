@@ -129,9 +129,25 @@
     }
   }
 
+  // Theme (mirrors layout.svelte logic)
+  let theme = $state('light');
+
   onMount(() => {
     if (llmBaseUrl) fetchModels();
+    const savedTheme = localStorage.getItem('app-theme');
+    if (savedTheme) {
+      theme = savedTheme;
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      theme = 'dark';
+    }
   });
+
+  function cycleTheme() {
+    if (theme === 'light') theme = 'dark';
+    else theme = 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('app-theme', theme);
+  }
 
   // AI quota helpers
   const quotaPct = $derived(
@@ -303,6 +319,25 @@
             <span class="freeze-xp-balance">You have {freezeXp} XP</span>
           </div>
         </div>
+      </section>
+
+      <!-- Mobile-only: theme & logout -->
+      <section class="card profile-mobile-actions">
+        <button class="profile-theme-btn" onclick={cycleTheme}>
+          {#if theme === 'light'}
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            Switch to Dark Mode
+          {:else}
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            Switch to Light Mode
+          {/if}
+        </button>
+        <form action="/logout" method="POST">
+          <button type="submit" class="profile-logout-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log Out
+          </button>
+        </form>
       </section>
     </div>
 
@@ -1323,6 +1358,70 @@
     }
     .quota-stats {
       gap: 1rem;
+    }
+  }
+
+  /* Mobile-only: theme + logout quick-actions on profile page */
+  .profile-mobile-actions {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .profile-mobile-actions form {
+    margin: 0;
+    width: 100%;
+  }
+
+  .profile-theme-btn,
+  .profile-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    text-align: left;
+    border: none;
+  }
+
+  .profile-theme-btn {
+    background: transparent;
+    color: var(--text-color, #374151);
+  }
+
+  .profile-theme-btn:hover {
+    background-color: var(--link-hover-bg, #ddf4ff);
+    color: #1cb0f6;
+  }
+
+  :global(html[data-theme='dark']) .profile-theme-btn:hover {
+    background-color: #2a303c;
+    color: #60a5fa;
+  }
+
+  .profile-logout-btn {
+    background: transparent;
+    color: #ff4b4b;
+  }
+
+  .profile-logout-btn:hover {
+    background-color: #ffedef;
+  }
+
+  :global(html[data-theme='dark']) .profile-logout-btn:hover {
+    background-color: #2a303c;
+  }
+
+  @media (max-width: 768px) {
+    .profile-mobile-actions {
+      display: flex;
     }
   }
 </style>

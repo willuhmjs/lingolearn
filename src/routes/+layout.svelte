@@ -253,6 +253,25 @@
               </svg>
               <span class="nav-text">Social</span>
             </a>
+            <a
+              href="/profile"
+              class="nav-item mobile-only-nav {$page.url.pathname.startsWith('/profile') ? 'active' : ''}"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                /></svg
+              >
+              <span class="nav-text">Profile</span>
+            </a>
           {/if}
           {#if !user.hasOnboarded}
             <a
@@ -274,9 +293,10 @@
             </a>
           {/if}
           {#if user.role === 'ADMIN'}
+            <!-- Desktop: admin in sidebar nav -->
             <a
               href="/admin"
-              class="nav-item admin-link {$page.url.pathname.startsWith('/admin') ? 'active' : ''}"
+              class="nav-item admin-link desktop-only-nav {$page.url.pathname.startsWith('/admin') ? 'active' : ''}"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -470,6 +490,27 @@
         </div>
       {/if}
     </nav>
+
+    <!-- Mobile: floating admin button above bottom nav -->
+    {#if user && user.role === 'ADMIN'}
+      <a
+        href="/admin"
+        class="admin-fab {$page.url.pathname.startsWith('/admin') ? 'active' : ''}"
+        aria-label="Admin"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          ><path
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          /><circle cx="12" cy="12" r="3" /></svg
+        >
+      </a>
+    {/if}
   {/if}
 
   <div class="content-wrapper">
@@ -493,36 +534,13 @@
         {#if user && onboardedLanguages.length > 0}
           <div class="language-dropdown-container mobile-lang-dropdown">
             <button class="mobile-lang-btn" onclick={toggleDropdown} aria-label="Select language">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                ><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path
-                  d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-                /></svg
-              >
-              <span class="mobile-lang-label">
-                {#if user?.activeLanguage}
-                  {user.activeLanguage.flag ? user.activeLanguage.flag : ''}{user.activeLanguage
-                    .name}
+              <span class="mobile-lang-flag">
+                {#if user?.activeLanguage?.flag}
+                  {user.activeLanguage.flag}
                 {:else}
-                  Language
+                  🌐
                 {/if}
               </span>
-              <svg
-                class="dropdown-chevron {isDropdownOpen ? 'open' : ''}"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg
-              >
             </button>
 
             {#if isDropdownOpen}
@@ -580,54 +598,6 @@
             {/if}
           </div>
         {/if}
-        <button
-          class="nav-item theme-toggle-btn mobile-theme-toggle"
-          onclick={cycleTheme}
-          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          style="border: none; background: transparent; cursor: pointer; padding: 0.4rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;"
-        >
-          {#if theme === 'light'}
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-              ><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line
-                x1="12"
-                y1="21"
-                x2="12"
-                y2="23"
-              /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line
-                x1="18.36"
-                y1="18.36"
-                x2="19.78"
-                y2="19.78"
-              /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line
-                x1="4.22"
-                y1="19.78"
-                x2="5.64"
-                y2="18.36"
-              /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg
-            >
-          {:else}
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg
-            >
-          {/if}
-        </button>
         {#if user}
           <div class="gamification-stats">
             <span class="stat streak" title="Current Streak">
@@ -637,25 +607,6 @@
               ⚡ {user.totalXp || 0} XP
             </span>
           </div>
-          <!-- Mobile logout button -->
-          <form action="/logout" method="POST" class="mobile-logout-form">
-            <button type="submit" class="mobile-logout-btn" aria-label="Logout">
-              <svg
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                ><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline
-                  points="16 17 21 12 16 7"
-                /><line x1="21" y1="12" x2="9" y2="12" /></svg
-              >
-            </button>
-          </form>
         {/if}
       </div>
     </header>
@@ -738,8 +689,13 @@
 </div>
 
 <style>
+  :global(html) {
+    overflow-x: hidden;
+  }
+
   :global(body) {
     margin: 0;
+    overflow-x: hidden;
     font-family:
       'Nunito',
       -apple-system,
@@ -1250,6 +1206,21 @@
     background-color: #eef2ff !important;
   }
 
+  /* Mobile-only nav items (hidden on desktop sidebar) */
+  .mobile-only-nav {
+    display: none;
+  }
+
+  /* Desktop-only nav items (hidden in mobile bottom bar) */
+  .desktop-only-nav {
+    display: flex;
+  }
+
+  /* Floating admin button — hidden on desktop */
+  .admin-fab {
+    display: none;
+  }
+
   .content-wrapper {
     display: flex;
     flex-direction: column;
@@ -1408,6 +1379,57 @@
       display: none; /* Hide language selector and logout on bottom mobile nav */
     }
 
+    .mobile-only-nav {
+      display: flex;
+    }
+
+    .desktop-only-nav {
+      display: none;
+    }
+
+    .admin-fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      bottom: 80px; /* above the 70px bottom nav */
+      right: 1rem;
+      width: 3rem;
+      height: 3rem;
+      background-color: #4f46e5;
+      color: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+      text-decoration: none;
+      z-index: 110;
+      transition: background-color 0.15s, box-shadow 0.15s;
+    }
+
+    .admin-fab svg {
+      width: 1.375rem;
+      height: 1.375rem;
+    }
+
+    .admin-fab:hover,
+    .admin-fab.active {
+      background-color: #4338ca;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.5);
+    }
+
+    :global(html[data-theme='dark']) .admin-fab {
+      background-color: #6366f1;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    :global(html[data-theme='dark']) .admin-fab:hover,
+    :global(html[data-theme='dark']) .admin-fab.active {
+      background-color: #4f46e5;
+    }
+
+    .mobile-theme-toggle {
+      display: none;
+    }
+
     .content-wrapper {
       margin-left: 0;
       margin-bottom: 70px; /* Space for bottom nav */
@@ -1433,15 +1455,26 @@
       font-weight: 800;
       color: #2563eb;
       text-decoration: none;
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
     }
 
     .mobile-brand .brand-icon {
       width: 1.5rem;
       height: 1.5rem;
+      flex-shrink: 0;
     }
 
     .mobile-brand .brand-text {
       display: inline;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mobile-header-right {
+      flex-shrink: 0;
     }
 
     .mobile-header-right {
@@ -1458,26 +1491,17 @@
     .mobile-lang-btn {
       display: flex;
       align-items: center;
-      gap: 0.375rem;
+      justify-content: center;
       background: none;
       border: 2px solid var(--card-border, #e5e7eb);
       border-radius: 0.75rem;
-      padding: 0.375rem 0.625rem;
-      font-family: inherit;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text-color, #374151);
+      padding: 0.25rem 0.5rem;
       cursor: pointer;
     }
 
-    .mobile-lang-btn svg {
-      width: 1.125rem;
-      height: 1.125rem;
-      flex-shrink: 0;
-    }
-
-    .mobile-lang-label {
-      white-space: nowrap;
+    .mobile-lang-flag {
+      font-size: 1.375rem;
+      line-height: 1;
     }
 
     .mobile-dropdown-menu {
@@ -1493,42 +1517,21 @@
     }
 
     .gamification-stats {
-      padding: 0.375rem 0.75rem;
+      padding: 0.25rem 0.625rem;
+      gap: 0.5rem;
+      flex-wrap: nowrap;
     }
 
-    .mobile-logout-form {
-      margin: 0;
-    }
-
-    .mobile-logout-btn {
-      background: none;
-      border: 2px solid var(--card-border, #e5e7eb);
-      border-radius: 0.75rem;
-      padding: 0.375rem 0.625rem;
-      cursor: pointer;
-      color: #ff4b4b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-
-    .mobile-logout-btn:hover {
-      background-color: #ffedef;
-      border-color: #ff4b4b;
-    }
-
-    :global(html[data-theme='dark']) .mobile-logout-btn {
-      border-color: #2d3340;
-    }
-
-    :global(html[data-theme='dark']) .mobile-logout-btn:hover {
-      background-color: #2a303c;
-      border-color: #ff4b4b;
+    .gamification-stats .stat {
+      font-size: 0.8rem;
+      gap: 0.2rem;
+      white-space: nowrap;
     }
 
     .main-content {
       padding: 0;
+      width: 100%;
+      max-width: 100vw;
     }
   }
 
