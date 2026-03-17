@@ -25,7 +25,8 @@ export const load = async ({ locals }: ServerLoadEvent) => {
         where: { languageId: activeLanguageId },
         orderBy: [{ level: 'asc' }, { title: 'asc' }],
         include: {
-          dependencies: { select: { id: true, title: true, level: true } }
+          dependencies: { select: { id: true, title: true, level: true } },
+          dependents: { select: { id: true, title: true, level: true } }
         }
       }),
       prisma.userVocabulary
@@ -52,7 +53,8 @@ export const load = async ({ locals }: ServerLoadEvent) => {
     grammarRules = await prisma.grammarRule.findMany({
       orderBy: [{ level: 'asc' }, { title: 'asc' }],
       include: {
-        dependencies: { select: { id: true, title: true, level: true } }
+        dependencies: { select: { id: true, title: true, level: true } },
+        dependents: { select: { id: true, title: true, level: true } }
       }
     });
   }

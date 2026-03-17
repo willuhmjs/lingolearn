@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, fly, slide } from 'svelte/transition';
   import { marked } from 'marked';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
   import GrammarWeb from '$lib/components/dashboard/GrammarWeb.svelte';
@@ -109,7 +109,20 @@
   }
 
   function toggleGrammar(id: string) {
+    grammarQuery = '';
     expandedGrammarId = expandedGrammarId === id ? null : id;
+    if (expandedGrammarId === id) {
+      tick().then(() => {
+        const el = document.getElementById(`grammar-card-${id}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const offset = 24;
+          if (rect.top < offset || rect.bottom > window.innerHeight) {
+            window.scrollBy({ top: rect.top - offset, behavior: 'smooth' });
+          }
+        }
+      });
+    }
   }
 
   let currentLanguage = $derived(data.user?.activeLanguage?.name || 'German');
@@ -958,15 +971,13 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
-          {#if grammarMapExpanded}
-            <div class="grammar-map-content" transition:slide={{ duration: 300 }}>
-              <GrammarWeb
-                allGrammarRules={data.grammarRules}
-                grammarRules={data.userGrammarProgress}
-                onOpenModal={() => {}}
-              />
-            </div>
-          {/if}
+          <div class="grammar-map-content" aria-hidden={!grammarMapExpanded}>
+            <GrammarWeb
+              allGrammarRules={data.grammarRules}
+              grammarRules={data.userGrammarProgress}
+              onOpenModal={() => {}}
+            />
+          </div>
         </div>
       {/if}
 
@@ -1058,7 +1069,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
         {:else}
           <div class="grammar-rules-list">
             {#each filteredTopoRules as rule (rule.id)}
-              <div class="grammar-rule-card">
+              <div class="grammar-rule-card" id="grammar-card-{rule.id}">
                 <button
                   type="button"
                   class="grammar-rule-header"
@@ -1133,6 +1144,19 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
                         {/each}
                       </div>
                     {/if}
+                    {#if rule.dependents?.length > 0}
+                      <div class="grammar-prereqs grammar-dependents">
+                        <span class="prereq-label">Required by:</span>
+                        {#each rule.dependents as dep, i}
+                          <button
+                            type="button"
+                            class="prereq-link dependent-link"
+                            onclick={() => toggleGrammar(dep.id)}
+                            title="Jump to: {dep.title}">{dep.title}</button
+                          >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span>{/if}
+                        {/each}
+                      </div>
+                    {/if}
                     {#if rule.guide}
                       <div class="grammar-guide markdown-body">
                         {@html marked(rule.guide)}
@@ -1154,7 +1178,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
             <h2 class="level-heading">Level {level}</h2>
             <div class="grammar-rules-list">
               {#each filteredGroupedGrammar[level] as rule}
-                <div class="grammar-rule-card">
+                <div class="grammar-rule-card" id="grammar-card-{rule.id}">
                   <button
                     type="button"
                     class="grammar-rule-header"
@@ -1221,6 +1245,19 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
                             >{#if i < rule.dependencies.length - 1}<span class="prereq-arrow">
                                 →
                               </span>{/if}
+                          {/each}
+                        </div>
+                      {/if}
+                      {#if rule.dependents?.length > 0}
+                        <div class="grammar-prereqs grammar-dependents">
+                          <span class="prereq-label">Required by:</span>
+                          {#each rule.dependents as dep, i}
+                            <button
+                              type="button"
+                              class="prereq-link dependent-link"
+                              onclick={() => toggleGrammar(dep.id)}
+                              title="Jump to: {dep.title}">{dep.title}</button
+                            >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span>{/if}
                           {/each}
                         </div>
                       {/if}
@@ -2382,14 +2419,23 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   }
   .grammar-map-chevron.rotated { transform: rotate(180deg); }
   .grammar-map-content {
-    height: 100vh;
-    max-height: 90vh;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease;
     border-top: 1px solid #e2e8f0;
   }
+  .grammar-map-content[aria-hidden='true'] {
+    grid-template-rows: 0fr;
+    border-top: none;
+  }
+  .grammar-map-content > :global(*) {
+    overflow: hidden;
+    min-height: 0;
+  }
   :global(html[data-theme='dark']) .grammar-map-content { border-color: #334155; }
-  /* Override GrammarWeb container to fill the blob */
+  /* Give GrammarWeb's flow canvas a tall fixed height inside the blob */
   :global(.grammar-map-content .grammar-web-container) {
-    height: 100%;
+    height: 75vh;
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -3198,6 +3244,26 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 
   :global(html[data-theme='dark']) .prereq-link:hover {
     background: #1e40af;
+  }
+
+  .dependent-link {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+
+  .dependent-link:hover {
+    background: #fde68a;
+  }
+
+  :global(html[data-theme='dark']) .dependent-link {
+    background: #422006;
+    border-color: #d97706;
+    color: #fcd34d;
+  }
+
+  :global(html[data-theme='dark']) .dependent-link:hover {
+    background: #78350f;
   }
 
   .prereq-arrow {
