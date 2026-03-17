@@ -35,6 +35,21 @@ export async function GET({ url, locals }: { url: URL; locals: App.Locals }) {
 		orderBy: { vocabulary: { lemma: 'asc' } }
 	});
 
+	if (format === 'json') {
+		const items = userVocabs.map((uv) => ({
+			word: uv.vocabulary.lemma,
+			meanings: uv.vocabulary.meanings.map((m) => ({ value: m.value, pos: m.partOfSpeech })),
+			partOfSpeech: uv.vocabulary.partOfSpeech ?? '',
+			gender: uv.vocabulary.gender ?? '',
+			cefrLevel: uv.vocabulary.cefrLevel,
+			srsState: uv.srsState,
+			eloRating: Math.round(uv.eloRating)
+		}));
+		return new Response(JSON.stringify(items), {
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
+
 	if (format === 'anki') {
 		// Anki tab-separated format: front\tback
 		const lines = userVocabs.map((uv) => {

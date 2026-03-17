@@ -306,6 +306,325 @@
 			console.error('Error adding word:', error);
 		}
 	}
+
+	// ── Dictionary export modal ────────────────────────────────
+	type DictExportContent = 'grammar' | 'vocabulary' | 'both';
+	type DictExportTemplate = 'classic' | 'modern' | 'compact';
+
+	let dictExportContent = $state<DictExportContent>('grammar');
+	let dictExportTemplate = $state<DictExportTemplate>('classic');
+	let dictExportFields = $state({
+		word: true,
+		meaning: true,
+		partOfSpeech: true,
+		gender: true,
+		cefrLevel: true,
+		srsState: true,
+		eloRating: false
+	});
+	let isDictExporting = $state(false);
+
+	interface VocabExportRow {
+		word: string;
+		meanings: { value: string; pos: string | null }[];
+		partOfSpeech: string;
+		gender: string;
+		cefrLevel: string;
+		srsState: string;
+		eloRating: number;
+	}
+
+	function dEscHtml(s: string): string {
+		return s
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
+	}
+
+	function dSrsLabel(state: string): string {
+		return (
+			{ UNSEEN: 'Unseen', LEARNING: 'Learning', KNOWN: 'Known', MASTERED: 'Mastered' }[state] ??
+			state
+		);
+	}
+
+	function buildGrammarSection(rules: any[]): string {
+		if (!rules.length) return '<p style="color:#64748b;font-style:italic">No grammar rules available.</p>';
+		return rules
+			.map((rule) => {
+				const guideHtml = rule.guide ? (marked(rule.guide) as string) : '';
+				const deps =
+					rule.dependencies?.length
+						? `<p style="font-size:.75rem;color:#64748b;margin:.5rem 0 0">Prerequisites: ${rule.dependencies.map((d: any) => dEscHtml(d.title)).join(', ')}</p>`
+						: '';
+				return `<div class="gr-rule">
+<div class="gr-rule-head">
+  <span class="gr-rule-title">${dEscHtml(rule.title)}</span>
+  ${rule.level ? `<span class="gr-level-badge">${dEscHtml(rule.level)}</span>` : ''}
+</div>
+${rule.description ? `<p class="gr-rule-desc">${dEscHtml(rule.description)}</p>` : ''}
+${deps}
+${guideHtml ? `<div class="gr-guide markdown-body">${guideHtml}</div>` : ''}
+</div>`;
+			})
+			.join('');
+	}
+
+	function buildVocabTable(
+		vocab: VocabExportRow[],
+		fields: typeof dictExportFields
+	): string {
+		const colDefs = [
+			{ key: 'word' as const, label: 'Word' },
+			{ key: 'meaning' as const, label: 'Meaning' },
+			{ key: 'partOfSpeech' as const, label: 'Part of Speech' },
+			{ key: 'gender' as const, label: 'Gender' },
+			{ key: 'cefrLevel' as const, label: 'CEFR' },
+			{ key: 'srsState' as const, label: 'Status' },
+			{ key: 'eloRating' as const, label: 'ELO' }
+		];
+		const cols = colDefs.filter((c) => fields[c.key]);
+		const thead = cols.map((c) => `<th>${dEscHtml(c.label)}</th>`).join('');
+		const tbody = vocab
+			.map((item, i) => {
+				const cells = cols
+					.map((c) => {
+						if (c.key === 'word') return `<td><strong>${dEscHtml(item.word)}</strong></td>`;
+						if (c.key === 'meaning')
+							return `<td>${dEscHtml(item.meanings.map((m) => m.value).join('; '))}</td>`;
+						if (c.key === 'partOfSpeech') return `<td>${dEscHtml(item.partOfSpeech)}</td>`;
+						if (c.key === 'gender') return `<td>${dEscHtml(item.gender)}</td>`;
+						if (c.key === 'cefrLevel')
+							return `<td><span class="cefr-badge cefr-${item.cefrLevel.toLowerCase()}">${dEscHtml(item.cefrLevel)}</span></td>`;
+						if (c.key === 'srsState')
+							return `<td><span class="srs-badge srs-${item.srsState.toLowerCase()}">${dEscHtml(dSrsLabel(item.srsState))}</span></td>`;
+						if (c.key === 'eloRating') return `<td>${item.eloRating}</td>`;
+						return '<td></td>';
+					})
+					.join('');
+				return `<tr class="${i % 2 !== 0 ? 'alt' : ''}">${cells}</tr>`;
+			})
+			.join('');
+		return `<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+	}
+
+	function buildDictPrintHtml(
+		content: DictExportContent,
+		template: DictExportTemplate,
+		rules: any[],
+		vocab: VocabExportRow[],
+		fields: typeof dictExportFields,
+		username: string,
+		lang: string,
+		date: string
+	): string {
+		const showGrammar = content === 'grammar' || content === 'both';
+		const showVocab = content === 'vocabulary' || content === 'both';
+
+		const bookIconLg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+		const bookIconSm = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+
+		const googleFont = `<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">`;
+		const baseFontStack = `'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+
+		const sharedBadges = `
+.cefr-badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:800}
+.cefr-a1,.cefr-a2{background:#dcfce7;color:#166534}
+.cefr-b1,.cefr-b2{background:#dbeafe;color:#1e40af}
+.cefr-c1,.cefr-c2{background:#ede9fe;color:#5b21b6}
+.srs-badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.srs-unseen{background:#f1f5f9;color:#64748b}
+.srs-learning{background:#fef3c7;color:#92400e}
+.srs-known{background:#dcfce7;color:#166534}
+.srs-mastered{background:#ede9fe;color:#5b21b6}`;
+
+		const grammarCss = `
+.gr-rule{border:1px solid #e2e8f0;border-radius:.5rem;padding:1rem;margin-bottom:1rem;page-break-inside:avoid}
+.gr-rule-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.gr-rule-title{font-size:.95rem;font-weight:800;color:#0f172a}
+.gr-level-badge{background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:20px;font-size:.72rem;font-weight:800;flex-shrink:0}
+.gr-rule-desc{font-size:.825rem;color:#475569;margin:.25rem 0 .5rem;line-height:1.45}
+.gr-guide{font-size:.875rem;line-height:1.6;color:#1e293b;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f1f5f9}
+.gr-guide h1,.gr-guide h2,.gr-guide h3{font-size:.95rem;font-weight:800;margin:.75rem 0 .3rem;color:#0f172a}
+.gr-guide p{margin:.3rem 0}
+.gr-guide ul,.gr-guide ol{padding-left:1.25rem;margin:.3rem 0}
+.gr-guide li{margin:.15rem 0}
+.gr-guide code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:.8em;font-family:monospace}
+.gr-guide pre{background:#f8fafc;padding:.625rem;border-radius:.375rem;overflow-x:auto;border:1px solid #e2e8f0}
+.gr-guide table{width:100%;border-collapse:collapse;font-size:.8rem;margin:.5rem 0}
+.gr-guide th{background:#f1f5f9;padding:.3rem .5rem;border:1px solid #e2e8f0;font-weight:700;text-align:left}
+.gr-guide td{padding:.3rem .5rem;border:1px solid #e2e8f0}
+.section-divider{height:2px;background:#e2e8f0;margin:2rem 0}`;
+
+		const vocabCss = `
+table.vocab-table{width:100%;border-collapse:collapse;font-size:.875rem}
+table.vocab-table th{text-align:left;padding:.5rem .75rem;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.055em;border-bottom:2px solid rgba(0,0,0,.15)}
+table.vocab-table td{padding:.5rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+table.vocab-table tr.alt td{background:#f8fafc}
+table.vocab-table td strong{font-size:.9rem;font-weight:800;color:#0f172a}`;
+
+		const sectionHeadCss = `.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;font-size:.72rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em}.section-head::after{content:"";flex:1;height:1px;background:#e2e8f0}.count-pill{background:#f1f5f9;color:#475569;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:none;letter-spacing:0}`;
+
+		const printMedia = `@media print{@page{margin:15mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
+
+		const grammarOnlyHead = content === 'grammar'
+			? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>` : '';
+		const vocabOnlyHead = content === 'vocabulary'
+			? `<div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>` : '';
+
+		const grammarBlock = showGrammar
+			? (content === 'both' ? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>` : '')
+				+ buildGrammarSection(rules)
+			: '';
+		const vocabBlock = showVocab
+			? (content === 'both' ? `<div class="section-divider"></div><div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>` : '')
+				+ buildVocabTable(vocab, fields)
+			: '';
+
+		// ── Classic: Blue header, white brand, green bottom accent ──────────
+		if (template === 'classic') {
+			return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">${googleFont}<title>LingoLearn — ${dEscHtml(lang)}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:${baseFontStack};background:#fff;color:#1e293b}
+.header{background:#2563eb;color:#fff;padding:1.75rem 2.5rem 1.375rem;border-bottom:4px solid #58cc02}
+.brand{display:flex;align-items:center;gap:.875rem;margin-bottom:.875rem}
+.brand-logo{width:2.5rem;height:2.5rem;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.brand-name{font-size:1.75rem;font-weight:900;letter-spacing:-.025em;line-height:1}
+.brand-tagline{font-size:.72rem;opacity:.8;margin-top:.25rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.meta{display:flex;gap:2rem;font-size:.8rem;opacity:.95;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.3);flex-wrap:wrap}
+.meta-item{display:flex;align-items:center;gap:.4rem;font-weight:700}
+.meta-label{opacity:.75;font-weight:600}
+.content{padding:1.625rem 2.5rem 2rem}
+.footer{padding:.875rem 2.5rem;border-top:3px solid #58cc02;display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:#94a3b8;margin-top:1rem}
+.footer-brand{font-weight:900;font-size:.82rem;color:#2563eb}
+${sectionHeadCss}${sharedBadges}${grammarCss}${vocabCss}${printMedia}
+table.vocab-table th{background:#2563eb;color:#fff}
+</style></head><body>
+<div class="header">
+<div class="brand"><div class="brand-logo">${bookIconLg}</div><div><div class="brand-name">LingoLearn</div><div class="brand-tagline">AI-powered language learning</div></div></div>
+<div class="meta">
+<div class="meta-item"><span class="meta-label">Student</span>${dEscHtml(username)}</div>
+<div class="meta-item"><span class="meta-label">Language</span>${dEscHtml(lang)}</div>
+<div class="meta-item"><span class="meta-label">Date</span>${dEscHtml(date)}</div>
+</div></div>
+<div class="content">${grammarOnlyHead}${vocabOnlyHead}${grammarBlock}${vocabBlock}</div>
+<div class="footer"><span>Generated ${dEscHtml(date)}</span><span class="footer-brand">LingoLearn</span></div>
+</body></html>`;
+		}
+
+		// ── Modern: White header with blue/green stripe, dark table heads ───
+		if (template === 'modern') {
+			return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">${googleFont}<title>LingoLearn — ${dEscHtml(lang)}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:${baseFontStack};background:#f1f5f9;color:#1e293b}
+.header{background:#fff;border-bottom:1px solid #e2e8f0}
+.header-stripe{height:5px;background:linear-gradient(90deg,#2563eb 0%,#1cb0f6 50%,#58cc02 100%)}
+.header-inner{padding:1.5rem 2.5rem;display:flex;justify-content:space-between;align-items:flex-end;gap:1.5rem;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:.625rem}
+.brand-icon-wrap{color:#2563eb}
+.brand-name{font-size:1.625rem;font-weight:900;letter-spacing:-.03em;color:#2563eb;line-height:1}
+.brand-tagline{font-size:.7rem;color:#64748b;margin-top:.25rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.header-meta{text-align:right;line-height:1.85;font-size:.825rem}
+.header-meta .meta-name{font-size:1rem;font-weight:800;color:#0f172a}
+.header-meta .meta-sub{color:#64748b;font-weight:600}
+.content{padding:1.5rem 2rem 2rem}
+.content-wrap{background:#fff;border-radius:.75rem;border:1px solid #e2e8f0;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.footer{text-align:center;padding:1rem;font-size:.75rem;color:#94a3b8;font-weight:600}
+.footer strong{color:#2563eb;font-weight:900}
+${sectionHeadCss}${sharedBadges}${grammarCss}${vocabCss}${printMedia}
+table.vocab-table th{background:#1e293b;color:#94a3b8}
+</style></head><body>
+<div class="header">
+<div class="header-stripe"></div>
+<div class="header-inner">
+<div>
+<div class="brand"><div class="brand-icon-wrap">${bookIconLg}</div><div class="brand-name">LingoLearn</div></div>
+<div class="brand-tagline">AI-powered language learning</div>
+</div>
+<div class="header-meta">
+<div class="meta-name">${dEscHtml(username)}</div>
+<div class="meta-sub">${dEscHtml(lang)}</div>
+<div class="meta-sub">${dEscHtml(date)}</div>
+</div></div></div>
+<div class="content"><div class="content-wrap">${grammarOnlyHead}${vocabOnlyHead}${grammarBlock}${vocabBlock}</div></div>
+<div class="footer">Generated by <strong>LingoLearn</strong> &mdash; ${dEscHtml(date)}</div>
+</body></html>`;
+		}
+
+		// ── Compact: Minimal, blue brand, green accent border ───────────────
+		return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">${googleFont}<title>LingoLearn — ${dEscHtml(lang)}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:${baseFontStack};font-size:.8rem;color:#1e293b;background:#fff}
+.header{padding:.6rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #58cc02;background:#fff}
+.brand{font-size:1rem;font-weight:900;color:#2563eb;letter-spacing:-.02em;display:flex;align-items:center;gap:.4rem}
+.brand-icon{color:#58cc02}
+.header-meta{font-size:.7rem;color:#64748b;text-align:right;line-height:1.65;font-weight:600}
+.content{padding:.875rem 1.5rem 1.5rem}
+.footer{border-top:1px solid #e2e8f0;padding:.4rem 1.5rem;font-size:.67rem;color:#94a3b8;text-align:right;margin-top:.5rem;font-weight:600}
+.footer strong{color:#2563eb;font-weight:900}
+${sectionHeadCss}${sharedBadges}${grammarCss}${vocabCss}${printMedia}
+table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb}
+</style></head><body>
+<div class="header">
+<div class="brand"><span class="brand-icon">${bookIconSm}</span>LingoLearn</div>
+<div class="header-meta"><div>${dEscHtml(username)} &middot; ${dEscHtml(lang)}</div><div>${dEscHtml(date)}</div></div>
+</div>
+<div class="content">${grammarOnlyHead}${vocabOnlyHead}${grammarBlock}${vocabBlock}</div>
+<div class="footer">Generated by <strong>LingoLearn</strong> &middot; ${dEscHtml(date)}</div>
+</body></html>`;
+	}
+
+
+	async function generateDictPdf() {
+		const win = window.open('', '_blank');
+		if (!win) {
+			toastError('Popup blocked — please allow popups for this site.');
+			return;
+		}
+		win.document.write(
+			'<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#64748b"><p>Generating your reference PDF\u2026</p></body></html>'
+		);
+
+		isDictExporting = true;
+		try {
+			let vocab: VocabExportRow[] = [];
+			if (dictExportContent === 'vocabulary' || dictExportContent === 'both') {
+				const res = await fetch('/api/user/vocabulary/export?format=json');
+				if (!res.ok) throw new Error('Failed to fetch vocabulary');
+				vocab = await res.json();
+			}
+
+			const username = data.user?.username ?? '';
+			const lang = data.user?.activeLanguage?.name ?? currentLanguage;
+			const date = new Date().toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric'
+			});
+
+			const html = buildDictPrintHtml(
+				dictExportContent,
+				dictExportTemplate,
+				grammarRules,
+				vocab,
+				dictExportFields,
+				username,
+				lang,
+				date
+			);
+			win.document.open();
+			win.document.write(html);
+			win.document.close();
+			win.focus();
+			setTimeout(() => win.print(), 700);
+		} catch (e: any) {
+			win.close();
+			toastError(e.message || 'Failed to generate PDF');
+		} finally {
+			isDictExporting = false;
+		}
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -316,8 +635,20 @@
 
 <div class="dictionary-container">
 	<div class="header" in:fly={{ y: 20, duration: 400 }}>
-		<h1 class="title">Dictionary & Grammar</h1>
-		<p class="subtitle">Search for words or browse grammar rules for {currentLanguage}.</p>
+		<div class="header-text">
+			<h1 class="title">Dictionary & Grammar</h1>
+			<p class="subtitle">Search for words or browse grammar rules for {currentLanguage}.</p>
+		</div>
+		<button
+			class="btn-export-pdf no-print"
+			onclick={() => (document.getElementById('dict-export-modal') as HTMLDialogElement)?.showModal()}
+			title="Export grammar and vocabulary as PDF"
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem">
+				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>
+			</svg>
+			Export PDF
+		</button>
 	</div>
 
 	<div class="tabs-container">
@@ -645,25 +976,7 @@
 							<span>A–Z</span>
 						</button>
 					</div>
-					<button
-						class="btn-export-pdf no-print"
-						onclick={() => window.print()}
-						title="Export grammar guide as PDF"
-					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:1rem;height:1rem"
-							><polyline points="6 9 6 2 18 2 18 9"></polyline><path
-								d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
-							></path><rect x="6" y="14" width="12" height="8"></rect></svg
-						>
-						Export PDF
-					</button>
+					
 				</div>
 			</div>
 
@@ -861,6 +1174,113 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Dictionary export modal -->
+<dialog id="dict-export-modal" class="dict-modal">
+	<div class="dict-modal-box">
+		<!-- Header -->
+		<div class="dex-header">
+			<div class="dex-title">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="19" height="19" aria-hidden="true">
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+				</svg>
+				Export Reference PDF
+			</div>
+			<form method="dialog">
+				<button class="dex-close" aria-label="Close">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+				</button>
+			</form>
+		</div>
+
+		<!-- Content selection -->
+		<div class="dex-section">
+			<p class="dex-label">What to export</p>
+			<div class="dex-content-tabs">
+				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'grammar'} onclick={() => (dictExportContent = 'grammar')}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+					Grammar Guide
+					<span class="dex-count-pill">{grammarRules.length}</span>
+				</button>
+				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'vocabulary'} onclick={() => (dictExportContent = 'vocabulary')}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+					Vocabulary List
+				</button>
+				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'both'} onclick={() => (dictExportContent = 'both')}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+					Both
+				</button>
+			</div>
+		</div>
+
+		<!-- Template picker -->
+		<div class="dex-section">
+			<p class="dex-label">Template</p>
+			<div class="dex-template-picker">
+				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'classic'} onclick={() => (dictExportTemplate = 'classic')}>
+					<div class="dex-tp tp-classic">
+						<div class="tp-header-bar"></div>
+						<div class="tp-brand-row"><div class="tp-logo-dot"></div><div class="tp-brand-lines"><div class="tp-line tp-line-wide"></div><div class="tp-line tp-line-narrow"></div></div></div>
+						<div class="tp-meta-dots"><div class="tp-dot"></div><div class="tp-dot"></div><div class="tp-dot"></div></div>
+						<div class="tp-table-head"></div><div class="tp-table-row"></div><div class="tp-table-row tp-row-alt"></div><div class="tp-table-row"></div>
+					</div>
+					<span class="dex-tmpl-name">Classic</span>
+					{#if dictExportTemplate === 'classic'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+				</button>
+				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'modern'} onclick={() => (dictExportTemplate = 'modern')}>
+					<div class="dex-tp tp-modern">
+						<div class="tp-top-accent"></div>
+						<div class="tp-dark-header"><div class="tp-line tp-line-green"></div><div class="tp-line tp-line-narrow tp-line-muted"></div></div>
+						<div class="tp-summary-chip"></div>
+						<div class="tp-card-wrap"><div class="tp-table-head tp-head-dark"></div><div class="tp-table-row"></div><div class="tp-table-row tp-row-alt"></div></div>
+					</div>
+					<span class="dex-tmpl-name">Modern</span>
+					{#if dictExportTemplate === 'modern'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+				</button>
+				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'compact'} onclick={() => (dictExportTemplate = 'compact')}>
+					<div class="dex-tp tp-compact">
+						<div class="tp-compact-header"><div class="tp-line tp-line-green tp-line-sm"></div><div class="tp-compact-meta"><div class="tp-dot"></div><div class="tp-dot"></div></div></div>
+						<div class="tp-table-head"></div><div class="tp-table-row tp-row-xs"></div><div class="tp-table-row tp-row-alt tp-row-xs"></div><div class="tp-table-row tp-row-xs"></div><div class="tp-table-row tp-row-alt tp-row-xs"></div><div class="tp-table-row tp-row-xs"></div>
+					</div>
+					<span class="dex-tmpl-name">Compact</span>
+					{#if dictExportTemplate === 'compact'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+				</button>
+			</div>
+		</div>
+
+		<!-- Vocabulary field toggles (only when vocab is included) -->
+		{#if dictExportContent === 'vocabulary' || dictExportContent === 'both'}
+			<div class="dex-section">
+				<p class="dex-label">Vocabulary fields</p>
+				<div class="dex-field-grid">
+					<label class="dex-field-toggle" class:field-on={dictExportFields.word}><input type="checkbox" bind:checked={dictExportFields.word} /><span>Word</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.meaning}><input type="checkbox" bind:checked={dictExportFields.meaning} /><span>Meaning</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.partOfSpeech}><input type="checkbox" bind:checked={dictExportFields.partOfSpeech} /><span>Part of Speech</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.gender}><input type="checkbox" bind:checked={dictExportFields.gender} /><span>Gender</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.cefrLevel}><input type="checkbox" bind:checked={dictExportFields.cefrLevel} /><span>CEFR Level</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.srsState}><input type="checkbox" bind:checked={dictExportFields.srsState} /><span>SRS Status</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.eloRating}><input type="checkbox" bind:checked={dictExportFields.eloRating} /><span>ELO Rating</span></label>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Footer actions -->
+		<div class="dex-footer">
+			<form method="dialog">
+				<button class="dex-cancel">Cancel</button>
+			</form>
+			<button type="button" class="dex-generate" onclick={generateDictPdf} disabled={isDictExporting}>
+				{#if isDictExporting}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" class="dex-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+					Generating…
+				{:else}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+					Generate PDF
+				{/if}
+			</button>
+		</div>
+	</div>
+</dialog>
 
 {#if selectedResult}
 	<div
@@ -1229,6 +1649,15 @@
 
 	.header {
 		margin-bottom: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.header-text {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.title {
@@ -1780,6 +2209,483 @@
 	.grammar-search-wrapper {
 		position: relative;
 		margin-bottom: 1.5rem;
+	}
+
+	/* ── Dictionary export modal ─────────────────────────── */
+	.dict-modal {
+		border: none;
+		border-radius: 1rem;
+		padding: 0;
+		background: transparent;
+		max-width: 560px;
+		width: calc(100vw - 2rem);
+	}
+
+	.dict-modal::backdrop {
+		background: rgba(0, 0, 0, 0.5);
+	}
+
+	.dict-modal-box {
+		background: var(--card-bg, #ffffff);
+		border-radius: 1rem;
+		overflow: hidden;
+	}
+
+	.dex-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.125rem 1.375rem 1rem;
+		border-bottom: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.dex-title {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		font-size: 1rem;
+		font-weight: 700;
+		color: var(--text-color, #0f172a);
+	}
+
+	.dex-close {
+		width: 1.875rem;
+		height: 1.875rem;
+		border: none;
+		background: var(--card-bg, #f1f5f9);
+		border-radius: 0.375rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #64748b;
+		transition: background 0.15s;
+		padding: 0;
+	}
+
+	.dex-close:hover {
+		background: var(--card-border, #e5e7eb);
+		color: var(--text-color, #0f172a);
+	}
+
+	.dex-section {
+		padding: 1rem 1.375rem;
+		border-bottom: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.dex-label {
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #64748b;
+		margin: 0 0 0.75rem;
+	}
+
+	/* Content tabs */
+	.dex-content-tabs {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.dex-content-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.45rem 0.875rem;
+		border: 1.5px solid var(--card-border, #e5e7eb);
+		border-radius: 0.5rem;
+		background: var(--card-bg, #fff);
+		color: #64748b;
+		font-size: 0.825rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			border-color 0.15s,
+			color 0.15s,
+			background 0.15s;
+		font-family: inherit;
+	}
+
+	.dex-content-tab:hover {
+		border-color: #94a3b8;
+		color: var(--text-color, #374151);
+	}
+
+	.dex-content-tab.active {
+		border-color: #22c55e;
+		color: #166534;
+		background: #f0fdf4;
+		font-weight: 600;
+	}
+
+	:global(html[data-theme='dark']) .dex-content-tab.active {
+		background: rgba(34, 197, 94, 0.1);
+		color: #4ade80;
+	}
+
+	.dex-count-pill {
+		background: #e2e8f0;
+		color: #475569;
+		padding: 0 6px;
+		border-radius: 20px;
+		font-size: 0.68rem;
+		font-weight: 700;
+	}
+
+	.dex-content-tab.active .dex-count-pill {
+		background: #bbf7d0;
+		color: #166534;
+	}
+
+	:global(html[data-theme='dark']) .dex-content-tab.active .dex-count-pill {
+		background: rgba(34, 197, 94, 0.2);
+		color: #4ade80;
+	}
+
+	/* Template picker */
+	.dex-template-picker {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.625rem;
+	}
+
+	.dex-tmpl-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+		padding: 0.625rem;
+		background: var(--card-bg, #fff);
+		border: 1.5px solid var(--card-border, #e5e7eb);
+		border-radius: 0.6rem;
+		cursor: pointer;
+		text-align: left;
+		font-family: inherit;
+		transition:
+			border-color 0.15s,
+			box-shadow 0.15s;
+	}
+
+	.dex-tmpl-card:hover {
+		border-color: #22c55e;
+	}
+
+	.dex-tmpl-card.selected {
+		border-color: #22c55e;
+		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+	}
+
+	.dex-tmpl-name {
+		font-size: 0.775rem;
+		font-weight: 700;
+		color: var(--text-color, #0f172a);
+	}
+
+	.dex-check {
+		position: absolute;
+		top: 0.4rem;
+		right: 0.4rem;
+		width: 1.1rem;
+		height: 1.1rem;
+		background: #22c55e;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+	}
+
+	/* Template mini-previews (reuse tp-* classes from below) */
+	.dex-tp {
+		width: 100%;
+		aspect-ratio: 3/4;
+		border-radius: 0.3rem;
+		overflow: hidden;
+		background: #fff;
+		border: 1px solid #e2e8f0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	:global(html[data-theme='dark']) .dex-tp {
+		background: #1e293b;
+		border-color: #334155;
+	}
+
+	.tp-header-bar {
+		height: 24%;
+		background: #2563eb;
+		border-bottom: 3px solid #58cc02;
+		flex-shrink: 0;
+	}
+
+	.tp-brand-row {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		padding: 4px 5px 0;
+		position: relative;
+		margin-top: -18%;
+		z-index: 1;
+	}
+
+	.tp-logo-dot {
+		width: 10px;
+		height: 10px;
+		background: white;
+		border-radius: 2px;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .tp-logo-dot {
+		background: #e2e8f0;
+	}
+
+	.tp-brand-lines {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		flex: 1;
+	}
+
+	.tp-meta-dots {
+		display: flex;
+		gap: 4px;
+		padding: 3px 5px 4px;
+		border-bottom: 1px solid #f1f5f9;
+		margin-bottom: 1px;
+	}
+
+	.tp-dot {
+		width: 14px;
+		height: 3px;
+		background: #cbd5e1;
+		border-radius: 2px;
+	}
+
+	.tp-top-accent {
+		height: 3px;
+		background: linear-gradient(90deg, #2563eb, #1cb0f6, #58cc02);
+		flex-shrink: 0;
+	}
+
+	.tp-dark-header {
+		background: #eff6ff;
+		padding: 4px 5px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		flex-shrink: 0;
+	}
+
+	.tp-summary-chip {
+		height: 7px;
+		background: #fff;
+		border-radius: 3px;
+		margin: 3px 4px;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .tp-summary-chip {
+		background: #2d3a4f;
+	}
+
+	.tp-card-wrap {
+		flex: 1;
+		background: #fff;
+		border-radius: 3px;
+		margin: 0 4px 4px;
+		overflow: hidden;
+		border: 1px solid #e2e8f0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	:global(html[data-theme='dark']) .tp-card-wrap {
+		background: #1e293b;
+		border-color: #334155;
+	}
+
+	.tp-compact-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 4px 5px;
+		border-bottom: 2px solid #58cc02;
+		flex-shrink: 0;
+	}
+
+	.tp-compact-meta {
+		display: flex;
+		gap: 3px;
+	}
+
+	.tp-table-head {
+		height: 8px;
+		background: #f8fafc;
+		border-bottom: 1px solid #e2e8f0;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .tp-table-head {
+		background: #2d3a4f;
+		border-color: #334155;
+	}
+
+	.tp-head-dark {
+		background: #1e293b !important;
+	}
+
+	.tp-table-row {
+		height: 7px;
+		background: #fff;
+		border-bottom: 1px solid #f8fafc;
+		flex-shrink: 0;
+	}
+
+	:global(html[data-theme='dark']) .tp-table-row {
+		background: #1e293b;
+		border-color: #1e293b;
+	}
+
+	.tp-row-alt {
+		background: #fafafa !important;
+	}
+
+	:global(html[data-theme='dark']) .tp-row-alt {
+		background: #243044 !important;
+	}
+
+	.tp-row-xs {
+		height: 5px;
+	}
+
+	.tp-line {
+		height: 3px;
+		background: #fff;
+		border-radius: 2px;
+		flex-shrink: 0;
+	}
+
+	.tp-line-wide { width: 70%; }
+	.tp-line-narrow { width: 45%; opacity: 0.6; }
+	.tp-line-green { background: #2563eb; width: 55%; }
+	.tp-line-sm { height: 2px; width: 40%; }
+	.tp-line-muted { opacity: 0.4; width: 35%; }
+
+	/* Field toggles */
+	.dex-field-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+	}
+
+	.dex-field-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.325rem 0.7rem;
+		border: 1.5px solid var(--card-border, #e5e7eb);
+		border-radius: 999px;
+		cursor: pointer;
+		font-size: 0.775rem;
+		font-weight: 500;
+		color: #64748b;
+		background: var(--card-bg, #fff);
+		transition:
+			border-color 0.15s,
+			color 0.15s,
+			background 0.15s;
+		user-select: none;
+	}
+
+	.dex-field-toggle input[type='checkbox'] {
+		display: none;
+	}
+
+	.dex-field-toggle.field-on {
+		border-color: #22c55e;
+		color: #166534;
+		background: #f0fdf4;
+	}
+
+	:global(html[data-theme='dark']) .dex-field-toggle.field-on {
+		background: rgba(34, 197, 94, 0.1);
+		color: #4ade80;
+		border-color: #22c55e;
+	}
+
+	.dex-field-toggle:hover:not(.field-on) {
+		border-color: #94a3b8;
+		color: var(--text-color, #374151);
+	}
+
+	/* Footer */
+	.dex-footer {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 0.875rem 1.375rem;
+	}
+
+	.dex-cancel {
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		border: 1px solid var(--card-border, #d1d5db);
+		background: var(--card-bg, #fff);
+		color: var(--text-color, #374151);
+		font-family: inherit;
+	}
+
+	.dex-cancel:hover {
+		background: var(--link-hover-bg, #f3f4f6);
+	}
+
+	.dex-generate {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.525rem 1.125rem;
+		background: #22c55e;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background-color 0.15s;
+		font-family: inherit;
+	}
+
+	.dex-generate:hover:not(:disabled) {
+		background: #16a34a;
+	}
+
+	.dex-generate:disabled {
+		opacity: 0.65;
+		cursor: not-allowed;
+	}
+
+	@keyframes dex-spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.dex-spin {
+		animation: dex-spin 0.8s linear infinite;
+	}
+
+	:global(html[data-theme='dark']) .dex-header,
+	:global(html[data-theme='dark']) .dex-section,
+	:global(html[data-theme='dark']) .dex-footer {
+		border-color: #334155;
 	}
 
 	/* Print / PDF styles */
