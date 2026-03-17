@@ -5,11 +5,12 @@ import { CEFR_CONFIG } from '../../src/lib/server/srsConfig';
 
 const mockPrisma = {
   userProgress: { findUnique: vi.fn(), update: vi.fn() },
+  vocabulary: { findMany: vi.fn() },
   userVocabulary: { findMany: vi.fn(), count: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   userVocabularyProgress: { findMany: vi.fn() },
   userGrammarRule: { findMany: vi.fn(), count: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   userGrammarRuleProgress: { findMany: vi.fn() },
-  grammarRule: { findMany: vi.fn() },
+  grammarRule: { findMany: vi.fn(), count: vi.fn() },
   $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops))
 };
 
@@ -56,7 +57,8 @@ describe('CefrService.getCefrProgress', () => {
     expect(result.currentLevel).toBe('A1');
     expect(result.nextLevel).toBe('A2');
     expect(result.percentComplete).toBe(0);
-    expect(result.targetElo).toBe(CEFR_CONFIG.ELO_TARGETS.A1);
+    expect(result.freqCoverageCount).toBe(0);
+    expect(result.freqCoverageTarget).toBe(CEFR_CONFIG.VOCAB_FREQ_GATE.A1);
   });
 
   it('returns 100% complete with null nextLevel at C2 (max level)', async () => {
@@ -67,41 +69,40 @@ describe('CefrService.getCefrProgress', () => {
     expect(result.currentLevel).toBe('C2');
     expect(result.nextLevel).toBeNull();
     expect(result.percentComplete).toBe(100);
-    expect(result.targetElo).toBeNull();
   });
 
-  it('computes correct vocabMastery ratio', async () => {
+  it('computes freqCoverageCount correctly from top-N frequency words', async () => {
     mockPrisma.userProgress.findUnique.mockResolvedValue({ id: 'p', cefrLevel: 'A1' });
-    mockPrisma.grammarRule = { count: vi.fn().mockResolvedValue(10) } as any;
 
-    // encountered=10, interactedGrammar=5, masteredVocab=8, masteredGrammar=5
-    mockPrisma.userVocabulary.count
-      .mockResolvedValueOnce(10) // encounteredVocab
-      .mockResolvedValueOnce(8); // masteredVocab
+    // Simulate DB having 50 A1 words with frequency data — exactly the gate target
+    const topWords = Array.from({ length: 50 }, (_, i) => ({ id: `v${i}` }));
+    mockPrisma.vocabulary.findMany.mockResolvedValue(topWords);
+    mockPrisma.grammarRule.count.mockResolvedValue(10); // totalGrammar
     mockPrisma.userGrammarRule.count
-      .mockResolvedValueOnce(5) // totalGrammar (via grammarRule.count below)
       .mockResolvedValueOnce(8) // masteredGrammar
       .mockResolvedValueOnce(5); // interactedGrammar
-
-    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1200 }]);
-    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1100 }]);
-
-    // grammarRule.count mock for totalGrammar
-    mockPrisma.grammarRule.findMany = vi.fn().mockResolvedValue([]);
+    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1100 }]);
+    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1050 }]);
+    mockPrisma.userVocabulary.count.mockResolvedValue(40); // 40 of top-50 mastered
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
-    // vocabMastery = 8/10 = 0.8
-    expect(result.vocabMastery).toBeCloseTo(0.8, 2);
+    expect(result.freqCoverageCount).toBe(40);
+    expect(result.freqCoverageTarget).toBe(50);
   });
 
   it('percentComplete is between 0 and 100', async () => {
     mockPrisma.userProgress.findUnique.mockResolvedValue({ id: 'p', cefrLevel: 'B1' });
 
-    mockPrisma.userVocabulary.count.mockResolvedValue(5);
-    mockPrisma.userGrammarRule.count.mockResolvedValue(3);
-    mockPrisma.grammarRule.findMany = vi.fn().mockResolvedValue([]);
+    mockPrisma.vocabulary.findMany.mockResolvedValue(
+      Array.from({ length: 70 }, (_, i) => ({ id: `v${i}` }))
+    );
+    mockPrisma.grammarRule.count.mockResolvedValue(8);
+    mockPrisma.userGrammarRule.count
+      .mockResolvedValueOnce(5) // masteredGrammar
+      .mockResolvedValueOnce(4); // interactedGrammar
     mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1400 }]);
     mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1300 }]);
+    mockPrisma.userVocabulary.count.mockResolvedValue(35); // mastered from top-70
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
     expect(result.percentComplete).toBeGreaterThanOrEqual(0);
