@@ -23,6 +23,7 @@
 	let userOverride: boolean | null = $state(null);
 	let showKeyboardHelp = $state(false);
 	let triggerConfetti = $state(false);
+	let confettiFired = $state(false);
 
 	// Copy-to-clipboard
 	let reviewCopied = $state(false);
@@ -72,7 +73,8 @@
 
 	// Trigger confetti on perfect session
 	$effect(() => {
-		if (isFinished && accuracyPct === 100 && sessionResults.length > 0 && !triggerConfetti) {
+		if (isFinished && accuracyPct === 100 && sessionResults.length > 0 && !confettiFired) {
+			confettiFired = true;
 			triggerConfetti = true;
 			setTimeout(() => {
 				triggerConfetti = false;
