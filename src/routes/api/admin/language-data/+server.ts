@@ -7,26 +7,76 @@ function adminOnly(locals: App.Locals) {
 }
 
 /** GET /api/admin/language-data?languageId=xxx
- *  Export all vocabulary + grammar rules for a language as a seed-compatible JSON snapshot. */
+ *  Export vocabulary + grammar rules as a seed-compatible JSON snapshot.
+ *  Omit languageId (or pass "all") to export every language in one file. */
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (adminOnly(locals)) return json({ error: 'Unauthorized' }, { status: 403 });
 
 	const languageId = url.searchParams.get('languageId');
-	if (!languageId) return json({ error: 'languageId is required' }, { status: 400 });
+	const exportAll = !languageId || languageId === 'all';
+
+	const vocabSelect = {
+		lemma: true,
+		meanings: { select: { value: true, partOfSpeech: true } },
+		partOfSpeech: true,
+		gender: true,
+		plural: true,
+		isBeginner: true
+	} as const;
+
+	if (exportAll) {
+		const languages = await prisma.language.findMany({ orderBy: { name: 'asc' } });
+		const date = new Date().toISOString();
+
+		const languagesData = await Promise.all(
+			languages.map(async (language) => {
+				const [vocabulary, grammarRules] = await Promise.all([
+					prisma.vocabulary.findMany({
+						where: { languageId: language.id },
+						orderBy: [{ partOfSpeech: 'asc' }, { lemma: 'asc' }],
+						select: vocabSelect
+					}),
+					prisma.grammarRule.findMany({
+						where: { languageId: language.id },
+						orderBy: { level: 'asc' },
+						include: { dependencies: { select: { title: true } } }
+					})
+				]);
+				return {
+					language: { code: language.code, name: language.name, flag: language.flag },
+					vocabulary: vocabulary.map((v) => ({
+						lemma: v.lemma,
+						meanings: v.meanings,
+						partOfSpeech: v.partOfSpeech,
+						gender: v.gender,
+						plural: v.plural,
+						isBeginner: v.isBeginner
+					})),
+					grammarRules: grammarRules.map((g) => ({
+						title: g.title,
+						description: g.description,
+						level: g.level,
+						dependencies: g.dependencies.map((d) => d.title)
+					}))
+				};
+			})
+		);
+
+		const exportData = { exportedAt: date, languages: languagesData };
+		return new Response(JSON.stringify(exportData, null, 2), {
+			headers: {
+				'Content-Type': 'application/json',
+				'Content-Disposition': `attachment; filename="all-language-data-${date.slice(0, 10)}.json"`
+			}
+		});
+	}
 
 	const [language, vocabulary, grammarRules] = await Promise.all([
 		prisma.language.findUnique({ where: { id: languageId } }),
 		prisma.vocabulary.findMany({
 			where: { languageId },
 			orderBy: [{ partOfSpeech: 'asc' }, { lemma: 'asc' }],
-			select: {
-				lemma: true,
-				meanings: true,
-				partOfSpeech: true,
-				gender: true,
-				plural: true,
-				isBeginner: true
-			}
+			select: vocabSelect
 		}),
 		prisma.grammarRule.findMany({
 			where: { languageId },
@@ -66,8 +116,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 /** POST /api/admin/language-data
  *  Import (upsert) vocabulary and/or grammar rules from a JSON snapshot.
- *  Body: { languageId: string, vocabulary?: VocabEntry[], grammarRules?: GrammarRuleEntry[] }
- *  Vocabulary is matched by lemma — updates meaning/pos/gender/plural if changed.
+ *
+ *  Single-language: { languageId: string, vocabulary?: VocabEntry[], grammarRules?: GrammarRuleEntry[] }
+ *  All-languages:   { languages: [{ language: { code }, vocabulary?, grammarRules? }] }
+ *
+ *  Vocabulary is matched by lemma — updates pos/gender/plural if changed.
  *  Grammar rules are matched by title — updates description/level if changed. */
 export const POST: RequestHandler = async ({ locals, request }) => {
 	if (adminOnly(locals)) return json({ error: 'Unauthorized' }, { status: 403 });
@@ -79,18 +132,66 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		return json({ error: 'Invalid JSON body' }, { status: 400 });
 	}
 
+	// ── Multi-language format ──────────────────────────────────────────────────
+	if (Array.isArray(body.languages)) {
+		let totalVocabCreated = 0,
+			totalVocabUpdated = 0;
+		let totalGrammarCreated = 0,
+			totalGrammarUpdated = 0;
+		let languagesProcessed = 0;
+
+		for (const entry of body.languages) {
+			const code = entry?.language?.code;
+			if (!code) continue;
+			const language = await prisma.language.findFirst({ where: { code } });
+			if (!language) continue;
+			languagesProcessed++;
+
+			const { vc, vu, gc, gu } = await upsertLanguageData(
+				language.id,
+				entry.vocabulary,
+				entry.grammarRules
+			);
+			totalVocabCreated += vc;
+			totalVocabUpdated += vu;
+			totalGrammarCreated += gc;
+			totalGrammarUpdated += gu;
+		}
+
+		return json({
+			success: true,
+			languagesProcessed,
+			vocab: { created: totalVocabCreated, updated: totalVocabUpdated },
+			grammar: { created: totalGrammarCreated, updated: totalGrammarUpdated }
+		});
+	}
+
+	// ── Single-language format ────────────────────────────────────────────────
 	const { languageId, vocabulary, grammarRules } = body;
 	if (!languageId) return json({ error: 'languageId is required' }, { status: 400 });
 
 	const language = await prisma.language.findUnique({ where: { id: languageId } });
 	if (!language) return json({ error: 'Language not found' }, { status: 404 });
 
-	let vocabCreated = 0,
-		vocabUpdated = 0;
-	let grammarCreated = 0,
-		grammarUpdated = 0;
+	const { vc, vu, gc, gu } = await upsertLanguageData(languageId, vocabulary, grammarRules);
 
-	// --- Vocabulary upsert ---
+	return json({
+		success: true,
+		vocab: { created: vc, updated: vu },
+		grammar: { created: gc, updated: gu }
+	});
+};
+
+async function upsertLanguageData(
+	languageId: string,
+	vocabulary: any[] | undefined,
+	grammarRules: any[] | undefined
+): Promise<{ vc: number; vu: number; gc: number; gu: number }> {
+	let vc = 0,
+		vu = 0,
+		gc = 0,
+		gu = 0;
+
 	if (Array.isArray(vocabulary)) {
 		for (const v of vocabulary) {
 			if (!v.lemma) continue;
@@ -126,7 +227,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 						}
 					});
 				}
-				vocabUpdated++;
+				vu++;
 			} else {
 				await prisma.vocabulary.create({
 					data: {
@@ -141,12 +242,11 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 						languageId
 					}
 				});
-				vocabCreated++;
+				vc++;
 			}
 		}
 	}
 
-	// --- Grammar rules upsert (two-pass: create then connect deps) ---
 	if (Array.isArray(grammarRules)) {
 		// First pass: upsert rules without dependencies
 		for (const g of grammarRules) {
@@ -162,7 +262,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 						level: g.level ?? existing.level
 					}
 				});
-				grammarUpdated++;
+				gu++;
 			} else {
 				await prisma.grammarRule.create({
 					data: {
@@ -172,7 +272,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 						languageId
 					}
 				});
-				grammarCreated++;
+				gc++;
 			}
 		}
 
@@ -193,12 +293,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		}
 	}
 
-	return json({
-		success: true,
-		vocab: { created: vocabCreated, updated: vocabUpdated },
-		grammar: { created: grammarCreated, updated: grammarUpdated }
-	});
-};
+	return { vc, vu, gc, gu };
+}
 
 /** DELETE /api/admin/language-data?languageId=xxx&scope=vocab|grammar|all
  *  Removes all vocabulary and/or grammar rules for the given language.

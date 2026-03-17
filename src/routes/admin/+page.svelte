@@ -11,6 +11,14 @@
 	// Language data management state
 	let selectedLangId = $state('');
 	let isExporting = $state(false);
+	let isExportingAll = $state(false);
+	let isExportingFull = $state(false);
+	let importAllFile = $state<FileList | undefined>();
+	let isImportingAll = $state(false);
+	let showImportAllConfirm = $state(false);
+	let importFullFile = $state<FileList | undefined>();
+	let isImportingFull = $state(false);
+	let showImportFullConfirm = $state(false);
 	let isImporting = $state(false);
 	let importFile = $state<FileList | undefined>();
 	let langDataMsg = $state('');
@@ -152,8 +160,15 @@
 	async function exportLangData() {
 		if (!selectedLangId) return;
 		isExporting = true;
-		const res = await fetch(`/api/admin/language-data?languageId=${selectedLangId}`);
+		await downloadBlob(
+			`/api/admin/language-data?languageId=${selectedLangId}`,
+			'language-data.json'
+		);
 		isExporting = false;
+	}
+
+	async function downloadBlob(url: string, fallbackName: string) {
+		const res = await fetch(url);
 		if (!res.ok) {
 			langDataMsg = 'Export failed.';
 			langDataError = true;
@@ -162,15 +177,89 @@
 		const blob = await res.blob();
 		const cd = res.headers.get('Content-Disposition') || '';
 		const fnMatch = cd.match(/filename="([^"]+)"/);
-		const filename = fnMatch ? fnMatch[1] : 'language-data.json';
-		const url = URL.createObjectURL(blob);
+		const filename = fnMatch ? fnMatch[1] : fallbackName;
 		const a = document.createElement('a');
-		a.href = url;
+		a.href = URL.createObjectURL(blob);
 		a.download = filename;
 		a.click();
-		URL.revokeObjectURL(url);
+		URL.revokeObjectURL(a.href);
 		langDataMsg = `Exported ${filename}`;
 		langDataError = false;
+	}
+
+	async function exportAllLangData() {
+		isExportingAll = true;
+		await downloadBlob('/api/admin/language-data', 'all-language-data.json');
+		isExportingAll = false;
+	}
+
+	async function exportEverything() {
+		isExportingFull = true;
+		await downloadBlob('/api/admin/export', 'full-export.json');
+		isExportingFull = false;
+	}
+
+	async function importAllLangData() {
+		if (!importAllFile?.length) return;
+		isImportingAll = true;
+		showImportAllConfirm = false;
+		const text = await importAllFile[0].text();
+		try {
+			const payload = JSON.parse(text);
+			const res = await fetch('/api/admin/language-data', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			const result = await res.json();
+			if (!res.ok) {
+				langDataMsg = result.error || 'Import failed.';
+				langDataError = true;
+			} else {
+				const v = result.vocab;
+				const g = result.grammar;
+				langDataMsg = `All-languages import complete — ${result.languagesProcessed} languages · Vocab: +${v.created} created, ${v.updated} updated · Grammar: +${g.created} created, ${g.updated} updated`;
+				langDataError = false;
+				await invalidateAll();
+			}
+		} catch {
+			langDataMsg = 'Invalid JSON file.';
+			langDataError = true;
+		} finally {
+			isImportingAll = false;
+			importAllFile = undefined;
+		}
+	}
+
+	async function importFullData() {
+		if (!importFullFile?.length) return;
+		isImportingFull = true;
+		showImportFullConfirm = false;
+		const text = await importFullFile[0].text();
+		try {
+			const payload = JSON.parse(text);
+			const res = await fetch('/api/admin/export', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			const result = await res.json();
+			if (!res.ok) {
+				langDataMsg = result.error || 'Import failed.';
+				langDataError = true;
+			} else {
+				const s = result.stats;
+				langDataMsg = `Full import complete — ${s.languages.processed} languages · Vocab: +${s.languages.vocabCreated} created, ${s.languages.vocabUpdated} updated · Grammar: +${s.languages.grammarCreated} created, ${s.languages.grammarUpdated} updated · Users updated: ${s.users.updated} (${s.users.skipped} skipped) · Progress entries: ${s.users.progressUpserted} · Classes: +${s.classes.created} created, ${s.classes.updated} updated`;
+				langDataError = false;
+				await invalidateAll();
+			}
+		} catch {
+			langDataMsg = 'Invalid JSON file.';
+			langDataError = true;
+		} finally {
+			isImportingFull = false;
+			importFullFile = undefined;
+		}
 	}
 
 	async function importLangData() {
@@ -762,6 +851,79 @@
 			Export a full JSON snapshot of vocabulary and grammar rules for any language — copy it into
 			your seed scripts for source control. Import a JSON file to upsert entries into the database.
 		</p>
+
+		<div class="lang-bulk-exports">
+			<div class="lang-action-group">
+				<span class="lang-action-label">All languages</span>
+				<button class="seed-btn" onclick={exportAllLangData} disabled={isExportingAll}>
+					{isExportingAll ? 'Exporting…' : 'Export'}
+				</button>
+				{#if !showImportAllConfirm}
+					<div class="lang-import-row">
+						<input type="file" accept=".json" bind:files={importAllFile} class="file-input" />
+						<button
+							class="seed-btn"
+							onclick={() => (showImportAllConfirm = true)}
+							disabled={!importAllFile?.length}
+						>
+							Import…
+						</button>
+					</div>
+				{:else}
+					<div class="delete-confirm">
+						<span class="delete-warning"
+							>Upsert vocab + grammar for all languages from this file?</span
+						>
+						<button
+							class="delete-confirm-btn"
+							onclick={importAllLangData}
+							disabled={isImportingAll}
+						>
+							{isImportingAll ? 'Importing…' : 'Confirm'}
+						</button>
+						<button class="cancel-delete-btn" onclick={() => (showImportAllConfirm = false)}>
+							Cancel
+						</button>
+					</div>
+				{/if}
+			</div>
+
+			<div class="lang-action-group">
+				<span class="lang-action-label">Everything</span>
+				<button
+					class="seed-btn seed-btn-full"
+					onclick={exportEverything}
+					disabled={isExportingFull}
+				>
+					{isExportingFull ? 'Exporting…' : 'Export'}
+				</button>
+				{#if !showImportFullConfirm}
+					<div class="lang-import-row">
+						<input type="file" accept=".json" bind:files={importFullFile} class="file-input" />
+						<button
+							class="seed-btn seed-btn-full"
+							onclick={() => (showImportFullConfirm = true)}
+							disabled={!importFullFile?.length}
+						>
+							Import…
+						</button>
+					</div>
+				{:else}
+					<div class="delete-confirm">
+						<span class="delete-warning"
+							>Import language data, users, and classes from this file? Existing records will be
+							updated.</span
+						>
+						<button class="delete-confirm-btn" onclick={importFullData} disabled={isImportingFull}>
+							{isImportingFull ? 'Importing…' : 'Confirm'}
+						</button>
+						<button class="cancel-delete-btn" onclick={() => (showImportFullConfirm = false)}>
+							Cancel
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
 
 		<div class="lang-data-controls">
 			<div class="form-group mb-0">
@@ -1669,6 +1831,23 @@
 		color: #6b7280;
 		font-size: 0.875rem;
 		margin: 0 0 1.25rem 0;
+	}
+
+	.lang-bulk-exports {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding-bottom: 1.25rem;
+		margin-bottom: 1.25rem;
+		border-bottom: 1px solid var(--card-border, #e5e7eb);
+	}
+
+	.seed-btn-full {
+		background-color: #0f766e;
+	}
+
+	.seed-btn-full:hover:not(:disabled) {
+		background-color: #0d6b63;
 	}
 
 	.lang-data-controls {

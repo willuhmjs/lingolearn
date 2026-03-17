@@ -16,6 +16,8 @@ services:
     restart: always
     ports:
       - '3000:3000'
+    environment:
+      - BODY_SIZE_LIMIT=52428800
     env_file:
       - .env
 

@@ -70,6 +70,8 @@ spec:
                 secretKeyRef:
                   name: lingolearn-secrets
                   key: DEFAULT_LLM_MODEL
+            - name: BODY_SIZE_LIMIT
+              value: '52428800'
           resources:
             requests:
               memory: '2Gi'
