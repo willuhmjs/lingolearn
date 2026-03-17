@@ -607,6 +607,7 @@
   .profile-container {
     max-width: 640px;
     margin: 0 auto;
+    padding: 2rem;
     color: var(--text-color, #334155);
   }
 
@@ -1310,7 +1311,7 @@
 
   @media (max-width: 640px) {
     .profile-container {
-      padding: 0 0.5rem;
+      padding: 1rem 0.75rem;
     }
     .profile-header h1 {
       font-size: 1.75rem;

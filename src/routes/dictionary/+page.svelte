@@ -490,7 +490,7 @@ table.vocab-table td strong{font-size:.9rem;font-weight:800;color:#0f172a}`;
       return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">${googleFont}<title>LingoLearn — ${dEscHtml(lang)}</title><style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:${baseFontStack};background:#fff;color:#1e293b}
-.header{background:#2563eb;color:#fff;padding:1.75rem 2.5rem 1.375rem;border-bottom:4px solid #58cc02}
+.header{background:#2563eb;color:#fff;padding:1.75rem 2.5rem 1.375rem;border-bottom:4px solid #60a5fa}
 .brand{display:flex;align-items:center;gap:.875rem;margin-bottom:.875rem}
 .brand-logo{width:2.5rem;height:2.5rem;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
 .brand-name{font-size:1.75rem;font-weight:900;letter-spacing:-.025em;line-height:1}
@@ -499,7 +499,7 @@ body{font-family:${baseFontStack};background:#fff;color:#1e293b}
 .meta-item{display:flex;align-items:center;gap:.4rem;font-weight:700}
 .meta-label{opacity:.75;font-weight:600}
 .content{padding:1.625rem 2.5rem 2rem}
-.footer{padding:.875rem 2.5rem;border-top:3px solid #58cc02;display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:#94a3b8;margin-top:1rem}
+.footer{padding:.875rem 2.5rem;border-top:3px solid #60a5fa;display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:#94a3b8;margin-top:1rem}
 .footer-brand{font-weight:900;font-size:.82rem;color:#2563eb}
 ${sectionHeadCss}${sharedBadges}${grammarCss}${vocabCss}${printMedia}
 table.vocab-table th{background:#2563eb;color:#fff}
@@ -522,7 +522,7 @@ table.vocab-table th{background:#2563eb;color:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:${baseFontStack};background:#f1f5f9;color:#1e293b}
 .header{background:#fff;border-bottom:1px solid #e2e8f0}
-.header-stripe{height:5px;background:linear-gradient(90deg,#2563eb 0%,#1cb0f6 50%,#58cc02 100%)}
+.header-stripe{height:5px;background:linear-gradient(90deg,#1d4ed8 0%,#2563eb 50%,#60a5fa 100%)}
 .header-inner{padding:1.5rem 2.5rem;display:flex;justify-content:space-between;align-items:flex-end;gap:1.5rem;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:.625rem}
 .brand-icon-wrap{color:#2563eb}
@@ -559,9 +559,9 @@ table.vocab-table th{background:#1e293b;color:#94a3b8}
     return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">${googleFont}<title>LingoLearn — ${dEscHtml(lang)}</title><style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:${baseFontStack};font-size:.8rem;color:#1e293b;background:#fff}
-.header{padding:.6rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #58cc02;background:#fff}
+.header{padding:.6rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #60a5fa;background:#fff}
 .brand{font-size:1rem;font-weight:900;color:#2563eb;letter-spacing:-.02em;display:flex;align-items:center;gap:.4rem}
-.brand-icon{color:#58cc02}
+.brand-icon{color:#2563eb}
 .header-meta{font-size:.7rem;color:#64748b;text-align:right;line-height:1.65;font-weight:600}
 .content{padding:.875rem 1.5rem 1.5rem}
 .footer{border-top:1px solid #e2e8f0;padding:.4rem 1.5rem;font-size:.67rem;color:#94a3b8;text-align:right;margin-top:.5rem;font-weight:600}
@@ -2628,7 +2628,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   .tp-header-bar {
     height: 24%;
     background: #2563eb;
-    border-bottom: 3px solid #58cc02;
+    border-bottom: 3px solid #60a5fa;
     flex-shrink: 0;
   }
 
@@ -2678,7 +2678,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 
   .tp-top-accent {
     height: 3px;
-    background: linear-gradient(90deg, #2563eb, #1cb0f6, #58cc02);
+    background: linear-gradient(90deg, #1d4ed8, #2563eb, #60a5fa);
     flex-shrink: 0;
   }
 
@@ -2724,7 +2724,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     align-items: center;
     justify-content: space-between;
     padding: 4px 5px;
-    border-bottom: 2px solid #58cc02;
+    border-bottom: 2px solid #60a5fa;
     flex-shrink: 0;
   }
 

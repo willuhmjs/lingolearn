@@ -239,8 +239,8 @@
 <style>
   .friends-container {
     max-width: 1000px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    margin: 0 auto;
+    padding: 2rem;
   }
   .friends-header {
     margin-bottom: 2rem;
@@ -343,6 +343,7 @@
   .btn-primary {
     background: #3b82f6;
     color: white;
+    box-shadow: 0 4px 0 #1d4ed8;
   }
   .btn-success {
     background: #10b981;
