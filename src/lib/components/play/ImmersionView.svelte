@@ -114,13 +114,14 @@
     wordInflightSet.clear();
 
     const dests = langConfig.destinations;
-    loadingDestination = dests[Math.floor(Math.random() * dests.length)];
+    const chosenDest = dests[Math.floor(Math.random() * dests.length)];
+    loadingDestination = chosenDest;
 
     try {
       const res = await fetch('/api/immersion/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaType: selectedMediaType })
+        body: JSON.stringify({ mediaType: selectedMediaType, destinationCity: chosenDest?.city })
       });
       if (!res.ok) {
         const err = await res.json();

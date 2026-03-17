@@ -221,6 +221,7 @@ export async function POST(event) {
   try {
     const body = await request.json().catch(() => ({}));
     const requestedMediaType = body.mediaType as MediaType | 'random' | undefined;
+    const requestedDestinationCity = body.destinationCity as string | undefined;
 
     const mediaType: MediaType =
       !requestedMediaType || requestedMediaType === 'random'
@@ -233,7 +234,7 @@ export async function POST(event) {
     const languageName = locals.user.activeLanguage?.name || 'German';
     const activeLanguageId = locals.user.activeLanguage?.id;
 
-    // Pick a random travel destination for this session
+    // Pick a travel destination for this session — use the client's choice if provided
     let destination: { city: string; country: string; emoji: string; description: string } | null =
       null;
     if (activeLanguageId) {
@@ -242,7 +243,10 @@ export async function POST(event) {
         select: { city: true, country: true, emoji: true, description: true }
       });
       if (destinations.length > 0) {
-        destination = destinations[Math.floor(Math.random() * destinations.length)];
+        const match = requestedDestinationCity
+          ? destinations.find((d) => d.city === requestedDestinationCity)
+          : null;
+        destination = match ?? destinations[Math.floor(Math.random() * destinations.length)];
       }
     }
 
