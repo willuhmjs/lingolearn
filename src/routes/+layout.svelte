@@ -1106,6 +1106,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		width: 100%;
+		box-sizing: border-box;
 		padding: 0.75rem 1rem;
 		border: none;
 		background: transparent;
