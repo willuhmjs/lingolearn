@@ -76,11 +76,22 @@ describe('CEFR_CONFIG', () => {
     }
   });
 
-  it('vocab and grammar mastery thresholds are between 0 and 1', () => {
-    expect(CEFR_CONFIG.VOCAB_MASTERY_THRESHOLD).toBeGreaterThan(0);
-    expect(CEFR_CONFIG.VOCAB_MASTERY_THRESHOLD).toBeLessThanOrEqual(1);
+  it('grammar mastery threshold is between 0 and 1', () => {
     expect(CEFR_CONFIG.GRAMMAR_MASTERY_THRESHOLD).toBeGreaterThan(0);
     expect(CEFR_CONFIG.GRAMMAR_MASTERY_THRESHOLD).toBeLessThanOrEqual(1);
+  });
+
+  it('VOCAB_FREQ_GATE has ascending targets across levels', () => {
+    const gate = CEFR_CONFIG.VOCAB_FREQ_GATE;
+    expect(gate.A1).toBeLessThan(gate.A2);
+    expect(gate.A2).toBeLessThan(gate.B1);
+    expect(gate.B1).toBeLessThan(gate.B2);
+    expect(gate.B2).toBeLessThan(gate.C1);
+  });
+
+  it('GRAMMAR_MIN_INTERACTION is a positive integer', () => {
+    expect(CEFR_CONFIG.GRAMMAR_MIN_INTERACTION).toBeGreaterThan(0);
+    expect(Number.isInteger(CEFR_CONFIG.GRAMMAR_MIN_INTERACTION)).toBe(true);
   });
 });
 

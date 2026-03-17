@@ -42,27 +42,25 @@ export const CEFR_CONFIG = {
     C1: 1950
   } as const,
 
-  // Minimum percentage of encountered vocabulary that must be KNOWN or MASTERED to level up
-  VOCAB_MASTERY_THRESHOLD: 0.8,
+  // Number of top-frequency vocab words at each level that must be KNOWN/MASTERED to level up.
+  // The lesson generator surfaces words in corpus-frequency order (ASC), so users encounter
+  // these before any AI-generated enrichment words. The gate is immune to DB growth: adding
+  // new AI-generated words doesn't change which words rank highest by corpus frequency.
+  VOCAB_FREQ_GATE: {
+    A1: 50,
+    A2: 60,
+    B1: 70,
+    B2: 80,
+    C1: 90
+  } as const,
 
-  // Percentage of grammar rules the user has INTERACTED with that must be KNOWN or MASTERED to level up.
-  // Uses interacted rules as denominator (not all DB rules) so unencountered rules don't block progress.
+  // Percentage of interacted grammar rules that must be KNOWN/MASTERED to level up.
   GRAMMAR_MASTERY_THRESHOLD: 0.9,
 
-  // Minimum number of words a user must have encountered (non-UNSEEN) at a level
-  // before they can level up. Prevents levelling up on a tiny sample of words.
-  // Set to 50 as a soft floor — lenient enough that misplaced users aren't stuck,
-  // but prevents level-up after only a handful of reviews.
-  MIN_ENCOUNTERED_VOCAB: 50,
-
-  // Frequency threshold for high-value words (corpus rank ≤ this are considered "common").
-  // Mastering common words contributes a bonus to vocab mastery so the gate rewards
-  // learning high-utility words, not just any 50 words.
-  FREQ_BONUS_RANK_THRESHOLD: 1000,
-  // How much the frequency-weighted mastery ratio is blended in.
-  // Final mastery = max(rawMastery, weightedMastery * FREQ_WEIGHT_BLEND)
-  // A blend < 1.0 means frequency-weighting alone can't fully satisfy the threshold.
-  FREQ_WEIGHT_BLEND: 0.92,
+  // Minimum number of grammar rules at the current level the user must have interacted with
+  // before the mastery threshold applies. Prevents levelling up without ever touching grammar.
+  // Self-sizing: if the level has fewer rules than this, all of them are required.
+  GRAMMAR_MIN_INTERACTION: 3,
 
   // ELO decay configuration (for items not reviewed recently)
   DECAY: {
