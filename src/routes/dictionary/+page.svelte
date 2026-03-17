@@ -350,14 +350,14 @@
 	}
 
 	function buildGrammarSection(rules: any[]): string {
-		if (!rules.length) return '<p style="color:#64748b;font-style:italic">No grammar rules available.</p>';
+		if (!rules.length)
+			return '<p style="color:#64748b;font-style:italic">No grammar rules available.</p>';
 		return rules
 			.map((rule) => {
 				const guideHtml = rule.guide ? (marked(rule.guide) as string) : '';
-				const deps =
-					rule.dependencies?.length
-						? `<p style="font-size:.75rem;color:#64748b;margin:.5rem 0 0">Prerequisites: ${rule.dependencies.map((d: any) => dEscHtml(d.title)).join(', ')}</p>`
-						: '';
+				const deps = rule.dependencies?.length
+					? `<p style="font-size:.75rem;color:#64748b;margin:.5rem 0 0">Prerequisites: ${rule.dependencies.map((d: any) => dEscHtml(d.title)).join(', ')}</p>`
+					: '';
 				return `<div class="gr-rule">
 <div class="gr-rule-head">
   <span class="gr-rule-title">${dEscHtml(rule.title)}</span>
@@ -371,10 +371,7 @@ ${guideHtml ? `<div class="gr-guide markdown-body">${guideHtml}</div>` : ''}
 			.join('');
 	}
 
-	function buildVocabTable(
-		vocab: VocabExportRow[],
-		fields: typeof dictExportFields
-	): string {
+	function buildVocabTable(vocab: VocabExportRow[], fields: typeof dictExportFields): string {
 		const colDefs = [
 			{ key: 'word' as const, label: 'Word' },
 			{ key: 'meaning' as const, label: 'Meaning' },
@@ -468,18 +465,24 @@ table.vocab-table td strong{font-size:.9rem;font-weight:800;color:#0f172a}`;
 
 		const printMedia = `@media print{@page{margin:15mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
 
-		const grammarOnlyHead = content === 'grammar'
-			? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>` : '';
-		const vocabOnlyHead = content === 'vocabulary'
-			? `<div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>` : '';
+		const grammarOnlyHead =
+			content === 'grammar'
+				? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>`
+				: '';
+		const vocabOnlyHead =
+			content === 'vocabulary'
+				? `<div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>`
+				: '';
 
 		const grammarBlock = showGrammar
-			? (content === 'both' ? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>` : '')
-				+ buildGrammarSection(rules)
+			? (content === 'both'
+					? `<div class="section-head">Grammar Guide <span class="count-pill">${rules.length} rules</span></div>`
+					: '') + buildGrammarSection(rules)
 			: '';
 		const vocabBlock = showVocab
-			? (content === 'both' ? `<div class="section-divider"></div><div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>` : '')
-				+ buildVocabTable(vocab, fields)
+			? (content === 'both'
+					? `<div class="section-divider"></div><div class="section-head">Vocabulary List <span class="count-pill">${vocab.length} words</span></div>`
+					: '') + buildVocabTable(vocab, fields)
 			: '';
 
 		// ── Classic: Blue header, white brand, green bottom accent ──────────
@@ -575,7 +578,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 </body></html>`;
 	}
 
-
 	async function generateDictPdf() {
 		const win = window.open('', '_blank');
 		if (!win) {
@@ -641,11 +643,23 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 		</div>
 		<button
 			class="btn-export-pdf no-print"
-			onclick={() => (document.getElementById('dict-export-modal') as HTMLDialogElement)?.showModal()}
+			onclick={() =>
+				(document.getElementById('dict-export-modal') as HTMLDialogElement)?.showModal()}
 			title="Export grammar and vocabulary as PDF"
 		>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem">
-				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				style="width:1rem;height:1rem"
+			>
+				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline
+					points="14 2 14 8 20 8"
+				></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"
+				></line>
 			</svg>
 			Export PDF
 		</button>
@@ -976,7 +990,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 							<span>A–Z</span>
 						</button>
 					</div>
-					
 				</div>
 			</div>
 
@@ -1181,14 +1194,32 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 		<!-- Header -->
 		<div class="dex-header">
 			<div class="dex-title">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="19" height="19" aria-hidden="true">
-					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					width="19"
+					height="19"
+					aria-hidden="true"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline
+						points="14 2 14 8 20 8"
+					/><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
 				</svg>
 				Export Reference PDF
 			</div>
 			<form method="dialog">
 				<button class="dex-close" aria-label="Close">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						width="15"
+						height="15"
+						><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+					>
 				</button>
 			</form>
 		</div>
@@ -1197,17 +1228,73 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 		<div class="dex-section">
 			<p class="dex-label">What to export</p>
 			<div class="dex-content-tabs">
-				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'grammar'} onclick={() => (dictExportContent = 'grammar')}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+				<button
+					type="button"
+					class="dex-content-tab"
+					class:active={dictExportContent === 'grammar'}
+					onclick={() => (dictExportContent = 'grammar')}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="15"
+						height="15"
+						aria-hidden="true"
+						><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
+							d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+						/></svg
+					>
 					Grammar Guide
 					<span class="dex-count-pill">{grammarRules.length}</span>
 				</button>
-				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'vocabulary'} onclick={() => (dictExportContent = 'vocabulary')}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+				<button
+					type="button"
+					class="dex-content-tab"
+					class:active={dictExportContent === 'vocabulary'}
+					onclick={() => (dictExportContent = 'vocabulary')}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="15"
+						height="15"
+						aria-hidden="true"
+						><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+							d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+						/></svg
+					>
 					Vocabulary List
 				</button>
-				<button type="button" class="dex-content-tab" class:active={dictExportContent === 'both'} onclick={() => (dictExportContent = 'both')}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+				<button
+					type="button"
+					class="dex-content-tab"
+					class:active={dictExportContent === 'both'}
+					onclick={() => (dictExportContent = 'both')}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="15"
+						height="15"
+						aria-hidden="true"
+						><rect x="3" y="3" width="7" height="7" /><rect
+							x="14"
+							y="3"
+							width="7"
+							height="7"
+						/><rect x="3" y="14" width="7" height="7" /><rect
+							x="14"
+							y="14"
+							width="7"
+							height="7"
+						/></svg
+					>
 					Both
 				</button>
 			</div>
@@ -1217,33 +1304,106 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 		<div class="dex-section">
 			<p class="dex-label">Template</p>
 			<div class="dex-template-picker">
-				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'classic'} onclick={() => (dictExportTemplate = 'classic')}>
+				<button
+					type="button"
+					class="dex-tmpl-card"
+					class:selected={dictExportTemplate === 'classic'}
+					onclick={() => (dictExportTemplate = 'classic')}
+				>
 					<div class="dex-tp tp-classic">
 						<div class="tp-header-bar"></div>
-						<div class="tp-brand-row"><div class="tp-logo-dot"></div><div class="tp-brand-lines"><div class="tp-line tp-line-wide"></div><div class="tp-line tp-line-narrow"></div></div></div>
-						<div class="tp-meta-dots"><div class="tp-dot"></div><div class="tp-dot"></div><div class="tp-dot"></div></div>
-						<div class="tp-table-head"></div><div class="tp-table-row"></div><div class="tp-table-row tp-row-alt"></div><div class="tp-table-row"></div>
+						<div class="tp-brand-row">
+							<div class="tp-logo-dot"></div>
+							<div class="tp-brand-lines">
+								<div class="tp-line tp-line-wide"></div>
+								<div class="tp-line tp-line-narrow"></div>
+							</div>
+						</div>
+						<div class="tp-meta-dots">
+							<div class="tp-dot"></div>
+							<div class="tp-dot"></div>
+							<div class="tp-dot"></div>
+						</div>
+						<div class="tp-table-head"></div>
+						<div class="tp-table-row"></div>
+						<div class="tp-table-row tp-row-alt"></div>
+						<div class="tp-table-row"></div>
 					</div>
 					<span class="dex-tmpl-name">Classic</span>
-					{#if dictExportTemplate === 'classic'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+					{#if dictExportTemplate === 'classic'}<span class="dex-check"
+							><svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="3"
+								width="11"
+								height="11"><polyline points="20 6 9 17 4 12" /></svg
+							></span
+						>{/if}
 				</button>
-				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'modern'} onclick={() => (dictExportTemplate = 'modern')}>
+				<button
+					type="button"
+					class="dex-tmpl-card"
+					class:selected={dictExportTemplate === 'modern'}
+					onclick={() => (dictExportTemplate = 'modern')}
+				>
 					<div class="dex-tp tp-modern">
 						<div class="tp-top-accent"></div>
-						<div class="tp-dark-header"><div class="tp-line tp-line-green"></div><div class="tp-line tp-line-narrow tp-line-muted"></div></div>
+						<div class="tp-dark-header">
+							<div class="tp-line tp-line-green"></div>
+							<div class="tp-line tp-line-narrow tp-line-muted"></div>
+						</div>
 						<div class="tp-summary-chip"></div>
-						<div class="tp-card-wrap"><div class="tp-table-head tp-head-dark"></div><div class="tp-table-row"></div><div class="tp-table-row tp-row-alt"></div></div>
+						<div class="tp-card-wrap">
+							<div class="tp-table-head tp-head-dark"></div>
+							<div class="tp-table-row"></div>
+							<div class="tp-table-row tp-row-alt"></div>
+						</div>
 					</div>
 					<span class="dex-tmpl-name">Modern</span>
-					{#if dictExportTemplate === 'modern'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+					{#if dictExportTemplate === 'modern'}<span class="dex-check"
+							><svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="3"
+								width="11"
+								height="11"><polyline points="20 6 9 17 4 12" /></svg
+							></span
+						>{/if}
 				</button>
-				<button type="button" class="dex-tmpl-card" class:selected={dictExportTemplate === 'compact'} onclick={() => (dictExportTemplate = 'compact')}>
+				<button
+					type="button"
+					class="dex-tmpl-card"
+					class:selected={dictExportTemplate === 'compact'}
+					onclick={() => (dictExportTemplate = 'compact')}
+				>
 					<div class="dex-tp tp-compact">
-						<div class="tp-compact-header"><div class="tp-line tp-line-green tp-line-sm"></div><div class="tp-compact-meta"><div class="tp-dot"></div><div class="tp-dot"></div></div></div>
-						<div class="tp-table-head"></div><div class="tp-table-row tp-row-xs"></div><div class="tp-table-row tp-row-alt tp-row-xs"></div><div class="tp-table-row tp-row-xs"></div><div class="tp-table-row tp-row-alt tp-row-xs"></div><div class="tp-table-row tp-row-xs"></div>
+						<div class="tp-compact-header">
+							<div class="tp-line tp-line-green tp-line-sm"></div>
+							<div class="tp-compact-meta">
+								<div class="tp-dot"></div>
+								<div class="tp-dot"></div>
+							</div>
+						</div>
+						<div class="tp-table-head"></div>
+						<div class="tp-table-row tp-row-xs"></div>
+						<div class="tp-table-row tp-row-alt tp-row-xs"></div>
+						<div class="tp-table-row tp-row-xs"></div>
+						<div class="tp-table-row tp-row-alt tp-row-xs"></div>
+						<div class="tp-table-row tp-row-xs"></div>
 					</div>
 					<span class="dex-tmpl-name">Compact</span>
-					{#if dictExportTemplate === 'compact'}<span class="dex-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg></span>{/if}
+					{#if dictExportTemplate === 'compact'}<span class="dex-check"
+							><svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="3"
+								width="11"
+								height="11"><polyline points="20 6 9 17 4 12" /></svg
+							></span
+						>{/if}
 				</button>
 			</div>
 		</div>
@@ -1253,13 +1413,37 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 			<div class="dex-section">
 				<p class="dex-label">Vocabulary fields</p>
 				<div class="dex-field-grid">
-					<label class="dex-field-toggle" class:field-on={dictExportFields.word}><input type="checkbox" bind:checked={dictExportFields.word} /><span>Word</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.meaning}><input type="checkbox" bind:checked={dictExportFields.meaning} /><span>Meaning</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.partOfSpeech}><input type="checkbox" bind:checked={dictExportFields.partOfSpeech} /><span>Part of Speech</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.gender}><input type="checkbox" bind:checked={dictExportFields.gender} /><span>Gender</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.cefrLevel}><input type="checkbox" bind:checked={dictExportFields.cefrLevel} /><span>CEFR Level</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.srsState}><input type="checkbox" bind:checked={dictExportFields.srsState} /><span>SRS Status</span></label>
-					<label class="dex-field-toggle" class:field-on={dictExportFields.eloRating}><input type="checkbox" bind:checked={dictExportFields.eloRating} /><span>ELO Rating</span></label>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.word}
+						><input type="checkbox" bind:checked={dictExportFields.word} /><span>Word</span></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.meaning}
+						><input type="checkbox" bind:checked={dictExportFields.meaning} /><span>Meaning</span
+						></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.partOfSpeech}
+						><input type="checkbox" bind:checked={dictExportFields.partOfSpeech} /><span
+							>Part of Speech</span
+						></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.gender}
+						><input type="checkbox" bind:checked={dictExportFields.gender} /><span>Gender</span
+						></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.cefrLevel}
+						><input type="checkbox" bind:checked={dictExportFields.cefrLevel} /><span
+							>CEFR Level</span
+						></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.srsState}
+						><input type="checkbox" bind:checked={dictExportFields.srsState} /><span
+							>SRS Status</span
+						></label
+					>
+					<label class="dex-field-toggle" class:field-on={dictExportFields.eloRating}
+						><input type="checkbox" bind:checked={dictExportFields.eloRating} /><span
+							>ELO Rating</span
+						></label
+					>
 				</div>
 			</div>
 		{/if}
@@ -1269,12 +1453,37 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 			<form method="dialog">
 				<button class="dex-cancel">Cancel</button>
 			</form>
-			<button type="button" class="dex-generate" onclick={generateDictPdf} disabled={isDictExporting}>
+			<button
+				type="button"
+				class="dex-generate"
+				onclick={generateDictPdf}
+				disabled={isDictExporting}
+			>
 				{#if isDictExporting}
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" class="dex-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="14"
+						height="14"
+						aria-hidden="true"
+						class="dex-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg
+					>
 					Generating…
 				{:else}
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="14"
+						height="14"
+						aria-hidden="true"
+						><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline
+							points="14 2 14 8 20 8"
+						/><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg
+					>
 					Generate PDF
 				{/if}
 			</button>
@@ -2571,11 +2780,25 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 		flex-shrink: 0;
 	}
 
-	.tp-line-wide { width: 70%; }
-	.tp-line-narrow { width: 45%; opacity: 0.6; }
-	.tp-line-green { background: #2563eb; width: 55%; }
-	.tp-line-sm { height: 2px; width: 40%; }
-	.tp-line-muted { opacity: 0.4; width: 35%; }
+	.tp-line-wide {
+		width: 70%;
+	}
+	.tp-line-narrow {
+		width: 45%;
+		opacity: 0.6;
+	}
+	.tp-line-green {
+		background: #2563eb;
+		width: 55%;
+	}
+	.tp-line-sm {
+		height: 2px;
+		width: 40%;
+	}
+	.tp-line-muted {
+		opacity: 0.4;
+		width: 35%;
+	}
 
 	/* Field toggles */
 	.dex-field-grid {
@@ -2675,7 +2898,9 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 	}
 
 	@keyframes dex-spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.dex-spin {

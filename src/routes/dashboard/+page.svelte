@@ -681,8 +681,7 @@
 								{#if i < grammarWebNodes.length - 1}
 									<line
 										x1="50%"
-										y1="{(100 / grammarWebNodes.length) * i +
-											100 / grammarWebNodes.length / 2}%"
+										y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
 										x2="50%"
 										y2="{(100 / grammarWebNodes.length) * (i + 1) +
 											100 / grammarWebNodes.length / 2}%"
@@ -798,11 +797,32 @@
 				aria-expanded={showMemoryHealth}
 			>
 				<span class="accordion-title">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="18"
+						height="18"
+						aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg
+					>
 					Memory Health
 				</span>
-				<span class="accordion-meta">{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span>
-				<svg class="accordion-chevron" class:rotated={showMemoryHealth} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+				<span class="accordion-meta"
+					>{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span
+				>
+				<svg
+					class="accordion-chevron"
+					class:rotated={showMemoryHealth}
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					width="18"
+					height="18"
+					aria-hidden="true"
+					><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+				>
 			</button>
 			{#if showMemoryHealth}
 				<div class="accordion-body" transition:slide={{ duration: 280 }}>
@@ -871,7 +891,10 @@
 									<div class="bar-row">
 										<span class="bar-label">{point.days}d</span>
 										<div class="bar-track">
-											<div class="bar-fill forgetting-fill" style="width: {point.retentionPct}%"></div>
+											<div
+												class="bar-fill forgetting-fill"
+												style="width: {point.retentionPct}%"
+											></div>
 										</div>
 										<span class="bar-count">{point.retentionPct}%</span>
 									</div>
@@ -881,28 +904,28 @@
 					</div>
 
 					{#if data.newWordIntake && data.newWordIntake.some((w) => w.count > 0)}
-					{@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
-					<div class="intake-card">
-						<h3>New Word Intake</h3>
-						<p class="insight-desc">Words added to your vocabulary over the past 8 weeks.</p>
-						<div class="intake-bars">
-							{#each data.newWordIntake as week}
-								<div class="intake-col">
-									<span class="intake-count">{week.count > 0 ? week.count : ''}</span>
-									<div class="intake-bar-track">
-										<div
-											class="intake-bar-fill"
-											style="height:{Math.round((week.count / maxIntake) * 100)}%"
-										></div>
+						{@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
+						<div class="intake-card">
+							<h3>New Word Intake</h3>
+							<p class="insight-desc">Words added to your vocabulary over the past 8 weeks.</p>
+							<div class="intake-bars">
+								{#each data.newWordIntake as week}
+									<div class="intake-col">
+										<span class="intake-count">{week.count > 0 ? week.count : ''}</span>
+										<div class="intake-bar-track">
+											<div
+												class="intake-bar-fill"
+												style="height:{Math.round((week.count / maxIntake) * 100)}%"
+											></div>
+										</div>
+										<span class="intake-label">{week.label}</span>
 									</div>
-									<span class="intake-label">{week.label}</span>
-								</div>
-							{/each}
+								{/each}
+							</div>
 						</div>
-					</div>
-				{/if}
+					{/if}
 
-				<div class="upcoming-reviews">
+					<div class="upcoming-reviews">
 						<h3>Upcoming Reviews</h3>
 						<div class="upcoming-row">
 							<div class="upcoming-chip">
@@ -944,13 +967,38 @@
 				aria-expanded={showInsights}
 			>
 				<span class="accordion-title">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="18"
+						height="18"
+						aria-hidden="true"
+						><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
+							cx="12"
+							cy="12"
+							r="3"
+						/></svg
+					>
 					Learning Insights
 				</span>
 				<span class="accordion-meta">
-					{#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0} · errors tracked{/if}
+					{#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0}
+						· errors tracked{/if}
 				</span>
-				<svg class="accordion-chevron" class:rotated={showInsights} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+				<svg
+					class="accordion-chevron"
+					class:rotated={showInsights}
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					width="18"
+					height="18"
+					aria-hidden="true"
+					><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+				>
 			</button>
 			{#if showInsights}
 				<div class="accordion-body" transition:slide={{ duration: 280 }}>
@@ -958,10 +1006,26 @@
 						{#if urgent.length > 0}
 							<div class="insight-card urgent-card">
 								<h3>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
+											x1="12"
+											y1="16"
+											x2="12.01"
+											y2="16"
+										/></svg
+									>
 									Fading Fast
 								</h3>
-								<p class="insight-desc">Words your memory of has dropped below 70% — review them soon.</p>
+								<p class="insight-desc">
+									Words your memory of has dropped below 70% — review them soon.
+								</p>
 								<ul class="urgent-list">
 									{#each urgent as item}
 										<li class="urgent-row">
@@ -975,7 +1039,9 @@
 														? '#f97316'
 														: '#eab308'}">{item.retrievabilityPct}%</span
 											>
-											{#if item.lapses > 0}<span class="urgent-lapses">{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span>{/if}
+											{#if item.lapses > 0}<span class="urgent-lapses"
+													>{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span
+												>{/if}
 										</li>
 									{/each}
 								</ul>
@@ -989,7 +1055,15 @@
 							) as number}
 							<div class="insight-card error-card">
 								<h3>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
+									>
 									Error Breakdown
 								</h3>
 								<p class="insight-desc">Types of mistakes in your most recent answers.</p>
@@ -1009,178 +1083,242 @@
 								</div>
 								{#if (data as any).totalOverrides > 0}
 									<p class="override-note">
-										{(data as any).totalOverrides} self-correction{(data as any).totalOverrides !== 1
-									? 's'
-									: ''} recorded
-							</p>
+										{(data as any).totalOverrides} self-correction{(data as any).totalOverrides !==
+										1
+											? 's'
+											: ''} recorded
+									</p>
+								{/if}
+							</div>
+						{/if}
+
+						{#if coverage}
+							<div class="insight-card coverage-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
+											d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+										/></svg
+									>
+									Grammar Coverage
+								</h3>
+								<p class="insight-desc">{coverage.total} total rules in this language.</p>
+								<div class="coverage-rows">
+									<div class="coverage-row">
+										<span class="coverage-dot" style="background:#10b981"></span>
+										<span class="coverage-label">Mastered / Known</span>
+										<span class="coverage-val">{coverage.mastered}</span>
+									</div>
+									<div class="coverage-row">
+										<span class="coverage-dot" style="background:#fef08a;border:1px solid #ca8a04"
+										></span>
+										<span class="coverage-label">Interacted</span>
+										<span class="coverage-val">{coverage.interacted - coverage.mastered}</span>
+									</div>
+									<div class="coverage-row">
+										<span class="coverage-dot" style="background:#e2e8f0;border:1px solid #94a3b8"
+										></span>
+										<span class="coverage-label">Available to Learn</span>
+										<span class="coverage-val">{coverage.available}</span>
+									</div>
+									<div class="coverage-row">
+										<span class="coverage-dot" style="background:#94a3b8"></span>
+										<span class="coverage-label">Locked (prereqs unmet)</span>
+										<span class="coverage-val">{coverage.locked}</span>
+									</div>
+								</div>
+								<div class="coverage-bar-track">
+									<div
+										class="coverage-seg mastered-seg"
+										style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
+									></div>
+									<div
+										class="coverage-seg learning-seg"
+										style="width:{Math.round(
+											((coverage.interacted - coverage.mastered) / coverage.total) * 100
+										)}%"
+									></div>
+									<div
+										class="coverage-seg available-seg"
+										style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
+									></div>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Recently Mastered -->
+						{#if data.recentlyMastered && data.recentlyMastered.length > 0}
+							<div class="insight-card mastered-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+									>
+									Recently Mastered
+								</h3>
+								<p class="insight-desc">Your most recently learned words.</p>
+								<div class="mastered-chips">
+									{#each data.recentlyMastered as word}
+										<span class="mastered-chip" title={word.partOfSpeech ?? ''}>{word.lemma}</span>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<!-- Most Confused Words -->
+						{#if (data as any).mostConfusedWords?.length > 0}
+							<div class="insight-card confused-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><circle cx="12" cy="12" r="10" /><path
+											d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+										/><line x1="12" y1="17" x2="12.01" y2="17" /></svg
+									>
+									Most Confused
+								</h3>
+								<p class="insight-desc">
+									Words you've forgotten most often — they need extra attention.
+								</p>
+								<ul class="confused-list">
+									{#each (data as any).mostConfusedWords as word}
+										<li class="confused-row">
+											<span class="confused-lemma">{word.lemma}</span>
+											{#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
+											<span class="confused-lapses"
+												>{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span
+											>
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+
+						<!-- Part of Speech Breakdown -->
+						{#if data.posBreakdown && data.posBreakdown.length > 0}
+							{@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
+							<div class="insight-card pos-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><rect x="3" y="3" width="18" height="18" rx="2" /><path
+											d="M3 9h18M9 21V9"
+										/></svg
+									>
+									Parts of Speech
+								</h3>
+								<p class="insight-desc">Breakdown of your vocabulary by word type.</p>
+								<div class="pos-bars">
+									{#each data.posBreakdown as p}
+										<div class="pos-bar-row">
+											<span class="pos-label">{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span
+											>
+											<div class="pos-track">
+												<div
+													class="pos-fill"
+													style="width:{Math.round((p.count / totalPos) * 100)}%"
+												></div>
+											</div>
+											<span class="pos-count">{p.count}</span>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<!-- CEFR Level Breakdown -->
+						{#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
+							<div class="insight-card cefr-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg
+									>
+									CEFR Level Breakdown
+								</h3>
+								<p class="insight-desc">
+									Vocab and grammar rules you've touched at each proficiency level.
+								</p>
+								<div class="cefr-grid">
+									{#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
+										<div class="cefr-row">
+											<span class="cefr-badge cefr-{row.level.toLowerCase()}">{row.level}</span>
+											<div class="cefr-bar-wrap">
+												<div class="cefr-bar-track">
+													<div
+														class="cefr-bar-fill"
+														style="width:{Math.round((row.known / Math.max(row.total, 1)) * 100)}%"
+													></div>
+												</div>
+												<span class="cefr-nums">{row.known}/{row.total} vocab</span>
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<!-- Next Grammar Unlocks -->
+						{#if data.nextUnlocks && data.nextUnlocks.length > 0}
+							<div class="insight-card unlocks-card">
+								<h3>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path
+											d="M7 11V7a5 5 0 0 1 9.9-1"
+										/></svg
+									>
+									Next Grammar Unlocks
+								</h3>
+								<p class="insight-desc">
+									Rules you can start learning now — all prerequisites mastered.
+								</p>
+								<ul class="unlocks-list">
+									{#each data.nextUnlocks as rule}
+										<li class="unlock-row">
+											<span class="unlock-title">{rule.title}</span>
+											<span class="cefr-badge cefr-{rule.level.toLowerCase()}">{rule.level}</span>
+										</li>
+									{/each}
+								</ul>
+							</div>
 						{/if}
 					</div>
-				{/if}
-
-				{#if coverage}
-					<div class="insight-card coverage-card">
-						<h3>
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								width="16"
-								height="16"
-								aria-hidden="true"
-								><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
-									d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-								/></svg
-							>
-							Grammar Coverage
-						</h3>
-						<p class="insight-desc">{coverage.total} total rules in this language.</p>
-						<div class="coverage-rows">
-							<div class="coverage-row">
-								<span class="coverage-dot" style="background:#10b981"></span>
-								<span class="coverage-label">Mastered / Known</span>
-								<span class="coverage-val">{coverage.mastered}</span>
-							</div>
-							<div class="coverage-row">
-								<span class="coverage-dot" style="background:#fef08a;border:1px solid #ca8a04"
-								></span>
-								<span class="coverage-label">Interacted</span>
-								<span class="coverage-val">{coverage.interacted - coverage.mastered}</span>
-							</div>
-							<div class="coverage-row">
-								<span class="coverage-dot" style="background:#e2e8f0;border:1px solid #94a3b8"
-								></span>
-								<span class="coverage-label">Available to Learn</span>
-								<span class="coverage-val">{coverage.available}</span>
-							</div>
-							<div class="coverage-row">
-								<span class="coverage-dot" style="background:#94a3b8"></span>
-								<span class="coverage-label">Locked (prereqs unmet)</span>
-								<span class="coverage-val">{coverage.locked}</span>
-							</div>
-						</div>
-						<div class="coverage-bar-track">
-							<div
-								class="coverage-seg mastered-seg"
-								style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
-							></div>
-							<div
-								class="coverage-seg learning-seg"
-								style="width:{Math.round(
-									((coverage.interacted - coverage.mastered) / coverage.total) * 100
-								)}%"
-							></div>
-							<div
-								class="coverage-seg available-seg"
-								style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
-							></div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- Recently Mastered -->
-				{#if data.recentlyMastered && data.recentlyMastered.length > 0}
-					<div class="insight-card mastered-card">
-						<h3>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
-							Recently Mastered
-						</h3>
-						<p class="insight-desc">Your most recently learned words.</p>
-						<div class="mastered-chips">
-							{#each data.recentlyMastered as word}
-								<span class="mastered-chip" title={word.partOfSpeech ?? ''}>{word.lemma}</span>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Most Confused Words -->
-				{#if (data as any).mostConfusedWords?.length > 0}
-					<div class="insight-card confused-card">
-						<h3>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
-							Most Confused
-						</h3>
-						<p class="insight-desc">Words you've forgotten most often — they need extra attention.</p>
-						<ul class="confused-list">
-							{#each (data as any).mostConfusedWords as word}
-								<li class="confused-row">
-									<span class="confused-lemma">{word.lemma}</span>
-									{#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
-									<span class="confused-lapses">{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-
-				<!-- Part of Speech Breakdown -->
-				{#if data.posBreakdown && data.posBreakdown.length > 0}
-					{@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
-					<div class="insight-card pos-card">
-						<h3>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
-							Parts of Speech
-						</h3>
-						<p class="insight-desc">Breakdown of your vocabulary by word type.</p>
-						<div class="pos-bars">
-							{#each data.posBreakdown as p}
-								<div class="pos-bar-row">
-									<span class="pos-label">{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span>
-									<div class="pos-track">
-										<div class="pos-fill" style="width:{Math.round((p.count / totalPos) * 100)}%"></div>
-									</div>
-									<span class="pos-count">{p.count}</span>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- CEFR Level Breakdown -->
-				{#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
-					<div class="insight-card cefr-card">
-						<h3>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg>
-							CEFR Level Breakdown
-						</h3>
-						<p class="insight-desc">Vocab and grammar rules you've touched at each proficiency level.</p>
-						<div class="cefr-grid">
-							{#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
-								<div class="cefr-row">
-									<span class="cefr-badge cefr-{row.level.toLowerCase()}">{row.level}</span>
-									<div class="cefr-bar-wrap">
-										<div class="cefr-bar-track">
-											<div class="cefr-bar-fill" style="width:{Math.round((row.known / Math.max(row.total, 1)) * 100)}%"></div>
-										</div>
-										<span class="cefr-nums">{row.known}/{row.total} vocab</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Next Grammar Unlocks -->
-				{#if data.nextUnlocks && data.nextUnlocks.length > 0}
-					<div class="insight-card unlocks-card">
-						<h3>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></svg>
-							Next Grammar Unlocks
-						</h3>
-						<p class="insight-desc">Rules you can start learning now — all prerequisites mastered.</p>
-						<ul class="unlocks-list">
-							{#each data.nextUnlocks as rule}
-								<li class="unlock-row">
-									<span class="unlock-title">{rule.title}</span>
-									<span class="cefr-badge cefr-{rule.level.toLowerCase()}">{rule.level}</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-
-				</div>
 				</div>
 			{/if}
 		</section>
@@ -1189,18 +1327,40 @@
 	<!-- LEARNING INTELLIGENCE (collapsible, power users) -->
 	{#if (data as any).sessionEma !== undefined}
 		{@const ad = data as any}
-		<section class="accordion-card accordion-technical" in:fly={{ y: 16, duration: 400, delay: 500 }}>
+		<section
+			class="accordion-card accordion-technical"
+			in:fly={{ y: 16, duration: 400, delay: 500 }}
+		>
 			<button
 				class="accordion-toggle"
 				onclick={() => (showIntelligence = !showIntelligence)}
 				aria-expanded={showIntelligence}
 			>
 				<span class="accordion-title">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						width="18"
+						height="18"
+						aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg
+					>
 					Learning Intelligence
 				</span>
 				<span class="accordion-meta">Adaptive · FSRS-5 · Bandit</span>
-				<svg class="accordion-chevron" class:rotated={showIntelligence} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+				<svg
+					class="accordion-chevron"
+					class:rotated={showIntelligence}
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					width="18"
+					height="18"
+					aria-hidden="true"
+					><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+				>
 			</button>
 			{#if showIntelligence}
 				<div class="accordion-body" transition:slide={{ duration: 280 }}>
@@ -1210,295 +1370,346 @@
 					<div class="algo-grid">
 						<div class="algo-card">
 							<h3 class="algo-card-title">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+								<svg
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									width="16"
+									height="16"
+									aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg
+								>
 								Adaptive Pace
 							</h3>
 							<p class="algo-card-desc">
 								Your recent answer accuracy drives how many new words are introduced each day.
 							</p>
-					<div class="algo-stat-row">
-						<span class="algo-stat-label">Session accuracy (EMA)</span>
-						<span class="algo-stat-value">{ad.sessionEma}%</span>
-					</div>
-					<div class="algo-ema-bar">
-						<div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
-					</div>
-					<div class="algo-stat-row" style="margin-top:0.5rem">
-						<span class="algo-stat-label">Today's new-word cap</span>
-						<span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
-					</div>
-								<p class="algo-footnote">Range 5–20. Higher accuracy → more new words introduced.</p>
+							<div class="algo-stat-row">
+								<span class="algo-stat-label">Session accuracy (EMA)</span>
+								<span class="algo-stat-value">{ad.sessionEma}%</span>
+							</div>
+							<div class="algo-ema-bar">
+								<div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
+							</div>
+							<div class="algo-stat-row" style="margin-top:0.5rem">
+								<span class="algo-stat-label">Today's new-word cap</span>
+								<span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
+							</div>
+							<p class="algo-footnote">Range 5–20. Higher accuracy → more new words introduced.</p>
 						</div>
 
 						<!-- Bandit interleave card -->
-				<div class="algo-card">
-					<h3 class="algo-card-title">
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							width="16"
-							height="16"
-							aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
-						>
-						Review Mix (Bandit)
-					</h3>
-					<p class="algo-card-desc">
-						A Thompson-sampling bandit learns how many mastered items to interleave per lesson for
-						best retention.
-					</p>
-					{#if ad.banditArmMeans}
-						<div class="bandit-arms">
-							{#each ad.banditArmMeans as arm}
-								<div
-									class="bandit-arm-row"
-									class:bandit-best={arm.interleaveCount === ad.bestBanditArm.interleaveCount}
+						<div class="algo-card">
+							<h3 class="algo-card-title">
+								<svg
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									width="16"
+									height="16"
+									aria-hidden="true"
+									><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
 								>
-									<span class="bandit-arm-label"
-										>{arm.interleaveCount} review{arm.interleaveCount !== 1 ? 's' : ''}</span
-									>
-									<div class="bandit-arm-track">
-										<div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
-									</div>
-									<span class="bandit-arm-pct">{arm.mean}%</span>
-									<span class="bandit-arm-obs"
-										>{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
-									>
+								Review Mix (Bandit)
+							</h3>
+							<p class="algo-card-desc">
+								A Thompson-sampling bandit learns how many mastered items to interleave per lesson
+								for best retention.
+							</p>
+							{#if ad.banditArmMeans}
+								<div class="bandit-arms">
+									{#each ad.banditArmMeans as arm}
+										<div
+											class="bandit-arm-row"
+											class:bandit-best={arm.interleaveCount === ad.bestBanditArm.interleaveCount}
+										>
+											<span class="bandit-arm-label"
+												>{arm.interleaveCount} review{arm.interleaveCount !== 1 ? 's' : ''}</span
+											>
+											<div class="bandit-arm-track">
+												<div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
+											</div>
+											<span class="bandit-arm-pct">{arm.mean}%</span>
+											<span class="bandit-arm-obs"
+												>{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
+											>
+										</div>
+									{/each}
 								</div>
-							{/each}
+								<p class="algo-footnote">
+									Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad.bestBanditArm
+										.mean}% success rate)
+								</p>
+							{/if}
 						</div>
-						<p class="algo-footnote">
-							Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad.bestBanditArm
-								.mean}% success rate)
-						</p>
-					{/if}
-				</div>
 
-				<!-- ELO confidence card -->
-				{#if ad.highVarianceVocab?.length > 0}
-					<div class="algo-card">
-						<h3 class="algo-card-title">
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								width="16"
-								height="16"
-								aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
-							>
-							ELO Uncertainty
-						</h3>
-						<p class="algo-card-desc">
-							Words where the algorithm is least certain of your true proficiency — expect them to
-							appear more often.
-						</p>
-						<ul class="variance-list">
-							{#each ad.highVarianceVocab as v}
-								<li class="variance-row">
-									<span class="variance-lemma">{v.lemma}</span>
-									<span class="variance-level">{v.level}</span>
-									<span class="variance-elo">{v.elo}</span>
-									<span class="variance-sigma" title="ELO uncertainty (±σ)">±{v.sigma}</span>
-								</li>
-							{/each}
-						</ul>
-						<p class="algo-footnote">σ shrinks with each review. New items start at σ≈20.</p>
-					</div>
-				{/if}
-
-				<!-- PFA at-risk grammar card -->
-				{#if ad.pfaAtRisk?.length > 0}
-					<div class="algo-card">
-						<h3 class="algo-card-title">
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								width="16"
-								height="16"
-								aria-hidden="true"
-								><path
-									d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-								/><line x1="12" y1="9" x2="12" y2="13" /><line
-									x1="12"
-									y1="17"
-									x2="12.01"
-									y2="17"
-								/></svg
-							>
-							Grammar at Risk
-						</h3>
-						<p class="algo-card-desc">
-							Rules the Performance Factor model predicts you're likely to get wrong — they'll be
-							prioritised in lessons.
-						</p>
-						<ul class="pfa-list">
-							{#each ad.pfaAtRisk as g}
-								<li class="pfa-row">
-									<span class="pfa-title">{g.title}</span>
-									<span class="pfa-level">{g.level}</span>
-									<span
-										class="pfa-p"
-										style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
-										>{Math.round((g.pCorrect ?? 0) * 100)}%</span
+						<!-- ELO confidence card -->
+						{#if ad.highVarianceVocab?.length > 0}
+							<div class="algo-card">
+								<h3 class="algo-card-title">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
 									>
-								</li>
-							{/each}
-						</ul>
-						<p class="algo-footnote">P(correct) from PFA model — below 60% means at-risk.</p>
-					</div>
-				{/if}
+									ELO Uncertainty
+								</h3>
+								<p class="algo-card-desc">
+									Words where the algorithm is least certain of your true proficiency — expect them
+									to appear more often.
+								</p>
+								<ul class="variance-list">
+									{#each ad.highVarianceVocab as v}
+										<li class="variance-row">
+											<span class="variance-lemma">{v.lemma}</span>
+											<span class="variance-level">{v.level}</span>
+											<span class="variance-elo">{v.elo}</span>
+											<span class="variance-sigma" title="ELO uncertainty (±σ)">±{v.sigma}</span>
+										</li>
+									{/each}
+								</ul>
+								<p class="algo-footnote">σ shrinks with each review. New items start at σ≈20.</p>
+							</div>
+						{/if}
 
-				<!-- Error co-occurrence card -->
-				{#if ad.coOccurrencePairs?.length > 0}
-					{@const errorLabels: Record<string, string> = {
+						<!-- PFA at-risk grammar card -->
+						{#if ad.pfaAtRisk?.length > 0}
+							<div class="algo-card">
+								<h3 class="algo-card-title">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><path
+											d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+										/><line x1="12" y1="9" x2="12" y2="13" /><line
+											x1="12"
+											y1="17"
+											x2="12.01"
+											y2="17"
+										/></svg
+									>
+									Grammar at Risk
+								</h3>
+								<p class="algo-card-desc">
+									Rules the Performance Factor model predicts you're likely to get wrong — they'll
+									be prioritised in lessons.
+								</p>
+								<ul class="pfa-list">
+									{#each ad.pfaAtRisk as g}
+										<li class="pfa-row">
+											<span class="pfa-title">{g.title}</span>
+											<span class="pfa-level">{g.level}</span>
+											<span
+												class="pfa-p"
+												style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
+												>{Math.round((g.pCorrect ?? 0) * 100)}%</span
+											>
+										</li>
+									{/each}
+								</ul>
+								<p class="algo-footnote">P(correct) from PFA model — below 60% means at-risk.</p>
+							</div>
+						{/if}
+
+						<!-- Error co-occurrence card -->
+						{#if ad.coOccurrencePairs?.length > 0}
+							{@const errorLabels: Record<string, string> = {
 						wrong_case: 'Wrong Case', wrong_tense: 'Wrong Tense', wrong_gender: 'Wrong Gender',
 						spelling: 'Spelling', word_order: 'Word Order', vocabulary_gap: 'Vocab Gap'
 					}}
-					<div class="algo-card">
-						<h3 class="algo-card-title">
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								width="16"
-								height="16"
-								aria-hidden="true"
-								><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
-									cx="18"
-									cy="19"
-									r="3"
-								/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
-									x1="15.41"
-									y1="6.51"
-									x2="8.59"
-									y2="10.49"
-								/></svg
-							>
-							Error Patterns
-						</h3>
-						<p class="algo-card-desc">
-							Error types that tend to appear together across learners — fixing one often helps the
-							other.
-						</p>
-						<ul class="coerr-list">
-							{#each ad.coOccurrencePairs as pair}
-								<li class="coerr-row">
-									<span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
-									<span class="coerr-arrow">↔</span>
-									<span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
-									<span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span>
-								</li>
-							{/each}
-						</ul>
-						<p class="algo-footnote">
-							Grammar rules addressing co-occurring errors are surfaced first.
-						</p>
-					</div>
-				{/if}
+							<div class="algo-card">
+								<h3 class="algo-card-title">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
+											cx="18"
+											cy="19"
+											r="3"
+										/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
+											x1="15.41"
+											y1="6.51"
+											x2="8.59"
+											y2="10.49"
+										/></svg
+									>
+									Error Patterns
+								</h3>
+								<p class="algo-card-desc">
+									Error types that tend to appear together across learners — fixing one often helps
+									the other.
+								</p>
+								<ul class="coerr-list">
+									{#each ad.coOccurrencePairs as pair}
+										<li class="coerr-row">
+											<span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
+											<span class="coerr-arrow">↔</span>
+											<span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
+											<span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span>
+										</li>
+									{/each}
+								</ul>
+								<p class="algo-footnote">
+									Grammar rules addressing co-occurring errors are surfaced first.
+								</p>
+							</div>
+						{/if}
 
-				<!-- FSRS personalisation card -->
-				<div class="algo-card">
-					<h3 class="algo-card-title">
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							width="16"
-							height="16"
-							aria-hidden="true"
-							><path d="M12 20h9" /><path
-								d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-							/></svg
-						>
-						FSRS Personalisation
-					</h3>
-					<p class="algo-card-desc">
-						The spaced-repetition scheduler fits 19 weights to your review history daily.
-					</p>
-					<div class="algo-stat-row">
-						<span class="algo-stat-label">Personal weights</span>
-						<span
-							class="algo-stat-value"
-							style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
-							>{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
-						>
-					</div>
-					<div class="algo-stat-row">
-						<span class="algo-stat-label">Target retention</span>
-						<span class="algo-stat-value">{ad.fsrsRetention}%</span>
-					</div>
-					<div class="algo-stat-row">
-						<span class="algo-stat-label">Algorithm version</span>
-						<span class="algo-stat-value">FSRS-5</span>
-					</div>
-				</div>
-
-				<!-- ELO Calibration scatter -->
-				{#if ad.eloCalibration?.length > 1}
-					<div class="algo-card">
-						<h3 class="algo-card-title">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle cx="14" cy="18" r="2" /><circle cx="6" cy="10" r="2" /><line x1="2" y1="22" x2="22" y2="2" stroke-dasharray="3 3" /></svg>
-							ELO Calibration
-						</h3>
-						<p class="algo-card-desc">
-							Does your ELO score actually predict how often you answer correctly? A well-calibrated model rises left-to-right.
-						</p>
-						<div class="calibration-chart">
-							{#each ad.eloCalibration as point}
-								<div class="cal-col">
-									<span class="cal-pct">{point.actualPassPct}%</span>
-									<div class="cal-bar-track">
-										<div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
-									</div>
-									<span class="cal-elo">{point.elo}</span>
-									<span class="cal-n">n={point.sampleSize}</span>
-								</div>
-							{/each}
+						<!-- FSRS personalisation card -->
+						<div class="algo-card">
+							<h3 class="algo-card-title">
+								<svg
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									width="16"
+									height="16"
+									aria-hidden="true"
+									><path d="M12 20h9" /><path
+										d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+									/></svg
+								>
+								FSRS Personalisation
+							</h3>
+							<p class="algo-card-desc">
+								The spaced-repetition scheduler fits 19 weights to your review history daily.
+							</p>
+							<div class="algo-stat-row">
+								<span class="algo-stat-label">Personal weights</span>
+								<span
+									class="algo-stat-value"
+									style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
+									>{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
+								>
+							</div>
+							<div class="algo-stat-row">
+								<span class="algo-stat-label">Target retention</span>
+								<span class="algo-stat-value">{ad.fsrsRetention}%</span>
+							</div>
+							<div class="algo-stat-row">
+								<span class="algo-stat-label">Algorithm version</span>
+								<span class="algo-stat-value">FSRS-5</span>
+							</div>
 						</div>
-						<p class="algo-footnote">ELO buckets vs actual pass rate across all your reviews.</p>
-					</div>
-				{/if}
 
-				<!-- Word Frequency Coverage -->
-				{#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
-					<div class="algo-card">
-						<h3 class="algo-card-title">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
-							Word Frequency Coverage
-						</h3>
-						<p class="algo-card-desc">
-							How many of the most common words in this language you've mastered or know.
-						</p>
-						<div class="freq-coverage-rows">
-							{#each data.freqCoverage as tier}
-								{#if tier.total > 0}
-									<div class="freq-row">
-										<span class="freq-label">Top {tier.threshold >= 1000 ? tier.threshold / 1000 + 'k' : tier.threshold}</span>
-										<div class="freq-track">
-											<div class="freq-fill" style="width:{Math.round((tier.known / tier.total) * 100)}%"></div>
+						<!-- ELO Calibration scatter -->
+						{#if ad.eloCalibration?.length > 1}
+							<div class="algo-card">
+								<h3 class="algo-card-title">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle
+											cx="14"
+											cy="18"
+											r="2"
+										/><circle cx="6" cy="10" r="2" /><line
+											x1="2"
+											y1="22"
+											x2="22"
+											y2="2"
+											stroke-dasharray="3 3"
+										/></svg
+									>
+									ELO Calibration
+								</h3>
+								<p class="algo-card-desc">
+									Does your ELO score actually predict how often you answer correctly? A
+									well-calibrated model rises left-to-right.
+								</p>
+								<div class="calibration-chart">
+									{#each ad.eloCalibration as point}
+										<div class="cal-col">
+											<span class="cal-pct">{point.actualPassPct}%</span>
+											<div class="cal-bar-track">
+												<div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
+											</div>
+											<span class="cal-elo">{point.elo}</span>
+											<span class="cal-n">n={point.sampleSize}</span>
 										</div>
-										<span class="freq-stat">{tier.known}/{tier.total}</span>
-										<span class="freq-pct">{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span>
-									</div>
-								{/if}
-							{/each}
-						</div>
-						<p class="algo-footnote">Based on corpus frequency rank. Only words in your vocabulary are counted.</p>
-					</div>
-				{/if}
+									{/each}
+								</div>
+								<p class="algo-footnote">
+									ELO buckets vs actual pass rate across all your reviews.
+								</p>
+							</div>
+						{/if}
 
-			</div>
+						<!-- Word Frequency Coverage -->
+						{#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
+							<div class="algo-card">
+								<h3 class="algo-card-title">
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										width="16"
+										height="16"
+										aria-hidden="true"
+										><path d="M12 2L2 7l10 5 10-5-10-5z" /><path
+											d="M2 17l10 5 10-5M2 12l10 5 10-5"
+										/></svg
+									>
+									Word Frequency Coverage
+								</h3>
+								<p class="algo-card-desc">
+									How many of the most common words in this language you've mastered or know.
+								</p>
+								<div class="freq-coverage-rows">
+									{#each data.freqCoverage as tier}
+										{#if tier.total > 0}
+											<div class="freq-row">
+												<span class="freq-label"
+													>Top {tier.threshold >= 1000
+														? tier.threshold / 1000 + 'k'
+														: tier.threshold}</span
+												>
+												<div class="freq-track">
+													<div
+														class="freq-fill"
+														style="width:{Math.round((tier.known / tier.total) * 100)}%"
+													></div>
+												</div>
+												<span class="freq-stat">{tier.known}/{tier.total}</span>
+												<span class="freq-pct"
+													>{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span
+												>
+											</div>
+										{/if}
+									{/each}
+								</div>
+								<p class="algo-footnote">
+									Based on corpus frequency rank. Only words in your vocabulary are counted.
+								</p>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/if}
 		</section>
 	{/if}
-
 </div>
 
 {#if selectedModalItem}
@@ -1852,7 +2063,9 @@
 		gap: 0.25rem;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 		border: 1px solid rgba(0, 0, 0, 0.06);
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 
 	.qstat:hover {
@@ -1876,17 +2089,29 @@
 		color: #64748b;
 	}
 
-	.qstat-green .qstat-value { color: #10b981; }
-	.qstat-purple .qstat-value { color: #8b5cf6; }
-	.qstat-blue .qstat-value { color: #3b82f6; }
-	.qstat-warn .qstat-value { color: #f97316; }
+	.qstat-green .qstat-value {
+		color: #10b981;
+	}
+	.qstat-purple .qstat-value {
+		color: #8b5cf6;
+	}
+	.qstat-blue .qstat-value {
+		color: #3b82f6;
+	}
+	.qstat-warn .qstat-value {
+		color: #f97316;
+	}
 
 	:global(html[data-theme='dark']) .qstat {
 		background: #1e293b;
-		border-color: rgba(255,255,255,0.06);
+		border-color: rgba(255, 255, 255, 0.06);
 	}
-	:global(html[data-theme='dark']) .qstat-value { color: #f1f5f9; }
-	:global(html[data-theme='dark']) .qstat-label { color: #94a3b8; }
+	:global(html[data-theme='dark']) .qstat-value {
+		color: #f1f5f9;
+	}
+	:global(html[data-theme='dark']) .qstat-label {
+		color: #94a3b8;
+	}
 
 	/* ── Accordion cards ── */
 	.accordion-card {
@@ -4852,12 +5077,30 @@
 		text-align: center;
 		flex-shrink: 0;
 	}
-	.cefr-a1 { background: #dcfce7; color: #15803d; }
-	.cefr-a2 { background: #d1fae5; color: #059669; }
-	.cefr-b1 { background: #dbeafe; color: #1d4ed8; }
-	.cefr-b2 { background: #ede9fe; color: #7c3aed; }
-	.cefr-c1 { background: #fce7f3; color: #be185d; }
-	.cefr-c2 { background: #fef3c7; color: #b45309; }
+	.cefr-a1 {
+		background: #dcfce7;
+		color: #15803d;
+	}
+	.cefr-a2 {
+		background: #d1fae5;
+		color: #059669;
+	}
+	.cefr-b1 {
+		background: #dbeafe;
+		color: #1d4ed8;
+	}
+	.cefr-b2 {
+		background: #ede9fe;
+		color: #7c3aed;
+	}
+	.cefr-c1 {
+		background: #fce7f3;
+		color: #be185d;
+	}
+	.cefr-c2 {
+		background: #fef3c7;
+		color: #b45309;
+	}
 	.cefr-bar-wrap {
 		display: flex;
 		align-items: center;

@@ -144,7 +144,6 @@
 		if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
 		return n.toString();
 	}
-
 </script>
 
 <div class="profile-container">
@@ -567,7 +566,6 @@
 		</div>
 	{/if}
 </div>
-
 
 <!-- Delete modal (outside tab content so it's always in DOM) -->
 <dialog id="delete-modal" class="modal">
@@ -1326,5 +1324,4 @@
 			gap: 1rem;
 		}
 	}
-
 </style>
