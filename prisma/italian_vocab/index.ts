@@ -12,34 +12,34 @@ import { italianGrammarRules } from './grammar';
 import type { LanguageSeedData } from '../seed-types';
 
 const allVocab = [
-  ...articles,
-  ...verbs,
-  ...nouns,
-  ...adverbs,
-  ...adjectives,
-  ...conjunctions,
-  ...prepositions,
-  ...pronouns,
-  ...particles,
-  ...interjections
+	...articles,
+	...verbs,
+	...nouns,
+	...adverbs,
+	...adjectives,
+	...conjunctions,
+	...prepositions,
+	...pronouns,
+	...particles,
+	...interjections
 ];
 
 export const seedData: LanguageSeedData = {
-  vocabulary: allVocab.map((v: any) => ({
-    lemma: v.lemma,
-    meaning: v.meaning,
-    partOfSpeech: v.partOfSpeech,
-    isBeginner: v.isBeginner ?? false,
-    gender: v.gender ?? null,
-    plural: v.plural ?? null
-  })),
-  grammarRules: italianGrammarRules.map((r: any) => ({
-    title: r.title,
-    description: r.description,
-    guide: r.guide,
-    level: r.level,
-    ruleType: r.ruleType ?? null,
-    targetForms: r.targetForms ?? [],
-    dependencies: r.dependencies ?? []
-  }))
+	vocabulary: allVocab.map((v: any) => ({
+		lemma: v.lemma,
+		meaning: v.meaning,
+		partOfSpeech: v.partOfSpeech,
+		isBeginner: v.isBeginner ?? false,
+		gender: v.gender ?? null,
+		plural: v.plural ?? null
+	})),
+	grammarRules: italianGrammarRules.map((r: any) => ({
+		title: r.title,
+		description: r.description,
+		guide: r.guide,
+		level: r.level,
+		ruleType: r.ruleType ?? null,
+		targetForms: r.targetForms ?? [],
+		dependencies: r.dependencies ?? []
+	}))
 };
