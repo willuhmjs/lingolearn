@@ -529,11 +529,13 @@ export class CefrService {
 		const eloProgress = Math.min(1, averageElo / targetElo);
 
 		const weightedPercent = vocabProgress * 0.4 + grammarProgress * 0.4 + eloProgress * 0.2;
+		const allMet = vocabProgress >= 1 && grammarProgress >= 1 && eloProgress >= 1;
+		const percentComplete = allMet ? 100 : Math.min(99, Math.round(weightedPercent * 100));
 
 		return {
 			currentLevel,
 			nextLevel,
-			percentComplete: Math.round(weightedPercent * 100),
+			percentComplete,
 			vocabMastery: Math.round(vocabMastery * 100) / 100,
 			grammarMastery: Math.round(grammarMastery * 100) / 100,
 			vocabExposure: Math.round(vocabExposure * 100) / 100,
