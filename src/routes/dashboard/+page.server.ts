@@ -311,6 +311,141 @@ export const load: PageServerLoad = async ({ locals }) => {
 			}
 		}
 
+		// Most Confused Words: vocab lapsed 2+ times, sorted by lapse count
+		const confusedRecs = vocabProgressRecords
+			.filter((r) => r.lapses >= 2)
+			.sort((a, b) => b.lapses - a.lapses)
+			.slice(0, 8);
+		const confusedDetails =
+			confusedRecs.length > 0
+				? await prisma.vocabulary.findMany({
+						where: { id: { in: confusedRecs.map((r) => r.vocabularyId) } },
+						select: { id: true, lemma: true, meanings: { select: { value: true }, take: 1 } }
+					})
+				: [];
+		const confusedMap = new Map(confusedDetails.map((v) => [v.id, v]));
+		const vocabSrsMap = new Map(vocabularies.map((v) => [v.vocabularyId, v.srsState]));
+		const mostConfusedWords = confusedRecs.map((rec) => ({
+			lemma: confusedMap.get(rec.vocabularyId)?.lemma ?? rec.vocabularyId,
+			meaning: confusedMap.get(rec.vocabularyId)?.meanings[0]?.value ?? null,
+			lapses: rec.lapses,
+			srsState: vocabSrsMap.get(rec.vocabularyId) ?? 'LEARNING'
+		}));
+
+		// ELO Calibration: bucket vocab by ELO, compute actual pass rate from review logs
+		const reviewLogs = await prisma.reviewLog.findMany({
+			where: { userId: user.id, itemType: 'vocabulary' },
+			select: { itemId: true, rating: true }
+		});
+		const reviewsByItem = new Map<string, { total: number; pass: number }>();
+		for (const log of reviewLogs) {
+			const entry = reviewsByItem.get(log.itemId) ?? { total: 0, pass: 0 };
+			entry.total++;
+			if (log.rating >= 3) entry.pass++;
+			reviewsByItem.set(log.itemId, entry);
+		}
+		const vocabEloMap = new Map(vocabularies.map((v) => [v.vocabularyId, v.eloRating]));
+		const eloBuckets = new Map<number, { total: number; pass: number; count: number }>();
+		for (const [itemId, stats] of reviewsByItem) {
+			if (stats.total < 3) continue;
+			const elo = vocabEloMap.get(itemId);
+			if (!elo) continue;
+			const bucket = Math.floor(elo / 100) * 100;
+			const existing = eloBuckets.get(bucket) ?? { total: 0, pass: 0, count: 0 };
+			existing.total += stats.total;
+			existing.pass += stats.pass;
+			existing.count++;
+			eloBuckets.set(bucket, existing);
+		}
+		const eloCalibration = Array.from(eloBuckets.entries())
+			.map(([elo, stats]) => ({
+				elo,
+				actualPassPct: Math.round((stats.pass / stats.total) * 100),
+				sampleSize: stats.count
+			}))
+			.sort((a, b) => a.elo - b.elo);
+
+		// New Word Intake: words added per week for last 8 weeks
+		const weekMs = 7 * 24 * 60 * 60 * 1000;
+		const nowMs = Date.now();
+		const newWordIntake = Array.from({ length: 8 }, (_, i) => {
+			const weekStart = new Date(nowMs - (7 - i) * weekMs);
+			const weekEnd = new Date(weekStart.getTime() + weekMs);
+			const count = vocabularies.filter((v) => {
+				const t = v.createdAt.getTime();
+				return t >= weekStart.getTime() && t < weekEnd.getTime();
+			}).length;
+			return {
+				label: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+				count
+			};
+		});
+
+		// Recently Mastered: last 10 words to hit MASTERED
+		const recentlyMastered = vocabularies
+			.filter((v) => v.srsState === 'MASTERED')
+			.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+			.slice(0, 10)
+			.map((v) => ({ lemma: v.vocabulary.lemma, partOfSpeech: v.vocabulary.partOfSpeech }));
+
+		// Part-of-speech breakdown
+		const posMap = new Map<string, number>();
+		for (const v of vocabularies) {
+			const pos = v.vocabulary.partOfSpeech ?? 'Other';
+			posMap.set(pos, (posMap.get(pos) ?? 0) + 1);
+		}
+		const posBreakdown = Array.from(posMap.entries())
+			.map(([pos, count]) => ({ pos, count }))
+			.sort((a, b) => b.count - a.count);
+
+		// CEFR level breakdown (vocab + grammar)
+		const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+		const knownStates = new Set(['KNOWN', 'MASTERED']);
+		const cefrBreakdown = {
+			vocab: cefrLevels.map((level) => ({
+				level,
+				total: vocabularies.filter((v) => v.vocabulary.cefrLevel === level).length,
+				known: vocabularies.filter(
+					(v) => v.vocabulary.cefrLevel === level && knownStates.has(v.srsState)
+				).length
+			})),
+			grammar: cefrLevels.map((level) => ({
+				level,
+				total: grammarRules.filter((g) => g.grammarRule.level === level).length,
+				known: grammarRules.filter(
+					(g) => g.grammarRule.level === level && knownStates.has(g.srsState)
+				).length
+			}))
+		};
+
+		// Next Grammar Unlocks: not-yet-started rules with all prereqs mastered/known
+		const masteredGrammarIds = new Set(
+			grammarRules.filter((r) => knownStates.has(r.srsState)).map((r) => r.grammarRuleId)
+		);
+		const interactedIds = new Set(grammarRules.map((r) => r.grammarRuleId));
+		const nextUnlocks = allGrammarRules
+			.filter((rule) => {
+				if (interactedIds.has(rule.id)) return false;
+				if (rule.dependencies.length === 0) return true;
+				return rule.dependencies.every((dep) => masteredGrammarIds.has(dep.id));
+			})
+			.slice(0, 6)
+			.map((rule) => ({ id: rule.id, title: rule.title, level: rule.level }));
+
+		// Word Frequency Coverage: % of top N most-common words known
+		const freqCoverage = [1000, 5000, 10000].map((n) => ({
+			threshold: n,
+			known: vocabularies.filter(
+				(v) =>
+					v.vocabulary.frequency != null &&
+					v.vocabulary.frequency <= n &&
+					knownStates.has(v.srsState)
+			).length,
+			total: vocabularies.filter(
+				(v) => v.vocabulary.frequency != null && v.vocabulary.frequency <= n
+			).length
+		}));
+
 		analytics = {
 			urgentItems,
 			errorTypeCounts,
@@ -329,7 +464,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 			pfaAtRisk,
 			coOccurrencePairs,
 			hasPersonalizedWeights: (userRecord?.fsrsWeights?.length ?? 0) === 19,
-			fsrsRetention: Math.round((userRecord?.fsrsRetention ?? 0.9) * 100)
+			fsrsRetention: Math.round((userRecord?.fsrsRetention ?? 0.9) * 100),
+			mostConfusedWords,
+			eloCalibration,
+			newWordIntake,
+			recentlyMastered,
+			posBreakdown,
+			cefrBreakdown,
+			nextUnlocks,
+			freqCoverage
 		};
 
 		setCachedDashboardAnalytics(user.id, languageId, analytics);

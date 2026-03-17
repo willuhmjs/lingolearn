@@ -28,6 +28,22 @@ export interface DashboardAnalytics {
 	coOccurrencePairs: Array<{ from: string; to: string; strength: string }>;
 	hasPersonalizedWeights: boolean;
 	fsrsRetention: number;
+	mostConfusedWords: Array<{
+		lemma: string;
+		meaning: string | null;
+		lapses: number;
+		srsState: string;
+	}>;
+	eloCalibration: Array<{ elo: number; actualPassPct: number; sampleSize: number }>;
+	newWordIntake: Array<{ label: string; count: number }>;
+	recentlyMastered: Array<{ lemma: string; partOfSpeech: string | null }>;
+	posBreakdown: Array<{ pos: string; count: number }>;
+	cefrBreakdown: {
+		vocab: Array<{ level: string; total: number; known: number }>;
+		grammar: Array<{ level: string; total: number; known: number }>;
+	};
+	nextUnlocks: Array<{ id: string; title: string; level: string }>;
+	freqCoverage: Array<{ threshold: number; known: number; total: number }>;
 }
 
 function cacheKey(userId: string, languageId: string): string {
