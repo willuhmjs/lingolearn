@@ -17,8 +17,7 @@ import { writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const DATA_DIR = 'prisma/data/frequency';
-const BASE_URL =
-	'https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018';
+const BASE_URL = 'https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018';
 
 async function fetchLanguage(code: string): Promise<void> {
 	const outPath = join(DATA_DIR, `${code}_50k.txt`);
@@ -50,9 +49,7 @@ async function main() {
 		console.error('Example: pnpm fetch:frequency it ja pt');
 		console.error('');
 		console.error('Language codes match ISO 639-1 (e.g. it=Italian, ja=Japanese, pt=Portuguese).');
-		console.error(
-			'Make sure the language is registered in src/lib/languages/ before rebuilding.'
-		);
+		console.error('Make sure the language is registered in src/lib/languages/ before rebuilding.');
 		process.exit(1);
 	}
 

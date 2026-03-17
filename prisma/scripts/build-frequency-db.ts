@@ -304,7 +304,12 @@ async function main() {
 
 	console.log(`Found ${txtFiles.length} frequency file(s): ${txtFiles.join(', ')}`);
 
-	const languages: Array<{ code: string; name: string; exportName: string; map: Map<string, number> }> = [];
+	const languages: Array<{
+		code: string;
+		name: string;
+		exportName: string;
+		map: Map<string, number>;
+	}> = [];
 
 	for (const file of txtFiles) {
 		const code = file.replace('_50k.txt', '');

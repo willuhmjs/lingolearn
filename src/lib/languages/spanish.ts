@@ -246,7 +246,7 @@ const spanish: LanguageConfig = {
 			city: 'Valencia',
 			country: 'Spain',
 			emoji: '🇪🇸',
-			description: "Birthplace of paella, home to the futuristic City of Arts and Sciences"
+			description: 'Birthplace of paella, home to the futuristic City of Arts and Sciences'
 		},
 		{
 			city: 'Granada',

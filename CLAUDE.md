@@ -2,7 +2,6 @@
 
 This file is loaded automatically by Claude Code at the start of every session. Read it before writing any code.
 
-
 ---
 
 ## Project overview
@@ -19,7 +18,6 @@ LingoLearn is an AI-powered language learning platform built with SvelteKit 5 + 
 - **Styling**: Plain CSS with CSS custom properties for theming (no Tailwind)
 
 We use tabs, not spaces.
-
 
 ## Directory structure
 

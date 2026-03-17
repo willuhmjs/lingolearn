@@ -246,7 +246,7 @@ const french: LanguageConfig = {
 			city: 'Nice',
 			country: 'France',
 			emoji: '🇫🇷',
-			description: "Azure Coast jewel of Provençal markets and the Belle Époque Promenade"
+			description: 'Azure Coast jewel of Provençal markets and the Belle Époque Promenade'
 		},
 		{
 			city: 'Strasbourg',
@@ -270,7 +270,8 @@ const french: LanguageConfig = {
 			city: 'Lille',
 			country: 'France',
 			emoji: '🇫🇷',
-			description: "Northern France's Flemish-inflected city of brasseries and the giant flea market"
+			description:
+				"Northern France's Flemish-inflected city of brasseries and the giant flea market"
 		},
 		{
 			city: 'Rennes',

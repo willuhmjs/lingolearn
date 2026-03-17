@@ -446,7 +446,7 @@ const italian: LanguageConfig = {
 			city: 'Messina',
 			country: 'Italy',
 			emoji: '🇮🇹',
-			description: "Sicilian strait city connecting the island to the mainland since antiquity"
+			description: 'Sicilian strait city connecting the island to the mainland since antiquity'
 		},
 		{
 			city: 'Modena',
@@ -482,7 +482,8 @@ const italian: LanguageConfig = {
 			city: 'Matera',
 			country: 'Italy',
 			emoji: '🇮🇹',
-			description: "Ancient cave-city (Sassi) hewn from Basilicata's ravines, a European Capital of Culture"
+			description:
+				"Ancient cave-city (Sassi) hewn from Basilicata's ravines, a European Capital of Culture"
 		},
 		{
 			city: 'Brescia',
@@ -494,7 +495,8 @@ const italian: LanguageConfig = {
 			city: 'Sassari',
 			country: 'Italy',
 			emoji: '🇮🇹',
-			description: "Northern Sardinia's university city of Catalan-Gothic churches and Cavalcata Sarda festival"
+			description:
+				"Northern Sardinia's university city of Catalan-Gothic churches and Cavalcata Sarda festival"
 		},
 		{
 			city: 'Reggio Calabria',
