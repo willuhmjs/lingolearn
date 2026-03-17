@@ -2,12 +2,15 @@
   import type { PageData } from './$types';
   import { invalidateAll } from '$app/navigation';
   import { fly } from 'svelte/transition';
+  import { page } from '$app/stores';
 
   let { data }: { data: PageData } = $props();
 
   let newFriendUsername = $state('');
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let copyLinkLoading = $state(false);
+  let copyLinkSuccess = $state(false);
 
   async function sendRequest() {
     if (!newFriendUsername) return;
@@ -64,6 +67,27 @@
     }
   }
 
+  async function copyInviteLink() {
+    copyLinkLoading = true;
+    copyLinkSuccess = false;
+    try {
+      const res = await fetch('/api/friends/invite');
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      const origin = $page.url.origin;
+      const link = `${origin}/friends/accept?token=${result.token}`;
+      await navigator.clipboard.writeText(link);
+      copyLinkSuccess = true;
+      setTimeout(() => {
+        copyLinkSuccess = false;
+      }, 3000);
+    } catch {
+      error = 'Could not copy invite link';
+    } finally {
+      copyLinkLoading = false;
+    }
+  }
+
   let friends = $derived(data.friendships.filter((f) => f.status === 'ACCEPTED'));
   let incomingRequests = $derived(
     data.friendships.filter((f) => f.status === 'PENDING' && f.receiverId === data.userId)
@@ -103,6 +127,22 @@
           <p class="error-text">{error}</p>
         {/if}
       </form>
+      <div class="invite-link-row">
+        <span class="invite-label">Or share your invite link</span>
+        <button
+          class="btn-copy {copyLinkSuccess ? 'copied' : ''}"
+          onclick={copyInviteLink}
+          disabled={copyLinkLoading}
+        >
+          {#if copyLinkSuccess}
+            ✓ Copied!
+          {:else if copyLinkLoading}
+            Copying...
+          {:else}
+            Copy Link
+          {/if}
+        </button>
+      </div>
     </section>
 
     <section class="requests-section">
@@ -392,5 +432,42 @@
     color: #ef4444;
     font-size: 0.875rem;
     margin-top: 0.5rem;
+  }
+  .invite-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
+    gap: 0.75rem;
+  }
+  .invite-label {
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+  .btn-copy {
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+    background: transparent;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-copy:hover:not(:disabled) {
+    background: #3b82f6;
+    color: white;
+  }
+  .btn-copy.copied {
+    border-color: #10b981;
+    color: #10b981;
+  }
+  .btn-copy:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>
