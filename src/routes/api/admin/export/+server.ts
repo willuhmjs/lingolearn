@@ -77,6 +77,13 @@ export const GET: RequestHandler = async ({ locals }) => {
 						title: true,
 						description: true,
 						dueDate: true,
+						gamemode: true,
+						language: true,
+						targetScore: true,
+						passThreshold: true,
+						targetCefrLevel: true,
+						targetVocab: true,
+						disableHoverTranslation: true,
 						createdAt: true
 					}
 				}
@@ -182,6 +189,13 @@ export const GET: RequestHandler = async ({ locals }) => {
 				title: a.title,
 				description: a.description,
 				dueDate: a.dueDate,
+				gamemode: a.gamemode,
+				language: a.language,
+				targetScore: a.targetScore,
+				passThreshold: a.passThreshold,
+				targetCefrLevel: a.targetCefrLevel,
+				targetVocab: a.targetVocab,
+				disableHoverTranslation: a.disableHoverTranslation,
 				createdAt: a.createdAt
 			}))
 		}))
@@ -509,7 +523,13 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 								title: a.title,
 								description: a.description ?? null,
 								dueDate: a.dueDate ? new Date(a.dueDate) : null,
-								gamemode: 'flashcard'
+								gamemode: a.gamemode ?? 'flashcard',
+								language: a.language ?? c.primaryLanguage ?? 'de',
+								targetScore: a.targetScore ?? 0,
+								passThreshold: a.passThreshold ?? 50,
+								targetCefrLevel: a.targetCefrLevel ?? null,
+								targetVocab: a.targetVocab ?? [],
+								disableHoverTranslation: a.disableHoverTranslation ?? false
 							}
 						});
 					}
