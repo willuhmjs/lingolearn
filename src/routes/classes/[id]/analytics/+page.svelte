@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
-	import { addToast } from '$lib/toast';
+	import { toastSuccess, toastError } from '$lib/utils/toast';
 
 	let { data }: { data: PageData } = $props();
 
@@ -61,10 +61,10 @@
 				throw new Error(error.message || 'Failed to create assignment');
 			}
 
-			addToast('Remediation assignment created successfully!', 'success');
+			toastSuccess('Remediation assignment created successfully!');
 		} catch (error) {
 			console.error('Error creating assignment:', error);
-			addToast(error instanceof Error ? error.message : 'An error occurred', 'error');
+			toastError(error instanceof Error ? error.message : 'An error occurred');
 		} finally {
 			creating = false;
 		}

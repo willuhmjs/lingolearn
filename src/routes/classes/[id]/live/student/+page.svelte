@@ -1,40 +1,44 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
-	import { toast } from '$lib/toast';
+	import { toastSuccess, toastError } from '$lib/utils/toast';
 
-	let session: any = null;
+	let session: any = $state(null);
 	let interval: any;
-	let loading = true;
-	let joined = false;
-	let currentUserId = '';
-	let shuffledOptions: any[] = [];
-	let lastQuestionId = '';
-	let lastAnswerCorrect: boolean | null = null;
+	let loading = $state(true);
+	let joined = $state(false);
+	let currentUserId = $state('');
+	let shuffledOptions: any[] = $state([]);
+	let lastQuestionId = $state('');
+	let lastAnswerCorrect: boolean | null = $state(null);
 
-	$: currentQuestionData = session?.game?.questions?.[session?.currentQuestionIndex || 0] || null;
-	$: me = session?.participants?.find((p: any) => p.userId === currentUserId) || null;
-	$: hasAnswered = me?.hasAnswered || false;
-	$: myScore = me?.score || 0;
+	let currentQuestionData = $derived(
+		session?.game?.questions?.[session?.currentQuestionIndex || 0] || null
+	);
+	let me = $derived(session?.participants?.find((p: any) => p.userId === currentUserId) || null);
+	let hasAnswered = $derived(me?.hasAnswered || false);
+	let myScore = $derived(me?.score || 0);
 
-	$: if (currentQuestionData && currentQuestionData.id !== lastQuestionId) {
-		lastQuestionId = currentQuestionData.id;
-		const rawOptions = Array.isArray(currentQuestionData.options)
-			? currentQuestionData.options
-			: typeof currentQuestionData.options === 'string'
-				? JSON.parse(currentQuestionData.options)
-				: [];
-		const opts = [...rawOptions].filter((o) => o !== currentQuestionData.answer);
-		opts.push(currentQuestionData.answer);
+	$effect(() => {
+		if (currentQuestionData && currentQuestionData.id !== lastQuestionId) {
+			lastQuestionId = currentQuestionData.id;
+			const rawOptions = Array.isArray(currentQuestionData.options)
+				? currentQuestionData.options
+				: typeof currentQuestionData.options === 'string'
+					? JSON.parse(currentQuestionData.options)
+					: [];
+			const opts = [...rawOptions].filter((o: any) => o !== currentQuestionData.answer);
+			opts.push(currentQuestionData.answer);
 
-		// Fisher-Yates shuffle
-		for (let i = opts.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[opts[i], opts[j]] = [opts[j], opts[i]];
+			// Fisher-Yates shuffle
+			for (let i = opts.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[opts[i], opts[j]] = [opts[j], opts[i]];
+			}
+
+			shuffledOptions = opts.map((text: any) => ({ text }));
 		}
-
-		shuffledOptions = opts.map((text) => ({ text }));
-	}
+	});
 
 	const classId = $page.params.id;
 
@@ -73,7 +77,7 @@
 			joined = true;
 			fetchSession();
 		} catch (error: any) {
-			toast.error(error.message);
+			toastError(error.message);
 		}
 	}
 
@@ -90,9 +94,9 @@
 			lastAnswerCorrect = result.isCorrect ?? false;
 
 			fetchSession();
-			toast.success(result.isCorrect ? 'Correct!' : 'Incorrect!');
+			toastSuccess(result.isCorrect ? 'Correct!' : 'Incorrect!');
 		} catch (error: any) {
-			toast.error(error.message);
+			toastError(error.message);
 		}
 	}
 

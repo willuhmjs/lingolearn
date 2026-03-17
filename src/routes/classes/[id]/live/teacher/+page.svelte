@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
-	import { toast } from '$lib/toast';
+	import { toastSuccess, toastError } from '$lib/utils/toast';
 	import { modal } from '$lib/modal.svelte';
 
 	let { data }: { data: any } = $props();
@@ -51,7 +51,7 @@
 			if (!res.ok) throw new Error('Failed to update session');
 			fetchSession();
 		} catch (error: any) {
-			toast.error(error.message);
+			toastError(error.message);
 		}
 	}
 
@@ -64,10 +64,10 @@
 				body: JSON.stringify({ action: 'end' })
 			});
 			if (!res.ok) throw new Error('Failed to end session');
-			toast.success('Session ended');
+			toastSuccess('Session ended');
 			window.location.href = `/classes/${classId}`;
 		} catch (error: any) {
-			toast.error(error.message);
+			toastError(error.message);
 		}
 	}
 
