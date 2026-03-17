@@ -77,11 +77,6 @@
 
 	// Summary Statistics Calculations
 	let totalVocab = $derived(data.vocabularies.length);
-	let avgVocabElo = $derived(
-		totalVocab > 0
-			? Math.ceil(data.vocabularies.reduce((acc, v) => acc + v.eloRating, 0) / totalVocab)
-			: 0
-	);
 	let vocabSrsBreakdown = $derived(
 		data.vocabularies.reduce(
 			(acc, v) => {
@@ -92,12 +87,6 @@
 		)
 	);
 
-	let totalGrammar = $derived(data.grammarRules.length);
-	let avgGrammarElo = $derived(
-		totalGrammar > 0
-			? Math.ceil(data.grammarRules.reduce((acc, r) => acc + r.eloRating, 0) / totalGrammar)
-			: 0
-	);
 	let grammarSrsBreakdown = $derived(
 		data.grammarRules.reduce(
 			(acc, r) => {
