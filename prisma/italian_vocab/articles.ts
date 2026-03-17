@@ -12,5 +12,6 @@ export const articles = [
   { lemma: 'un', meaning: 'a, an (masc.)', partOfSpeech: 'article', isBeginner: true },
   { lemma: 'uno', meaning: 'a, an (masc. s+consonant/z/ps/gn)', partOfSpeech: 'article', isBeginner: true },
   { lemma: 'una', meaning: 'a, an (fem.)', partOfSpeech: 'article', isBeginner: true },
-  { lemma: "un'", meaning: 'a, an (fem. before vowel)', partOfSpeech: 'article', isBeginner: true }
+  { lemma: "un'", meaning: 'a, an (fem. before vowel)', partOfSpeech: 'article', isBeginner: true },
+  { lemma: 'dei', meaning: 'some (masc. plural)', partOfSpeech: 'article', isBeginner: true }
 ];

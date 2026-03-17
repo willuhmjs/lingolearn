@@ -14,5 +14,6 @@ export const particles = [
   { lemma: 'pure', meaning: 'also, too', partOfSpeech: 'particle', isBeginner: false },
   { lemma: 'mica', meaning: 'at all (negation)', partOfSpeech: 'particle', isBeginner: false },
   { lemma: 'però', meaning: 'but, however', partOfSpeech: 'particle', isBeginner: true },
-  { lemma: 'anzi', meaning: 'on the contrary', partOfSpeech: 'particle', isBeginner: false }
+  { lemma: 'anzi', meaning: 'on the contrary', partOfSpeech: 'particle', isBeginner: false },
+  { lemma: 'proprio', meaning: 'really, exactly', partOfSpeech: 'particle', isBeginner: false }
 ];

@@ -14,5 +14,12 @@ export const interjections = [
   { lemma: 'basta', meaning: 'enough!', partOfSpeech: 'interjection', isBeginner: true },
   { lemma: 'dai', meaning: 'come on!', partOfSpeech: 'interjection', isBeginner: true },
   { lemma: 'evviva', meaning: 'hooray!', partOfSpeech: 'interjection', isBeginner: false },
-  { lemma: 'mah', meaning: 'meh, who knows', partOfSpeech: 'interjection', isBeginner: false }
+  { lemma: 'mah', meaning: 'meh, who knows', partOfSpeech: 'interjection', isBeginner: false },
+  { lemma: 'oh', meaning: 'oh', partOfSpeech: 'interjection', isBeginner: true },
+  { lemma: 'uffa', meaning: 'phew, ugh', partOfSpeech: 'interjection', isBeginner: true },
+  { lemma: 'peccato', meaning: 'too bad', partOfSpeech: 'interjection', isBeginner: true },
+  { lemma: 'salute', meaning: 'bless you', partOfSpeech: 'interjection', isBeginner: true },
+  { lemma: 'figurati', meaning: "don't mention it", partOfSpeech: 'interjection', isBeginner: false },
+  { lemma: 'assolutamente', meaning: 'absolutely', partOfSpeech: 'interjection', isBeginner: false },
+  { lemma: 'd\'accordo', meaning: 'agreed', partOfSpeech: 'interjection', isBeginner: true }
 ];

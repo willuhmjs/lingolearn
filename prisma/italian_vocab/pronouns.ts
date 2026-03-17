@@ -19,5 +19,14 @@ export const pronouns = [
   { lemma: 'gli', meaning: 'to him, to them', partOfSpeech: 'pronoun', isBeginner: true },
   { lemma: 'ne', meaning: 'of it, of them', partOfSpeech: 'pronoun', isBeginner: false },
   { lemma: 'me', meaning: 'me (stressed)', partOfSpeech: 'pronoun', isBeginner: false },
-  { lemma: 'te', meaning: 'you (stressed)', partOfSpeech: 'pronoun', isBeginner: false }
+  { lemma: 'te', meaning: 'you (stressed)', partOfSpeech: 'pronoun', isBeginner: false },
+  { lemma: 'chi', meaning: 'who', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'che', meaning: 'what', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'cui', meaning: 'which, whom', partOfSpeech: 'pronoun', isBeginner: false },
+  { lemma: 'questo', meaning: 'this', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'quello', meaning: 'that', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'qualcosa', meaning: 'something', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'qualcuno', meaning: 'someone', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'niente', meaning: 'nothing', partOfSpeech: 'pronoun', isBeginner: true },
+  { lemma: 'nessuno', meaning: 'no one, nobody', partOfSpeech: 'pronoun', isBeginner: true }
 ];
