@@ -2617,17 +2617,6 @@
 			0 8px 10px -6px rgba(0, 0, 0, 0.05);
 	}
 
-	.summary-card h3 {
-		margin-top: 0;
-		margin-bottom: 1.5rem;
-		color: var(--text-color, #0f172a);
-		font-size: 1.5rem;
-		font-weight: 700;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
 	.stat-row {
 		display: flex;
 		justify-content: space-between;
@@ -2676,19 +2665,6 @@
 		background: #1e293b;
 	}
 
-	.srs-breakdown h4 {
-		font-size: 1rem;
-		color: #475569;
-		margin-bottom: 1rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		font-weight: 600;
-	}
-
-	:global(html[data-theme='dark']) .srs-breakdown h4 {
-		color: #94a3b8;
-	}
-
 	.breakdown-row {
 		display: flex;
 		justify-content: space-between;
@@ -2710,10 +2686,6 @@
 	}
 
 	:global(html[data-theme='dark']) .breakdown-label {
-		color: #94a3b8;
-	}
-
-	:global(html[data-theme='dark']) .breakdown-row > span {
 		color: #94a3b8;
 	}
 
@@ -4261,13 +4233,6 @@
 		margin-bottom: 3rem;
 	}
 
-	.retention-section h2 {
-		margin-bottom: 1.5rem;
-		font-size: 1.75rem;
-		font-weight: 700;
-		color: var(--text-color, #0f172a);
-	}
-
 	.retention-kpi-row {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
@@ -4449,12 +4414,6 @@
 	/* ---- Learning Insights ---- */
 	.insights-section {
 		margin-bottom: 2.5rem;
-	}
-	.insights-section h2 {
-		font-size: 1.25rem;
-		font-weight: 800;
-		color: var(--text-color, #1e293b);
-		margin: 0 0 1rem;
 	}
 	.insights-grid {
 		display: grid;
