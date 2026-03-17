@@ -350,6 +350,156 @@ const german: LanguageConfig = {
 			country: 'Germany',
 			emoji: '🇩🇪',
 			description: 'Baroque masterpieces on the banks of the Elbe'
+		},
+		{
+			city: 'Stuttgart',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Mercedes, Porsche, and Württemberg vineyard terraces'
+		},
+		{
+			city: 'Düsseldorf',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Rhine promenade, fashion capital, and the Altbier old town'
+		},
+		{
+			city: 'Leipzig',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Bach's city of music, art, and the Peaceful Revolution"
+		},
+		{
+			city: 'Nuremberg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Medieval walled city and the world-famous Christmas market'
+		},
+		{
+			city: 'Heidelberg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Romantic castle ruins gazing over the Neckar river'
+		},
+		{
+			city: 'Freiburg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Sun-drenched university town at the edge of the Black Forest'
+		},
+		{
+			city: 'Innsbruck',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: 'Olympic mountain city in the heart of the Tirolean Alps'
+		},
+		{
+			city: 'Graz',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: "Austria's second city of clocktower hills and pumpkin oil cuisine"
+		},
+		{
+			city: 'Lucerne',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'Chapel Bridge reflections on a glacier-fed lake'
+		},
+		{
+			city: 'Basel',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'Art Basel city straddling three countries on the Rhine'
+		},
+		{
+			city: 'Linz',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: 'Danube city bridging baroque heritage and cutting-edge digital art'
+		},
+		{
+			city: 'Regensburg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'UNESCO-listed medieval old town at the northernmost bend of the Danube'
+		},
+		{
+			city: 'Augsburg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Fugger banking dynasty, the Romantic Road, and Mozart's father's hometown"
+		},
+		{
+			city: 'Würzburg',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Franconian wine, a Tiepolo-frescoed Residenz, and the Main river valley'
+		},
+		{
+			city: 'Erfurt',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Thuringia's flower city and the university where Luther studied"
+		},
+		{
+			city: 'Potsdam',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Sanssouci palace gardens and the grandeur of Prussian royalty'
+		},
+		{
+			city: 'Trier',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: "Germany's oldest city with Roman baths, Porta Nigra, and Moselle wine"
+		},
+		{
+			city: 'Lübeck',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Hanseatic brick-gothic city, marzipan capital, and birthplace of Thomas Mann'
+		},
+		{
+			city: 'Münster',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'City of bicycles, Westphalian peace treaties, and Gothic gables'
+		},
+		{
+			city: 'Hallstatt',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: 'Fairytale lakeside village in the Salzkammergut salt-mining valley'
+		},
+		{
+			city: 'Vaduz',
+			country: 'Liechtenstein',
+			emoji: '🇱🇮',
+			description: "Tiny Liechtenstein's capital with a hilltop castle and no airport"
+		},
+		{
+			city: 'Koblenz',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Where the Moselle meets the Rhine at the Deutsches Eck corner'
+		},
+		{
+			city: 'Rostock',
+			country: 'Germany',
+			emoji: '🇩🇪',
+			description: 'Baltic Sea port with a medieval brick-gothic old town and sandy beaches'
+		},
+		{
+			city: 'St. Gallen',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'UNESCO abbey library and Appenzell embroidery traditions'
+		},
+		{
+			city: 'Bregenz',
+			country: 'Austria',
+			emoji: '🇦🇹',
+			description: 'Floating stage opera festival on the shores of Lake Constance'
 		}
 	]
 };

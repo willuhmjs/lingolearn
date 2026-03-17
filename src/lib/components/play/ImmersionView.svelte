@@ -73,10 +73,51 @@
 		'letter'
 	];
 
+	type Destination = { city: string; country: string; emoji: string; description: string };
+	const DESTINATIONS: Record<string, Destination[]> = {
+		German: [
+			{ city: 'Berlin', country: 'Germany', emoji: '🇩🇪', description: "Germany's vibrant, history-rich capital" },
+			{ city: 'Munich', country: 'Germany', emoji: '🇩🇪', description: "Bavaria's beer gardens and Alpine backdrop" },
+			{ city: 'Hamburg', country: 'Germany', emoji: '🇩🇪', description: "Germany's gateway to the sea" },
+			{ city: 'Vienna', country: 'Austria', emoji: '🇦🇹', description: 'Imperial palaces, coffee houses, and classical music' },
+			{ city: 'Salzburg', country: 'Austria', emoji: '🇦🇹', description: "Mozart's birthplace in the Austrian Alps" },
+			{ city: 'Zurich', country: 'Switzerland', emoji: '🇨🇭', description: "Switzerland's cosmopolitan financial hub" },
+			{ city: 'Bern', country: 'Switzerland', emoji: '🇨🇭', description: 'Charming medieval arcades and the Swiss capital' },
+			{ city: 'Cologne', country: 'Germany', emoji: '🇩🇪', description: 'Cathedral city on the Rhine with legendary Karneval' },
+			{ city: 'Frankfurt', country: 'Germany', emoji: '🇩🇪', description: "Europe's financial heartbeat and Goethe's hometown" },
+			{ city: 'Dresden', country: 'Germany', emoji: '🇩🇪', description: 'Baroque masterpieces on the banks of the Elbe' }
+		],
+		Spanish: [
+			{ city: 'Madrid', country: 'Spain', emoji: '🇪🇸', description: 'Vibrant capital of flamenco, tapas, and football' },
+			{ city: 'Barcelona', country: 'Spain', emoji: '🇪🇸', description: "Gaudi's city of art, beaches, and Catalan culture" },
+			{ city: 'Mexico City', country: 'Mexico', emoji: '🇲🇽', description: 'Ancient Aztec heart meets modern Latin metropolis' },
+			{ city: 'Buenos Aires', country: 'Argentina', emoji: '🇦🇷', description: 'The Paris of South America — tango and steak capital' },
+			{ city: 'Bogota', country: 'Colombia', emoji: '🇨🇴', description: 'High-altitude city of emeralds and magical realism' },
+			{ city: 'Lima', country: 'Peru', emoji: '🇵🇪', description: "South America's culinary capital by the Pacific" },
+			{ city: 'Havana', country: 'Cuba', emoji: '🇨🇺', description: 'Classic cars, salsa rhythms, and colorful colonial streets' },
+			{ city: 'Santiago', country: 'Chile', emoji: '🇨🇱', description: "Andean peaks frame Chile's modern, dynamic capital" },
+			{ city: 'Seville', country: 'Spain', emoji: '🇪🇸', description: "Flamenco's birthplace amid orange trees and tapas bars" },
+			{ city: 'Cartagena', country: 'Colombia', emoji: '🇨🇴', description: 'Walled Caribbean gem of cobblestones and bougainvillea' }
+		],
+		French: [
+			{ city: 'Paris', country: 'France', emoji: '🇫🇷', description: 'The City of Light — fashion, cuisine, and the Eiffel Tower' },
+			{ city: 'Lyon', country: 'France', emoji: '🇫🇷', description: "France's gastronomic capital and UNESCO heritage city" },
+			{ city: 'Marseille', country: 'France', emoji: '🇫🇷', description: 'Sun-drenched port city of bouillabaisse and calanques' },
+			{ city: 'Montreal', country: 'Canada', emoji: '🇨🇦', description: "North America's French heart — festivals and poutine" },
+			{ city: 'Quebec City', country: 'Canada', emoji: '🇨🇦', description: 'Fortified old town with a distinctly European feel' },
+			{ city: 'Brussels', country: 'Belgium', emoji: '🇧🇪', description: "Chocolate, waffles, and the EU's administrative capital" },
+			{ city: 'Geneva', country: 'Switzerland', emoji: '🇨🇭', description: 'International diplomacy on the shores of Lake Leman' },
+			{ city: 'Dakar', country: 'Senegal', emoji: '🇸🇳', description: "West Africa's vibrant gateway to the Francophone world" },
+			{ city: 'Abidjan', country: "Cote d'Ivoire", emoji: '🇨🇮', description: "Cote d'Ivoire's dynamic economic powerhouse" },
+			{ city: 'Casablanca', country: 'Morocco', emoji: '🇲🇦', description: 'Atlantic port city where French and Arabic cultures meet' }
+		]
+	};
+
 	let selectedMediaType: MediaType | 'random' = $state('random');
 	let session = $state<ImmersionSession | null>(null);
 	let loading = $state(false);
 	let error = $state('');
+	let loadingDestination = $state<Destination | null>(null);
 
 	// Answer tracking
 	type AnswerState = {
@@ -108,6 +149,9 @@
 		wordPopup = null;
 		wordLookupCache.clear();
 		wordInflightSet.clear();
+
+		const dests = DESTINATIONS[language?.name ?? 'German'] ?? DESTINATIONS['German'];
+		loadingDestination = dests[Math.floor(Math.random() * dests.length)];
 
 		try {
 			const res = await fetch('/api/immersion/generate', {
@@ -855,6 +899,16 @@
 				<div class="skeleton-line" style="width:80%"></div>
 				<div class="skeleton-line" style="width:6rem;margin-top:1rem"></div>
 				<div class="skeleton-line" style="width:8rem;margin-top:0.25rem"></div>
+			{/if}
+
+			{#if loadingDestination}
+				<div class="loading-destination">
+					<span class="loading-destination-emoji">{loadingDestination.emoji}</span>
+					<div class="loading-destination-info">
+						<div class="loading-destination-name">{loadingDestination.city}, {loadingDestination.country}</div>
+						<div class="loading-destination-desc">{loadingDestination.description}</div>
+					</div>
+				</div>
 			{/if}
 
 			<div class="skeleton-hint">
@@ -1848,6 +1902,49 @@
 		color: #94a3b8;
 		font-size: 0.875rem;
 		text-align: center;
+	}
+
+	.loading-destination {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		margin-top: 1.25rem;
+		padding: 0.875rem 1rem;
+		background: var(--accent-light, #eff6ff);
+		border: 1px solid var(--accent, #3b82f6);
+		border-radius: 0.875rem;
+	}
+
+	:global(html[data-theme='dark']) .loading-destination {
+		background: rgba(59, 130, 246, 0.1);
+		border-color: rgba(59, 130, 246, 0.4);
+	}
+
+	.loading-destination-emoji {
+		font-size: 2.25rem;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.loading-destination-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.loading-destination-name {
+		font-weight: 600;
+		font-size: 1rem;
+		color: var(--text-primary, #1e293b);
+	}
+
+	:global(html[data-theme='dark']) .loading-destination-name {
+		color: #e2e8f0;
+	}
+
+	.loading-destination-desc {
+		font-size: 0.8125rem;
+		color: var(--text-secondary, #64748b);
+		margin-top: 0.2rem;
 	}
 
 	.loading-inner {

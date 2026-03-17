@@ -357,6 +357,156 @@ const italian: LanguageConfig = {
 			country: 'Italy',
 			emoji: '🇮🇹',
 			description: "Romeo and Juliet's city — Roman amphitheatre and rose-lined piazzas"
+		},
+		{
+			city: 'Catania',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Sicily's baroque city of lava-stone streets in the shadow of Mount Etna"
+		},
+		{
+			city: 'Bari',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Puglia's Adriatic port of orecchiette pasta and whitewashed old town"
+		},
+		{
+			city: 'Siena',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Medieval contrade rivalries and the shell-shaped Piazza del Campo'
+		},
+		{
+			city: 'Trieste',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Mitteleuropean crossroads of Joyce, Freud, and Italy-finest coffee culture'
+		},
+		{
+			city: 'Perugia',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Umbria's hilltop city of Etruscan walls, jazz festival, and chocolate"
+		},
+		{
+			city: 'Amalfi',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Clifftop villages clinging to the Tyrrhenian coast between sea and sky'
+		},
+		{
+			city: 'Lecce',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'The Florence of the South — ornate baroque sandstone at every corner'
+		},
+		{
+			city: 'Bergamo',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Venetian-walled upper city of towers and polenta above the Po plain'
+		},
+		{
+			city: 'Padova',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Italy's second-oldest university and Giotto's Scrovegni Chapel frescoes"
+		},
+		{
+			city: 'Parma',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Capital of prosciutto, Parmigiano-Reggiano, and Verdi's operatic legacy"
+		},
+		{
+			city: 'Pisa',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Leaning Tower, Piazza dei Miracoli, and a proud medieval maritime republic'
+		},
+		{
+			city: 'Trento',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Alpine gateway of Trentino wine, Dolomite castles, and the Council of Trent'
+		},
+		{
+			city: 'Ravenna',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Golden Byzantine mosaics and Dante's final resting place"
+		},
+		{
+			city: 'Cagliari',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Sardinia's hilltop capital of nuraghi mysteries and crystal-clear waters"
+		},
+		{
+			city: 'Messina',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Sicilian strait city connecting the island to the mainland since antiquity"
+		},
+		{
+			city: 'Modena',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Ferrari, balsamic vinegar aged for decades, and Pavarotti's birthplace"
+		},
+		{
+			city: 'Lugano',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: 'Swiss-Italian lake city of Mediterranean palms and Alpine precision'
+		},
+		{
+			city: 'Bolzano',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "South Tyrol's bilingual city where Tyrolean tradition meets Italian style"
+		},
+		{
+			city: 'Mantua',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Renaissance ducal city on three lakes immortalized in Virgil's poetry"
+		},
+		{
+			city: 'Ferrara',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Este dynasty city of bicycles, Renaissance walls, and UNESCO heritage'
+		},
+		{
+			city: 'Matera',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Ancient cave-city (Sassi) hewn from Basilicata's ravines, a European Capital of Culture"
+		},
+		{
+			city: 'Brescia',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Lombardy's iron city of Roman temples, Mille Miglia cars, and Franciacorta wine"
+		},
+		{
+			city: 'Sassari',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Northern Sardinia's university city of Catalan-Gothic churches and Cavalcata Sarda festival"
+		},
+		{
+			city: 'Reggio Calabria',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: 'Tip of the Italian boot, home to the magnificent bronze Riace Warriors'
+		},
+		{
+			city: 'Palermo',
+			country: 'Italy',
+			emoji: '🇮🇹',
+			description: "Sicily's chaotic capital of Ballarò street markets and Arab-Norman churches"
 		}
 	]
 };

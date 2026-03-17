@@ -241,6 +241,156 @@ const spanish: LanguageConfig = {
 			country: 'Colombia',
 			emoji: '🇨🇴',
 			description: 'Walled Caribbean gem of cobblestones and bougainvillea'
+		},
+		{
+			city: 'Valencia',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: "Birthplace of paella, home to the futuristic City of Arts and Sciences"
+		},
+		{
+			city: 'Granada',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: 'Alhambra palace, Sacromonte caves, and the last Moorish kingdom in Europe'
+		},
+		{
+			city: 'Bilbao',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: "Guggenheim's titanium curves and the pintxos bars of the Basque Country"
+		},
+		{
+			city: 'Cusco',
+			country: 'Peru',
+			emoji: '🇵🇪',
+			description: 'Inca imperial capital at 3,400 m, gateway to Machu Picchu'
+		},
+		{
+			city: 'Medellín',
+			country: 'Colombia',
+			emoji: '🇨🇴',
+			description: "Colombia's city of eternal spring, cable cars, and urban reinvention"
+		},
+		{
+			city: 'Montevideo',
+			country: 'Uruguay',
+			emoji: '🇺🇾',
+			description: "Uruguay's laid-back Río de la Plata capital of candombe and mate"
+		},
+		{
+			city: 'Quito',
+			country: 'Ecuador',
+			emoji: '🇪🇨',
+			description: 'UNESCO old town perched at equatorial altitude in the Andes'
+		},
+		{
+			city: 'Guadalajara',
+			country: 'Mexico',
+			emoji: '🇲🇽',
+			description: 'Birthplace of mariachi, tequila, and Mexican folk traditions'
+		},
+		{
+			city: 'Oaxaca',
+			country: 'Mexico',
+			emoji: '🇲🇽',
+			description: 'Mole negro, Zapotec ruins at Monte Albán, and Día de Muertos'
+		},
+		{
+			city: 'Córdoba',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: 'Mezquita-Catedral and Moorish Andalucía at its most magnificent'
+		},
+		{
+			city: 'Málaga',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: "Picasso's birthplace on the sun-drenched Costa del Sol"
+		},
+		{
+			city: 'San Sebastián',
+			country: 'Spain',
+			emoji: '🇪🇸',
+			description: 'Most Michelin stars per capita in the world and the golden La Concha bay'
+		},
+		{
+			city: 'Mérida',
+			country: 'Mexico',
+			emoji: '🇲🇽',
+			description: 'Maya culture meets colonial splendor in the Yucatán Peninsula'
+		},
+		{
+			city: 'Mendoza',
+			country: 'Argentina',
+			emoji: '🇦🇷',
+			description: "Argentina's Malbec wine country at the foot of the snow-capped Andes"
+		},
+		{
+			city: 'Cali',
+			country: 'Colombia',
+			emoji: '🇨🇴',
+			description: "Colombia's salsa capital of tropical heat and sugarcane fields"
+		},
+		{
+			city: 'Guanajuato',
+			country: 'Mexico',
+			emoji: '🇲🇽',
+			description: 'Silver-mining city of colorful alleyways and the Cervantino festival'
+		},
+		{
+			city: 'Asunción',
+			country: 'Paraguay',
+			emoji: '🇵🇾',
+			description: "Paraguay's riverside capital of colonial squares and terere culture"
+		},
+		{
+			city: 'La Paz',
+			country: 'Bolivia',
+			emoji: '🇧🇴',
+			description: "World's highest administrative capital of cable cars and witches' markets"
+		},
+		{
+			city: 'Panama City',
+			country: 'Panama',
+			emoji: '🇵🇦',
+			description: 'Where the Americas meet at the iconic Panama Canal'
+		},
+		{
+			city: 'San José',
+			country: 'Costa Rica',
+			emoji: '🇨🇷',
+			description: 'Gateway to rainforests, cloud forests, and pura vida living'
+		},
+		{
+			city: 'Sucre',
+			country: 'Bolivia',
+			emoji: '🇧🇴',
+			description: "Bolivia's constitutional capital and UNESCO-listed colonial gem"
+		},
+		{
+			city: 'Rosario',
+			country: 'Argentina',
+			emoji: '🇦🇷',
+			description: "Argentina's Paraná river city, birthplace of Che Guevara and the flag"
+		},
+		{
+			city: 'Tegucigalpa',
+			country: 'Honduras',
+			emoji: '🇭🇳',
+			description: "Honduras's hilltop capital of colonial churches and vibrant markets"
+		},
+		{
+			city: 'Santa Cruz de la Sierra',
+			country: 'Bolivia',
+			emoji: '🇧🇴',
+			description: "Bolivia's tropical boom city sprawling in the eastern lowlands"
+		},
+		{
+			city: 'Punta Arenas',
+			country: 'Chile',
+			emoji: '🇨🇱',
+			description: 'Southernmost city on the Strait of Magellan at the tip of Patagonia'
 		}
 	]
 };

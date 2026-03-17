@@ -235,6 +235,156 @@ const french: LanguageConfig = {
 			country: 'Morocco',
 			emoji: '🇲🇦',
 			description: 'Atlantic port city where French and Arabic cultures meet'
+		},
+		{
+			city: 'Bordeaux',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: "World's wine capital on the Garonne with a Haussmann-style waterfront"
+		},
+		{
+			city: 'Nice',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: "Azure Coast jewel of Provençal markets and the Belle Époque Promenade"
+		},
+		{
+			city: 'Strasbourg',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: 'Rhine island of Alsatian timber frames, sauerkraut, and the EU Parliament'
+		},
+		{
+			city: 'Toulouse',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: 'Pink city of aerospace, rugby passion, and Occitan culture'
+		},
+		{
+			city: 'Nantes',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: "Jules Verne's Atlantic port city of mechanical elephants and Gothic spires"
+		},
+		{
+			city: 'Lille',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: "Northern France's Flemish-inflected city of brasseries and the giant flea market"
+		},
+		{
+			city: 'Rennes',
+			country: 'France',
+			emoji: '🇫🇷',
+			description: 'Breton capital of half-timbered streets, cider, and galettes'
+		},
+		{
+			city: 'Tunis',
+			country: 'Tunisia',
+			emoji: '🇹🇳',
+			description: 'UNESCO medina of souks and minarets where ancient Carthage once stood'
+		},
+		{
+			city: 'Kinshasa',
+			country: 'DR Congo',
+			emoji: '🇨🇩',
+			description: "Africa's third-largest city, capital of soukous music on the Congo River"
+		},
+		{
+			city: 'Algiers',
+			country: 'Algeria',
+			emoji: '🇩🇿',
+			description: 'Whitewashed Casbah tumbling down to the Mediterranean — a UNESCO medina'
+		},
+		{
+			city: 'Antananarivo',
+			country: 'Madagascar',
+			emoji: '🇲🇬',
+			description: "Madagascar's highland capital of royal palaces, rice terraces, and lemurs"
+		},
+		{
+			city: 'Port-au-Prince',
+			country: 'Haiti',
+			emoji: '🇭🇹',
+			description: "Haiti's resilient capital of Vodou art, iron market, and Creole culture"
+		},
+		{
+			city: 'Douala',
+			country: 'Cameroon',
+			emoji: '🇨🇲',
+			description: "Cameroon's booming Atlantic port and economic engine of Central Africa"
+		},
+		{
+			city: 'Lausanne',
+			country: 'Switzerland',
+			emoji: '🇨🇭',
+			description: "Olympic capital and university city on Lake Geneva's northern shore"
+		},
+		{
+			city: 'Lomé',
+			country: 'Togo',
+			emoji: '🇹🇬',
+			description: "Togo's seaside capital straddling the beach and the Grand Marché"
+		},
+		{
+			city: 'Cotonou',
+			country: 'Benin',
+			emoji: '🇧🇯',
+			description: "Benin's vibrant port city of Vodun temples and the Dantokpa market"
+		},
+		{
+			city: 'Fort-de-France',
+			country: 'Martinique',
+			emoji: '🇲🇶',
+			description: 'Creole culture, rum distilleries, and Mount Pelée on a Caribbean island'
+		},
+		{
+			city: 'Pointe-à-Pitre',
+			country: 'Guadeloupe',
+			emoji: '🇬🇵',
+			description: "Guadeloupe's market town where Creole joie de vivre meets French life"
+		},
+		{
+			city: 'Saint-Louis',
+			country: 'Senegal',
+			emoji: '🇸🇳',
+			description: "Senegal's colonial island city and gateway to the Sahara"
+		},
+		{
+			city: 'Namur',
+			country: 'Belgium',
+			emoji: '🇧🇪',
+			description: "Belgium's Walloon capital where the Meuse and Sambre rivers converge"
+		},
+		{
+			city: 'Luxembourg City',
+			country: 'Luxembourg',
+			emoji: '🇱🇺',
+			description: 'Grand Duchy capital of medieval fortifications and EU institutions'
+		},
+		{
+			city: 'Djibouti City',
+			country: 'Djibouti',
+			emoji: '🇩🇯',
+			description: 'Strategic port at the mouth of the Red Sea in the Horn of Africa'
+		},
+		{
+			city: 'Libreville',
+			country: 'Gabon',
+			emoji: '🇬🇦',
+			description: "Gabon's lush Atlantic capital with equatorial rainforest at its doorstep"
+		},
+		{
+			city: 'Bamako',
+			country: 'Mali',
+			emoji: '🇲🇱',
+			description: 'Niger river capital of djembe rhythms, gold trade, and Dogon culture'
+		},
+		{
+			city: 'Bujumbura',
+			country: 'Burundi',
+			emoji: '🇧🇮',
+			description: "Burundi's lakeside city on the shores of vast Lake Tanganyika"
 		}
 	]
 };
