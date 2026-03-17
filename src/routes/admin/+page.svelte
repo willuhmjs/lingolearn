@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { modal } from '$lib/modal.svelte';
 	import { fly } from 'svelte/transition';
+	import { untrack } from 'svelte';
 	import type { PageData, ActionData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -27,10 +28,10 @@
 	let deleteScope = $state<'vocab' | 'grammar' | 'all'>('all');
 	let isDeletingLangData = $state(false);
 
-	// LLM config state
-	let llmEndpoint = $state(data.llmEndpoint || '');
-	let llmApiKey = $state(data.llmApiKey || '');
-	let llmModel = $state(data.llmModel || '');
+	// LLM config state — untrack intentionally: these are editable form fields seeded from server data
+	let llmEndpoint = $state(untrack(() => data.llmEndpoint || ''));
+	let llmApiKey = $state(untrack(() => data.llmApiKey || ''));
+	let llmModel = $state(untrack(() => data.llmModel || ''));
 	let availableModels = $state<string[]>([]);
 	let isFetchingModels = $state(false);
 	let llmMsg = $state('');

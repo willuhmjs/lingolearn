@@ -874,6 +874,7 @@
 			role="dialog"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 			transition:fly={{ y: 20, duration: 200 }}
 		>
 			<!-- Header band -->
