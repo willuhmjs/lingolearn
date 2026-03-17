@@ -72,6 +72,8 @@ feat!:     breaking change                   → major bump
 
 **Never commit directly.** Stage changes for the user to review first.
 
+**Never add co-author or co-commit trailers** (`Co-Authored-By`, `Co-Committed-By`, etc.) to any commit message.
+
 ## Release process (short version)
 
 ```bash
