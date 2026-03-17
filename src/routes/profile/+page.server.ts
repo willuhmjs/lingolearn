@@ -4,6 +4,7 @@ import { prisma } from '$lib/server/prisma';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { encrypt, decrypt } from '$lib/server/crypto';
 import { getSiteSettings } from '$lib/server/settings';
 import { checkUsernameAppropriate } from '$lib/server/llm';
 import { getDailyUsage, DAILY_TOKEN_QUOTA } from '$lib/server/aiQuota';
@@ -50,8 +51,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     })
   );
 
+  const llmApiKey = user?.llmApiKey ? decrypt(user.llmApiKey) : null;
+
   return {
-    user: { ...locals.user, ...user },
+    user: { ...locals.user, ...user, llmApiKey },
     hasPassword: !!user?.passwordHash,
     localLoginEnabled: settings.localLoginEnabled,
     languageProgress,
@@ -201,7 +204,8 @@ export const actions: Actions = {
     const formData = await request.formData();
     const useLocalLlm = formData.get('useLocalLlm') === 'on';
     const llmBaseUrl = formData.get('llmBaseUrl')?.toString() || null;
-    const llmApiKey = formData.get('llmApiKey')?.toString() || null;
+    const rawLlmApiKey = formData.get('llmApiKey')?.toString() || null;
+    const llmApiKey = rawLlmApiKey ? encrypt(rawLlmApiKey) : null;
     const llmModel = formData.get('llmModel')?.toString() || null;
 
     try {

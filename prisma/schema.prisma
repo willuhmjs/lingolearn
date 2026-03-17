@@ -99,6 +99,8 @@ model User {
   fsrsWeights           Float[]       @default([]) // Per-user optimized FSRS-5 weights (19 values); empty = use global defaults
   sessionSuccessEma     Float         @default(0.75) // EMA of per-session correct rate [0,1]; drives adaptive new-word cap
   interleaveBanditState String? // JSON: {arms:[{alpha,beta}]} for Thompson-sampling interleave count (0..MAX_INTERLEAVE)
+
+  @@index([activeLanguageId])
 }
 
 model UserProgress {
@@ -115,6 +117,7 @@ model UserProgress {
 
   @@unique([userId, languageId])
   @@index([userId])
+  @@index([languageId])
 }
 
 model Account {
@@ -134,6 +137,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -142,6 +146,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -178,6 +184,7 @@ model Vocabulary {
   progress        UserVocabularyProgress[]
 
   @@index([lemma])
+  @@index([languageId])
 }
 
 model Meaning {
@@ -189,6 +196,7 @@ model Meaning {
   context      String?
 
   @@index([value])
+  @@index([vocabularyId])
 }
 
 model GrammarRule {
@@ -211,6 +219,8 @@ model GrammarRule {
 
   dependencies GrammarRule[] @relation("GrammarDependencies")
   dependents   GrammarRule[] @relation("GrammarDependencies")
+
+  @@index([languageId])
 }
 
 enum SrsState {
@@ -347,6 +357,7 @@ model LevelUpEvent {
 
   @@index([userId])
   @@index([userId, languageId])
+  @@index([languageId])
 }
 
 model SiteSettings {
@@ -413,6 +424,8 @@ model Game {
   questions    GameQuestion[]
   liveSessions LiveSession[]
   assignments  Assignment[]
+
+  @@index([creatorId])
 }
 
 model GameQuestion {
@@ -483,6 +496,9 @@ model Assignment {
   class  Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
   game   Game?             @relation(fields: [gameId], references: [id], onDelete: SetNull)
   scores AssignmentScore[]
+
+  @@index([classId])
+  @@index([gameId])
 }
 
 model AssignmentScore {
@@ -531,6 +547,8 @@ model ConversationSession {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
+
+  @@index([userId])
 }
 
 model Message {

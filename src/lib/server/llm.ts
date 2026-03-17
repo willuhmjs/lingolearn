@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { getLanguageConfig } from '$lib/languages';
+import { decrypt } from '$lib/server/crypto';
 import { prisma } from '$lib/server/prisma';
 import { getSiteSettings } from '$lib/server/settings';
 import OpenAI from 'openai';
@@ -122,8 +123,8 @@ export async function generateChatCompletion({
 
   const apiKey = (
     allowCustomLlm && user?.llmApiKey
-      ? user.llmApiKey
-      : settings.llmApiKey || env.DEFAULT_LLM_API_KEY || ''
+      ? decrypt(user.llmApiKey)
+      : decrypt(settings.llmApiKey || '') || env.DEFAULT_LLM_API_KEY || ''
   ).replace(/^["']|["']$/g, '');
   const resolvedModel = (
     model ||
@@ -274,7 +275,10 @@ export async function checkUsernameAppropriate(
     /^["']|["']$/g,
     ''
   );
-  const apiKey = (settings.llmApiKey || env.DEFAULT_LLM_API_KEY || '').replace(/^["']|["']$/g, '');
+  const apiKey = (decrypt(settings.llmApiKey || '') || env.DEFAULT_LLM_API_KEY || '').replace(
+    /^["']|["']$/g,
+    ''
+  );
   const resolvedModel = (settings.llmModel || env.DEFAULT_LLM_MODEL || 'gpt-3.5-turbo').replace(
     /^["']|["']$/g,
     ''

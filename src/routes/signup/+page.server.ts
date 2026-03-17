@@ -3,6 +3,7 @@ import { prisma } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import bcrypt from 'bcrypt';
+import { encrypt } from '$lib/server/crypto';
 import { Prisma } from '@prisma/client';
 import { getSiteSettings } from '$lib/server/settings';
 import { checkUsernameAppropriate } from '$lib/server/llm';
@@ -52,8 +53,9 @@ export const actions = {
       return fail(400, { error: message, usernameSuggestion: suggestion });
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Hash and encrypt password
+    const rawHash = await bcrypt.hash(password, 10);
+    const passwordHash = encrypt(rawHash);
 
     // Create user — rely on DB unique constraints for race-condition safety.
     // Role assignment runs in the same transaction to eliminate TOCTOU.

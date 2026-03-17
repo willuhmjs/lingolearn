@@ -1,6 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { encrypt, decrypt } from '$lib/server/crypto';
 import { runSeed } from '../../../prisma/seed';
 import { getSiteSettings, updateSiteSettings } from '$lib/server/settings';
 import { todayUtc } from '$lib/server/dateUtils';
@@ -112,7 +113,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     users,
     localLoginEnabled: settings.localLoginEnabled,
     llmEndpoint: settings.llmEndpoint || '',
-    llmApiKey: settings.llmApiKey || '',
+    llmApiKey: settings.llmApiKey ? decrypt(settings.llmApiKey) : '',
     llmModel: settings.llmModel || '',
     languages,
     pendingVocab,
@@ -194,7 +195,8 @@ export const actions: Actions = {
 
     const data = await request.formData();
     const llmEndpoint = data.get('llmEndpoint')?.toString() || '';
-    const llmApiKey = data.get('llmApiKey')?.toString() || '';
+    const rawLlmApiKey = data.get('llmApiKey')?.toString() || '';
+    const llmApiKey = rawLlmApiKey ? encrypt(rawLlmApiKey) : '';
     const llmModel = data.get('llmModel')?.toString() || '';
 
     try {

@@ -4,6 +4,7 @@ import Credentials from '@auth/sveltekit/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '$lib/server/prisma';
 import bcrypt from 'bcrypt';
+import { decrypt } from '$lib/server/crypto';
 import { getSiteSettings } from '$lib/server/settings';
 
 const adapter = PrismaAdapter(prisma);
@@ -54,9 +55,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           }
         });
         if (!user || !user.passwordHash) return null;
+
+        // Decrypt the hash if it's encrypted (decrypt handles legacy hashes)
+        const decryptedHash = decrypt(user.passwordHash);
+
         const passwordsMatch = await bcrypt.compare(
           credentials.password as string,
-          user.passwordHash
+          decryptedHash
         );
         if (passwordsMatch) return user;
         return null;
