@@ -5,18 +5,36 @@
  * Format: "<inflected_form> <raw_count>" per line, sorted by count desc.
  *
  * What this script does:
- *   1. Downloads the top-50k frequency lists for German, Spanish, and French.
- *   2. Aggregates inflected forms into lemmas using the strong-verb lookup table
- *      and Snowball stemmer (German only; ES/FR kept as-is since they have
- *      much less irregular morphology and the raw forms are close to lemmas).
+ *   1. Reads all *_50k.txt files present in prisma/data/frequency/.
+ *      Download missing languages first with: pnpm fetch:frequency <code>
+ *   2. Aggregates inflected forms into lemmas (German only; all other languages
+ *      are kept as-is since raw forms are close to lemmas).
  *   3. Assigns rank 1..N (1 = most frequent) to the aggregated lemmas.
- *   4. Writes a single TypeScript file with three exported Record<string,number>
- *      maps plus helper functions used by the app at runtime.
+ *   4. Writes src/lib/frequency/index.ts with one export per language plus a
+ *      unified FREQUENCY_MAPS record used by frequencyLoader.ts at runtime.
  *
- * Run with: pnpm tsx prisma/scripts/build-frequency-db.ts
+ * Run with: pnpm build:frequency
+ *
+ * To add a new language:
+ *   1. Register it in src/lib/languages/ (add a config + add to index.ts)
+ *   2. Add its code → display-name mapping to CODE_TO_NAME below
+ *   3. Run: pnpm fetch:frequency <code> && pnpm build:frequency
+ *   4. Commit prisma/data/frequency/<code>_50k.txt and src/lib/frequency/index.ts
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+
+// ---------------------------------------------------------------------------
+// Code → display name mapping.
+// Add a new entry here whenever you register a new language in src/lib/languages/.
+// ---------------------------------------------------------------------------
+const CODE_TO_NAME: Record<string, string> = {
+	de: 'German',
+	es: 'Spanish',
+	fr: 'French',
+	it: 'Italian'
+};
 import { stemmer as deStemmer } from '@orama/stemmers/german';
 
 // ---------------------------------------------------------------------------
@@ -238,9 +256,7 @@ const DATA_DIR = 'prisma/data/frequency';
 function resolveGermanLemma(form: string): string {
 	const lower = form.toLowerCase();
 	if (DE_INFLECTION_LOOKUP[lower]) return DE_INFLECTION_LOOKUP[lower];
-	const stem = deStemmer(lower);
-	// Try stem+en (common infinitive pattern)
-	return stem;
+	return deStemmer(lower);
 }
 
 function buildRankMap(rawText: string, resolver: (form: string) => string): Map<string, number> {
@@ -253,7 +269,6 @@ function buildRankMap(rawText: string, resolver: (form: string) => string): Map<
 		const count = parseInt(countStr);
 		countMap.set(lemma, (countMap.get(lemma) ?? 0) + count);
 	}
-	// Sort descending by count, assign rank 1..N
 	const sorted = [...countMap.entries()].sort((a, b) => b[1] - a[1]);
 	const rankMap = new Map<string, number>();
 	sorted.forEach(([lemma], i) => rankMap.set(lemma, i + 1));
@@ -264,43 +279,73 @@ function mapToTsObject(map: Map<string, number>): string {
 	return [...map.entries()].map(([k, v]) => `  ${JSON.stringify(k)}:${v}`).join(',\n');
 }
 
+/** Returns the resolver function for a given language code. */
+function resolverFor(code: string): (form: string) => string {
+	if (code === 'de') return resolveGermanLemma;
+	return (f) => f.toLowerCase();
+}
+
+/** Upper-cases the first letter of a code-derived name (fallback for unknown codes). */
+function codeToExportName(code: string): string {
+	return code.toUpperCase();
+}
+
 async function main() {
-	console.log('Reading frequency lists from', DATA_DIR);
-	const deRaw = readFileSync(`${DATA_DIR}/de_50k.txt`, 'utf8');
-	const esRaw = readFileSync(`${DATA_DIR}/es_50k.txt`, 'utf8');
-	const frRaw = readFileSync(`${DATA_DIR}/fr_50k.txt`, 'utf8');
+	// Auto-discover all *_50k.txt files in the data directory.
+	const txtFiles = readdirSync(DATA_DIR)
+		.filter((f) => f.endsWith('_50k.txt'))
+		.sort();
 
-	console.log('Building rank maps...');
-	const deMap = buildRankMap(deRaw, resolveGermanLemma);
-	const esMap = buildRankMap(esRaw, (f) => f.toLowerCase());
-	const frMap = buildRankMap(frRaw, (f) => f.toLowerCase());
+	if (txtFiles.length === 0) {
+		console.error(`No *_50k.txt files found in ${DATA_DIR}.`);
+		console.error('Run: pnpm fetch:frequency <code>  (e.g. pnpm fetch:frequency it)');
+		process.exit(1);
+	}
 
-	console.log(`DE: ${deMap.size} lemmas, ES: ${esMap.size}, FR: ${frMap.size}`);
+	console.log(`Found ${txtFiles.length} frequency file(s): ${txtFiles.join(', ')}`);
+
+	const languages: Array<{ code: string; name: string; exportName: string; map: Map<string, number> }> = [];
+
+	for (const file of txtFiles) {
+		const code = file.replace('_50k.txt', '');
+		const name = CODE_TO_NAME[code] ?? code;
+		const exportName = CODE_TO_NAME[code]
+			? code.toUpperCase() + '_FREQUENCY'
+			: codeToExportName(code) + '_FREQUENCY';
+
+		console.log(`Building rank map for ${name} (${code})...`);
+		const raw = readFileSync(join(DATA_DIR, file), 'utf8');
+		const map = buildRankMap(raw, resolverFor(code));
+		console.log(`  ${name}: ${map.size} lemmas`);
+
+		languages.push({ code, name, exportName, map });
+	}
 
 	mkdirSync('src/lib/frequency', { recursive: true });
 
+	const individualExports = languages
+		.map(
+			({ exportName, map }) =>
+				`export const ${exportName}: Record<string, number> = {\n${mapToTsObject(map)}\n};`
+		)
+		.join('\n\n');
+
+	const mapsEntries = languages
+		.map(({ name, exportName }) => `  ${JSON.stringify(name)}: ${exportName}`)
+		.join(',\n');
+
 	const ts = `// Auto-generated — do not edit manually.
-// Rebuild with: pnpm tsx prisma/scripts/build-frequency-db.ts
+// Rebuild with: pnpm build:frequency
+// Add a new language: pnpm fetch:frequency <code> && pnpm build:frequency
 // Source: hermitdave/FrequencyWords (OpenSubtitles 2018, MIT licence)
 // German forms are aggregated to lemmas via strong-verb lookup + Snowball stemmer.
 // Format: lowercased lemma → frequency rank (1 = most frequent in corpus).
 
-export const DE_FREQUENCY: Record<string, number> = {
-${mapToTsObject(deMap)}
-};
+${individualExports}
 
-export const ES_FREQUENCY: Record<string, number> = {
-${mapToTsObject(esMap)}
-};
-
-export const FR_FREQUENCY: Record<string, number> = {
-${mapToTsObject(frMap)}
-};
-
-const MAPS: Record<string, Record<string, number>> = {
-  German: DE_FREQUENCY,
-  Spanish: ES_FREQUENCY,
-  French: FR_FREQUENCY,
+/** All bundled frequency maps keyed by language display name. */
+export const FREQUENCY_MAPS: Record<string, Record<string, number>> = {
+${mapsEntries}
 };
 
 /**
@@ -308,7 +353,7 @@ const MAPS: Record<string, Record<string, number>> = {
  * Returns null if the lemma is not in the frequency database.
  */
 export function getFrequencyRank(lemma: string, language: string): number | null {
-  const map = MAPS[language];
+  const map = FREQUENCY_MAPS[language];
   if (!map) return null;
   return map[lemma.toLowerCase()] ?? null;
 }
@@ -324,7 +369,8 @@ export function estimateFrequencyRank(lemma: string): number {
 `;
 
 	writeFileSync('src/lib/frequency/index.ts', ts);
-	console.log(`Written src/lib/frequency/index.ts (${(ts.length / 1024).toFixed(0)} KB)`);
+	console.log(`\nWritten src/lib/frequency/index.ts (${(ts.length / 1024).toFixed(0)} KB)`);
+	console.log('Commit this file along with any new prisma/data/frequency/*.txt files.');
 }
 
 main().catch((e) => {

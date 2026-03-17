@@ -13,6 +13,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"seed": "tsx prisma/seed.ts",
+		"fetch:frequency": "tsx prisma/scripts/fetch-frequency-data.ts",
+		"build:frequency": "tsx prisma/scripts/build-frequency-db.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
