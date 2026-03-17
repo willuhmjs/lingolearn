@@ -949,8 +949,22 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
             aria-expanded={grammarMapExpanded}
           >
             <span class="grammar-map-toggle-label">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle
+                  cx="19"
+                  cy="19"
+                  r="2"
+                />
                 <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
               </svg>
               Grammar Map
@@ -1153,7 +1167,8 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
                             class="prereq-link dependent-link"
                             onclick={() => toggleGrammar(dep.id)}
                             title="Jump to: {dep.title}">{dep.title}</button
-                          >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span>{/if}
+                          >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span
+                            >{/if}
                         {/each}
                       </div>
                     {/if}
@@ -1257,7 +1272,8 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
                               class="prereq-link dependent-link"
                               onclick={() => toggleGrammar(dep.id)}
                               title="Jump to: {dep.title}">{dep.title}</button
-                            >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span>{/if}
+                            >{#if i < rule.dependents.length - 1}<span class="prereq-arrow">·</span
+                              >{/if}
                           {/each}
                         </div>
                       {/if}
@@ -2403,21 +2419,29 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     color: var(--text-color, #0f172a);
     transition: background 0.15s;
   }
-  .grammar-map-toggle:hover { background: rgba(0, 0, 0, 0.03); }
-  :global(html[data-theme='dark']) .grammar-map-toggle:hover { background: rgba(255, 255, 255, 0.04); }
+  .grammar-map-toggle:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+  :global(html[data-theme='dark']) .grammar-map-toggle:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
   .grammar-map-toggle-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: #475569;
   }
-  :global(html[data-theme='dark']) .grammar-map-toggle-label { color: #94a3b8; }
+  :global(html[data-theme='dark']) .grammar-map-toggle-label {
+    color: #94a3b8;
+  }
   .grammar-map-chevron {
     color: #94a3b8;
     transition: transform 0.2s;
     flex-shrink: 0;
   }
-  .grammar-map-chevron.rotated { transform: rotate(180deg); }
+  .grammar-map-chevron.rotated {
+    transform: rotate(180deg);
+  }
   .grammar-map-content {
     display: grid;
     grid-template-rows: 1fr;
@@ -2432,7 +2456,9 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     overflow: hidden;
     min-height: 0;
   }
-  :global(html[data-theme='dark']) .grammar-map-content { border-color: #334155; }
+  :global(html[data-theme='dark']) .grammar-map-content {
+    border-color: #334155;
+  }
   /* Give GrammarWeb's flow canvas a tall fixed height inside the blob */
   :global(.grammar-map-content .grammar-web-container) {
     height: 75vh;

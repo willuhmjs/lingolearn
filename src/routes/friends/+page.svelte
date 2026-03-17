@@ -456,7 +456,9 @@
     background: transparent;
     font-size: 0.875rem;
     white-space: nowrap;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
   .btn-copy:hover:not(:disabled) {
     background: #3b82f6;

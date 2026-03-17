@@ -1,6 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { SvelteFlow, Background, Controls, Panel, MiniMap, type Node, type Edge } from '@xyflow/svelte';
+  import {
+    SvelteFlow,
+    Background,
+    Controls,
+    Panel,
+    MiniMap,
+    type Node,
+    type Edge
+  } from '@xyflow/svelte';
   import dagre from 'dagre';
   import GrammarNode from './GrammarNode.svelte';
 

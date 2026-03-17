@@ -883,7 +883,6 @@
           : selectedMediaType.replace(/_/g, ' ')}...
       </div>
     </div>
-
   {/if}
 
   {#if session && !loading}

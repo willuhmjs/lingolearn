@@ -38,13 +38,11 @@
       <h1>Invalid Invite</h1>
       <p class="sub">{data.error}</p>
       <a href="/friends" class="btn-primary">Go to Friends</a>
-
     {:else if data.existing}
       <div class="state-icon">✓</div>
       <h1>Already Friends</h1>
       <p class="sub">You and <strong>{data.inviter?.username}</strong> are already friends.</p>
       <a href="/friends" class="btn-primary">View Friends</a>
-
     {:else if sent}
       <div class="state-icon">🎉</div>
       <h1>You're now friends!</h1>
@@ -52,13 +50,8 @@
         You and <strong>{data.inviter?.username}</strong> are now friends.
       </p>
       <a href="/friends" class="btn-primary">View Friends</a>
-
     {:else}
-      <img
-        src={data.inviter?.image || '/default-avatar.png'}
-        alt=""
-        class="avatar"
-      />
+      <img src={data.inviter?.image || '/default-avatar.png'} alt="" class="avatar" />
       <h1>{data.inviter?.name || data.inviter?.username}</h1>
       <p class="username">@{data.inviter?.username}</p>
       <p class="sub">invited you to be friends on LingoLearn.</p>

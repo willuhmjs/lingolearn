@@ -258,7 +258,9 @@
             </a>
             <a
               href="/profile"
-              class="nav-item mobile-only-nav {$page.url.pathname.startsWith('/profile') ? 'active' : ''}"
+              class="nav-item mobile-only-nav {$page.url.pathname.startsWith('/profile')
+                ? 'active'
+                : ''}"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -299,7 +301,9 @@
             <!-- Desktop: admin in sidebar nav -->
             <a
               href="/admin"
-              class="nav-item admin-link desktop-only-nav {$page.url.pathname.startsWith('/admin') ? 'active' : ''}"
+              class="nav-item admin-link desktop-only-nav {$page.url.pathname.startsWith('/admin')
+                ? 'active'
+                : ''}"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -1418,7 +1422,9 @@
       box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
       text-decoration: none;
       z-index: 110;
-      transition: background-color 0.15s, box-shadow 0.15s;
+      transition:
+        background-color 0.15s,
+        box-shadow 0.15s;
     }
 
     .admin-fab svg {
