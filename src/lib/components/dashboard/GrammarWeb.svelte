@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { SvelteFlow, Background, Controls, type Node, type Edge } from '@xyflow/svelte';
+  import { SvelteFlow, Background, Controls, Panel, MiniMap, type Node, type Edge } from '@xyflow/svelte';
   import dagre from 'dagre';
   import GrammarNode from './GrammarNode.svelte';
 
@@ -13,6 +13,18 @@
     KNOWN: 'var(--color-known, #6ee7b7)',
     MASTERED: 'var(--color-mastered, #10b981)'
   };
+
+  const srsHex: Record<string, string> = {
+    LOCKED: '#94a3b8',
+    UNSEEN: '#e2e8f0',
+    LEARNING: '#fef08a',
+    KNOWN: '#6ee7b7',
+    MASTERED: '#10b981'
+  };
+
+  function miniMapNodeColor(node: Node): string {
+    return srsHex[(node.data as { srsState: string }).srsState] ?? srsHex.LOCKED;
+  }
 
   interface Props {
     allGrammarRules: any[];
@@ -305,6 +317,17 @@
       >
         <Background />
         <Controls />
+        <MiniMap zoomable pannable nodeColor={miniMapNodeColor} />
+        <Panel position="top-left">
+          <div class="flow-legend">
+            {#each Object.entries(srsColors) as [state, color]}
+              <div class="legend-item">
+                <span class="legend-dot" style="background-color: {color}"></span>
+                <span class="legend-label">{state}</span>
+              </div>
+            {/each}
+          </div>
+        </Panel>
       </SvelteFlow>
     </div>
   {/if}
@@ -505,6 +528,49 @@
 
   :global(html[data-theme='dark'] .svelte-flow__edge-path) {
     stroke: #475569;
+  }
+
+  /* SRS legend panel */
+  .flow-legend {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  :global(html[data-theme='dark']) .flow-legend {
+    background: rgba(15, 23, 42, 0.88);
+    border-color: #334155;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .legend-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+  }
+
+  :global(html[data-theme='dark']) .legend-label {
+    color: #94a3b8;
   }
 
   .empty-state {

@@ -15,9 +15,23 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     onboardedLanguages = languages.filter((l) => onboardedIds.has(l.id));
   }
 
+  let socialNotificationCount = 0;
+  if (locals.user) {
+    const [pendingFriendships, pendingChallenges] = await Promise.all([
+      prisma.friendship.count({
+        where: { receiverId: locals.user.id, status: 'PENDING' }
+      }),
+      prisma.challenge.count({
+        where: { challengeeId: locals.user.id, status: 'PENDING' }
+      })
+    ]);
+    socialNotificationCount = pendingFriendships + pendingChallenges;
+  }
+
   return {
     user: locals.user,
     languages,
-    onboardedLanguages
+    onboardedLanguages,
+    socialNotificationCount
   };
 };

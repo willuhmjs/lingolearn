@@ -16,46 +16,32 @@
   };
 
   let grammarSortOrder = $state<'easiest' | 'hardest'>('easiest');
-  let grammarView = $state<'web' | 'list'>('web'); // #15: list fallback for mobile
+  let grammarView = $state<'web' | 'list'>('web');
 
-  // Topologically sort grammar rules to ensure prerequisites come first
   let sortedRules = $derived(
     (() => {
       const rules = data.allGrammarRules || [];
       const sorted: any[] = [];
       const visited = new Set<string>();
       const visiting = new Set<string>();
-
       function visit(rule: any) {
         if (visited.has(rule.id)) return;
-        if (visiting.has(rule.id)) return; // Break cycle
+        if (visiting.has(rule.id)) return;
         visiting.add(rule.id);
-
         for (const dep of rule.dependencies || []) {
           const depRule = rules.find((r: any) => r.id === dep.id);
-          if (depRule) {
-            visit(depRule);
-          }
+          if (depRule) visit(depRule);
         }
-
         visiting.delete(rule.id);
         visited.add(rule.id);
         sorted.push(rule);
       }
-
-      for (const rule of rules) {
-        visit(rule);
-      }
-
-      if (grammarSortOrder === 'hardest') {
-        return sorted.reverse();
-      }
-
-      return sorted;
+      for (const rule of rules) visit(rule);
+      return grammarSortOrder === 'hardest' ? sorted.reverse() : sorted;
     })()
   );
 
-  // Merge user progress with all possible rules for the grammar web
+  // Merge user progress with all possible rules
   let grammarWebNodes = $derived(
     sortedRules.map((rule: any) => {
       const userProgress = data.grammarRules.find((ur: any) => ur.grammarRuleId === rule.id);
@@ -564,20 +550,8 @@
               aria-pressed={grammarView === 'web'}
               title="Web view"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-                width="16"
-                height="16"
-              >
-                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle
-                  cx="19"
-                  cy="19"
-                  r="2"
-                />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" width="16" height="16">
+                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" />
                 <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
               </svg>
             </button>
@@ -588,30 +562,24 @@
               aria-pressed={grammarView === 'list'}
               title="List view"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-                width="16"
-                height="16"
-              >
-                <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line
-                  x1="8"
-                  y1="18"
-                  x2="21"
-                  y2="18"
-                />
-                <line x1="3" y1="6" x2="3.01" y2="6" /><line
-                  x1="3"
-                  y1="12"
-                  x2="3.01"
-                  y2="12"
-                /><line x1="3" y1="18" x2="3.01" y2="18" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" width="16" height="16">
+                <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
             </button>
           </div>
+          <a
+            href="/dictionary?tab=grammar"
+            class="grammar-expand-btn"
+            title="Open full grammar map"
+            aria-label="Open full grammar map in library"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
         </div>
       </div>
       {#if grammarWebNodes.length === 0}
@@ -620,19 +588,9 @@
         <div class="grammar-list">
           {#each grammarWebNodes as rule}
             {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
-            {@const eloPercent = rule.isLocked
-              ? 0
-              : Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    rule.srsState === 'LEARNING'
-                      ? ((rule.eloRating - 1000) / 50) * 100
-                      : rule.srsState === 'KNOWN'
-                        ? ((rule.eloRating - 1050) / 100) * 100
-                        : 100
-                  )
-                )}
+            {@const eloPercent = rule.isLocked ? 0 : Math.max(0, Math.min(100,
+              rule.srsState === 'LEARNING' ? ((rule.eloRating - 1000) / 50) * 100
+              : rule.srsState === 'KNOWN' ? ((rule.eloRating - 1050) / 100) * 100 : 100))}
             <button
               class="grammar-list-row"
               class:locked={rule.isLocked}
@@ -647,16 +605,7 @@
                 {/if}
               </div>
               <span class="grammar-list-state" style="color: {srsColor}">{rule.srsState}</span>
-              <svg
-                class="grammar-list-chevron"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                aria-hidden="true"
-                width="14"
-                height="14"
-              >
+              <svg class="grammar-list-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" width="14" height="14">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
               </svg>
             </button>
@@ -669,41 +618,24 @@
               {#each grammarWebNodes as _rule, i}
                 {#if i < grammarWebNodes.length - 1}
                   <line
-                    x1="50%"
-                    y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
-                    x2="50%"
-                    y2="{(100 / grammarWebNodes.length) * (i + 1) +
-                      100 / grammarWebNodes.length / 2}%"
+                    x1="50%" y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
+                    x2="50%" y2="{(100 / grammarWebNodes.length) * (i + 1) + 100 / grammarWebNodes.length / 2}%"
                     class="web-connection-line"
                   />
                 {/if}
               {/each}
             </svg>
-
             <div class="web-tree-layout">
               {#each grammarWebNodes as rule}
                 {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
-                {@const eloPercent = rule.isLocked
-                  ? 0
-                  : Math.max(
-                      0,
-                      Math.min(
-                        100,
-                        rule.srsState === 'LEARNING'
-                          ? ((rule.eloRating - 1000) / 50) * 100
-                          : rule.srsState === 'KNOWN'
-                            ? ((rule.eloRating - 1050) / 100) * 100
-                            : 100
-                      )
-                    )}
-
+                {@const eloPercent = rule.isLocked ? 0 : Math.max(0, Math.min(100,
+                  rule.srsState === 'LEARNING' ? ((rule.eloRating - 1000) / 50) * 100
+                  : rule.srsState === 'KNOWN' ? ((rule.eloRating - 1050) / 100) * 100 : 100))}
                 <button
                   class="web-node-pill"
                   class:locked={rule.isLocked}
                   style="--node-color: {srsColor}"
                   onclick={() => openGrammarModal(rule, srsColor, eloPercent)}
-                  onkeydown={(e) =>
-                    e.key === 'Enter' && openGrammarModal(rule, srsColor, eloPercent)}
                   aria-label="View grammar rule: {rule.grammarRule.title}"
                 >
                   <div class="node-pill-content tooltip-trigger">
@@ -711,11 +643,8 @@
                       <span class="sr-only">{rule.srsState}</span>
                     </div>
                     <span class="node-title">{rule.grammarRule.title}</span>
-
                     <div class="tooltip-content">
-                      <div class="tooltip-header">
-                        {rule.grammarRule.title}
-                      </div>
+                      <div class="tooltip-header">{rule.grammarRule.title}</div>
                       <div class="tooltip-body">
                         <div class="word-tooltip-elo">
                           <div class="elo-header">
@@ -726,16 +655,11 @@
                           </div>
                           {#if !rule.isLocked}
                             <div class="elo-progress-track">
-                              <div
-                                class="elo-progress-fill {rule.srsState.toLowerCase()}"
-                                style="width: {eloPercent}%; background-color: {srsColor}"
-                              ></div>
+                              <div class="elo-progress-fill {rule.srsState.toLowerCase()}" style="width: {eloPercent}%; background-color: {srsColor}"></div>
                             </div>
                           {/if}
                         </div>
-                        <p class="node-desc">
-                          {rule.grammarRule.description || 'No description available.'}
-                        </p>
+                        <p class="node-desc">{rule.grammarRule.description || 'No description available.'}</p>
                       </div>
                     </div>
                   </div>
@@ -2918,7 +2842,7 @@
     background: linear-gradient(90deg, #10b981, #059669);
   }
 
-  /* Grammar Web Redesign */
+  /* Grammar Web */
   .grammar-header-row {
     display: flex;
     justify-content: space-between;
@@ -2927,26 +2851,19 @@
     flex-wrap: wrap;
     gap: 0.75rem;
   }
-
-  .grammar-header-row h2 {
-    margin-bottom: 0;
-  }
-
+  .grammar-header-row h2 { margin-bottom: 0; }
   .grammar-header-controls {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
   }
-
-  /* View toggle (#15) */
   .view-toggle {
     display: flex;
     border: 2px solid #334155;
     border-radius: 0.6rem;
     overflow: hidden;
   }
-
   .view-toggle-btn {
     background: none;
     border: none;
@@ -2955,34 +2872,64 @@
     color: #64748b;
     display: flex;
     align-items: center;
-    transition:
-      background 0.15s,
-      color 0.15s;
+    transition: background 0.15s, color 0.15s;
     line-height: 0;
   }
-
-  .view-toggle-btn:first-child {
-    border-right: 1px solid #334155;
+  .view-toggle-btn:first-child { border-right: 1px solid #334155; }
+  .view-toggle-btn.active { background: #334155; color: #f1f5f9; }
+  .view-toggle-btn:hover:not(.active) { background: #1e293b; color: #94a3b8; }
+  .grammar-expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    background: transparent;
+    text-decoration: none;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
-
-  .view-toggle-btn.active {
-    background: #334155;
-    color: #f1f5f9;
+  .grammar-expand-btn:hover {
+    color: #3b82f6;
+    border-color: #93c5fd;
+    background: #eff6ff;
   }
-
-  .view-toggle-btn:hover:not(.active) {
-    background: #1e293b;
+  :global(html[data-theme='dark']) .grammar-expand-btn {
+    border-color: #334155;
     color: #94a3b8;
   }
-
-  /* Grammar list view (#15) */
+  :global(html[data-theme='dark']) .grammar-expand-btn:hover {
+    color: #60a5fa;
+    border-color: #3b82f6;
+    background: #1e3a5f;
+  }
+  .sort-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .sort-control select {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  :global(html[data-theme='dark']) .sort-control select {
+    background-color: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
   .grammar-list {
     background: #1e293b;
     border: 2px solid #334155;
     border-radius: 1rem;
     overflow: hidden;
   }
-
   .grammar-list-row {
     display: flex;
     align-items: center;
@@ -2997,35 +2944,16 @@
     transition: background 0.15s;
     font-family: inherit;
   }
-
-  .grammar-list-row:last-child {
-    border-bottom: none;
-  }
-
-  .grammar-list-row:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .grammar-list-row.locked {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
+  .grammar-list-row:last-child { border-bottom: none; }
+  .grammar-list-row:hover { background: rgba(255, 255, 255, 0.04); }
+  .grammar-list-row.locked { opacity: 0.5; cursor: not-allowed; }
   .grammar-list-dot {
     width: 0.75rem;
     height: 0.75rem;
     border-radius: 50%;
     flex-shrink: 0;
   }
-
-  .grammar-list-info {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
+  .grammar-list-info { flex: 1; display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .grammar-list-title {
     font-size: 0.9rem;
     font-weight: 700;
@@ -3034,7 +2962,6 @@
     text-overflow: ellipsis;
     color: #e2e8f0;
   }
-
   .grammar-list-level {
     font-size: 0.65rem;
     font-weight: 800;
@@ -3044,7 +2971,6 @@
     border-radius: 0.35rem;
     flex-shrink: 0;
   }
-
   .grammar-list-state {
     font-size: 0.65rem;
     font-weight: 800;
@@ -3052,48 +2978,17 @@
     letter-spacing: 0.06em;
     flex-shrink: 0;
   }
-
-  .grammar-list-chevron {
-    flex-shrink: 0;
-    color: #475569;
-  }
-
-  .sort-control {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .sort-control select {
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid #cbd5e1;
-    background-color: #ffffff;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  :global(html[data-theme='dark']) .sort-control select {
-    background-color: #1e293b;
-    border-color: #475569;
-    color: #f1f5f9;
-  }
-
+  .grammar-list-chevron { flex-shrink: 0; color: #475569; }
   .grammar-web-container {
     position: relative;
     background: var(--card-bg, #ffffff);
     border-radius: 1rem;
     height: 500px;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.05),
-      0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.05);
     overflow-y: auto;
     overflow-x: hidden;
-    display: block;
   }
-
   .grammar-web-scroll-content {
     position: relative;
     padding: 2rem;
@@ -3101,29 +2996,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
   }
-
   .web-svg-lines {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     z-index: 0;
     pointer-events: none;
   }
-
-  .web-connection-line {
-    stroke: #cbd5e1;
-    stroke-width: 2px;
-    stroke-dasharray: 4 4;
-  }
-
-  :global(html[data-theme='dark']) .web-connection-line {
-    stroke: #475569;
-  }
-
+  .web-connection-line { stroke: #cbd5e1; stroke-width: 2px; stroke-dasharray: 4 4; }
+  :global(html[data-theme='dark']) .web-connection-line { stroke: #475569; }
   .web-tree-layout {
     position: relative;
     z-index: 1;
@@ -3134,7 +3016,6 @@
     width: 100%;
     padding: 2rem 0;
   }
-
   .web-node-pill {
     position: relative;
     display: flex;
@@ -3143,63 +3024,19 @@
     border: 2px solid var(--node-color);
     border-radius: 9999px;
     padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 0 10px var(--node-color) 40;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
   }
-
-  :global(html[data-theme='dark']) .web-node-pill {
-    background: #1e293b;
-  }
-
-  .web-node-pill:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 0 15px var(--node-color) 60;
-    z-index: 10;
-  }
-
-  .web-node-pill.locked {
-    opacity: 0.7;
-    border-style: dashed;
-    background-color: #f1f5f9;
-  }
-
-  :global(html[data-theme='dark']) .web-node-pill.locked {
-    background-color: #0f172a;
-  }
-
-  .node-pill-content {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .node-icon {
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  .node-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: #334155;
-  }
-
-  :global(html[data-theme='dark']) .node-title {
-    color: #f8fafc;
-  }
-
-  .node-desc {
-    margin-top: 0.5rem;
-    color: #94a3b8;
-  }
-
+  :global(html[data-theme='dark']) .web-node-pill { background: #1e293b; }
+  .web-node-pill:hover { transform: translateY(-2px) scale(1.05); z-index: 10; }
+  .web-node-pill.locked { opacity: 0.7; border-style: dashed; background-color: #f1f5f9; }
+  :global(html[data-theme='dark']) .web-node-pill.locked { background-color: #0f172a; }
+  .node-pill-content { display: flex; align-items: center; gap: 0.75rem; }
+  .node-icon { width: 1.5rem; height: 1.5rem; border-radius: 50%; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); }
+  .node-title { font-weight: 600; font-size: 0.95rem; color: #334155; }
+  :global(html[data-theme='dark']) .node-title { color: #f8fafc; }
+  .node-desc { margin-top: 0.5rem; color: #94a3b8; }
   .empty-state {
     text-align: center;
     padding: 4rem 2rem;
@@ -3210,11 +3047,7 @@
     font-size: 1.1rem;
     font-weight: 500;
   }
-
-  :global(html[data-theme='dark']) .empty-state {
-    background: #1e293b;
-    border-color: #475569;
-  }
+  :global(html[data-theme='dark']) .empty-state { background: #1e293b; border-color: #475569; }
 
   .empty-state-vocab {
     text-align: center;
@@ -3271,12 +3104,6 @@
     h2 {
       font-size: 1.4rem;
       margin-bottom: 1rem;
-    }
-
-    .grammar-header-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
     }
 
     .dashboard-header {
@@ -3378,13 +3205,12 @@
       font-size: 1.25rem;
     }
 
-    .web-node-wrapper {
-      flex: 1 1 100%;
+    .grammar-header-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
     }
-
-    .grammar-web-container {
-      height: 350px;
-    }
+    .grammar-web-container { height: 350px; }
 
     .quick-stats-row {
       gap: 0.5rem;

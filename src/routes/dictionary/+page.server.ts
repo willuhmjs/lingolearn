@@ -17,8 +17,10 @@ export const load = async ({ locals }: ServerLoadEvent) => {
   let grammarRules: any[] = [];
   let learningWords: any[] = [];
 
+  let userGrammarProgress: any[] = [];
+
   if (activeLanguageId) {
-    [grammarRules, learningWords] = await Promise.all([
+    [grammarRules, learningWords, userGrammarProgress] = await Promise.all([
       prisma.grammarRule.findMany({
         where: { languageId: activeLanguageId },
         orderBy: [{ level: 'asc' }, { title: 'asc' }],
@@ -40,7 +42,11 @@ export const load = async ({ locals }: ServerLoadEvent) => {
             ...r.vocabulary,
             userSrsState: r.srsState
           }))
-        )
+        ),
+      prisma.userGrammarRule.findMany({
+        where: { userId, grammarRule: { languageId: activeLanguageId } },
+        select: { grammarRuleId: true, srsState: true, eloRating: true }
+      })
     ]);
   } else {
     grammarRules = await prisma.grammarRule.findMany({
@@ -54,6 +60,7 @@ export const load = async ({ locals }: ServerLoadEvent) => {
   return {
     user: locals.user,
     grammarRules,
-    learningWords
+    learningWords,
+    userGrammarProgress
   };
 };

@@ -252,6 +252,9 @@
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
               <span class="nav-text">Social</span>
+              {#if data.socialNotificationCount > 0}
+                <span class="nav-badge">{data.socialNotificationCount}</span>
+              {/if}
             </a>
             <a
               href="/profile"
@@ -1024,6 +1027,19 @@
     width: 1.5rem;
     height: 1.5rem;
     flex-shrink: 0;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.1rem 0.45rem;
+    min-width: 1.25rem;
+    text-align: center;
+    line-height: 1.4;
   }
 
   .sidebar-footer {

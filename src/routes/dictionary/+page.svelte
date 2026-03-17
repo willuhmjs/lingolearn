@@ -1,13 +1,23 @@
 <script lang="ts">
   import { fade, fly, slide } from 'svelte/transition';
   import { marked } from 'marked';
+  import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
+  import GrammarWeb from '$lib/components/dashboard/GrammarWeb.svelte';
   import { toastError } from '$lib/utils/toast';
   import { getLanguageConfig } from '$lib/languages';
 
   let { data } = $props();
 
   let activeTab: 'vocabulary' | 'grammar' = $state('vocabulary');
+  let grammarMapExpanded = $state(false);
+
+  onMount(() => {
+    if ($page.url.searchParams.get('tab') === 'grammar') {
+      activeTab = 'grammar';
+    }
+  });
   let query = $state('');
   let results: any[] = $state([]);
   let loading = $state(false);
@@ -917,6 +927,49 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     </div>
   {:else}
     <div class="grammar-library" in:fly={{ y: 20, duration: 400 }}>
+      <!-- Grammar map blob -->
+      {#if data.grammarRules.length > 0}
+        <div class="grammar-map-blob" class:expanded={grammarMapExpanded}>
+          <button
+            class="grammar-map-toggle"
+            onclick={() => (grammarMapExpanded = !grammarMapExpanded)}
+            aria-expanded={grammarMapExpanded}
+          >
+            <span class="grammar-map-toggle-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
+                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" />
+                <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
+              </svg>
+              Grammar Map
+            </span>
+            <svg
+              class="grammar-map-chevron"
+              class:rotated={grammarMapExpanded}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="16"
+              height="16"
+              aria-hidden="true"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {#if grammarMapExpanded}
+            <div class="grammar-map-content" transition:slide={{ duration: 300 }}>
+              <GrammarWeb
+                allGrammarRules={data.grammarRules}
+                grammarRules={data.userGrammarProgress}
+                onOpenModal={() => {}}
+              />
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <div class="grammar-library-toolbar">
         <div class="grammar-search-wrapper">
           <div class="search-icon-wrapper">
@@ -2278,6 +2331,68 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
+  }
+
+  /* Grammar Map Blob */
+  .grammar-map-blob {
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--card-bg, #fff);
+  }
+  :global(html[data-theme='dark']) .grammar-map-blob {
+    border-color: #334155;
+    background: #1e293b;
+  }
+  .grammar-map-blob.expanded {
+    border-color: #93c5fd;
+  }
+  :global(html[data-theme='dark']) .grammar-map-blob.expanded {
+    border-color: #3b82f6;
+  }
+  .grammar-map-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color, #0f172a);
+    transition: background 0.15s;
+  }
+  .grammar-map-toggle:hover { background: rgba(0, 0, 0, 0.03); }
+  :global(html[data-theme='dark']) .grammar-map-toggle:hover { background: rgba(255, 255, 255, 0.04); }
+  .grammar-map-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #475569;
+  }
+  :global(html[data-theme='dark']) .grammar-map-toggle-label { color: #94a3b8; }
+  .grammar-map-chevron {
+    color: #94a3b8;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .grammar-map-chevron.rotated { transform: rotate(180deg); }
+  .grammar-map-content {
+    height: 100vh;
+    max-height: 90vh;
+    border-top: 1px solid #e2e8f0;
+  }
+  :global(html[data-theme='dark']) .grammar-map-content { border-color: #334155; }
+  /* Override GrammarWeb container to fill the blob */
+  :global(.grammar-map-content .grammar-web-container) {
+    height: 100%;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
   }
 
   /* Grammar Library */

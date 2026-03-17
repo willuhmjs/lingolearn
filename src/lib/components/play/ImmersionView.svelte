@@ -725,6 +725,18 @@
   </div>
 
   {#if loading}
+    {#if loadingDestination}
+      <div class="loading-destination">
+        <span class="loading-destination-emoji">{loadingDestination.emoji}</span>
+        <div class="loading-destination-info">
+          <div class="loading-destination-name">
+            {loadingDestination.city}, {loadingDestination.country}
+          </div>
+          <div class="loading-destination-desc">{loadingDestination.description}</div>
+        </div>
+      </div>
+    {/if}
+
     <div
       class="loading-card skeleton-card"
       in:fade={{ duration: 200 }}
@@ -865,24 +877,13 @@
         <div class="skeleton-line" style="width:8rem;margin-top:0.25rem"></div>
       {/if}
 
-      {#if loadingDestination}
-        <div class="loading-destination">
-          <span class="loading-destination-emoji">{loadingDestination.emoji}</span>
-          <div class="loading-destination-info">
-            <div class="loading-destination-name">
-              {loadingDestination.city}, {loadingDestination.country}
-            </div>
-            <div class="loading-destination-desc">{loadingDestination.description}</div>
-          </div>
-        </div>
-      {/if}
-
       <div class="skeleton-hint">
         Generating your {selectedMediaType === 'random'
           ? 'content'
           : selectedMediaType.replace(/_/g, ' ')}...
       </div>
     </div>
+
   {/if}
 
   {#if session && !loading}
@@ -1874,7 +1875,7 @@
     display: flex;
     align-items: center;
     gap: 0.875rem;
-    margin-top: 1.25rem;
+    margin-top: 0.5rem;
     padding: 0.875rem 1rem;
     background: var(--accent-light, #eff6ff);
     border: 1px solid var(--accent, #3b82f6);
