@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { toastError } from '$lib/utils/toast';
 
 	let { data }: { data: any } = $props();
@@ -20,7 +21,8 @@
 
 	$effect(() => {
 		const lang = data?.user?.activeLanguage;
-		step = lang ? 'choose' : 'language';
+		const forceLanguageStep = $page.url.searchParams.get('step') === 'language';
+		step = !lang || forceLanguageStep ? 'language' : 'choose';
 		completed = false;
 		resetQuiz();
 		resetChat();
@@ -468,14 +470,20 @@
 	{#if step === 'language' && !completed}
 		<!-- ── Language Selection ─────────────────────────────────────────────── -->
 		<header class="page-header" in:fly={{ y: 20, duration: 400 }}>
-			<h1>Choose Your New Language</h1>
-			<p>Which language would you like to start learning?</p>
+			<h1>Choose a Language</h1>
+			<p>Pick a language to start or reset your placement test.</p>
 		</header>
 		<div class="path-selection horizontal" in:fly={{ y: 20, duration: 400, delay: 100 }}>
 			{#each data.languages || [] as lang}
+				{@const isOnboarded = (data.onboardedLanguages || []).some((l) => l.id === lang.id)}
 				<button class="path-card" onclick={() => selectLanguage(lang.id)}>
 					<span class="path-icon">{lang.flag || '🌐'}</span>
 					<h2>{lang.name}</h2>
+					{#if isOnboarded}
+						<span class="path-badge reset-badge">Retake placement test</span>
+					{:else}
+						<span class="path-badge new-lang-badge">Start learning</span>
+					{/if}
 				</button>
 			{/each}
 		</div>
@@ -2139,6 +2147,26 @@
 		border-radius: 9999px;
 		font-size: 0.8rem;
 		font-weight: 600;
+	}
+
+	.reset-badge {
+		background-color: #fef3c7;
+		color: #92400e;
+	}
+
+	.new-lang-badge {
+		background-color: #dbeafe;
+		color: #1e40af;
+	}
+
+	:global(html[data-theme='dark']) .reset-badge {
+		background-color: #451a03;
+		color: #fcd34d;
+	}
+
+	:global(html[data-theme='dark']) .new-lang-badge {
+		background-color: #1e3a5f;
+		color: #93c5fd;
 	}
 
 	.beginner-card {

@@ -10,6 +10,7 @@
 	let { data, children } = $props();
 	let user = $derived(data.user);
 	let languages = $derived(data.languages || []);
+	let onboardedLanguages = $derived(data.onboardedLanguages || []);
 	let isDropdownOpen = $state(false);
 	let theme = $state('light');
 
@@ -314,7 +315,7 @@
 
 			{#if user}
 				<div class="sidebar-footer">
-					{#if languages.length > 0}
+					{#if onboardedLanguages.length > 0}
 						<div class="language-dropdown-container">
 							<button
 								class="nav-item language-selector-btn"
@@ -357,7 +358,7 @@
 
 							{#if isDropdownOpen}
 								<div class="dropdown-menu" role="menu">
-									{#each languages as lang}
+									{#each onboardedLanguages as lang}
 										<button
 											class="dropdown-item {user?.activeLanguage?.id === lang.id ? 'active' : ''}"
 											onclick={() => changeLanguage(lang.id)}
@@ -380,6 +381,28 @@
 											{/if}
 										</button>
 									{/each}
+									{#if onboardedLanguages.length < languages.length}
+										<div class="dropdown-divider"></div>
+									{/if}
+									<a
+										href="/onboarding?step=language"
+										class="dropdown-item add-language-item"
+										onclick={() => (isDropdownOpen = false)}
+										role="menuitem"
+									>
+										<svg
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											aria-hidden="true"
+											class="add-lang-icon"
+										><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg
+										>
+										<span class="lang-name">Add language</span>
+									</a>
 								</div>
 							{/if}
 						</div>
@@ -443,7 +466,7 @@
 				<span class="brand-text">LingoLearn</span>
 			</a>
 			<div class="mobile-header-right">
-				{#if user && languages.length > 0}
+				{#if user && onboardedLanguages.length > 0}
 					<div class="language-dropdown-container mobile-lang-dropdown">
 						<button class="mobile-lang-btn" onclick={toggleDropdown} aria-label="Select language">
 							<svg
@@ -480,7 +503,7 @@
 
 						{#if isDropdownOpen}
 							<div class="dropdown-menu mobile-dropdown-menu">
-								{#each languages as lang}
+								{#each onboardedLanguages as lang}
 									<button
 										class="dropdown-item {user?.activeLanguage?.id === lang.id ? 'active' : ''}"
 										onclick={() => changeLanguage(lang.id)}
@@ -502,6 +525,28 @@
 										{/if}
 									</button>
 								{/each}
+								{#if onboardedLanguages.length < languages.length}
+									<div class="dropdown-divider"></div>
+								{/if}
+								<a
+									href="/onboarding?step=language"
+									class="dropdown-item add-language-item"
+									onclick={() => (isDropdownOpen = false)}
+									role="menuitem"
+								>
+									<svg
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										aria-hidden="true"
+										class="add-lang-icon"
+									><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg
+									>
+									<span class="lang-name">Add language</span>
+								</a>
 							</div>
 						{/if}
 					</div>
@@ -1100,6 +1145,33 @@
 		width: 1.25rem !important;
 		height: 1.25rem !important;
 		color: #1cb0f6;
+	}
+
+	.dropdown-divider {
+		height: 1px;
+		background-color: var(--card-border, #e5e7eb);
+		margin: 0.25rem 0;
+	}
+
+	.add-language-item {
+		color: var(--text-muted, #6b7280);
+		text-decoration: none;
+	}
+
+	.add-language-item:hover {
+		color: #1cb0f6;
+		background-color: var(--link-hover-bg, #ddf4ff);
+	}
+
+	:global(html[data-theme='dark']) .add-language-item:hover {
+		background-color: #2a303c;
+		color: #60a5fa;
+	}
+
+	.add-lang-icon {
+		width: 1.25rem !important;
+		height: 1.25rem !important;
+		flex-shrink: 0;
 	}
 
 	.signup-link {
