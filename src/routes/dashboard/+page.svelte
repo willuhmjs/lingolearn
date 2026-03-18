@@ -7,6 +7,7 @@
   import { page } from '$app/stores';
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
   import { SRS_COLORS } from '$lib/utils/srsColors';
+  import { vocabModal } from '$lib/stores/vocabModal.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -125,12 +126,6 @@
     testOutError = null;
     testOutMastering = false;
     testOutMasteryDone = false;
-  }
-
-  function openVocabModal(vocab: any, color: string, eloPercent: number) {
-    modalStack = [{ type: 'vocab', data: vocab, color, eloPercent }];
-    grammarModalPhase = 'detail';
-    resetTestOut();
   }
 
   function openGrammarModal(rule: any, color: string, eloPercent: number) {
@@ -556,8 +551,28 @@
             <button
               class="heatmap-cell tooltip-trigger"
               style="background-color: {cellColor}"
-              onclick={() => openVocabModal(vocab, cellColor, progressPct)}
-              onkeydown={(e) => e.key === 'Enter' && openVocabModal(vocab, cellColor, progressPct)}
+              onclick={() => {
+                const langId = $page.data.user?.activeLanguage?.id || '';
+                vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
+                  id: vocab.vocabularyId || vocab.vocabulary?.id,
+                  lemma: vocab.vocabulary?.lemma,
+                  gender: vocab.vocabulary?.gender,
+                  plural: vocab.vocabulary?.plural,
+                  partOfSpeech: vocab.vocabulary?.partOfSpeech
+                });
+              }}
+              onkeydown={(e) =>
+                e.key === 'Enter' &&
+                (() => {
+                  const langId = $page.data.user?.activeLanguage?.id || '';
+                  vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
+                    id: vocab.vocabularyId || vocab.vocabulary?.id,
+                    lemma: vocab.vocabulary?.lemma,
+                    gender: vocab.vocabulary?.gender,
+                    plural: vocab.vocabulary?.plural,
+                    partOfSpeech: vocab.vocabulary?.partOfSpeech
+                  });
+                })()}
               aria-label="View details for {vocab.vocabulary.lemma}"
             >
               <span class="sr-only">{vocab.vocabulary.lemma}</span>

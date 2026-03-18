@@ -2,17 +2,87 @@
   import favicon from '$lib/assets/favicon.svg';
   import { Toaster } from 'svelte-french-toast';
   import Modal from '$lib/components/Modal.svelte';
+  import VocabDetailModal from '$lib/components/VocabDetailModal.svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/stores';
 
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { theme } from '$lib/theme.svelte';
+  import { vocabModal } from '$lib/stores/vocabModal.svelte';
 
   let { data, children } = $props();
   let user = $derived(data.user);
   let languages = $derived(data.languages || []);
   let onboardedLanguages = $derived(data.onboardedLanguages || []);
   let isDropdownOpen = $state(false);
+
+  // Tooltip portal state
+  let portalEl: HTMLElement | null = null;
+  let activeClone: HTMLElement | null = null;
+  let activeTrigger: Element | null = null;
+
+  function getTooltipContent(trigger: Element): Element | null {
+    return (
+      trigger.querySelector(':scope > .tooltip-content') ||
+      trigger.querySelector(':scope > .word-tooltip')
+    );
+  }
+
+  function showPortalTooltip(trigger: Element) {
+    if (activeClone) return; // already showing
+    const content = getTooltipContent(trigger);
+    if (!content) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const clone = content.cloneNode(true) as HTMLElement;
+
+    // Force visible
+    clone.style.visibility = 'visible';
+    clone.style.opacity = '1';
+    clone.style.position = 'fixed';
+    clone.style.transform = 'none';
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '9999';
+
+    // Measure content first (append off-screen)
+    clone.style.left = '-9999px';
+    clone.style.top = '-9999px';
+    portalEl!.appendChild(clone);
+
+    const cw = clone.offsetWidth;
+    const ch = clone.offsetHeight;
+
+    // Position above trigger, centered
+    let left = rect.left + rect.width / 2 - cw / 2;
+    let top = rect.top - ch - 10;
+
+    // Clamp to viewport
+    left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
+    if (top < 8) top = rect.bottom + 10; // flip below if no room above
+
+    clone.style.left = `${left}px`;
+    clone.style.top = `${top}px`;
+
+    // Mark trigger so its native CSS tooltip is suppressed
+    (trigger as HTMLElement).dataset.tooltipPortalActive = 'true';
+    activeTrigger = trigger;
+    activeClone = clone;
+  }
+
+  function hidePortalTooltip() {
+    if (activeClone && portalEl) {
+      try {
+        portalEl.removeChild(activeClone);
+      } catch {
+        /* already removed */
+      }
+      activeClone = null;
+    }
+    if (activeTrigger) {
+      delete (activeTrigger as HTMLElement).dataset.tooltipPortalActive;
+      activeTrigger = null;
+    }
+  }
 
   onMount(() => {
     theme.init();
@@ -28,6 +98,37 @@
         }).catch(() => {});
       }
     }
+
+    portalEl = document.getElementById('tooltip-portal');
+
+    function onMouseOver(e: MouseEvent) {
+      const trigger = (e.target as Element).closest?.('.tooltip-trigger');
+      if (!trigger) {
+        hidePortalTooltip();
+        return;
+      }
+      if (activeTrigger === trigger) return; // same trigger, already showing
+      hidePortalTooltip();
+      showPortalTooltip(trigger);
+    }
+
+    function onMouseOut(e: MouseEvent) {
+      const to = e.relatedTarget as Element | null;
+      if (to?.closest?.('.tooltip-trigger')) return;
+      hidePortalTooltip();
+    }
+
+    document.addEventListener('mouseover', onMouseOver, { passive: true });
+    document.addEventListener('mouseout', onMouseOut, { passive: true });
+
+    return () => {
+      document.removeEventListener('mouseover', onMouseOver);
+      document.removeEventListener('mouseout', onMouseOut);
+    };
+  });
+
+  onDestroy(() => {
+    hidePortalTooltip();
   });
 
   function toggleDropdown() {
@@ -483,6 +584,13 @@
       </a>
     {/if}
   {/if}
+
+  <div id="tooltip-portal" aria-hidden="true"></div>
+  <VocabDetailModal
+    vocab={vocabModal.vocab}
+    enriching={vocabModal.enriching}
+    onclose={vocabModal.close}
+  />
 
   <div class="content-wrapper">
     <header class="mobile-header">
@@ -1733,5 +1841,24 @@
       bottom: 0;
       margin-left: 0.5rem;
     }
+  }
+
+  /* Tooltip portal */
+  #tooltip-portal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    z-index: 9999;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* Suppress native CSS tooltip when the portal clone is active */
+  :global([data-tooltip-portal-active] > .tooltip-content),
+  :global([data-tooltip-portal-active] > .word-tooltip) {
+    visibility: hidden !important;
+    opacity: 0 !important;
   }
 </style>

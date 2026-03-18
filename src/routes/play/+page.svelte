@@ -4,6 +4,7 @@
   import toast from 'svelte-french-toast';
   import { marked } from 'marked';
   import { modal } from '$lib/modal.svelte';
+  import { vocabModal } from '$lib/stores/vocabModal.svelte';
   import type { PageData } from './$types';
 
   import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
@@ -727,7 +728,7 @@
           }
           tooltipHtml = buildTooltipHtml(vocab, contextForm);
         }
-        const replacement = `<span class="vocab-highlight tooltip-trigger">${word}${tooltipHtml}</span>`;
+        const replacement = `<span class="vocab-highlight tooltip-trigger" data-vocab-id="${vocab.id}" data-vocab-lemma="${vocab.lemma}">${word}${tooltipHtml}</span>`;
         vocabReplacements.push(replacement);
         return `\x00VOCAB_${vocabReplacements.length - 1}\x00`;
       }
@@ -1023,7 +1024,7 @@
         if (multiWordVocab) {
           const combinedText = tokens.slice(i, multiWordEnd + 1).join('');
           result.push(
-            `<span class="word-hover has-info tooltip-trigger">${combinedText}${buildTooltipHtml(multiWordVocab)}</span>`
+            `<span class="word-hover has-info tooltip-trigger" data-vocab-id="${multiWordVocab.id}" data-vocab-lemma="${multiWordVocab.lemma}">${combinedText}${buildTooltipHtml(multiWordVocab)}</span>`
           );
           i = multiWordEnd;
           continue;
@@ -1033,7 +1034,7 @@
       const vocabResult = findVocab(cleanWord, token);
       if (vocabResult) {
         result.push(
-          `<span class="word-hover has-info tooltip-trigger">${token}${buildTooltipHtml(vocabResult.vocab, undefined, vocabResult.inflectionNote)}</span>`
+          `<span class="word-hover has-info tooltip-trigger" data-vocab-id="${vocabResult.vocab.id}" data-vocab-lemma="${vocabResult.vocab.lemma}">${token}${buildTooltipHtml(vocabResult.vocab, undefined, vocabResult.inflectionNote)}</span>`
         );
       } else if (stillStreaming) {
         const loadingTooltip = `<span class="word-tooltip"><span class="word-tooltip-header">${token}</span><span class="word-tooltip-body"><span class="word-tooltip-row ai-magic-text"><span class="sparkle">✨</span> AI analyzing...</span></span></span>`;
@@ -2184,7 +2185,21 @@
                     Translate this to {lessonLanguage?.name || 'Target'}:
                   </h3>
                 {/if}
-                <p class="challenge-text">{@html parsedChallengeText}</p>
+                <div
+                  role="presentation"
+                  onclick={(e) => {
+                    const trigger = (e.target as Element).closest('[data-vocab-id]');
+                    if (!trigger) return;
+                    const vocabId = trigger.getAttribute('data-vocab-id');
+                    const lemma = trigger.getAttribute('data-vocab-lemma') || '';
+                    const langId = $page.data.user?.activeLanguage?.id || '';
+                    if (vocabId && langId) {
+                      vocabModal.open(vocabId, langId, { id: vocabId, lemma });
+                    }
+                  }}
+                >
+                  <p class="challenge-text">{@html parsedChallengeText}</p>
+                </div>
               </div>
 
               {#if challenge.gameMode === 'fill-blank' && challenge.hints?.length > 0}
