@@ -6,22 +6,16 @@
   import { page } from '$app/stores';
 
   import { onMount } from 'svelte';
+  import { theme } from '$lib/theme.svelte';
 
   let { data, children } = $props();
   let user = $derived(data.user);
   let languages = $derived(data.languages || []);
   let onboardedLanguages = $derived(data.onboardedLanguages || []);
   let isDropdownOpen = $state(false);
-  let theme = $state('light');
 
   onMount(() => {
-    const savedTheme = localStorage.getItem('app-theme');
-    if (savedTheme) {
-      theme = savedTheme;
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      theme = 'dark';
-    }
-    document.documentElement.setAttribute('data-theme', theme);
+    theme.init();
 
     // Detect and save user timezone once (fire-and-forget)
     if (user) {
@@ -35,14 +29,6 @@
       }
     }
   });
-
-  function cycleTheme() {
-    if (theme === 'light') theme = 'dark';
-    else theme = 'light';
-
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('app-theme', theme);
-  }
 
   function toggleDropdown() {
     isDropdownOpen = !isDropdownOpen;
@@ -621,11 +607,11 @@
     <header class="desktop-topbar">
       <button
         class="nav-item theme-toggle-btn"
-        onclick={cycleTheme}
-        aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        onclick={theme.cycle}
+        aria-label={theme.current === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
         style="border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;"
       >
-        {#if theme === 'light'}
+        {#if theme.current === 'light'}
           <svg
             viewBox="0 0 24 24"
             width="24"
@@ -878,6 +864,160 @@
     :global(.page-shell) {
       padding: 1rem 0.75rem;
     }
+  }
+
+  /* ── Standard card ─────────────────────────────────────────────
+     Flat, bordered card used throughout pages. Pages that need
+     the raised card-duo style keep that separate class.
+  ─────────────────────────────────────────────────────────────── */
+  :global(.card) {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.card h2) {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-color, #111827);
+    margin: 0 0 1.25rem;
+  }
+
+  /* ── Standard form elements ────────────────────────────────────
+     .form-group wraps a label + input/select pair.
+     .submit-btn is the standard green action button.
+  ─────────────────────────────────────────────────────────────── */
+  :global(.form-group) {
+    margin-bottom: 1rem;
+  }
+
+  :global(.form-group label) {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.375rem;
+  }
+
+  :global(html[data-theme='dark'] .form-group label) {
+    color: #cbd5e1;
+  }
+
+  :global(.form-group input),
+  :global(.form-group select),
+  :global(.form-group textarea) {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--input-text, #111827);
+    background: var(--input-bg, #ffffff);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+    box-sizing: border-box;
+  }
+
+  :global(.form-group input:focus),
+  :global(.form-group select:focus),
+  :global(.form-group textarea:focus) {
+    outline: none;
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+  }
+
+  :global(.submit-btn) {
+    background-color: #22c55e;
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  :global(.submit-btn:hover) {
+    background-color: #16a34a;
+  }
+
+  :global(.submit-btn:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 640px) {
+    :global(.submit-btn) {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+
+  /* ── Standard tab bar (pill style) ────────────────────────────
+     .tabs-container  — flex row, centered
+     .tabs            — the pill background
+     .tab-btn         — individual tab button
+     .tab-btn.active  — selected state
+  ─────────────────────────────────────────────────────────────── */
+  :global(.tabs-container) {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  :global(.tabs) {
+    display: flex;
+    background: #f1f5f9;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    gap: 0.5rem;
+  }
+
+  :global(html[data-theme='dark'] .tabs) {
+    background: #1e293b;
+  }
+
+  :global(.tab-btn) {
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: inherit;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  :global(.tab-btn:hover) {
+    color: #1e293b;
+    background: #e2e8f0;
+  }
+
+  :global(html[data-theme='dark'] .tab-btn:hover) {
+    color: #f8fafc;
+    background: #334155;
+  }
+
+  :global(.tab-btn.active) {
+    background: white;
+    color: #3b82f6;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html[data-theme='dark'] .tab-btn.active) {
+    background: #0f172a;
+    color: #60a5fa;
   }
 
   @keyframes float {

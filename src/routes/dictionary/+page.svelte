@@ -689,18 +689,22 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   </div>
 
   <div class="tabs-container">
-    <button
-      class="tab-btn {activeTab === 'vocabulary' ? 'active' : ''}"
-      onclick={() => (activeTab = 'vocabulary')}
-    >
-      Vocabulary
-    </button>
-    <button
-      class="tab-btn {activeTab === 'grammar' ? 'active' : ''}"
-      onclick={() => (activeTab = 'grammar')}
-    >
-      Grammar Library
-    </button>
+    <div class="tabs">
+      <button
+        class="tab-btn"
+        class:active={activeTab === 'vocabulary'}
+        onclick={() => (activeTab = 'vocabulary')}
+      >
+        Vocabulary
+      </button>
+      <button
+        class="tab-btn"
+        class:active={activeTab === 'grammar'}
+        onclick={() => (activeTab = 'grammar')}
+      >
+        Grammar Library
+      </button>
+    </div>
   </div>
 
   {#if activeTab === 'vocabulary'}
@@ -1981,49 +1985,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   }
 
   /* Tabs */
-  .tabs-container {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid var(--card-border, #e5e7eb);
-    padding-bottom: 0.5rem;
-  }
-
-  .tab-btn {
-    background: none;
-    border: none;
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-color, #6b7280);
-    opacity: 0.6;
-    cursor: pointer;
-    position: relative;
-    transition:
-      color 0.2s,
-      opacity 0.2s;
-  }
-
-  .tab-btn:hover {
-    opacity: 1;
-    color: #3b82f6;
-  }
-
-  .tab-btn.active {
-    color: #3b82f6;
-    opacity: 1;
-  }
-
-  .tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -0.625rem;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background-color: #3b82f6;
-  }
-
   .search-section {
     margin-bottom: 2rem;
   }

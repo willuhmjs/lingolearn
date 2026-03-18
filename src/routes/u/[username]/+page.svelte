@@ -89,14 +89,6 @@
 </div>
 
 <style>
-  .card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
   .profile-header {
     display: flex;
     flex-direction: column;

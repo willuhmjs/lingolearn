@@ -6,6 +6,7 @@
   import { toastSuccess, toastError } from '$lib/utils/toast';
   import { invalidateAll } from '$app/navigation';
   import PageHeader from '$lib/components/PageHeader.svelte';
+  import { theme } from '$lib/theme.svelte';
 
   let { data, form }: { data: PageData; form: any } = $props();
 
@@ -130,25 +131,9 @@
     }
   }
 
-  // Theme (mirrors layout.svelte logic)
-  let theme = $state('light');
-
   onMount(() => {
     if (llmBaseUrl) fetchModels();
-    const savedTheme = localStorage.getItem('app-theme');
-    if (savedTheme) {
-      theme = savedTheme;
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      theme = 'dark';
-    }
   });
-
-  function cycleTheme() {
-    if (theme === 'light') theme = 'dark';
-    else theme = 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('app-theme', theme);
-  }
 
   // AI quota helpers
   const quotaPct = $derived(
@@ -167,18 +152,20 @@
   <PageHeader title="Profile" />
 
   <!-- Tab bar -->
-  <nav class="tab-bar" in:fly={{ y: 20, duration: 400, delay: 60 }}>
-    {#each [{ id: 'overview', label: 'Overview' }, { id: 'account', label: 'Account' }, { id: 'ai', label: 'AI / LLM' }, { id: 'danger', label: 'Danger' }] as { id: Tab; label: string }[] as tab}
-      <button
-        class="tab-btn"
-        class:active={activeTab === tab.id}
-        class:danger-tab={tab.id === 'danger'}
-        onclick={() => (activeTab = tab.id)}
-      >
-        {tab.label}
-      </button>
-    {/each}
-  </nav>
+  <div class="tabs-container" in:fly={{ y: 20, duration: 400, delay: 60 }}>
+    <div class="tabs">
+      {#each [{ id: 'overview', label: 'Overview' }, { id: 'account', label: 'Account' }, { id: 'ai', label: 'AI / LLM' }, { id: 'danger', label: 'Danger' }] as { id: Tab; label: string }[] as tab}
+        <button
+          class="tab-btn"
+          class:active={activeTab === tab.id}
+          class:danger-tab={tab.id === 'danger'}
+          onclick={() => (activeTab = tab.id)}
+        >
+          {tab.label}
+        </button>
+      {/each}
+    </div>
+  </div>
 
   <!-- OVERVIEW TAB -->
   {#if activeTab === 'overview'}
@@ -322,8 +309,8 @@
 
       <!-- Mobile-only: theme & logout -->
       <section class="card profile-mobile-actions">
-        <button class="profile-theme-btn" onclick={cycleTheme}>
-          {#if theme === 'light'}
+        <button class="profile-theme-btn" onclick={theme.cycle}>
+          {#if theme.current === 'light'}
             <svg
               viewBox="0 0 24 24"
               width="20"
@@ -691,47 +678,7 @@
     max-width: 640px;
   }
 
-  /* Tab bar */
-  .tab-bar {
-    display: flex;
-    gap: 0.25rem;
-    border-bottom: 2px solid var(--card-border, #e5e7eb);
-    margin-bottom: 1.75rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .tab-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab-btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    background: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    white-space: nowrap;
-    transition:
-      color 0.15s,
-      border-color 0.15s;
-    border-radius: 0.25rem 0.25rem 0 0;
-  }
-
-  .tab-btn:hover {
-    color: var(--text-color, #111827);
-  }
-
-  .tab-btn.active {
-    color: #22c55e;
-    border-bottom-color: #22c55e;
-    font-weight: 600;
-  }
-
+  /* Tab bar — danger tab colour override */
   .tab-btn.danger-tab {
     color: #ef4444;
   }
@@ -740,33 +687,6 @@
   }
   .tab-btn.danger-tab.active {
     color: #dc2626;
-    border-bottom-color: #dc2626;
-  }
-
-  :global(html[data-theme='dark']) .tab-btn {
-    color: #94a3b8;
-  }
-  :global(html[data-theme='dark']) .tab-btn:hover {
-    color: #e2e8f0;
-  }
-  :global(html[data-theme='dark']) .tab-btn.active {
-    color: #22c55e;
-  }
-
-  /* Cards */
-  .card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .card h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-color, #111827);
-    margin: 0 0 1.25rem 0;
   }
 
   .card-desc {
@@ -1055,45 +975,6 @@
     color: #94a3b8;
   }
 
-  /* Forms */
-  .form-group {
-    margin-bottom: 1rem;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.375rem;
-  }
-
-  :global(html[data-theme='dark']) .form-group label {
-    color: #cbd5e1;
-  }
-
-  .form-group input,
-  .form-group select {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid var(--input-border, #d1d5db);
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--input-text, #111827);
-    background: var(--input-bg, #ffffff);
-    transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
-    box-sizing: border-box;
-  }
-
-  .form-group input:focus,
-  .form-group select:focus {
-    outline: none;
-    border-color: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
-  }
-
   .fetch-models-btn {
     background: #eff6ff;
     border: 1px solid #93c5fd;
@@ -1234,27 +1115,6 @@
     color: #16a34a;
   }
 
-  .submit-btn {
-    background-color: #22c55e;
-    color: white;
-    border: none;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    margin-top: 0.5rem;
-  }
-
-  .submit-btn:hover {
-    background-color: #16a34a;
-  }
-  .submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   /* Danger */
   .danger-card {
     border-color: #fecaca;
@@ -1379,7 +1239,6 @@
   }
 
   @media (max-width: 640px) {
-    .submit-btn,
     .delete-btn {
       width: 100%;
       box-sizing: border-box;

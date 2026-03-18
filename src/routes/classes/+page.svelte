@@ -377,53 +377,12 @@
     margin-top: 0;
   }
 
+  /* Override default tab margin-bottom for this tighter layout */
   .tabs-container {
-    display: flex;
-    justify-content: center;
     margin-bottom: 1.5rem;
   }
 
-  .tabs {
-    display: flex;
-    background: #f1f5f9;
-    padding: 0.5rem;
-    border-radius: 1rem;
-    gap: 0.5rem;
-  }
-
-  :global(html[data-theme='dark']) .tabs {
-    background: #1e293b;
-  }
-
-  .tab-btn {
-    padding: 0.75rem 2rem;
-    border-radius: 0.75rem;
-    font-weight: bold;
-    font-size: 1rem;
-    color: #64748b;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .tab-btn:hover {
-    color: #1e293b;
-    background: #e2e8f0;
-  }
-
-  :global(html[data-theme='dark']) .tab-btn:hover {
-    color: #f8fafc;
-    background: #334155;
-  }
-
-  .tab-btn.active {
-    background: white;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-
+  /* Per-tab active colours */
   .tab-join.active {
     color: #f97316;
   }

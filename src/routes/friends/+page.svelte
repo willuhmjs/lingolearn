@@ -300,13 +300,6 @@
   }
 
   /* ── Cards ───────────────────────────────────────────────────── */
-  .card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-  }
-
   .card h2 {
     font-size: 1.05rem;
     font-weight: 700;
