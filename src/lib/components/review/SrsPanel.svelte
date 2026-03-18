@@ -42,7 +42,9 @@
     </div>
     <div class="srs-panel-row">
       <span class="srs-panel-label">Next due</span>
-      <span class="srs-panel-val">{review.nextReviewDate ? new Date(review.nextReviewDate).toLocaleDateString() : '—'}</span>
+      <span class="srs-panel-val"
+        >{review.nextReviewDate ? new Date(review.nextReviewDate).toLocaleDateString() : '—'}</span
+      >
     </div>
   </div>
 {/if}

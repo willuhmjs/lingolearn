@@ -81,9 +81,13 @@ describe('CefrService.getCefrProgress', () => {
     mockPrisma.userGrammarRule.count
       .mockResolvedValueOnce(8) // masteredGrammar
       .mockResolvedValueOnce(5); // interactedGrammar
-    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1100 }]);
-    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1050 }]);
-    mockPrisma.userVocabulary.count.mockResolvedValue(40); // 40 of top-50 mastered
+    mockPrisma.userVocabulary.findMany
+      .mockResolvedValueOnce(Array.from({ length: 40 }, () => ({ vocabulary: { progress: [] } }))) // freqGateItems
+      .mockResolvedValueOnce([{ eloRating: 1100 }]); // vocabElos
+    mockPrisma.userGrammarRule.findMany
+      .mockResolvedValueOnce([{ grammarRule: { progress: [] } }]) // grammarGateItems
+      .mockResolvedValueOnce([{ eloRating: 1050 }]); // grammarElos
+    mockPrisma.userVocabulary.count.mockResolvedValue(100); // totalMasteredVocab (separate from freq-gate)
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
     expect(result.freqCoverageCount).toBe(40);
@@ -98,11 +102,16 @@ describe('CefrService.getCefrProgress', () => {
     );
     mockPrisma.grammarRule.count.mockResolvedValue(8);
     mockPrisma.userGrammarRule.count
-      .mockResolvedValueOnce(5) // masteredGrammar
-      .mockResolvedValueOnce(4); // interactedGrammar
-    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1400 }]);
-    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1300 }]);
-    mockPrisma.userVocabulary.count.mockResolvedValue(35); // mastered from top-70
+      .mockResolvedValueOnce(4) // totalInteracted (interactedGrammar)
+      .mockResolvedValueOnce(2); // totalMastered (not used this way anymore)
+
+    mockPrisma.userVocabulary.findMany
+      .mockResolvedValueOnce(Array.from({ length: 35 }, () => ({ vocabulary: { progress: [] } }))) // freqGateItems
+      .mockResolvedValueOnce([{ eloRating: 1400 }]); // vocabElos
+    mockPrisma.userGrammarRule.findMany
+      .mockResolvedValueOnce([{ grammarRule: { progress: [] } }]) // grammarGateItems
+      .mockResolvedValueOnce([{ eloRating: 1300 }]); // grammarElos
+    mockPrisma.userVocabulary.count.mockResolvedValue(200);
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
     expect(result.percentComplete).toBeGreaterThanOrEqual(0);

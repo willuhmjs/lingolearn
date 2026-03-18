@@ -1193,19 +1193,6 @@
     flex-shrink: 0;
   }
 
-  .nav-badge {
-    margin-left: auto;
-    background: #ef4444;
-    color: white;
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    padding: 0.1rem 0.45rem;
-    min-width: 1.25rem;
-    text-align: center;
-    line-height: 1.4;
-  }
-
   .sidebar-footer {
     margin-top: auto;
     display: flex;
@@ -1610,10 +1597,6 @@
     :global(html[data-theme='dark']) .admin-fab:hover,
     :global(html[data-theme='dark']) .admin-fab.active {
       background-color: #4f46e5;
-    }
-
-    .mobile-theme-toggle {
-      display: none;
     }
 
     .content-wrapper {

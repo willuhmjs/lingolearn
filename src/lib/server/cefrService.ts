@@ -222,8 +222,9 @@ export class CefrService {
     ]);
 
     const masteredFromTopFreq = freqGateItems.length;
-    const producedFromTopFreq = freqGateItems.filter((i) => i.vocabulary.progress[0]?.hasProduced)
-      .length;
+    const producedFromTopFreq = freqGateItems.filter(
+      (i) => i.vocabulary.progress[0]?.hasProduced
+    ).length;
 
     // Must master all top-frequency words that exist (up to the target).
     const isFreqVocabMet = freqGateRequired > 0 && masteredFromTopFreq >= freqGateRequired;
@@ -252,8 +253,9 @@ export class CefrService {
     ]);
 
     const masteredGrammarCount = grammarGateItems.length;
-    const producedGrammarCount = grammarGateItems.filter((i) => i.grammarRule.progress[0]?.hasProduced)
-      .length;
+    const producedGrammarCount = grammarGateItems.filter(
+      (i) => i.grammarRule.progress[0]?.hasProduced
+    ).length;
 
     const minGrammarInteraction = Math.min(
       totalGrammarAtLevel,
@@ -568,12 +570,14 @@ export class CefrService {
 
     const freqCoverageTarget = topFreqWords.length;
     const masteredFromTopFreq = freqGateItems.length;
-    const producedFromTopFreq = freqGateItems.filter((i) => i.vocabulary.progress[0]?.hasProduced)
-      .length;
+    const producedFromTopFreq = freqGateItems.filter(
+      (i) => i.vocabulary?.progress?.[0]?.hasProduced
+    ).length;
 
     const masteredGrammarCount = grammarGateItems.length;
-    const producedGrammarCount = grammarGateItems.filter((i) => i.grammarRule.progress[0]?.hasProduced)
-      .length;
+    const producedGrammarCount = grammarGateItems.filter(
+      (i) => i.grammarRule?.progress?.[0]?.hasProduced
+    ).length;
 
     // Fetch ELO data for the items that contribute to the gate.
     const [vocabElos, grammarElos] = await Promise.all([
@@ -606,14 +610,18 @@ export class CefrService {
     const totalGateProduced = producedFromTopFreq + producedGrammarCount;
     const productionProgress =
       totalGateMastered > 0
-        ? Math.min(1, totalGateProduced / (totalGateMastered * CEFR_CONFIG.PRODUCTION_GATE_THRESHOLD))
+        ? Math.min(
+            1,
+            totalGateProduced / (totalGateMastered * CEFR_CONFIG.PRODUCTION_GATE_THRESHOLD)
+          )
         : 1;
 
     // Progress toward level-up: freq (30%) + total vocab (20%) + grammar (25%) + production (15%) + ELO (10%).
     const freqProgress = freqCoverageTarget > 0 ? masteredFromTopFreq / freqCoverageTarget : 0;
     const totalVocabTarget =
       CEFR_CONFIG.TOTAL_VOCAB_GATE[currentLevel as keyof typeof CEFR_CONFIG.TOTAL_VOCAB_GATE] ?? 0;
-    const totalVocabProgress = totalVocabTarget > 0 ? Math.min(1, totalMasteredVocab / totalVocabTarget) : 1;
+    const totalVocabProgress =
+      totalVocabTarget > 0 ? Math.min(1, totalMasteredVocab / totalVocabTarget) : 1;
 
     const minGrammarInteraction = Math.min(totalGrammar, CEFR_CONFIG.GRAMMAR_MIN_INTERACTION);
     const grammarInteractionProgress =
@@ -624,7 +632,8 @@ export class CefrService {
         : 0;
     const grammarProgress = Math.min(grammarInteractionProgress, grammarMasteryProgress);
 
-    const eloTarget = CEFR_CONFIG.ELO_TARGETS[currentLevel as keyof typeof CEFR_CONFIG.ELO_TARGETS] ?? 0;
+    const eloTarget =
+      CEFR_CONFIG.ELO_TARGETS[currentLevel as keyof typeof CEFR_CONFIG.ELO_TARGETS] ?? 0;
     const eloProgress = eloTarget > 0 ? Math.min(1, averageElo / eloTarget) : 1;
 
     const weightedPercent =

@@ -10,7 +10,7 @@
     C2: { bg: '#fce7f3', text: '#9d174d', border: '#f9a8d4' }
   };
 
-  const style_map = colors[level] ?? colors['A1'];
+  const style_map = $derived(colors[level] ?? colors['A1']);
 </script>
 
 <span

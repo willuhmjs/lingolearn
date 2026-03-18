@@ -520,7 +520,7 @@
         })
       });
       batchResult = await res.json();
-    } catch (e) {
+    } catch (_e) {
       batchResult = { error: 'Network error' };
     } finally {
       batchImporting = false;

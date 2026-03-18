@@ -6,7 +6,7 @@
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
-  import { SRS_COLORS, getSrsColor } from '$lib/utils/srsColors';
+  import { SRS_COLORS } from '$lib/utils/srsColors';
 
   let { data }: { data: PageData } = $props();
 
@@ -334,10 +334,12 @@
 
   let friends = $derived(data.friendships?.filter((f: any) => f.status === 'ACCEPTED') ?? []);
   let incomingRequests = $derived(
-    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.receiverId === data.userId) ?? []
+    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.receiverId === data.userId) ??
+      []
   );
   let outgoingRequests = $derived(
-    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.initiatorId === data.userId) ?? []
+    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.initiatorId === data.userId) ??
+      []
   );
 
   async function sendFriendRequest() {
@@ -402,7 +404,9 @@
       const link = `${origin}/friends/accept?token=${result.token}`;
       await navigator.clipboard.writeText(link);
       copyLinkSuccess = true;
-      setTimeout(() => { copyLinkSuccess = false; }, 3000);
+      setTimeout(() => {
+        copyLinkSuccess = false;
+      }, 3000);
     } catch {
       friendError = 'Could not copy invite link';
     } finally {
@@ -1778,7 +1782,17 @@
   <!-- SOCIAL -->
   <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
     <h2 class="social-heading">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        width="20"
+        height="20"
+        aria-hidden="true"
+      >
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
         <circle cx="9" cy="7" r="4"></circle>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -1794,7 +1808,12 @@
       <!-- Add Friend -->
       <div class="card">
         <h3 class="social-card-title">Add Friend</h3>
-        <form onsubmit={(e) => { e.preventDefault(); sendFriendRequest(); }}>
+        <form
+          onsubmit={(e) => {
+            e.preventDefault();
+            sendFriendRequest();
+          }}
+        >
           <div class="social-input-group">
             <input
               type="text"
@@ -1802,7 +1821,11 @@
               placeholder="Enter username…"
               disabled={friendLoading}
             />
-            <button type="submit" class="btn-duo btn-primary" disabled={friendLoading || !newFriendUsername}>
+            <button
+              type="submit"
+              class="btn-duo btn-primary"
+              disabled={friendLoading || !newFriendUsername}
+            >
               {friendLoading ? 'Sending…' : 'Add'}
             </button>
           </div>
@@ -1812,7 +1835,11 @@
         </form>
         <div class="social-invite-row">
           <span class="social-invite-label">Or share an invite link</span>
-          <button class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}" onclick={copyInviteLink} disabled={copyLinkLoading}>
+          <button
+            class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}"
+            onclick={copyInviteLink}
+            disabled={copyLinkLoading}
+          >
             {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
           </button>
         </div>
@@ -1822,20 +1849,36 @@
       <div class="social-requests-col">
         {#if incomingRequests.length > 0}
           <div class="card">
-            <h3 class="social-card-title">Friend Requests <span class="social-count-badge">{incomingRequests.length}</span></h3>
+            <h3 class="social-card-title">
+              Friend Requests <span class="social-count-badge">{incomingRequests.length}</span>
+            </h3>
             <ul class="social-user-list">
               {#each incomingRequests as request}
                 <li class="social-user-item">
                   <div class="social-user-info">
-                    <img src={request.initiator.image || '/default-avatar.png'} alt="" class="social-avatar" />
+                    <img
+                      src={request.initiator.image || '/default-avatar.png'}
+                      alt=""
+                      class="social-avatar"
+                    />
                     <div>
-                      <a href="/u/{request.initiator.username}" class="social-username">{request.initiator.username}</a>
-                      {#if request.initiator.name}<p class="social-meta">{request.initiator.name}</p>{/if}
+                      <a href="/u/{request.initiator.username}" class="social-username"
+                        >{request.initiator.username}</a
+                      >
+                      {#if request.initiator.name}<p class="social-meta">
+                          {request.initiator.name}
+                        </p>{/if}
                     </div>
                   </div>
                   <div class="social-actions">
-                    <button class="social-btn-sm social-btn-accept" onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button>
-                    <button class="social-btn-sm social-btn-decline" onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button>
+                    <button
+                      class="social-btn-sm social-btn-accept"
+                      onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
+                    >
+                    <button
+                      class="social-btn-sm social-btn-decline"
+                      onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
+                    >
                   </div>
                 </li>
               {/each}
@@ -1850,10 +1893,18 @@
               {#each outgoingRequests as request}
                 <li class="social-user-item">
                   <div class="social-user-info">
-                    <img src={request.receiver.image || '/default-avatar.png'} alt="" class="social-avatar" />
+                    <img
+                      src={request.receiver.image || '/default-avatar.png'}
+                      alt=""
+                      class="social-avatar"
+                    />
                     <div>
-                      <a href="/u/{request.receiver.username}" class="social-username">{request.receiver.username}</a>
-                      {#if request.receiver.name}<p class="social-meta">{request.receiver.name}</p>{/if}
+                      <a href="/u/{request.receiver.username}" class="social-username"
+                        >{request.receiver.username}</a
+                      >
+                      {#if request.receiver.name}<p class="social-meta">
+                          {request.receiver.name}
+                        </p>{/if}
                     </div>
                   </div>
                   <span class="social-status-pill social-pending">Pending</span>
@@ -1866,22 +1917,30 @@
 
       <!-- Friends list -->
       <div class="card">
-        <h3 class="social-card-title">Friends <span class="social-count-badge">{friends.length}</span></h3>
+        <h3 class="social-card-title">
+          Friends <span class="social-count-badge">{friends.length}</span>
+        </h3>
         {#if friends.length === 0}
           <p class="social-empty">No friends yet. Add some people to see them here!</p>
         {:else}
           <ul class="social-user-list">
             {#each friends as friendship}
-              {@const friend = friendship.initiatorId === data.userId ? friendship.receiver : friendship.initiator}
+              {@const friend =
+                friendship.initiatorId === data.userId ? friendship.receiver : friendship.initiator}
               <li class="social-user-item">
                 <div class="social-user-info">
                   <img src={friend.image || '/default-avatar.png'} alt="" class="social-avatar" />
                   <div>
                     <a href="/u/{friend.username}" class="social-username">{friend.username}</a>
-                    <p class="social-meta">Active {new Date(friend.lastActive).toLocaleDateString()}</p>
+                    <p class="social-meta">
+                      Active {new Date(friend.lastActive).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <button class="social-btn-sm social-btn-remove" onclick={() => removeFriend(friendship.id)}>Remove</button>
+                <button
+                  class="social-btn-sm social-btn-remove"
+                  onclick={() => removeFriend(friendship.id)}>Remove</button
+                >
               </li>
             {/each}
           </ul>
@@ -1907,9 +1966,14 @@
                   <p class="social-meta">Score to beat: <strong>{challenge.scoreToBeat}</strong></p>
                 </div>
                 <div class="social-challenge-right">
-                  <span class="social-status-pill social-{challenge.status.toLowerCase()}">{challenge.status}</span>
+                  <span class="social-status-pill social-{challenge.status.toLowerCase()}"
+                    >{challenge.status}</span
+                  >
                   {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
-                    <a href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}" class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a>
+                    <a
+                      href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
+                      class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a
+                    >
                   {/if}
                 </div>
               </li>
@@ -5420,7 +5484,9 @@
     font-family: inherit;
     color: var(--input-text, #111827);
     background: var(--input-bg, #ffffff);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
 
   .social-input-group input:focus {
@@ -5467,7 +5533,10 @@
     color: var(--text-color, #374151);
     background: transparent;
     white-space: nowrap;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .social-btn-copy:hover:not(:disabled) {
@@ -5556,7 +5625,9 @@
     font-family: inherit;
     cursor: pointer;
     border: none;
-    transition: filter 0.15s, transform 0.1s;
+    transition:
+      filter 0.15s,
+      transform 0.1s;
     white-space: nowrap;
   }
 
@@ -5686,5 +5757,4 @@
     background: #14532d;
     color: #86efac;
   }
-
 </style>

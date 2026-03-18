@@ -413,11 +413,7 @@ export async function POST({ request, locals }: RequestEvent) {
     const bottomBand = vocabWithMeaning.slice(bandSize * 2);
 
     // Pick 3 from top, 3 from mid, 2 from bottom = 8 questions
-    targetVocab = [
-      ...sample(topBand, 3),
-      ...sample(midBand, 3),
-      ...sample(bottomBand, 2)
-    ];
+    targetVocab = [...sample(topBand, 3), ...sample(midBand, 3), ...sample(bottomBand, 2)];
   } else {
     // Fallback if level has too few words for stratification
     targetVocab = sample(vocabWithMeaning, Math.min(numQuestions, vocabWithMeaning.length));

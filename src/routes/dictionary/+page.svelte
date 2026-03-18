@@ -139,7 +139,6 @@
   let recommendedWords = $state<any[]>([]);
   let recommendedLevel = $state('');
   let loadingRecommended = $state(false);
-  let addingWordId = $state<string | null>(null);
 
   async function loadRecommendedWords() {
     loadingRecommended = true;
@@ -793,7 +792,9 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
           <div class="rec-header">
             <span class="rec-title">Recommended for you</span>
             {#if recommendedLevel}
-              <span class="rec-subtitle">High-frequency {recommendedLevel} words you haven't learned yet</span>
+              <span class="rec-subtitle"
+                >High-frequency {recommendedLevel} words you haven't learned yet</span
+              >
             {/if}
           </div>
           <div class="rec-grid">
@@ -4040,9 +4041,21 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     flex-shrink: 0;
   }
 
-  .rec-cefr[data-level='A1'], .rec-cefr[data-level='A2'] { background: #dcfce7; color: #15803d; }
-  .rec-cefr[data-level='B1'], .rec-cefr[data-level='B2'] { background: #fef9c3; color: #854d0e; }
-  .rec-cefr[data-level='C1'], .rec-cefr[data-level='C2'] { background: #fee2e2; color: #991b1b; }
+  .rec-cefr[data-level='A1'],
+  .rec-cefr[data-level='A2'] {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .rec-cefr[data-level='B1'],
+  .rec-cefr[data-level='B2'] {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+  .rec-cefr[data-level='C1'],
+  .rec-cefr[data-level='C2'] {
+    background: #fee2e2;
+    color: #991b1b;
+  }
 
   .rec-meaning {
     font-size: 0.78rem;
@@ -4071,8 +4084,16 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     margin-top: 0.15rem;
   }
 
-  :global(html[data-theme='dark']) .rec-lemma { color: #e2e8f0; }
-  :global(html[data-theme='dark']) .rec-meaning { color: #94a3b8; }
-  :global(html[data-theme='dark']) .rec-card { border-color: #334155; }
-  :global(html[data-theme='dark']) .rec-title { color: #e2e8f0; }
+  :global(html[data-theme='dark']) .rec-lemma {
+    color: #e2e8f0;
+  }
+  :global(html[data-theme='dark']) .rec-meaning {
+    color: #94a3b8;
+  }
+  :global(html[data-theme='dark']) .rec-card {
+    border-color: #334155;
+  }
+  :global(html[data-theme='dark']) .rec-title {
+    color: #e2e8f0;
+  }
 </style>
