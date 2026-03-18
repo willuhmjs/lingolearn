@@ -64,6 +64,16 @@
     }
   }
 
+  @keyframes bounce-subtle {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
   .success-icon svg {
     width: 3.5rem;
     height: 3.5rem;
