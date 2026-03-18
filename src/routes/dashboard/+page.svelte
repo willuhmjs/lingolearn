@@ -2628,6 +2628,10 @@
     border: 1px solid rgba(0, 0, 0, 0.05);
     max-width: 100%;
     box-sizing: border-box;
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-content: flex-start;
   }
 
   .heatmap-cell {
@@ -3165,6 +3169,7 @@
       padding: 0.75rem;
       gap: 6px;
       justify-content: center;
+      max-height: 350px;
     }
 
     .heatmap-cell {

@@ -1105,7 +1105,8 @@
   .app-container {
     display: grid;
     grid-template-columns: 250px 1fr;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .app-container.no-sidebar {
@@ -1117,9 +1118,7 @@
     border-right: 2px solid var(--header-border, #e5e7eb);
     display: flex;
     flex-direction: column;
-    position: sticky;
-    top: 0;
-    max-height: 100vh;
+    height: 100%;
     z-index: 50;
     padding: 1.5rem 1rem;
     box-sizing: border-box;
@@ -1462,6 +1461,8 @@
     flex: 1;
     width: 100%;
     box-sizing: border-box;
+    overflow-y: auto;
+    height: 100%;
   }
 
   .site-footer {
@@ -1513,6 +1514,8 @@
     .app-container {
       display: flex;
       flex-direction: column;
+      height: auto;
+      overflow: visible;
     }
 
     .desktop-topbar {
