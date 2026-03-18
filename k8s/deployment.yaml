@@ -70,6 +70,11 @@ spec:
                 secretKeyRef:
                   name: lingolearn-secrets
                   key: DEFAULT_LLM_MODEL
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: lingolearn-secrets
+                  key: ENCRYPTION_KEY
             - name: BODY_SIZE_LIMIT
               value: '52428800'
           resources:
