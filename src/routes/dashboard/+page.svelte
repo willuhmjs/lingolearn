@@ -2186,7 +2186,6 @@
     border-color: rgba(255, 255, 255, 0.06);
   }
 
-
   .dashboard-header {
     margin-bottom: 2rem;
     text-align: center;

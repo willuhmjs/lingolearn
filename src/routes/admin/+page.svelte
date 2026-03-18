@@ -1290,7 +1290,6 @@
 {/if}
 
 <style>
-
   .active-indicator {
     display: inline-block;
     width: 8px;

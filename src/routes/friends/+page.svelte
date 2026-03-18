@@ -118,7 +118,11 @@
             placeholder="Enter username..."
             disabled={loading}
           />
-          <button type="submit" class="btn-duo btn-primary" disabled={loading || !newFriendUsername}>
+          <button
+            type="submit"
+            class="btn-duo btn-primary"
+            disabled={loading || !newFriendUsername}
+          >
             {loading ? 'Sending…' : 'Add'}
           </button>
         </div>

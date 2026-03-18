@@ -366,7 +366,6 @@
     width: 100%;
   }
 
-
   .classes-layout {
     display: grid;
     grid-template-columns: 1fr 440px;
