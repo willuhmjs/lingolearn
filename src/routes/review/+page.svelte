@@ -2,6 +2,7 @@
   import type { PageData } from './$types';
   import Confetti from '$lib/components/Confetti.svelte';
   import { haptics } from '$lib/utils/haptic';
+  import toast from 'svelte-french-toast';
   import { page } from '$app/stores';
   import ReviewHeader from '$lib/components/review/ReviewHeader.svelte';
   import KeyboardShortcutsModal from '$lib/components/review/KeyboardShortcutsModal.svelte';
@@ -125,9 +126,7 @@
   }
 
   function reportError() {
-    alert(
-      'Error reporting feature coming soon! This will allow you to flag incorrect translations or mistakes.'
-    );
+    toast('Error reporting coming soon — thanks for the feedback!', { duration: 4000 });
   }
 
   let lastResponseTimeMs: number | null = $state(null);
