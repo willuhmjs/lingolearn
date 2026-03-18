@@ -3,12 +3,6 @@
     currentLevel: string;
     nextLevel: string | null;
     percentComplete: number;
-    vocabMastery: number;
-    grammarMastery: number;
-    vocabExposure: number;
-    grammarExposure: number;
-    averageElo: number;
-    targetElo: number;
   }
 
   interface Props {
