@@ -1688,7 +1688,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
             {/if}
             {#if enriching}
               <span class="modal-enriching-badge">
-                <span class="spinner-tiny"></span> enriching...
+                <span class="spinner-tiny"></span> Enriching
               </span>
             {/if}
           </div>
@@ -3492,24 +3492,25 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   .modal-enriching-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    font-size: 0.65rem;
-    font-weight: 600;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.125rem 0.5rem;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.7);
+    background: #7c3aed;
+    color: white;
+    box-shadow: 0 1px 2px rgba(124, 58, 237, 0.3);
   }
 
   .spinner-tiny {
     display: inline-block;
-    width: 0.6rem;
-    height: 0.6rem;
+    width: 0.7rem;
+    height: 0.7rem;
     border-radius: 9999px;
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    border-bottom-color: rgba(255, 255, 255, 0.8);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-bottom-color: white;
     animation: spin 1s linear infinite;
     flex-shrink: 0;
   }
