@@ -514,7 +514,8 @@ export async function updateSrsMetrics(
   score: number,
   type: 'vocabulary' | 'grammar' = 'vocabulary',
   overridden = false,
-  responseTimeMs: number | null = null
+  responseTimeMs: number | null = null,
+  isProduction = false
 ) {
   // Fetch user's FSRS retention preference and optimized weights once
   const userPrefs = await prisma.user.findUnique({
@@ -523,6 +524,8 @@ export async function updateSrsMetrics(
   });
   const userRetention = userPrefs?.fsrsRetention ?? DEFAULT_FSRS_PARAMETERS.requestRetention;
   const userWeights = userPrefs?.fsrsWeights?.length === 19 ? userPrefs.fsrsWeights : undefined;
+
+  const hasProducedUpdate = isProduction && score >= 0.8;
 
   if (type === 'grammar') {
     const currentProgress = await prisma.userGrammarRuleProgress.findUnique({
@@ -558,11 +561,13 @@ export async function updateSrsMetrics(
         grammarRuleId: itemId,
         ...fsrs,
         reviewCount: 1,
+        hasProduced: hasProducedUpdate,
         ...(newMedianMs !== undefined ? { medianResponseMs: newMedianMs } : {})
       },
       update: {
         ...fsrs,
         reviewCount: { increment: 1 },
+        ...(hasProducedUpdate ? { hasProduced: true } : {}),
         ...(newMedianMs !== undefined ? { medianResponseMs: newMedianMs } : {})
       }
     });
@@ -617,12 +622,14 @@ export async function updateSrsMetrics(
       ...fsrs,
       overrideCount: overrideIncrement,
       reviewCount: 1,
+      hasProduced: hasProducedUpdate,
       ...(newMedianMsVocab !== undefined ? { medianResponseMs: newMedianMsVocab } : {})
     },
     update: {
       ...fsrs,
       overrideCount: { increment: overrideIncrement },
       reviewCount: { increment: 1 },
+      ...(hasProducedUpdate ? { hasProduced: true } : {}),
       ...(newMedianMsVocab !== undefined ? { medianResponseMs: newMedianMsVocab } : {})
     }
   });
@@ -791,6 +798,9 @@ export async function updateEloRatings(
         ? updateRunningMedian(priorVocabState.medianResponseMs, responseTimeMs)
         : undefined;
 
+    const isProduction = gameMode === 'native-to-target' || gameMode === 'fill-blank';
+    const hasProducedUpdate = isProduction && vocabUpdate.score >= 0.8;
+
     await Promise.all([
       prisma.userVocabularyProgress.upsert({
         where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
@@ -801,6 +811,7 @@ export async function updateEloRatings(
           lastErrorType: errorType,
           errorCounts: newVocabErrorCounts,
           reviewCount: 1,
+          hasProduced: hasProducedUpdate,
           ...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
         },
         update: {
@@ -808,6 +819,7 @@ export async function updateEloRatings(
           lastErrorType: errorType,
           errorCounts: newVocabErrorCounts,
           reviewCount: { increment: 1 },
+          ...(hasProducedUpdate ? { hasProduced: true } : {}),
           ...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
         }
       }),
@@ -898,6 +910,9 @@ export async function updateEloRatings(
         ? updateRunningMedian(priorGrammarState.medianResponseMs, responseTimeMs)
         : undefined;
 
+    const isProductionGrammar = gameMode === 'native-to-target' || gameMode === 'fill-blank';
+    const hasProducedUpdateGrammar = isProductionGrammar && grammarUpdate.score >= 0.8;
+
     await Promise.all([
       prisma.userGrammarRuleProgress.upsert({
         where: { userId_grammarRuleId: { userId, grammarRuleId: grammar.id } },
@@ -908,6 +923,7 @@ export async function updateEloRatings(
           lastErrorType: errorType,
           errorCounts: newGrammarErrorCounts,
           reviewCount: 1,
+          hasProduced: hasProducedUpdateGrammar,
           ...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
         },
         update: {
@@ -915,6 +931,7 @@ export async function updateEloRatings(
           lastErrorType: errorType,
           errorCounts: newGrammarErrorCounts,
           reviewCount: { increment: 1 },
+          ...(hasProducedUpdateGrammar ? { hasProduced: true } : {}),
           ...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
         }
       }),

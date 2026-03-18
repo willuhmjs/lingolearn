@@ -42,31 +42,55 @@ export const CEFR_CONFIG = {
     C1: 1950
   } as const,
 
-  // Number of top-frequency vocab words at each level that must be KNOWN/MASTERED to level up.
+  // Number of top-frequency vocab words at each level that must be MASTERED to level up.
   // The lesson generator surfaces words in corpus-frequency order (ASC), so users encounter
   // these before any AI-generated enrichment words. The gate is immune to DB growth: adding
   // new AI-generated words doesn't change which words rank highest by corpus frequency.
   VOCAB_FREQ_GATE: {
-    A1: 50,
-    A2: 60,
-    B1: 70,
-    B2: 80,
-    C1: 90
+    A1: 150,
+    A2: 250,
+    B1: 400,
+    B2: 600,
+    C1: 800
   } as const,
 
-  // Percentage of interacted grammar rules that must be KNOWN/MASTERED to level up.
+  // Total cumulative vocab words (across all levels) that must be MASTERED to level up.
+  // This ensures the user has a broad vocabulary base beyond just the top frequency items.
+  TOTAL_VOCAB_GATE: {
+    A1: 150,
+    A2: 300,
+    B1: 500,
+    B2: 800,
+    C1: 1200
+  } as const,
+
+  // Percentage of interacted grammar rules that must be MASTERED to level up.
   GRAMMAR_MASTERY_THRESHOLD: 0.9,
+
+  // Percentage of items counting toward the level-up gate (MASTERED) that must have
+  // been successfully reviewed in a production mode at least once.
+  PRODUCTION_GATE_THRESHOLD: 0.3,
 
   // Minimum number of grammar rules at the current level the user must have interacted with
   // before the mastery threshold applies. Prevents levelling up without ever touching grammar.
   // Self-sizing: if the level has fewer rules than this, all of them are required.
-  GRAMMAR_MIN_INTERACTION: 3,
+  GRAMMAR_MIN_INTERACTION: 10,
 
   // ELO decay configuration (for items not reviewed recently)
   DECAY: {
     THRESHOLD_DAYS: 30, // Items not reviewed for this many days will decay
     RATE: 0.05 // 5% decay toward baseline per decay period
-  }
+  },
+
+  // Frequency rank thresholds for mapping to CEFR levels (heuristic)
+  // Based on common distributions (e.g. Zipf's law applied to language learning)
+  RANK_THRESHOLDS: {
+    A1: 1000,
+    A2: 2500,
+    B1: 5000,
+    B2: 10000,
+    C1: 20000
+  } as const
 } as const;
 
 // XP Rewards Configuration

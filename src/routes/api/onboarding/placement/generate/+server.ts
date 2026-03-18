@@ -2,7 +2,7 @@
  * Onboarding placement quiz — generate a round for a given CEFR level.
  *
  * Returns:
- *   - 4 vocabulary MC questions (word → pick the correct English meaning)
+ *   - 8 vocabulary MC questions (word → pick the correct English meaning)
  *   - 2 grammar MC questions (pick the correct target-language form)
  *   - 1 short immersion passage with 3 comprehension MC questions
  *
@@ -397,15 +397,36 @@ export async function POST({ request, locals }: RequestEvent) {
   const allVocabAtLevel = await prisma.vocabulary.findMany({
     where: { languageId: langId, cefrLevel: level },
     include: { meanings: { take: 1 } },
-    orderBy: { frequency: 'asc' } // most frequent first → better signal
+    orderBy: { frequency: 'asc' } // most frequent first (smaller frequency rank)
   });
   const vocabWithMeaning = allVocabAtLevel.filter((v) => v.meanings.length > 0);
 
-  // We pick 4 target words + 8 distractor words (for wrong options).
-  const targetVocab = sample(vocabWithMeaning, Math.min(4, vocabWithMeaning.length));
+  // Stratified sampling: 8 questions (across 3 frequency bands: top, mid, bottom)
+  // frequency is 'asc' (most frequent first), so 0-1/3 is most frequent, etc.
+  const numQuestions = 8;
+  const bandSize = Math.floor(vocabWithMeaning.length / 3);
+
+  let targetVocab: typeof vocabWithMeaning = [];
+  if (vocabWithMeaning.length >= numQuestions && bandSize > 0) {
+    const topBand = vocabWithMeaning.slice(0, bandSize);
+    const midBand = vocabWithMeaning.slice(bandSize, bandSize * 2);
+    const bottomBand = vocabWithMeaning.slice(bandSize * 2);
+
+    // Pick 3 from top, 3 from mid, 2 from bottom = 8 questions
+    targetVocab = [
+      ...sample(topBand, 3),
+      ...sample(midBand, 3),
+      ...sample(bottomBand, 2)
+    ];
+  } else {
+    // Fallback if level has too few words for stratification
+    targetVocab = sample(vocabWithMeaning, Math.min(numQuestions, vocabWithMeaning.length));
+  }
+
+  // We pick a pool of potential distractors for wrong options.
   const distractorPool = vocabWithMeaning
     .filter((v) => !targetVocab.find((t) => t.id === v.id))
-    .slice(0, 20);
+    .slice(0, 30); // Increased pool size for more variety
 
   // Build vocab MC questions entirely from DB — no LLM needed.
   const vocabQuestions = targetVocab.map((vocab) => {

@@ -170,7 +170,7 @@ export class CefrService {
     // The lesson generator already surfaces words in frequency order, so users encounter
     // these before AI-generated enrichment words. DB growth doesn't affect this gate.
     const freqGateTarget =
-      CEFR_CONFIG.VOCAB_FREQ_GATE[currentLevel as keyof typeof CEFR_CONFIG.VOCAB_FREQ_GATE] ?? 50;
+      CEFR_CONFIG.VOCAB_FREQ_GATE[currentLevel as keyof typeof CEFR_CONFIG.VOCAB_FREQ_GATE] ?? 150;
 
     const topFreqWords = await prisma.vocabulary.findMany({
       where: { languageId, cefrLevel: currentLevel, frequency: { not: null } },
@@ -179,34 +179,81 @@ export class CefrService {
       select: { id: true }
     });
 
-    const masteredFromTopFreq = await prisma.userVocabulary.count({
-      where: {
-        userId,
-        vocabularyId: { in: topFreqWords.map((w) => w.id) },
-        srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
-      }
-    });
+    const freqGateRequired = topFreqWords.length;
+
+    // Fetch mastered items and their production status in parallel to avoid N+1
+    const [freqGateItems, grammarGateItems] = await Promise.all([
+      prisma.userVocabulary.findMany({
+        where: {
+          userId,
+          vocabularyId: { in: topFreqWords.map((w) => w.id) },
+          srsState: SrsState.MASTERED
+        },
+        select: {
+          vocabularyId: true,
+          vocabulary: {
+            select: {
+              progress: {
+                where: { userId },
+                select: { hasProduced: true }
+              }
+            }
+          }
+        }
+      }),
+      prisma.userGrammarRule.findMany({
+        where: {
+          userId,
+          grammarRule: { languageId, level: currentLevel },
+          srsState: SrsState.MASTERED
+        },
+        select: {
+          grammarRuleId: true,
+          grammarRule: {
+            select: {
+              progress: {
+                where: { userId },
+                select: { hasProduced: true }
+              }
+            }
+          }
+        }
+      })
+    ]);
+
+    const masteredFromTopFreq = freqGateItems.length;
+    const producedFromTopFreq = freqGateItems.filter((i) => i.vocabulary.progress[0]?.hasProduced)
+      .length;
 
     // Must master all top-frequency words that exist (up to the target).
-    const freqGateRequired = topFreqWords.length;
-    const isVocabMet = freqGateRequired > 0 && masteredFromTopFreq >= freqGateRequired;
+    const isFreqVocabMet = freqGateRequired > 0 && masteredFromTopFreq >= freqGateRequired;
+
+    // --- Total Vocab gate ---
+    // Ensures a broad base across all levels (cumulative).
+    const totalVocabTarget =
+      CEFR_CONFIG.TOTAL_VOCAB_GATE[currentLevel as keyof typeof CEFR_CONFIG.TOTAL_VOCAB_GATE] ?? 0;
+    const totalMasteredVocab = await prisma.userVocabulary.count({
+      where: {
+        userId,
+        vocabulary: { languageId },
+        srsState: SrsState.MASTERED
+      }
+    });
+    const isTotalVocabMet = totalMasteredVocab >= totalVocabTarget;
 
     // --- Grammar gate: minimum interaction + 90% mastery ---
     // Requires the user to have interacted with a minimum number of grammar rules
     // so grammar cannot be skipped by playing only vocabulary modes.
-    const [totalGrammarAtLevel, interactedGrammarCount, masteredGrammarCount] = await Promise.all([
+    const [totalGrammarAtLevel, interactedGrammarCount] = await Promise.all([
       prisma.grammarRule.count({ where: { languageId, level: currentLevel } }),
       prisma.userGrammarRule.count({
         where: { userId, grammarRule: { languageId, level: currentLevel } }
-      }),
-      prisma.userGrammarRule.count({
-        where: {
-          userId,
-          grammarRule: { languageId, level: currentLevel },
-          srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
-        }
       })
     ]);
+
+    const masteredGrammarCount = grammarGateItems.length;
+    const producedGrammarCount = grammarGateItems.filter((i) => i.grammarRule.progress[0]?.hasProduced)
+      .length;
 
     const minGrammarInteraction = Math.min(
       totalGrammarAtLevel,
@@ -218,7 +265,42 @@ export class CefrService {
       interactedGrammarCount >= minGrammarInteraction &&
       grammarMastery >= CEFR_CONFIG.GRAMMAR_MASTERY_THRESHOLD;
 
-    if (isVocabMet && isGrammarMet) {
+    // --- Production gate ---
+    // Require 30% of mastered gate items (top-freq vocab + current-level grammar) to be produced.
+    const totalGateMastered = masteredFromTopFreq + masteredGrammarCount;
+    const totalGateProduced = producedFromTopFreq + producedGrammarCount;
+    const isProductionMet =
+      totalGateMastered > 0
+        ? totalGateProduced / totalGateMastered >= CEFR_CONFIG.PRODUCTION_GATE_THRESHOLD
+        : true;
+
+    // --- ELO Target gate ---
+    // Ensures the user's proficiency (average ELO) is sufficient for the next level.
+    const eloTarget =
+      CEFR_CONFIG.ELO_TARGETS[currentLevel as keyof typeof CEFR_CONFIG.ELO_TARGETS] ?? 0;
+    const [vocabElos, grammarElos] = await Promise.all([
+      prisma.userVocabulary.findMany({
+        where: {
+          userId,
+          vocabularyId: { in: topFreqWords.map((w) => w.id) },
+          srsState: SrsState.MASTERED
+        },
+        select: { eloRating: true }
+      }),
+      prisma.userGrammarRule.findMany({
+        where: {
+          userId,
+          grammarRule: { languageId, level: currentLevel },
+          srsState: SrsState.MASTERED
+        },
+        select: { eloRating: true }
+      })
+    ]);
+    const allElos = [...vocabElos.map((v) => v.eloRating), ...grammarElos.map((g) => g.eloRating)];
+    const averageElo = allElos.length > 0 ? allElos.reduce((a, b) => a + b, 0) / allElos.length : 0;
+    const isEloMet = averageElo >= eloTarget;
+
+    if (isFreqVocabMet && isTotalVocabMet && isGrammarMet && isEloMet && isProductionMet) {
       const vocabMastery = freqGateRequired > 0 ? masteredFromTopFreq / freqGateRequired : 0;
       await prisma.$transaction([
         prisma.userProgress.update({
@@ -234,7 +316,7 @@ export class CefrService {
             newLevel: nextLevel,
             vocabMastery,
             grammarMastery,
-            averageElo: 0
+            averageElo
           }
         })
       ]);
@@ -414,70 +496,126 @@ export class CefrService {
     }
 
     const freqGateTarget =
-      CEFR_CONFIG.VOCAB_FREQ_GATE[currentLevel as keyof typeof CEFR_CONFIG.VOCAB_FREQ_GATE] ?? 50;
+      CEFR_CONFIG.VOCAB_FREQ_GATE[currentLevel as keyof typeof CEFR_CONFIG.VOCAB_FREQ_GATE] ?? 150;
 
-    // Fetch freq-gate words, grammar counts, and ELO data in parallel.
-    const [topFreqWords, totalGrammar, masteredGrammar, interactedGrammar, vocabElos, grammarElos] =
-      await Promise.all([
-        prisma.vocabulary.findMany({
-          where: { languageId, cefrLevel: currentLevel, frequency: { not: null } },
-          orderBy: { frequency: 'asc' },
-          take: freqGateTarget,
-          select: { id: true }
-        }),
-        prisma.grammarRule.count({ where: { languageId, level: currentLevel } }),
-        prisma.userGrammarRule.count({
-          where: {
-            userId,
-            grammarRule: { languageId, level: currentLevel },
-            srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
+    // Fetch freq-gate words, grammar counts, and items in parallel.
+    const [
+      topFreqWords,
+      totalGrammar,
+      interactedGrammar,
+      totalMasteredVocab,
+      freqGateItems,
+      grammarGateItems
+    ] = await Promise.all([
+      prisma.vocabulary.findMany({
+        where: { languageId, cefrLevel: currentLevel, frequency: { not: null } },
+        orderBy: { frequency: 'asc' },
+        take: freqGateTarget,
+        select: { id: true }
+      }),
+      prisma.grammarRule.count({ where: { languageId, level: currentLevel } }),
+      prisma.userGrammarRule.count({
+        where: { userId, grammarRule: { languageId, level: currentLevel } }
+      }),
+      prisma.userVocabulary.count({
+        where: {
+          userId,
+          vocabulary: { languageId },
+          srsState: SrsState.MASTERED
+        }
+      }),
+      // We need these to check production status for the frequency gate words.
+      prisma.userVocabulary.findMany({
+        where: {
+          userId,
+          vocabulary: { languageId, cefrLevel: currentLevel, frequency: { not: null } },
+          srsState: SrsState.MASTERED
+        },
+        orderBy: { vocabulary: { frequency: 'asc' } },
+        take: freqGateTarget,
+        select: {
+          vocabularyId: true,
+          vocabulary: {
+            select: {
+              progress: {
+                where: { userId },
+                select: { hasProduced: true }
+              }
+            }
           }
-        }),
-        prisma.userGrammarRule.count({
-          where: { userId, grammarRule: { languageId, level: currentLevel } }
-        }),
-        prisma.userVocabulary.findMany({
-          where: {
-            userId,
-            vocabulary: { languageId, cefrLevel: currentLevel },
-            srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
-          },
-          select: { eloRating: true }
-        }),
-        prisma.userGrammarRule.findMany({
-          where: {
-            userId,
-            grammarRule: { languageId, level: currentLevel },
-            srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
-          },
-          select: { eloRating: true }
-        })
-      ]);
+        }
+      }),
+      // We need these to check production status for current-level grammar.
+      prisma.userGrammarRule.findMany({
+        where: {
+          userId,
+          grammarRule: { languageId, level: currentLevel },
+          srsState: SrsState.MASTERED
+        },
+        select: {
+          grammarRuleId: true,
+          grammarRule: {
+            select: {
+              progress: {
+                where: { userId },
+                select: { hasProduced: true }
+              }
+            }
+          }
+        }
+      })
+    ]);
 
     const freqCoverageTarget = topFreqWords.length;
-    const freqCoverageCount =
-      freqCoverageTarget > 0
-        ? await prisma.userVocabulary.count({
-            where: {
-              userId,
-              vocabularyId: { in: topFreqWords.map((w) => w.id) },
-              srsState: { in: [SrsState.KNOWN, SrsState.MASTERED] }
-            }
-          })
-        : 0;
+    const masteredFromTopFreq = freqGateItems.length;
+    const producedFromTopFreq = freqGateItems.filter((i) => i.vocabulary.progress[0]?.hasProduced)
+      .length;
 
-    const grammarMastery = interactedGrammar > 0 ? masteredGrammar / interactedGrammar : 0;
+    const masteredGrammarCount = grammarGateItems.length;
+    const producedGrammarCount = grammarGateItems.filter((i) => i.grammarRule.progress[0]?.hasProduced)
+      .length;
+
+    // Fetch ELO data for the items that contribute to the gate.
+    const [vocabElos, grammarElos] = await Promise.all([
+      prisma.userVocabulary.findMany({
+        where: {
+          userId,
+          vocabularyId: { in: topFreqWords.map((w) => w.id) },
+          srsState: SrsState.MASTERED
+        },
+        select: { eloRating: true }
+      }),
+      prisma.userGrammarRule.findMany({
+        where: {
+          userId,
+          grammarRule: { languageId, level: currentLevel },
+          srsState: SrsState.MASTERED
+        },
+        select: { eloRating: true }
+      })
+    ]);
+
+    const grammarMastery = interactedGrammar > 0 ? masteredGrammarCount / interactedGrammar : 0;
     const grammarExposure = totalGrammar > 0 ? interactedGrammar / totalGrammar : 0;
 
     const allElos = [...vocabElos.map((v) => v.eloRating), ...grammarElos.map((g) => g.eloRating)];
-    const averageElo =
-      allElos.length > 0 ? allElos.reduce((a, b) => a + b, 0) / allElos.length : 1000;
+    const averageElo = allElos.length > 0 ? allElos.reduce((a, b) => a + b, 0) / allElos.length : 0;
 
-    // Progress toward level-up: frequency coverage (60%) + grammar (40%).
-    // Both default to 0 when the user has no current-level data so the bar
-    // correctly starts at 0% immediately after leveling up.
+    // Production progress: percentage of mastered gate items that have been produced.
+    const totalGateMastered = masteredFromTopFreq + masteredGrammarCount;
+    const totalGateProduced = producedFromTopFreq + producedGrammarCount;
+    const productionProgress =
+      totalGateMastered > 0
+        ? Math.min(1, totalGateProduced / (totalGateMastered * CEFR_CONFIG.PRODUCTION_GATE_THRESHOLD))
+        : 1;
+
+    // Progress toward level-up: freq (30%) + total vocab (20%) + grammar (25%) + production (15%) + ELO (10%).
+    const freqProgress = freqCoverageTarget > 0 ? masteredFromTopFreq / freqCoverageTarget : 0;
+    const totalVocabTarget =
+      CEFR_CONFIG.TOTAL_VOCAB_GATE[currentLevel as keyof typeof CEFR_CONFIG.TOTAL_VOCAB_GATE] ?? 0;
+    const totalVocabProgress = totalVocabTarget > 0 ? Math.min(1, totalMasteredVocab / totalVocabTarget) : 1;
+
     const minGrammarInteraction = Math.min(totalGrammar, CEFR_CONFIG.GRAMMAR_MIN_INTERACTION);
-    const freqProgress = freqCoverageTarget > 0 ? freqCoverageCount / freqCoverageTarget : 0;
     const grammarInteractionProgress =
       minGrammarInteraction > 0 ? Math.min(1, interactedGrammar / minGrammarInteraction) : 1;
     const grammarMasteryProgress =
@@ -486,19 +624,49 @@ export class CefrService {
         : 0;
     const grammarProgress = Math.min(grammarInteractionProgress, grammarMasteryProgress);
 
-    const weightedPercent = freqProgress * 0.6 + grammarProgress * 0.4;
-    const allMet = freqProgress >= 1 && grammarProgress >= 1;
+    const eloTarget = CEFR_CONFIG.ELO_TARGETS[currentLevel as keyof typeof CEFR_CONFIG.ELO_TARGETS] ?? 0;
+    const eloProgress = eloTarget > 0 ? Math.min(1, averageElo / eloTarget) : 1;
+
+    const weightedPercent =
+      freqProgress * 0.3 +
+      totalVocabProgress * 0.2 +
+      grammarProgress * 0.25 +
+      productionProgress * 0.15 +
+      eloProgress * 0.1;
+
+    const allMet =
+      freqProgress >= 1 &&
+      totalVocabProgress >= 1 &&
+      grammarProgress >= 1 &&
+      productionProgress >= 1 &&
+      eloProgress >= 1;
     const percentComplete = allMet ? 100 : Math.min(99, Math.round(weightedPercent * 100));
 
     return {
       currentLevel,
       nextLevel,
       percentComplete,
-      freqCoverageCount,
+      freqCoverageCount: masteredFromTopFreq,
       freqCoverageTarget,
       grammarMastery: Math.round(grammarMastery * 100) / 100,
       grammarExposure: Math.round(grammarExposure * 100) / 100,
       averageElo: Math.round(averageElo)
     };
+  }
+
+  /**
+   * Map a frequency rank to a CEFR level based on the configured thresholds.
+   * 1-1000 = A1
+   * 1001-2500 = A2
+   * etc.
+   */
+  static mapRankToCefr(rank: number | null): string {
+    if (rank === null) return 'C2'; // Words not in frequency list are treated as extremely rare/advanced
+    if (rank <= CEFR_CONFIG.RANK_THRESHOLDS.A1) return 'A1';
+    if (rank <= CEFR_CONFIG.RANK_THRESHOLDS.A2) return 'A2';
+    if (rank <= CEFR_CONFIG.RANK_THRESHOLDS.B1) return 'B1';
+    if (rank <= CEFR_CONFIG.RANK_THRESHOLDS.B2) return 'B2';
+    if (rank <= CEFR_CONFIG.RANK_THRESHOLDS.C1) return 'C1';
+    return 'C2';
   }
 }

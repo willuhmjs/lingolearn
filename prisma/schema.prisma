@@ -270,6 +270,7 @@ model UserVocabularyProgress {
   lastReviewDate   DateTime?
   medianResponseMs Int? // running median response time in ms (updated each review)
   reviewCount      Int       @default(0) // total reviews — used to update running median
+  hasProduced      Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -314,6 +315,7 @@ model UserGrammarRuleProgress {
   lastReviewDate   DateTime?
   medianResponseMs Int? // running median response time in ms
   reviewCount      Int       @default(0)
+  hasProduced      Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
