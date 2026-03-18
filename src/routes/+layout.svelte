@@ -36,10 +36,14 @@
     const rect = trigger.getBoundingClientRect();
     const clone = content.cloneNode(true) as HTMLElement;
 
-    // Force visible
+    // Force visible and reset all position-related CSS so the scoped
+    // stylesheet values (bottom, left, transform) don't conflict with
+    // the fixed coordinates we compute below.
     clone.style.visibility = 'visible';
     clone.style.opacity = '1';
     clone.style.position = 'fixed';
+    clone.style.bottom = 'auto';
+    clone.style.right = 'auto';
     clone.style.transform = 'none';
     clone.style.pointerEvents = 'none';
     clone.style.zIndex = '9999';
