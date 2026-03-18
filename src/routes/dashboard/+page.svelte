@@ -3,6 +3,7 @@
   import { fly, slide } from 'svelte/transition';
   import { marked } from 'marked';
   import { onMount } from 'svelte';
+  import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -331,19 +332,7 @@
     <p>Track your language learning progress.</p>
 
     {#if (data as any).cefrProgress}
-      {@const cp = (data as any).cefrProgress}
-      <div class="cefr-progress-container">
-        <div class="cefr-labels">
-          <span class="current-level">{cp.currentLevel}</span>
-          <span class="next-level">{cp.nextLevel || 'MAX'}</span>
-        </div>
-        <div class="cefr-bar-track">
-          <div class="cefr-bar-fill" style="width: {cp.percentComplete}%">
-            <span class="cefr-percent">{cp.percentComplete}%</span>
-          </div>
-        </div>
-        <p class="cefr-subtext">Overall Progress to {cp.nextLevel || 'Mastery'}</p>
-      </div>
+      <CefrProgress cefrProgress={(data as any).cefrProgress} />
     {/if}
 
     <div class="header-actions">
@@ -2215,120 +2204,6 @@
     margin-right: auto;
   }
 
-  .cefr-progress-container {
-    max-width: 400px;
-    margin: 0 auto 2.5rem;
-    padding: 0 1rem;
-  }
-
-  .cefr-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.6rem;
-    font-weight: 800;
-    font-size: 1.25rem;
-    color: #ffffff;
-    letter-spacing: 0.05em;
-  }
-
-  .cefr-bar-track {
-    width: 100%;
-    height: 1.25rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    position: relative;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .cefr-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #d946ef);
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    min-width: 2.5rem;
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-  }
-
-  .cefr-percent {
-    font-size: 0.7rem;
-    font-weight: 900;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  }
-
-  .cefr-subtext {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin-top: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-  }
-
-  .cefr-detail-bars {
-    margin-top: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .detail-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .detail-bar-label {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    width: 110px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  .detail-bar-track {
-    flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    overflow: hidden;
-  }
-
-  .detail-bar-fill {
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 1s ease;
-  }
-
-  .detail-bar-fill.vocab {
-    background: #3b82f6;
-  }
-  .detail-bar-fill.grammar {
-    background: #8b5cf6;
-  }
-  .detail-bar-fill.exposure {
-    background: #f59e0b;
-  }
-  .detail-bar-fill.elo {
-    background: #10b981;
-  }
-
-  .detail-bar-value {
-    font-size: 0.65rem;
-    color: #cbd5e1;
-    font-weight: 700;
-    width: 70px;
-    flex-shrink: 0;
-  }
-
   .header-actions {
     display: flex;
     justify-content: center;
@@ -3259,30 +3134,6 @@
       box-sizing: border-box;
       padding: 0.75rem 1rem;
       font-size: 0.9rem;
-    }
-
-    .cefr-progress-container {
-      max-width: 100%;
-      padding: 0;
-      margin-bottom: 1.5rem;
-    }
-
-    .cefr-labels {
-      font-size: 1rem;
-    }
-
-    .cefr-bar-track {
-      height: 1rem;
-    }
-
-    .detail-bar-label {
-      width: 75px;
-      font-size: 0.55rem;
-    }
-
-    .detail-bar-value {
-      width: 45px;
-      font-size: 0.55rem;
     }
 
     .summary-card {

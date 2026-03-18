@@ -29,63 +29,6 @@
     </div>
   </div>
   <p class="cefr-subtext">Overall Progress to {cefrProgress.nextLevel || 'Mastery'}</p>
-
-  {#if cefrProgress.nextLevel}
-    <div class="cefr-detail-bars">
-      <div class="detail-bar-row">
-        <span class="detail-bar-label">Vocab Mastery</span>
-        <div class="detail-bar-track">
-          <div
-            class="detail-bar-fill vocab"
-            style="width: {Math.min(100, Math.round((cefrProgress.vocabMastery * 100) / 0.8))}%"
-          ></div>
-        </div>
-        <span class="detail-bar-value">{Math.round(cefrProgress.vocabMastery * 100)}%</span>
-      </div>
-      <div class="detail-bar-row">
-        <span class="detail-bar-label">Grammar Mastery</span>
-        <div class="detail-bar-track">
-          <div
-            class="detail-bar-fill grammar"
-            style="width: {Math.min(100, Math.round((cefrProgress.grammarMastery * 100) / 0.8))}%"
-          ></div>
-        </div>
-        <span class="detail-bar-value">{Math.round(cefrProgress.grammarMastery * 100)}%</span>
-      </div>
-      <div class="detail-bar-row">
-        <span class="detail-bar-label">Content Explored</span>
-        <div class="detail-bar-track">
-          <div
-            class="detail-bar-fill exposure"
-            style="width: {Math.min(
-              100,
-              Math.round(
-                (Math.min(cefrProgress.vocabExposure, cefrProgress.grammarExposure) * 100) / 0.6
-              )
-            )}%"
-          ></div>
-        </div>
-        <span class="detail-bar-value"
-          >{Math.round(
-            Math.min(cefrProgress.vocabExposure, cefrProgress.grammarExposure) * 100
-          )}%</span
-        >
-      </div>
-      <div class="detail-bar-row">
-        <span class="detail-bar-label">Avg ELO</span>
-        <div class="detail-bar-track">
-          <div
-            class="detail-bar-fill elo"
-            style="width: {Math.min(
-              100,
-              Math.round((cefrProgress.averageElo / cefrProgress.targetElo) * 100)
-            )}%"
-          ></div>
-        </div>
-        <span class="detail-bar-value">{cefrProgress.averageElo} / {cefrProgress.targetElo}</span>
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -107,32 +50,36 @@
 
   .cefr-bar-track {
     width: 100%;
-    height: 1.25rem;
-    background: rgba(255, 255, 255, 0.1);
+    height: 2rem;
+    background: #1e293b;
     border-radius: 9999px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #334155;
     position: relative;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
   }
 
   .cefr-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #d946ef);
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #d946ef 100%);
+    background-size: 600px 100%;
+    background-position: left center;
     border-radius: 9999px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     min-width: 2.5rem;
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    box-shadow:
+      0 0 12px rgba(139, 92, 246, 0.6),
+      0 0 24px rgba(59, 130, 246, 0.3);
   }
 
   .cefr-percent {
-    font-size: 0.7rem;
+    font-size: 1rem;
     font-weight: 900;
     color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   }
 
   .cefr-subtext {
@@ -144,62 +91,20 @@
     font-weight: 700;
   }
 
-  .cefr-detail-bars {
-    margin-top: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+  @media (max-width: 600px) {
+    .cefr-progress-container {
+      max-width: 100%;
+      padding: 0;
+      margin-bottom: 1.5rem;
+    }
 
-  .detail-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
+    .cefr-labels {
+      font-size: 1rem;
+    }
 
-  .detail-bar-label {
-    font-size: 0.65rem;
-    color: #94a3b8;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    width: 110px;
-    text-align: right;
-    flex-shrink: 0;
-  }
+    .cefr-bar-track {
+      height: 1.5rem;
+    }
 
-  .detail-bar-track {
-    flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    overflow: hidden;
-  }
-
-  .detail-bar-fill {
-    height: 100%;
-    border-radius: 9999px;
-    transition: width 1s ease;
-  }
-
-  .detail-bar-fill.vocab {
-    background: #3b82f6;
-  }
-  .detail-bar-fill.grammar {
-    background: #8b5cf6;
-  }
-  .detail-bar-fill.exposure {
-    background: #f59e0b;
-  }
-  .detail-bar-fill.elo {
-    background: #10b981;
-  }
-
-  .detail-bar-value {
-    font-size: 0.65rem;
-    color: #cbd5e1;
-    font-weight: 700;
-    width: 70px;
-    flex-shrink: 0;
   }
 </style>
