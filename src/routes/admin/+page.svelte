@@ -495,6 +495,37 @@
       await modal.alert('An error occurred.');
     }
   }
+
+  // Batch import state
+  let batchLanguageId = $state('');
+  let batchText = $state('');
+  let batchImporting = $state(false);
+  let batchResult = $state<any>(null);
+
+  async function runBatchImport() {
+    if (!batchLanguageId || !batchText.trim()) return;
+    batchImporting = true;
+    batchResult = null;
+
+    const lang = data.languages.find((l: any) => l.id === batchLanguageId);
+
+    try {
+      const res = await fetch('/api/admin/vocabulary/batch-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: batchText,
+          languageId: batchLanguageId,
+          languageName: lang?.name ?? ''
+        })
+      });
+      batchResult = await res.json();
+    } catch (e) {
+      batchResult = { error: 'Network error' };
+    } finally {
+      batchImporting = false;
+    }
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -1007,6 +1038,61 @@
         {langDataMsg}
       </div>
     {/if}
+  </section>
+
+  <section class="admin-section" in:fly={{ y: 20, duration: 400, delay: 340 }}>
+    <h2>Batch Word Import</h2>
+    <p class="section-desc">
+      Paste any text or essay. The system will extract vocabulary, enrich with AI, and auto-review
+      for safety.
+    </p>
+
+    <div class="batch-import-form">
+      <div class="form-row">
+        <label for="batch-language">Target Language</label>
+        <select id="batch-language" bind:value={batchLanguageId}>
+          <option value="">Select language...</option>
+          {#each data.languages as lang}
+            <option value={lang.id}>{lang.name} ({lang.flag})</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="batch-text">Text to Import</label>
+        <textarea
+          id="batch-text"
+          bind:value={batchText}
+          placeholder="Paste an essay, article, or list of words here..."
+          rows="8"
+        ></textarea>
+      </div>
+
+      <button
+        type="button"
+        class="btn-admin-primary"
+        onclick={runBatchImport}
+        disabled={batchImporting || !batchLanguageId || !batchText.trim()}
+      >
+        {batchImporting ? 'Processing...' : 'Import & Auto-Review'}
+      </button>
+
+      {#if batchResult}
+        <div class="batch-result" class:batch-result-error={batchResult.error}>
+          {#if batchResult.error}
+            <p>Error: {batchResult.error}</p>
+          {:else}
+            <p>&#10003; <strong>{batchResult.extracted}</strong> unique words extracted</p>
+            <p>&#10003; <strong>{batchResult.alreadyInDb}</strong> already in database</p>
+            <p>&#10003; <strong>{batchResult.enriched}</strong> new words enriched by AI</p>
+            <p>
+              &#10003; <strong>{batchResult.approved}</strong> approved,
+              <strong>{batchResult.rejected}</strong> rejected by safety review
+            </p>
+          {/if}
+        </div>
+      {/if}
+    </div>
   </section>
 
   <section class="pending-vocab-card" in:fly={{ y: 20, duration: 400, delay: 350 }}>
@@ -2008,5 +2094,102 @@
     background-color: #fef2f2;
     color: #dc2626;
     border: 1px solid #fecaca;
+  }
+
+  .admin-section {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--card-border, #e5e7eb);
+    border-radius: 1rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .admin-section h2 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+  }
+
+  .section-desc {
+    margin: 0 0 1.25rem 0;
+    font-size: 0.875rem;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .batch-import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 700px;
+  }
+
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-row label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .form-row select,
+  .form-row textarea {
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid var(--card-border, #e5e7eb);
+    border-radius: 0.625rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: var(--card-bg);
+    color: var(--text-color);
+    resize: vertical;
+  }
+
+  .form-row textarea {
+    min-height: 160px;
+  }
+
+  .btn-admin-primary {
+    align-self: flex-start;
+    padding: 0.625rem 1.5rem;
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #16a34a;
+    transition: all 0.15s;
+  }
+
+  .btn-admin-primary:hover:not(:disabled) {
+    background: #16a34a;
+  }
+
+  .btn-admin-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .batch-result {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    font-size: 0.875rem;
+  }
+
+  .batch-result-error {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  .batch-result p {
+    margin: 0.25rem 0;
   }
 </style>

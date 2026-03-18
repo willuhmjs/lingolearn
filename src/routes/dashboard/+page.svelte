@@ -3,17 +3,17 @@
   import { fly, slide } from 'svelte/transition';
   import { marked } from 'marked';
   import { onMount } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
+  import { page } from '$app/stores';
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
+  import { SRS_COLORS, getSrsColor } from '$lib/utils/srsColors';
 
   let { data }: { data: PageData } = $props();
 
   // SrsState enum values from Prisma schema
-  const srsColors = {
-    LOCKED: 'var(--color-locked, #94a3b8)', // gray-400
-    UNSEEN: 'var(--color-unseen, #e2e8f0)', // gray-200
-    LEARNING: 'var(--color-learning, #fef08a)', // yellow-200
-    KNOWN: 'var(--color-known, #6ee7b7)', // emerald-300
-    MASTERED: 'var(--color-mastered, #10b981)' // emerald-500
+  const srsColors: Record<string, string> = {
+    LOCKED: '#94a3b8', // gray-400
+    ...SRS_COLORS
   };
 
   let grammarSortOrder = $state<'easiest' | 'hardest'>('easiest');
@@ -324,6 +324,91 @@
   let showMemoryHealth = $state(false);
   let showInsights = $state(false);
   let showIntelligence = $state(false);
+
+  // Social state
+  let newFriendUsername = $state('');
+  let friendLoading = $state(false);
+  let friendError = $state<string | null>(null);
+  let copyLinkLoading = $state(false);
+  let copyLinkSuccess = $state(false);
+
+  let friends = $derived(data.friendships?.filter((f: any) => f.status === 'ACCEPTED') ?? []);
+  let incomingRequests = $derived(
+    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.receiverId === data.userId) ?? []
+  );
+  let outgoingRequests = $derived(
+    data.friendships?.filter((f: any) => f.status === 'PENDING' && f.initiatorId === data.userId) ?? []
+  );
+
+  async function sendFriendRequest() {
+    if (!newFriendUsername) return;
+    friendLoading = true;
+    friendError = null;
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiverUsername: newFriendUsername })
+      });
+      const result = await res.json();
+      if (res.ok) {
+        newFriendUsername = '';
+        await invalidateAll();
+      } else {
+        friendError = result.error || 'Failed to send request';
+      }
+    } catch {
+      friendError = 'An error occurred';
+    } finally {
+      friendLoading = false;
+    }
+  }
+
+  async function updateFriendship(friendshipId: string, status: string) {
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId, status })
+      });
+      if (res.ok) await invalidateAll();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function removeFriend(friendshipId: string) {
+    if (!confirm('Are you sure you want to remove this friend?')) return;
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId })
+      });
+      if (res.ok) await invalidateAll();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function copyInviteLink() {
+    copyLinkLoading = true;
+    copyLinkSuccess = false;
+    try {
+      const res = await fetch('/api/friends/invite');
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      const origin = $page.url.origin;
+      const link = `${origin}/friends/accept?token=${result.token}`;
+      await navigator.clipboard.writeText(link);
+      copyLinkSuccess = true;
+      setTimeout(() => { copyLinkSuccess = false; }, 3000);
+    } catch {
+      friendError = 'Could not copy invite link';
+    } finally {
+      copyLinkLoading = false;
+    }
+  }
 </script>
 
 <div class="page-shell wide">
@@ -1689,6 +1774,151 @@
       {/if}
     </section>
   {/if}
+
+  <!-- SOCIAL -->
+  <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
+    <h2 class="social-heading">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      Social
+      {#if incomingRequests.length > 0}
+        <span class="social-badge">{incomingRequests.length}</span>
+      {/if}
+    </h2>
+
+    <div class="social-grid">
+      <!-- Add Friend -->
+      <div class="card">
+        <h3 class="social-card-title">Add Friend</h3>
+        <form onsubmit={(e) => { e.preventDefault(); sendFriendRequest(); }}>
+          <div class="social-input-group">
+            <input
+              type="text"
+              bind:value={newFriendUsername}
+              placeholder="Enter username…"
+              disabled={friendLoading}
+            />
+            <button type="submit" class="btn-duo btn-primary" disabled={friendLoading || !newFriendUsername}>
+              {friendLoading ? 'Sending…' : 'Add'}
+            </button>
+          </div>
+          {#if friendError}
+            <p class="social-field-error">{friendError}</p>
+          {/if}
+        </form>
+        <div class="social-invite-row">
+          <span class="social-invite-label">Or share an invite link</span>
+          <button class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}" onclick={copyInviteLink} disabled={copyLinkLoading}>
+            {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
+          </button>
+        </div>
+      </div>
+
+      <!-- Requests -->
+      <div class="social-requests-col">
+        {#if incomingRequests.length > 0}
+          <div class="card">
+            <h3 class="social-card-title">Friend Requests <span class="social-count-badge">{incomingRequests.length}</span></h3>
+            <ul class="social-user-list">
+              {#each incomingRequests as request}
+                <li class="social-user-item">
+                  <div class="social-user-info">
+                    <img src={request.initiator.image || '/default-avatar.png'} alt="" class="social-avatar" />
+                    <div>
+                      <a href="/u/{request.initiator.username}" class="social-username">{request.initiator.username}</a>
+                      {#if request.initiator.name}<p class="social-meta">{request.initiator.name}</p>{/if}
+                    </div>
+                  </div>
+                  <div class="social-actions">
+                    <button class="social-btn-sm social-btn-accept" onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button>
+                    <button class="social-btn-sm social-btn-decline" onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+
+        {#if outgoingRequests.length > 0}
+          <div class="card">
+            <h3 class="social-card-title">Sent Requests</h3>
+            <ul class="social-user-list">
+              {#each outgoingRequests as request}
+                <li class="social-user-item">
+                  <div class="social-user-info">
+                    <img src={request.receiver.image || '/default-avatar.png'} alt="" class="social-avatar" />
+                    <div>
+                      <a href="/u/{request.receiver.username}" class="social-username">{request.receiver.username}</a>
+                      {#if request.receiver.name}<p class="social-meta">{request.receiver.name}</p>{/if}
+                    </div>
+                  </div>
+                  <span class="social-status-pill social-pending">Pending</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Friends list -->
+      <div class="card">
+        <h3 class="social-card-title">Friends <span class="social-count-badge">{friends.length}</span></h3>
+        {#if friends.length === 0}
+          <p class="social-empty">No friends yet. Add some people to see them here!</p>
+        {:else}
+          <ul class="social-user-list">
+            {#each friends as friendship}
+              {@const friend = friendship.initiatorId === data.userId ? friendship.receiver : friendship.initiator}
+              <li class="social-user-item">
+                <div class="social-user-info">
+                  <img src={friend.image || '/default-avatar.png'} alt="" class="social-avatar" />
+                  <div>
+                    <a href="/u/{friend.username}" class="social-username">{friend.username}</a>
+                    <p class="social-meta">Active {new Date(friend.lastActive).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <button class="social-btn-sm social-btn-remove" onclick={() => removeFriend(friendship.id)}>Remove</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+
+      <!-- Challenges -->
+      {#if data.challenges && data.challenges.length > 0}
+        <div class="card">
+          <h3 class="social-card-title">Active Challenges</h3>
+          <ul class="social-challenge-list">
+            {#each data.challenges as challenge}
+              <li class="social-challenge-item">
+                <div class="social-challenge-info">
+                  <span class="social-game-title">{challenge.game.title}</span>
+                  <p class="social-meta">
+                    {#if challenge.challengerId === data.userId}
+                      You challenged <strong>{challenge.challengee.username}</strong>
+                    {:else}
+                      <strong>{challenge.challenger.username}</strong> challenged you
+                    {/if}
+                  </p>
+                  <p class="social-meta">Score to beat: <strong>{challenge.scoreToBeat}</strong></p>
+                </div>
+                <div class="social-challenge-right">
+                  <span class="social-status-pill social-{challenge.status.toLowerCase()}">{challenge.status}</span>
+                  {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
+                    <a href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}" class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a>
+                  {/if}
+                </div>
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+    </div>
+  </section>
 </div>
 
 {#if selectedModalItem}
@@ -5118,4 +5348,343 @@
   :global(html[data-theme='dark']) .freq-track {
     background: #334155;
   }
+
+  /* ── Social section ──────────────────────────────────────────── */
+  .social-section {
+    margin-top: 2rem;
+  }
+
+  .social-heading {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-color, #111827);
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .social-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    border-radius: 9999px;
+    padding: 0.1rem 0.45rem;
+    line-height: 1.4;
+  }
+
+  .social-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .social-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .social-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .social-count-badge {
+    background: var(--card-border, #e5e7eb);
+    color: var(--text-muted, #64748b);
+    font-size: 0.7rem;
+    font-weight: 800;
+    border-radius: 9999px;
+    padding: 0.1rem 0.5rem;
+    line-height: 1.4;
+  }
+
+  .social-input-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .social-input-group input {
+    flex: 1;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--input-text, #111827);
+    background: var(--input-bg, #ffffff);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .social-input-group input:focus {
+    outline: none;
+    border-color: #58cc02;
+    box-shadow: 0 0 0 3px rgba(88, 204, 2, 0.12);
+  }
+
+  .social-input-group input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .social-field-error {
+    margin: 0.4rem 0 0;
+    font-size: 0.8rem;
+    color: #ef4444;
+    font-weight: 500;
+  }
+
+  .social-invite-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--card-border, #e5e7eb);
+  }
+
+  .social-invite-label {
+    font-size: 0.825rem;
+    color: var(--text-muted, #64748b);
+  }
+
+  .social-btn-copy {
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1.5px solid var(--card-border, #e5e7eb);
+    color: var(--text-color, #374151);
+    background: transparent;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .social-btn-copy:hover:not(:disabled) {
+    background: var(--link-hover-bg, #ddf4ff);
+    border-color: #1cb0f6;
+    color: #1cb0f6;
+  }
+
+  .social-btn-copy.copied {
+    border-color: #58cc02;
+    color: #58cc02;
+  }
+
+  .social-btn-copy:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .social-user-list,
+  .social-challenge-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .social-user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--card-border, #e5e7eb);
+    gap: 0.75rem;
+  }
+
+  .social-user-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .social-user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .social-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--card-border, #e5e7eb);
+  }
+
+  .social-username {
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-decoration: none;
+    color: var(--text-color, #111827);
+    display: block;
+  }
+
+  .social-username:hover {
+    color: #1cb0f6;
+    text-decoration: underline;
+  }
+
+  .social-meta {
+    margin: 0.1rem 0 0;
+    font-size: 0.775rem;
+    color: var(--text-muted, #64748b);
+  }
+
+  .social-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .social-btn-sm {
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: filter 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .social-btn-sm:active {
+    transform: scale(0.97);
+  }
+
+  .social-btn-accept {
+    background: #58cc02;
+    color: white;
+    box-shadow: 0 2px 0 #58a700;
+  }
+
+  .social-btn-accept:hover {
+    filter: brightness(1.07);
+  }
+
+  .social-btn-decline {
+    background: transparent;
+    border: 1.5px solid var(--card-border, #e5e7eb) !important;
+    color: var(--text-muted, #64748b);
+  }
+
+  .social-btn-decline:hover {
+    border-color: #ef4444 !important;
+    color: #ef4444;
+  }
+
+  .social-btn-remove {
+    background: transparent;
+    border: 1.5px solid var(--card-border, #e5e7eb) !important;
+    color: var(--text-muted, #64748b);
+    font-size: 0.75rem;
+  }
+
+  .social-btn-remove:hover {
+    border-color: #ef4444 !important;
+    color: #ef4444;
+  }
+
+  .social-btn-sm-duo {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+    border-radius: 0.6rem;
+    box-shadow: 0 2px 0 #58a700;
+  }
+
+  .social-status-pill {
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .social-pending {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+
+  .social-accepted {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .social-completed {
+    background: var(--card-border, #e5e7eb);
+    color: var(--text-muted, #64748b);
+  }
+
+  .social-challenge-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--card-border, #e5e7eb);
+  }
+
+  .social-challenge-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .social-challenge-info {
+    min-width: 0;
+  }
+
+  .social-game-title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text-color, #111827);
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .social-challenge-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .social-requests-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .social-empty {
+    text-align: center;
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.875rem;
+    padding: 1.5rem 0;
+    margin: 0;
+  }
+
+  :global(html[data-theme='dark']) .social-pending {
+    background: #422006;
+    color: #fde68a;
+  }
+
+  :global(html[data-theme='dark']) .social-accepted {
+    background: #14532d;
+    color: #86efac;
+  }
+
 </style>

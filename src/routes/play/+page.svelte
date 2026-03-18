@@ -317,6 +317,8 @@
   let isLocalMode = $state(false);
   let _loadProgressInterval: ReturnType<typeof setInterval> | null = null;
   let _loadTipInterval: ReturnType<typeof setInterval> | null = null;
+  let _streamingTimeout: ReturnType<typeof setTimeout> | null = null;
+  let streamingTimedOut = $state(false);
   let expandedGrammarId = $state<string | null>(null);
   let showGrammarRef = $state(false);
 
@@ -1134,6 +1136,15 @@
     currentLessonLanguage = data.language;
     loading = true;
     isStreaming = true;
+    streamingTimedOut = false;
+    if (_streamingTimeout) clearTimeout(_streamingTimeout);
+    _streamingTimeout = setTimeout(() => {
+      if (isStreaming) {
+        isStreaming = false;
+        streamingTimedOut = true;
+      }
+      _streamingTimeout = null;
+    }, 15000);
     feedback = null;
     userInput = '';
     challenge = null;
@@ -1501,6 +1512,11 @@
       challenge = null;
     } finally {
       generateController = null;
+      // Clear streaming timeout if it hasn't fired yet
+      if (_streamingTimeout) {
+        clearTimeout(_streamingTimeout);
+        _streamingTimeout = null;
+      }
       // Complete progress bar then clean up
       stopLoadingIntervals();
       loadProgressPct = 100;
@@ -1752,14 +1768,20 @@
         <button
           class="tab-btn"
           class:active={activeTab === 'learn'}
-          onclick={() => (activeTab = 'learn')}
+          onclick={() => {
+            activeTab = 'learn';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         >
           Learn
         </button>
         <button
           class="tab-btn"
           class:active={activeTab === 'games'}
-          onclick={() => (activeTab = 'games')}
+          onclick={() => {
+            activeTab = 'games';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         >
           Quizzes
         </button>
@@ -2184,6 +2206,10 @@
                   <div class="ai-magic-loader">
                     <span class="sparkle">✨</span>
                     <span class="italic">AI is analyzing grammar & generating tooltips...</span>
+                  </div>
+                {:else if streamingTimedOut}
+                  <div class="streaming-timeout-error">
+                    AI analysis timed out. Grammar tooltips may be incomplete.
                   </div>
                 {:else}
                   <button
@@ -3439,6 +3465,17 @@
     align-items: center;
     gap: 0.5rem;
     margin-top: 0.25rem;
+  }
+
+  .streaming-timeout-error {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #ef4444;
+    font-style: italic;
+  }
+
+  :global(html[data-theme='dark']) .streaming-timeout-error {
+    color: #f87171;
   }
 
   :global(.sparkle) {

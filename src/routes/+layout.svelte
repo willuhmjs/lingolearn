@@ -85,7 +85,7 @@
 
 <svelte:window onclick={closeDropdown} />
 
-<Toaster />
+<Toaster containerStyle="z-index: 1100;" />
 <Modal />
 
 <svelte:head>
@@ -219,28 +219,6 @@
                 ></polyline><polyline points="2 12 12 17 22 12"></polyline></svg
               >
               <span class="nav-text">Review</span>
-            </a>
-            <a
-              href="/friends"
-              class="nav-item {$page.url.pathname.startsWith('/friends') ? 'active' : ''}"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-              <span class="nav-text">Social</span>
-              {#if data.socialNotificationCount > 0}
-                <span class="nav-badge">{data.socialNotificationCount}</span>
-              {/if}
             </a>
             <a
               href="/profile"
@@ -710,6 +688,25 @@
 
   :global(h1, h2, h3, h4, h5, h6) {
     font-weight: 800;
+  }
+
+  :global(h1) {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  :global(h2) {
+    font-size: 1.5rem;
+    line-height: 1.25;
+  }
+
+  :global(h3) {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  :global(.toaster) {
+    z-index: 1100 !important;
   }
 
   :global(.btn-duo) {

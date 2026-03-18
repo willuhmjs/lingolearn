@@ -211,8 +211,10 @@
     e.stopPropagation();
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.min(rect.left, window.innerWidth - 290);
-    const y = rect.bottom + 6;
+    let x = Math.min(rect.left, window.innerWidth - 260);
+    x = Math.max(0, x);
+    let y = Math.min(rect.bottom + 6, window.innerHeight - 200);
+    y = Math.max(0, y);
 
     const wordKey = word.toLowerCase();
 

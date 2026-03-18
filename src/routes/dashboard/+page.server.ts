@@ -478,6 +478,33 @@ export const load: PageServerLoad = async ({ locals }) => {
     setCachedDashboardAnalytics(user.id, languageId, analytics);
   }
 
+  const [friendships, challenges] = await Promise.all([
+    prisma.friendship.findMany({
+      where: {
+        OR: [{ initiatorId: user.id }, { receiverId: user.id }]
+      },
+      include: {
+        initiator: {
+          select: { id: true, username: true, name: true, image: true, lastActive: true }
+        },
+        receiver: {
+          select: { id: true, username: true, name: true, image: true, lastActive: true }
+        }
+      }
+    }),
+    prisma.challenge.findMany({
+      where: {
+        OR: [{ challengerId: user.id }, { challengeeId: user.id }]
+      },
+      include: {
+        challenger: { select: { username: true } },
+        challengee: { select: { username: true } },
+        game: { select: { title: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
+
   return {
     vocabularies,
     grammarRules,
@@ -487,6 +514,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     retentionStats,
     dueSoonAssignments,
     activeLiveSessions,
+    friendships,
+    challenges,
+    userId: user.id,
     ...analytics
   };
 };

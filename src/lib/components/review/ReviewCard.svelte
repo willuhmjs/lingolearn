@@ -159,7 +159,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 8px;
+    height: 6px;
     background-color: #f1f5f9;
     z-index: 10;
   }

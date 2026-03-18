@@ -467,6 +467,26 @@
 <svelte:window onkeydown={handleQuizKeydown} />
 
 <main class="onboarding-container" class:chat-active={step === 'chat' && !completed}>
+  {#if !completed}
+    {@const stepNumber =
+      step === 'language'
+        ? 1
+        : step === 'choose'
+          ? 2
+          : step === 'beginner' || step === 'quiz'
+            ? 3
+            : 4}
+    {@const totalSteps = 4}
+    <div class="onboarding-progress">
+      <div class="onboarding-progress-bar">
+        <div
+          class="onboarding-progress-fill"
+          style="width: {(stepNumber / totalSteps) * 100}%"
+        ></div>
+      </div>
+      <span class="onboarding-progress-label">Step {stepNumber} of {totalSteps}</span>
+    </div>
+  {/if}
   {#if step === 'language' && !completed}
     <!-- ── Language Selection ─────────────────────────────────────────────── -->
     <header class="page-header" in:fly={{ y: 20, duration: 400 }}>
@@ -974,6 +994,35 @@
       sans-serif;
     background-color: var(--bg-color, #f8fafc);
     color: var(--text-color, #334155);
+  }
+
+  .onboarding-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .onboarding-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--card-border, #e2e8f0);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .onboarding-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .onboarding-progress-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-color, #64748b);
+    white-space: nowrap;
   }
 
   .onboarding-container {

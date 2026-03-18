@@ -60,6 +60,28 @@
       transition:scale={{ duration: 200, start: 0.95 }}
       onclick={(e) => e.stopPropagation()}
     >
+      {#if modalState.type !== 'alert'}
+        <button
+          type="button"
+          class="modal-close-btn"
+          aria-label="Close"
+          onclick={() => modal.close(false)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            aria-hidden="true"
+            width="14"
+            height="14"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      {/if}
       <div class="modal-content">
         {#if modalState.title}
           <h3 id="modal-title" class="modal-title">
@@ -127,10 +149,50 @@
     flex-direction: column;
     text-align: center;
     margin: 0 auto;
+    position: relative;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 0.625rem;
+    right: 0.625rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--card-bg, #ffffff);
+    border: 2px solid var(--card-border, #e5e7eb);
+    border-radius: 50%;
+    color: var(--text-color, #111827);
+    cursor: pointer;
+    z-index: 1;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+
+  .modal-close-btn:hover {
+    background-color: var(--card-border, #f1f5f9);
+  }
+
+  :global(html[data-theme='dark']) .modal-close-btn {
+    background-color: var(--card-bg, #1e293b);
+    border-color: #3a4150;
+    color: #cbd5e1;
+  }
+
+  :global(html[data-theme='dark']) .modal-close-btn:hover {
+    background-color: #2a303c;
   }
 
   .modal-content {
     padding: 2rem 1.5rem 1.5rem;
+  }
+
+  /* Prevent title text overlapping the absolute-positioned X button */
+  .modal-container:has(.modal-close-btn) .modal-content {
+    padding-right: 3rem;
   }
 
   .modal-title {

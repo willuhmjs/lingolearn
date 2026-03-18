@@ -17,6 +17,7 @@
     if ($page.url.searchParams.get('tab') === 'grammar') {
       activeTab = 'grammar';
     }
+    loadRecommendedWords();
   });
   let query = $state('');
   let results: any[] = $state([]);
@@ -39,7 +40,7 @@
         copiedId = null;
       }, 1500);
     } catch {
-      /* clipboard unavailable */
+      toastError('Failed to copy to clipboard. Please copy manually.');
     }
   }
 
@@ -133,6 +134,28 @@
   $effect(() => {
     learningWords = data.learningWords || [];
   });
+
+  // Recommended words
+  let recommendedWords = $state<any[]>([]);
+  let recommendedLevel = $state('');
+  let loadingRecommended = $state(false);
+  let addingWordId = $state<string | null>(null);
+
+  async function loadRecommendedWords() {
+    loadingRecommended = true;
+    try {
+      const res = await fetch('/api/vocabulary/recommended?limit=20');
+      if (res.ok) {
+        const recData = await res.json();
+        recommendedWords = recData.words ?? [];
+        recommendedLevel = recData.userLevel ?? '';
+      }
+    } catch (e) {
+      console.error('Failed to load recommended words', e);
+    } finally {
+      loadingRecommended = false;
+    }
+  }
   let displayResults = $derived(query.trim() ? results : learningWords);
 
   let grammarSortMode: 'prereq' | 'alpha' = $state('prereq');
@@ -321,6 +344,8 @@
       if (res.ok) {
         // Update local state to show it was added
         addedWords = [...addedWords, vocabularyId];
+        // Remove from recommended list if it came from there
+        recommendedWords = recommendedWords.filter((w) => w.id !== vocabularyId);
         searchInputEl?.focus();
       } else {
         console.error('Failed to add word');
@@ -758,6 +783,47 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
         />
       </div>
     </div>
+
+    <!-- Recommended Words (shown when not searching) -->
+    {#if activeTab === 'vocabulary' && !query.trim()}
+      {#if loadingRecommended}
+        <div class="rec-loading">Loading recommendations...</div>
+      {:else if recommendedWords.length > 0}
+        <div class="rec-section">
+          <div class="rec-header">
+            <span class="rec-title">Recommended for you</span>
+            {#if recommendedLevel}
+              <span class="rec-subtitle">High-frequency {recommendedLevel} words you haven't learned yet</span>
+            {/if}
+          </div>
+          <div class="rec-grid">
+            {#each recommendedWords as word (word.id)}
+              <button
+                class="rec-card"
+                class:rec-card-added={addedWords.includes(word.id)}
+                onclick={() => handleAddWord(word.id)}
+                disabled={addedWords.includes(word.id)}
+                type="button"
+              >
+                <div class="rec-card-top">
+                  <span class="rec-lemma">{word.lemma}</span>
+                  <span class="rec-cefr" data-level={word.cefrLevel}>{word.cefrLevel}</span>
+                </div>
+                <span class="rec-meaning">{word.meaning}</span>
+                {#if word.partOfSpeech}
+                  <span class="rec-pos">{word.partOfSpeech}</span>
+                {/if}
+                {#if addedWords.includes(word.id)}
+                  <span class="rec-added-label">Added ✓</span>
+                {:else}
+                  <span class="rec-add-label">+ Add to vocabulary</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    {/if}
 
     <div class="results-section">
       {#if loading && query.trim().length > 1}
@@ -3882,4 +3948,131 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     border-bottom-color: white;
     animation: spin 1s linear infinite;
   }
+
+  /* ---- Recommended Words ---- */
+  .rec-loading {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    padding: 0.75rem 0;
+  }
+
+  .rec-section {
+    margin-bottom: 2rem;
+  }
+
+  .rec-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .rec-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-color, #0f172a);
+    letter-spacing: -0.01em;
+  }
+
+  .rec-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.625rem;
+  }
+
+  .rec-card {
+    background: var(--card-bg, #ffffff);
+    border: 1.5px solid var(--card-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .rec-card:hover:not(:disabled) {
+    border-color: #22c55e;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .rec-card-added {
+    border-color: #86efac !important;
+    background: #f0fdf4;
+    cursor: default;
+    transform: none !important;
+  }
+
+  :global(html[data-theme='dark']) .rec-card-added {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: #166534 !important;
+  }
+
+  .rec-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .rec-lemma {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color, #0f172a);
+  }
+
+  .rec-cefr {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0.1rem 0.3rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .rec-cefr[data-level='A1'], .rec-cefr[data-level='A2'] { background: #dcfce7; color: #15803d; }
+  .rec-cefr[data-level='B1'], .rec-cefr[data-level='B2'] { background: #fef9c3; color: #854d0e; }
+  .rec-cefr[data-level='C1'], .rec-cefr[data-level='C2'] { background: #fee2e2; color: #991b1b; }
+
+  .rec-meaning {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.3;
+  }
+
+  .rec-pos {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-style: italic;
+    text-transform: capitalize;
+  }
+
+  .rec-add-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #22c55e;
+    margin-top: 0.15rem;
+  }
+
+  .rec-added-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #16a34a;
+    margin-top: 0.15rem;
+  }
+
+  :global(html[data-theme='dark']) .rec-lemma { color: #e2e8f0; }
+  :global(html[data-theme='dark']) .rec-meaning { color: #94a3b8; }
+  :global(html[data-theme='dark']) .rec-card { border-color: #334155; }
+  :global(html[data-theme='dark']) .rec-title { color: #e2e8f0; }
 </style>

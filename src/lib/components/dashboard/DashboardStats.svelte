@@ -1,10 +1,9 @@
 <script lang="ts">
+  import { SRS_COLORS } from '$lib/utils/srsColors';
+
   const srsColors: Record<string, string> = {
-    LOCKED: 'var(--color-locked, #94a3b8)',
-    UNSEEN: 'var(--color-unseen, #e2e8f0)',
-    LEARNING: 'var(--color-learning, #fef08a)',
-    KNOWN: 'var(--color-known, #6ee7b7)',
-    MASTERED: 'var(--color-mastered, #10b981)'
+    LOCKED: '#94a3b8',
+    ...SRS_COLORS
   };
 
   interface Props {

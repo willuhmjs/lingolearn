@@ -17,13 +17,15 @@
       >
     </div>
     <div class="srs-panel-row">
-      <span class="srs-panel-label">Stability</span>
+      <span class="srs-panel-label">Memory stability</span>
       <span class="srs-panel-val"
-        >{review.stability != null ? review.stability.toFixed(1) + ' days' : '\u2014'}</span
+        >{review.stability != null && review.stability > 0
+          ? '~' + Math.round(review.stability) + ' days'
+          : 'New card'}</span
       >
     </div>
     <div class="srs-panel-row">
-      <span class="srs-panel-label">Retrievability</span>
+      <span class="srs-panel-label">Memory strength</span>
       <span class="srs-panel-val"
         >{review.retrievability != null
           ? Math.round(review.retrievability * 100) + '%'
@@ -31,16 +33,16 @@
       >
     </div>
     <div class="srs-panel-row">
-      <span class="srs-panel-label">Reviews</span>
+      <span class="srs-panel-label">Times reviewed</span>
       <span class="srs-panel-val">{review.repetitions ?? 0}</span>
     </div>
     <div class="srs-panel-row">
-      <span class="srs-panel-label">Lapses</span>
+      <span class="srs-panel-label">Mistakes</span>
       <span class="srs-panel-val">{review.lapses ?? 0}</span>
     </div>
     <div class="srs-panel-row">
       <span class="srs-panel-label">Next due</span>
-      <span class="srs-panel-val">{new Date(review.nextReviewDate).toLocaleDateString()}</span>
+      <span class="srs-panel-val">{review.nextReviewDate ? new Date(review.nextReviewDate).toLocaleDateString() : '—'}</span>
     </div>
   </div>
 {/if}

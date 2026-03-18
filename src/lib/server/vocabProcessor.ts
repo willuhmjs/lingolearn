@@ -657,7 +657,7 @@ export function stemWord(word: string, language: string): Set<string> {
  * Upsert a single AI-discovered vocab entry into the DB.
  * Returns the resulting Vocabulary record, or null if skipped.
  */
-async function upsertAiVocabEntry(
+export async function upsertAiVocabEntry(
   v: {
     lemma?: string;
     meaning?: string;

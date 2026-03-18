@@ -14,20 +14,16 @@
 
   import '@xyflow/svelte/dist/style.css';
 
+  import { SRS_COLORS } from '$lib/utils/srsColors';
+
   const srsColors: Record<string, string> = {
-    LOCKED: 'var(--color-locked, #94a3b8)',
-    UNSEEN: 'var(--color-unseen, #e2e8f0)',
-    LEARNING: 'var(--color-learning, #fef08a)',
-    KNOWN: 'var(--color-known, #6ee7b7)',
-    MASTERED: 'var(--color-mastered, #10b981)'
+    LOCKED: '#94a3b8',
+    ...SRS_COLORS
   };
 
   const srsHex: Record<string, string> = {
     LOCKED: '#94a3b8',
-    UNSEEN: '#e2e8f0',
-    LEARNING: '#fef08a',
-    KNOWN: '#6ee7b7',
-    MASTERED: '#10b981'
+    ...SRS_COLORS
   };
 
   function miniMapNodeColor(node: Node): string {
@@ -284,6 +280,16 @@
           class:locked={rule.isLocked}
           onclick={() => handleOpenModal(rule)}
           aria-label="View grammar rule: {rule.grammarRule.title}"
+          title={rule.isLocked
+            ? (() => {
+                const deps = rule.grammarRule.dependencies || [];
+                if (deps.length > 0) {
+                  const names = deps.map((d: any) => d.title || d.id).join(', ');
+                  return `Locked — complete prerequisites first: ${names}`;
+                }
+                return 'Unlock by completing prerequisites';
+              })()
+            : undefined}
         >
           <div class="grammar-list-dot" style="background-color: {srsColor}"></div>
           <div class="grammar-list-info">
