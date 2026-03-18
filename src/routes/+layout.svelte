@@ -856,6 +856,30 @@
     box-shadow: 0 6px 0 var(--card-border, #e5e7eb);
   }
 
+  /* ── Standard page shell ───────────────────────────────────────
+     Every main page wraps its content in .page-shell. This gives
+     consistent padding and a sensible max-width. Pages that need
+     wider content (dashboard, dictionary) can override max-width
+     locally. The shell itself never has a background — cards do.
+  ─────────────────────────────────────────────────────────────── */
+  :global(.page-shell) {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  :global(.page-shell.wide) {
+    max-width: 1200px;
+  }
+
+  @media (max-width: 768px) {
+    :global(.page-shell) {
+      padding: 1rem 0.75rem;
+    }
+  }
+
   @keyframes float {
     0% {
       transform: translateY(0px);

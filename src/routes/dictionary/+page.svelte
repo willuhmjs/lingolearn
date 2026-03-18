@@ -658,8 +658,8 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   <title>Dictionary & Grammar - LingoLearn</title>
 </svelte:head>
 
-<div class="dictionary-container">
-  <div class="header" in:fly={{ y: 20, duration: 400 }}>
+<div class="page-shell wide">
+  <div class="dict-header" in:fly={{ y: 20, duration: 400 }}>
     <div class="header-text">
       <h1 class="title">Dictionary & Grammar</h1>
       <p class="subtitle">Search for words or browse grammar rules for {currentLanguage}.</p>
@@ -1954,15 +1954,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 {/if}
 
 <style>
-  .dictionary-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .header {
+  .dict-header {
     margin-bottom: 2rem;
     display: flex;
     align-items: center;
@@ -1976,16 +1968,16 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   }
 
   .title {
-    margin-bottom: 0.5rem;
-    font-size: 1.875rem;
-    line-height: 2.25rem;
-    font-weight: 700;
+    margin: 0 0 0.25rem;
+    font-size: 2rem;
+    font-weight: 800;
     color: var(--text-color, #111827);
   }
 
   .subtitle {
-    color: var(--text-color, #4b5563);
-    opacity: 0.7;
+    margin: 0;
+    font-size: 0.925rem;
+    color: var(--text-muted, #64748b);
   }
 
   /* Tabs */
@@ -3108,7 +3100,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     :global(header),
     :global(.tabs-container),
     :global(.search-section),
-    :global(.dictionary-container > .header) {
+    :global(.page-shell > .dict-header) {
       display: none !important;
     }
 

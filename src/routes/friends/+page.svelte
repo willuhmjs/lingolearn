@@ -3,6 +3,7 @@
   import { invalidateAll } from '$app/navigation';
   import { fly } from 'svelte/transition';
   import { page } from '$app/stores';
+  import PageHeader from '$lib/components/PageHeader.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -97,14 +98,12 @@
   );
 </script>
 
-<div class="friends-container">
-  <header class="friends-header" in:fly={{ y: 20, duration: 400 }}>
-    <h1>Social</h1>
-    <p>Connect with other learners and challenge them to games.</p>
-  </header>
+<div class="page-shell">
+  <PageHeader title="Social" subtitle="Connect with other learners and challenge them to games." />
 
   <div class="friends-grid">
-    <section class="add-friend-section card">
+    <!-- Add Friend -->
+    <section class="card" in:fly={{ y: 16, duration: 300, delay: 60 }}>
       <h2>Add Friend</h2>
       <form
         onsubmit={(e) => {
@@ -119,16 +118,16 @@
             placeholder="Enter username..."
             disabled={loading}
           />
-          <button type="submit" class="btn-primary" disabled={loading || !newFriendUsername}>
-            {loading ? 'Sending...' : 'Add Friend'}
+          <button type="submit" class="btn-duo btn-primary" disabled={loading || !newFriendUsername}>
+            {loading ? 'Sending…' : 'Add'}
           </button>
         </div>
         {#if error}
-          <p class="error-text">{error}</p>
+          <p class="field-error">{error}</p>
         {/if}
       </form>
-      <div class="invite-link-row">
-        <span class="invite-label">Or share your invite link</span>
+      <div class="invite-row">
+        <span class="invite-label">Or share an invite link</span>
         <button
           class="btn-copy {copyLinkSuccess ? 'copied' : ''}"
           onclick={copyInviteLink}
@@ -137,7 +136,7 @@
           {#if copyLinkSuccess}
             ✓ Copied!
           {:else if copyLinkLoading}
-            Copying...
+            Copying…
           {:else}
             Copy Link
           {/if}
@@ -145,10 +144,14 @@
       </div>
     </section>
 
+    <!-- Incoming / outgoing requests -->
     <section class="requests-section">
       {#if incomingRequests.length > 0}
-        <div class="card">
-          <h2>Friend Requests</h2>
+        <div class="card" in:fly={{ y: 16, duration: 300, delay: 90 }}>
+          <h2>
+            Friend Requests
+            <span class="badge-count">{incomingRequests.length}</span>
+          </h2>
           <ul class="user-list">
             {#each incomingRequests as request}
               <li class="user-item">
@@ -162,16 +165,18 @@
                     <a href="/u/{request.initiator.username}" class="username"
                       >{request.initiator.username}</a
                     >
-                    <p class="name">{request.initiator.name || ''}</p>
+                    {#if request.initiator.name}
+                      <p class="meta">{request.initiator.name}</p>
+                    {/if}
                   </div>
                 </div>
                 <div class="actions">
                   <button
-                    class="btn-success"
+                    class="btn-sm btn-accept"
                     onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
                   >
                   <button
-                    class="btn-danger"
+                    class="btn-sm btn-decline"
                     onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
                   >
                 </div>
@@ -182,7 +187,7 @@
       {/if}
 
       {#if outgoingRequests.length > 0}
-        <div class="card">
+        <div class="card" in:fly={{ y: 16, duration: 300, delay: 120 }}>
           <h2>Sent Requests</h2>
           <ul class="user-list">
             {#each outgoingRequests as request}
@@ -197,10 +202,12 @@
                     <a href="/u/{request.receiver.username}" class="username"
                       >{request.receiver.username}</a
                     >
-                    <p class="name">{request.receiver.name || ''}</p>
+                    {#if request.receiver.name}
+                      <p class="meta">{request.receiver.name}</p>
+                    {/if}
                   </div>
                 </div>
-                <span class="status-badge pending">Pending</span>
+                <span class="status-pill pending">Pending</span>
               </li>
             {/each}
           </ul>
@@ -208,8 +215,9 @@
       {/if}
     </section>
 
-    <section class="friends-list-section card">
-      <h2>Friends</h2>
+    <!-- Friends list -->
+    <section class="card" in:fly={{ y: 16, duration: 300, delay: 150 }}>
+      <h2>Friends <span class="badge-count">{friends.length}</span></h2>
       {#if friends.length === 0}
         <p class="empty-state">No friends yet. Add some people to see them here!</p>
       {:else}
@@ -222,23 +230,22 @@
                 <img src={friend.image || '/default-avatar.png'} alt="" class="avatar" />
                 <div>
                   <a href="/u/{friend.username}" class="username">{friend.username}</a>
-                  <p class="last-active">
+                  <p class="meta">
                     Active {new Date(friend.lastActive).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-              <div class="actions">
-                <button class="btn-outline-danger" onclick={() => removeFriend(friendship.id)}
-                  >Remove</button
-                >
-              </div>
+              <button class="btn-sm btn-remove" onclick={() => removeFriend(friendship.id)}
+                >Remove</button
+              >
             </li>
           {/each}
         </ul>
       {/if}
     </section>
 
-    <section class="challenges-section card">
+    <!-- Challenges -->
+    <section class="card" in:fly={{ y: 16, duration: 300, delay: 180 }}>
       <h2>Active Challenges</h2>
       {#if data.challenges.length === 0}
         <p class="empty-state">No active challenges. Play a game and challenge a friend!</p>
@@ -248,26 +255,24 @@
             <li class="challenge-item">
               <div class="challenge-info">
                 <span class="game-title">{challenge.game.title}</span>
-                <p class="challenge-status">
+                <p class="meta">
                   {#if challenge.challengerId === data.userId}
                     You challenged <strong>{challenge.challengee.username}</strong>
                   {:else}
                     <strong>{challenge.challenger.username}</strong> challenged you
                   {/if}
                 </p>
-                <p class="score-to-beat">Score to beat: {challenge.scoreToBeat}</p>
+                <p class="meta">Score to beat: <strong>{challenge.scoreToBeat}</strong></p>
               </div>
-              <div class="challenge-badge {challenge.status.toLowerCase()}">
-                {challenge.status}
-              </div>
-              {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
-                <div class="actions">
+              <div class="challenge-right">
+                <span class="status-pill {challenge.status.toLowerCase()}">{challenge.status}</span>
+                {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
                   <a
                     href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
-                    class="btn-primary">Accept & Play</a
+                    class="btn-duo btn-primary btn-sm-duo">Accept & Play</a
                   >
-                </div>
-              {/if}
+                {/if}
+              </div>
             </li>
           {/each}
         </ul>
@@ -277,199 +282,342 @@
 </div>
 
 <style>
-  .friends-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-  .friends-header {
-    margin-bottom: 2rem;
-  }
-  h1 {
-    font-size: 2.5rem;
-    margin: 0;
-  }
+  /* ── Layout ──────────────────────────────────────────────────── */
   .friends-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
+
   @media (min-width: 768px) {
     .friends-grid {
       grid-template-columns: 1fr 1fr;
     }
   }
+
+  /* ── Cards ───────────────────────────────────────────────────── */
   .card {
-    background: white;
-    border-radius: 1rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #e5e7eb);
+    border-radius: 0.75rem;
     padding: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   }
-  h2 {
-    margin-top: 0;
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
+
+  .card h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+    margin: 0 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
+
+  .badge-count {
+    background: var(--card-border, #e5e7eb);
+    color: var(--text-muted, #64748b);
+    font-size: 0.7rem;
+    font-weight: 800;
+    border-radius: 9999px;
+    padding: 0.1rem 0.5rem;
+    line-height: 1.4;
+  }
+
+  /* ── Add-friend form ─────────────────────────────────────────── */
   .input-group {
     display: flex;
     gap: 0.5rem;
   }
-  input {
+
+  .input-group input {
     flex: 1;
-    padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--input-border, #d1d5db);
     border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--input-text, #111827);
+    background: var(--input-bg, #ffffff);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
+
+  .input-group input:focus {
+    outline: none;
+    border-color: #58cc02;
+    box-shadow: 0 0 0 3px rgba(88, 204, 2, 0.12);
+  }
+
+  .input-group input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .field-error {
+    margin: 0.4rem 0 0;
+    font-size: 0.8rem;
+    color: #ef4444;
+    font-weight: 500;
+  }
+
+  /* ── Invite row ──────────────────────────────────────────────── */
+  .invite-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--card-border, #e5e7eb);
+  }
+
+  .invite-label {
+    font-size: 0.825rem;
+    color: var(--text-muted, #64748b);
+  }
+
+  .btn-copy {
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1.5px solid var(--card-border, #e5e7eb);
+    color: var(--text-color, #374151);
+    background: transparent;
+    white-space: nowrap;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
+  }
+
+  .btn-copy:hover:not(:disabled) {
+    background: var(--link-hover-bg, #ddf4ff);
+    border-color: #1cb0f6;
+    color: #1cb0f6;
+  }
+
+  .btn-copy.copied {
+    border-color: #58cc02;
+    color: #58cc02;
+  }
+
+  .btn-copy:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ── User lists ──────────────────────────────────────────────── */
   .user-list,
   .challenge-list {
     list-style: none;
     padding: 0;
     margin: 0;
   }
-  .user-item,
-  .challenge-item {
+
+  .user-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--card-border, #e5e7eb);
+    gap: 0.75rem;
   }
-  .user-item:last-child,
-  .challenge-item:last-child {
+
+  .user-item:last-child {
     border-bottom: none;
+    padding-bottom: 0;
   }
+
   .user-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    min-width: 0;
   }
+
   .avatar {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--card-border, #e5e7eb);
   }
+
   .username {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 0.9rem;
     text-decoration: none;
-    color: #1a202c;
+    color: var(--text-color, #111827);
+    display: block;
   }
+
   .username:hover {
+    color: #1cb0f6;
     text-decoration: underline;
   }
-  .name,
-  .last-active,
-  .challenge-status,
-  .score-to-beat {
-    margin: 0;
-    font-size: 0.875rem;
-    color: #64748b;
+
+  .meta {
+    margin: 0.1rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted, #64748b);
   }
+
   .actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    flex-shrink: 0;
   }
-  .btn-primary,
-  .btn-success,
-  .btn-danger,
-  .btn-outline-danger {
-    padding: 0.5rem 1rem;
+
+  /* ── Small buttons ───────────────────────────────────────────── */
+  .btn-sm {
+    padding: 0.35rem 0.75rem;
     border-radius: 0.5rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
     border: none;
-    font-size: 0.875rem;
+    transition:
+      filter 0.15s,
+      transform 0.1s;
+    white-space: nowrap;
   }
-  .btn-primary {
-    background: #3b82f6;
+
+  .btn-sm:active {
+    transform: scale(0.97);
+  }
+
+  .btn-accept {
+    background: #58cc02;
     color: white;
-    box-shadow: 0 4px 0 #1d4ed8;
+    box-shadow: 0 2px 0 #58a700;
   }
-  .btn-success {
-    background: #10b981;
-    color: white;
+
+  .btn-accept:hover {
+    filter: brightness(1.07);
   }
-  .btn-danger {
-    background: #ef4444;
-    color: white;
-  }
-  .btn-outline-danger {
+
+  .btn-decline {
     background: transparent;
-    border: 1px solid #ef4444;
+    border: 1.5px solid var(--card-border, #e5e7eb) !important;
+    color: var(--text-muted, #64748b);
+  }
+
+  .btn-decline:hover {
+    border-color: #ef4444 !important;
     color: #ef4444;
   }
-  .status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
+
+  .btn-remove {
+    background: transparent;
+    border: 1.5px solid var(--card-border, #e5e7eb) !important;
+    color: var(--text-muted, #64748b);
     font-size: 0.75rem;
-    font-weight: 600;
   }
-  .status-badge.pending {
-    background: #fef3c7;
-    color: #92400e;
+
+  .btn-remove:hover {
+    border-color: #ef4444 !important;
+    color: #ef4444;
   }
-  .challenge-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
+
+  /* btn-duo size override for inline challenge CTA */
+  .btn-sm-duo {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.8rem;
+    border-radius: 0.6rem;
+    box-shadow: 0 2px 0 #58a700;
+  }
+
+  /* ── Status pills ────────────────────────────────────────────── */
+  .status-pill {
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
-  .challenge-badge.pending {
-    background: #dbeafe;
-    color: #1e40af;
+
+  .status-pill.pending {
+    background: #fef9c3;
+    color: #854d0e;
   }
-  .challenge-badge.accepted {
+
+  .status-pill.accepted {
     background: #dcfce7;
     color: #166534;
   }
+
+  .status-pill.completed {
+    background: var(--card-border, #e5e7eb);
+    color: var(--text-muted, #64748b);
+  }
+
+  /* ── Challenges ──────────────────────────────────────────────── */
+  .challenge-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--card-border, #e5e7eb);
+  }
+
+  .challenge-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .challenge-info {
+    min-width: 0;
+  }
+
+  .game-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-color, #111827);
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .challenge-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────── */
   .empty-state {
     text-align: center;
-    color: #94a3b8;
-    padding: 2rem 0;
-  }
-  .error-text {
-    color: #ef4444;
+    color: var(--text-muted, #94a3b8);
     font-size: 0.875rem;
-    margin-top: 0.5rem;
+    padding: 1.5rem 0;
+    margin: 0;
   }
-  .invite-link-row {
+
+  /* ── Requests section stacking ───────────────────────────────── */
+  .requests-section {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #f1f5f9;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 1.5rem;
   }
-  .invite-label {
-    font-size: 0.875rem;
-    color: #64748b;
+
+  /* ── Dark mode pill overrides ────────────────────────────────── */
+  :global(html[data-theme='dark']) .status-pill.pending {
+    background: #422006;
+    color: #fde68a;
   }
-  .btn-copy {
-    padding: 0.4rem 0.9rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid #3b82f6;
-    color: #3b82f6;
-    background: transparent;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    transition:
-      background 0.15s,
-      color 0.15s;
-  }
-  .btn-copy:hover:not(:disabled) {
-    background: #3b82f6;
-    color: white;
-  }
-  .btn-copy.copied {
-    border-color: #10b981;
-    color: #10b981;
-  }
-  .btn-copy:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+
+  :global(html[data-theme='dark']) .status-pill.accepted {
+    background: #14532d;
+    color: #86efac;
   }
 </style>

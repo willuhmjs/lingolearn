@@ -325,7 +325,7 @@
   let showIntelligence = $state(false);
 </script>
 
-<div class="dashboard-container">
+<div class="page-shell wide">
   <header class="dashboard-header" in:fly={{ y: 20, duration: 400 }}>
     <h1>Proficiency Dashboard</h1>
     <p>Track your language learning progress.</p>
@@ -2186,17 +2186,6 @@
     border-color: rgba(255, 255, 255, 0.06);
   }
 
-  .dashboard-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    box-sizing: border-box;
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
-    color: #334155;
-  }
 
   .dashboard-header {
     margin-bottom: 2rem;
@@ -3247,10 +3236,6 @@
   }
 
   @media (max-width: 768px) {
-    .dashboard-container {
-      padding: 0.5rem;
-    }
-
     h2 {
       font-size: 1.4rem;
       margin-bottom: 1rem;

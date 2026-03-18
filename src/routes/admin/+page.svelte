@@ -3,6 +3,7 @@
   import { invalidateAll } from '$app/navigation';
   import { modal } from '$lib/modal.svelte';
   import { fly } from 'svelte/transition';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { untrack } from 'svelte';
   import type { PageData, ActionData } from './$types';
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -498,11 +499,8 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="admin-container">
-  <header class="admin-header" in:fly={{ y: 20, duration: 400 }}>
-    <h1>Admin Dashboard</h1>
-    <p>Manage users and system configuration.</p>
-  </header>
+<div class="page-shell wide">
+  <PageHeader title="Admin Dashboard" subtitle="Manage users and system configuration." />
 
   <section class="stats-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
     <h2>System Statistics</h2>
@@ -1292,27 +1290,6 @@
 {/if}
 
 <style>
-  .admin-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    color: #334155;
-  }
-
-  .admin-header {
-    margin-bottom: 2rem;
-  }
-
-  .admin-header h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-color, #111827);
-    margin: 0 0 0.5rem 0;
-  }
-
-  .admin-header p {
-    color: #6b7280;
-    margin: 0;
-  }
 
   .active-indicator {
     display: inline-block;

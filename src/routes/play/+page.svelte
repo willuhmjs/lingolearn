@@ -10,6 +10,7 @@
   import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
   import TranslationView from '$lib/components/play/TranslationView.svelte';
   import ImmersionView from '$lib/components/play/ImmersionView.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import BookmarkButton from '$lib/components/BookmarkButton.svelte';
   import { getLanguageConfig } from '$lib/languages';
 
@@ -1742,12 +1743,9 @@
   <title>Play - LingoLearn</title>
 </svelte:head>
 
-<div class="page-container">
+<div class="page-shell play-shell">
   <div class="content-wrapper" class:games-active={activeTab === 'games'}>
-    <header class="page-header" in:fly={{ y: 20, duration: 400 }}>
-      <h1>Play Mode</h1>
-      <p>Test your skills with personalized challenges.</p>
-    </header>
+    <PageHeader title="Play Mode" subtitle="Test your skills with personalized challenges." />
 
     <div class="tabs-container" in:fly={{ y: 20, duration: 400 }}>
       <div class="tabs">
@@ -3215,23 +3213,19 @@
     color: var(--text-color, #334155);
   }
 
-  .page-container {
-    display: flex;
-    justify-content: center;
-    padding: 2rem 1rem;
-    min-height: calc(100vh - 4rem);
+  .play-shell {
+    max-width: 1200px;
     -webkit-user-select: none;
     user-select: none;
   }
 
-  .page-container :global(input) {
+  .play-shell :global(input) {
     -webkit-user-select: text;
     user-select: text;
   }
 
   .content-wrapper {
     width: 100%;
-    max-width: 1200px;
     transition: max-width 0.3s ease;
   }
 
@@ -3239,22 +3233,6 @@
     max-width: 800px;
     margin: 0 auto;
     width: 100%;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  .page-header h1 {
-    font-size: 2.5rem;
-    color: #0f172a;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .page-header p {
-    color: #64748b;
-    font-size: 1.1rem;
-    margin: 0;
   }
 
   .card {
@@ -4661,16 +4639,8 @@
   }
 
   @media (max-width: 768px) {
-    .page-container {
-      padding: 1rem 0.5rem;
-    }
-
     .card {
       padding: 1rem;
-    }
-
-    .page-header h1 {
-      font-size: 2rem;
     }
 
     .mode-buttons {

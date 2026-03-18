@@ -26,7 +26,7 @@
   }
 </script>
 
-<div class="profile-container">
+<div class="page-shell">
   <div class="profile-header card" in:fly={{ y: 20, duration: 400 }}>
     <div class="profile-main">
       <img src={data.profile.image || '/default-avatar.png'} alt="" class="profile-avatar" />
@@ -89,140 +89,168 @@
 </div>
 
 <style>
-  .profile-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
   .card {
-    background: white;
-    border-radius: 1rem;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    margin-bottom: 2rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
   }
+
   .profile-header {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
   }
+
   .profile-main {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
     flex-wrap: wrap;
   }
+
   .profile-avatar {
-    width: 120px;
-    height: 120px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid #f1f5f9;
+    border: 3px solid var(--card-border, #e5e7eb);
+    flex-shrink: 0;
   }
+
   .profile-titles {
     flex: 1;
-    min-width: 200px;
+    min-width: 160px;
   }
+
   h1 {
-    font-size: 2.5rem;
-    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-color, #111827);
+    margin: 0 0 0.15rem;
   }
+
   .profile-name {
-    font-size: 1.25rem;
-    color: #64748b;
-    margin: 0.25rem 0;
+    font-size: 0.925rem;
+    color: var(--text-muted, #64748b);
+    margin: 0 0 0.1rem;
   }
+
   .joined-date {
-    font-size: 0.875rem;
-    color: #94a3b8;
+    font-size: 0.78rem;
+    color: var(--text-muted, #94a3b8);
     margin: 0;
   }
+
   .profile-stats {
     display: flex;
-    gap: 3rem;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 1.5rem;
+    gap: 2rem;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--card-border, #e5e7eb);
+    padding-top: 1.25rem;
   }
+
   .stat-item {
     display: flex;
     flex-direction: column;
+    gap: 0.1rem;
   }
+
   .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-color, #111827);
   }
+
   .stat-label {
-    font-size: 0.875rem;
-    color: #64748b;
+    font-size: 0.7rem;
+    color: var(--text-muted, #64748b);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    font-weight: 700;
   }
-  .btn-primary,
-  .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .btn-primary {
-    background: #3b82f6;
-    color: white;
-  }
-  .btn-secondary {
-    background: #f1f5f9;
-    color: #1e293b;
-  }
+
   .friend-badge {
     background: #dcfce7;
     color: #166534;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-weight: 600;
+    padding: 0.35rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
+
   .pending-badge {
-    background: #fef3c7;
-    color: #92400e;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-weight: 600;
+    background: #fef9c3;
+    color: #854d0e;
+    padding: 0.35rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
+
+  :global(html[data-theme='dark']) .friend-badge {
+    background: #14532d;
+    color: #86efac;
+  }
+
+  :global(html[data-theme='dark']) .pending-badge {
+    background: #422006;
+    color: #fde68a;
+  }
+
   .languages-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
   }
+
   .language-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    background: #f8fafc;
-    border-radius: 0.75rem;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-color, #f8fafc);
+    border: 1px solid var(--card-border, #e5e7eb);
+    border-radius: 0.6rem;
   }
+
   .flag {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+    line-height: 1;
   }
+
   .lang-info {
     display: flex;
     flex-direction: column;
+    gap: 0.1rem;
   }
+
   .lang-name {
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-  .cefr-badge {
-    font-size: 0.75rem;
-    color: #3b82f6;
     font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-color, #111827);
   }
+
+  .cefr-badge {
+    font-size: 0.72rem;
+    color: #2563eb;
+    font-weight: 800;
+  }
+
   .empty-state {
     text-align: center;
-    color: #94a3b8;
-    padding: 2rem 0;
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.875rem;
+    padding: 1.5rem 0;
+    margin: 0;
+  }
+
+  .languages-section h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+    margin: 0 0 0.75rem;
   }
 </style>

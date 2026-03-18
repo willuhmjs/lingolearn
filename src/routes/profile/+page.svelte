@@ -5,6 +5,7 @@
   import { onMount } from 'svelte';
   import { toastSuccess, toastError } from '$lib/utils/toast';
   import { invalidateAll } from '$app/navigation';
+  import PageHeader from '$lib/components/PageHeader.svelte';
 
   let { data, form }: { data: PageData; form: any } = $props();
 
@@ -162,10 +163,8 @@
   }
 </script>
 
-<div class="profile-container">
-  <header class="profile-header" in:fly={{ y: 20, duration: 400 }}>
-    <h1>Profile</h1>
-  </header>
+<div class="page-shell profile-shell">
+  <PageHeader title="Profile" />
 
   <!-- Tab bar -->
   <nav class="tab-bar" in:fly={{ y: 20, duration: 400, delay: 60 }}>
@@ -688,22 +687,8 @@
 </dialog>
 
 <style>
-  .profile-container {
+  .profile-shell {
     max-width: 640px;
-    margin: 0 auto;
-    padding: 2rem;
-    color: var(--text-color, #334155);
-  }
-
-  .profile-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .profile-header h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-color, #111827);
-    margin: 0;
   }
 
   /* Tab bar */
@@ -1394,12 +1379,6 @@
   }
 
   @media (max-width: 640px) {
-    .profile-container {
-      padding: 1rem 0.75rem;
-    }
-    .profile-header h1 {
-      font-size: 1.75rem;
-    }
     .submit-btn,
     .delete-btn {
       width: 100%;

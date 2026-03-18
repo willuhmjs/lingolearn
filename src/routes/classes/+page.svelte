@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { toastError, toastSuccess } from '$lib/utils/toast';
+  import PageHeader from '$lib/components/PageHeader.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -88,17 +89,12 @@
   <title>My Classes - LingoLearn</title>
 </svelte:head>
 
-<div class="classes-container">
-  <header class="classes-header" in:fly={{ y: 20, duration: 400 }}>
-    <h1>Classes</h1>
-    <p>Manage your classes and learning groups.</p>
-  </header>
+<div class="page-shell wide">
+  <PageHeader title="Classes" subtitle="Manage your classes and learning groups." />
 
   <div class="classes-layout">
     <!-- List of Classes -->
     <section class="my-classes-section" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-      <h2 class="section-title">My Classes</h2>
-
       {#if data.classes && data.classes.length > 0}
         <div class="classes-grid">
           {#each data.classes as cls}
@@ -370,28 +366,6 @@
     width: 100%;
   }
 
-  .classes-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-  }
-
-  .classes-header {
-    text-align: left;
-    margin-bottom: 2.5rem;
-  }
-
-  .classes-header h1 {
-    font-size: 2.5rem;
-    color: var(--text-color, #0f172a);
-    margin: 0 0 0.5rem;
-  }
-
-  .classes-header p {
-    color: #64748b;
-    font-size: 1.1rem;
-    margin: 0;
-  }
 
   .classes-layout {
     display: grid;
@@ -662,14 +636,6 @@
     min-width: 0;
   }
 
-  .section-title {
-    font-size: 1.75rem;
-    color: var(--text-color, #0f172a);
-    margin: 0 0 1.5rem;
-    border-bottom: 2px solid var(--card-border, #e2e8f0);
-    padding-bottom: 0.5rem;
-  }
-
   .classes-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -842,14 +808,6 @@
   }
 
   @media (max-width: 768px) {
-    .classes-container {
-      padding: 1rem 0.5rem;
-    }
-
-    .classes-header h1 {
-      font-size: 2rem;
-    }
-
     .btn-duo {
       width: 100%;
       box-sizing: border-box;
