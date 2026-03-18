@@ -430,7 +430,6 @@
         <a href="/review" class="btn-duo btn-secondary">Review ({data.dueReviewCount})</a>
       {/if}
       <a href="/play?tab=games" class="btn-duo btn-secondary">Play a Quiz</a>
-      <a href="/onboarding" class="redo-onboarding-link">redo onboarding</a>
       {#if (data as any).activeLiveSessions?.length > 0}
         {@const session = (data as any).activeLiveSessions[0]}
         <a href="/classes/{session.classId}/live/student" class="btn-duo btn-live">
@@ -2504,19 +2503,6 @@
     gap: 1rem;
     flex-wrap: wrap;
     align-items: center;
-  }
-
-  .redo-onboarding-link {
-    font-size: 0.78rem;
-    color: var(--text-muted, #888);
-    text-decoration: none;
-    width: 100%;
-    text-align: center;
-    margin-top: -0.25rem;
-  }
-
-  .redo-onboarding-link:hover {
-    text-decoration: underline;
   }
 
   /* Live session button */
