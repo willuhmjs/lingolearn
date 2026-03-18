@@ -4,7 +4,8 @@
 
   type ReviewResult = { lemma: string; correct: boolean; answer: string; correctMeaning: string };
 
-  let { sessionResults }: { sessionResults: ReviewResult[] } = $props();
+  let { sessionResults, onretry }: { sessionResults: ReviewResult[]; onretry?: () => void } =
+    $props();
 
   let correctCount = $derived(sessionResults.filter((r) => r.correct).length);
   let incorrectCount = $derived(sessionResults.filter((r) => !r.correct).length);
@@ -88,7 +89,18 @@
     </div>
   {/if}
 
-  <a href="/dashboard" class="btn-duo btn-primary back-btn">Back to Dashboard</a>
+  {#if missedWords.length > 0}
+    <div class="action-btns">
+      {#if onretry}
+        <button class="btn-duo btn-primary retry-btn" onclick={onretry}>Retry missed words</button>
+      {:else}
+        <a href="/review" class="btn-duo btn-primary retry-btn">Retry missed words</a>
+      {/if}
+      <a href="/dashboard" class="btn-duo btn-secondary back-btn">Back to Dashboard</a>
+    </div>
+  {:else}
+    <a href="/dashboard" class="btn-duo btn-primary back-btn">Back to Dashboard</a>
+  {/if}
 </div>
 
 <style>
@@ -334,8 +346,17 @@
     color: #94a3b8;
   }
 
+  .action-btns {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .retry-btn,
   .back-btn {
     width: 100%;
-    max-width: 200px;
+    max-width: 260px;
   }
 </style>
