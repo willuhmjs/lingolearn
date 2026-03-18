@@ -105,6 +105,5 @@
     .cefr-bar-track {
       height: 1.5rem;
     }
-
   }
 </style>
