@@ -32,7 +32,7 @@
 
 <div class="typing-section">
   <div class="typing-label-row">
-    <label class="typing-label" for="review-input"> Type your answer (optional) </label>
+    <label class="typing-label" for="review-input"> Type your translation </label>
     <VoiceDictation
       lang={languageToLocale(activeLangName)}
       bind:value={typedAnswer}
