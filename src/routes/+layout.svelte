@@ -2,17 +2,92 @@
   import favicon from '$lib/assets/favicon.svg';
   import { Toaster } from 'svelte-french-toast';
   import Modal from '$lib/components/Modal.svelte';
+  import VocabDetailModal from '$lib/components/VocabDetailModal.svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/stores';
 
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { theme } from '$lib/theme.svelte';
+  import { vocabModal } from '$lib/stores/vocabModal.svelte';
+  import '$lib/styles/variables.css';
 
   let { data, children } = $props();
   let user = $derived(data.user);
   let languages = $derived(data.languages || []);
   let onboardedLanguages = $derived(data.onboardedLanguages || []);
   let isDropdownOpen = $state(false);
+
+  // Tooltip portal state
+  let portalEl: HTMLElement | null = null;
+  let activeClone: HTMLElement | null = null;
+  let activeTrigger: Element | null = null;
+
+  function getTooltipContent(trigger: Element): Element | null {
+    return (
+      trigger.querySelector(':scope > .tooltip-content') ||
+      trigger.querySelector(':scope > .word-tooltip')
+    );
+  }
+
+  function showPortalTooltip(trigger: Element) {
+    if (activeClone) return; // already showing
+    const content = getTooltipContent(trigger);
+    if (!content) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const clone = content.cloneNode(true) as HTMLElement;
+
+    // Force visible and reset all position-related CSS so the scoped
+    // stylesheet values (bottom, left, transform) don't conflict with
+    // the fixed coordinates we compute below.
+    clone.style.visibility = 'visible';
+    clone.style.opacity = '1';
+    clone.style.position = 'fixed';
+    clone.style.bottom = 'auto';
+    clone.style.right = 'auto';
+    clone.style.transform = 'none';
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '9999';
+
+    // Measure content first (append off-screen)
+    clone.style.left = '-9999px';
+    clone.style.top = '-9999px';
+    portalEl!.appendChild(clone);
+
+    const cw = clone.offsetWidth;
+    const ch = clone.offsetHeight;
+
+    // Position above trigger, centered
+    let left = rect.left + rect.width / 2 - cw / 2;
+    let top = rect.top - ch - 10;
+
+    // Clamp to viewport
+    left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
+    if (top < 8) top = rect.bottom + 10; // flip below if no room above
+
+    clone.style.left = `${left}px`;
+    clone.style.top = `${top}px`;
+
+    // Mark trigger so its native CSS tooltip is suppressed
+    (trigger as HTMLElement).dataset.tooltipPortalActive = 'true';
+    activeTrigger = trigger;
+    activeClone = clone;
+  }
+
+  function hidePortalTooltip() {
+    if (activeClone && portalEl) {
+      try {
+        portalEl.removeChild(activeClone);
+      } catch {
+        /* already removed */
+      }
+      activeClone = null;
+    }
+    if (activeTrigger) {
+      delete (activeTrigger as HTMLElement).dataset.tooltipPortalActive;
+      activeTrigger = null;
+    }
+  }
 
   onMount(() => {
     theme.init();
@@ -28,6 +103,37 @@
         }).catch(() => {});
       }
     }
+
+    portalEl = document.getElementById('tooltip-portal');
+
+    function onMouseOver(e: MouseEvent) {
+      const trigger = (e.target as Element).closest?.('.tooltip-trigger');
+      if (!trigger) {
+        hidePortalTooltip();
+        return;
+      }
+      if (activeTrigger === trigger) return; // same trigger, already showing
+      hidePortalTooltip();
+      showPortalTooltip(trigger);
+    }
+
+    function onMouseOut(e: MouseEvent) {
+      const to = e.relatedTarget as Element | null;
+      if (to?.closest?.('.tooltip-trigger')) return;
+      hidePortalTooltip();
+    }
+
+    document.addEventListener('mouseover', onMouseOver, { passive: true });
+    document.addEventListener('mouseout', onMouseOut, { passive: true });
+
+    return () => {
+      document.removeEventListener('mouseover', onMouseOver);
+      document.removeEventListener('mouseout', onMouseOut);
+    };
+  });
+
+  onDestroy(() => {
+    hidePortalTooltip();
   });
 
   function toggleDropdown() {
@@ -85,7 +191,7 @@
 
 <svelte:window onclick={closeDropdown} />
 
-<Toaster />
+<Toaster containerStyle="z-index: 1100;" />
 <Modal />
 
 <svelte:head>
@@ -219,28 +325,6 @@
                 ></polyline><polyline points="2 12 12 17 22 12"></polyline></svg
               >
               <span class="nav-text">Review</span>
-            </a>
-            <a
-              href="/friends"
-              class="nav-item {$page.url.pathname.startsWith('/friends') ? 'active' : ''}"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-              <span class="nav-text">Social</span>
-              {#if data.socialNotificationCount > 0}
-                <span class="nav-badge">{data.socialNotificationCount}</span>
-              {/if}
             </a>
             <a
               href="/profile"
@@ -506,6 +590,13 @@
     {/if}
   {/if}
 
+  <div id="tooltip-portal" aria-hidden="true"></div>
+  <VocabDetailModal
+    vocab={vocabModal.vocab}
+    enriching={vocabModal.enriching}
+    onclose={vocabModal.close}
+  />
+
   <div class="content-wrapper">
     <header class="mobile-header">
       <a href="/" class="mobile-brand">
@@ -712,6 +803,25 @@
     font-weight: 800;
   }
 
+  :global(h1) {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  :global(h2) {
+    font-size: 1.5rem;
+    line-height: 1.25;
+  }
+
+  :global(h3) {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  :global(.toaster) {
+    z-index: 1100 !important;
+  }
+
   :global(.btn-duo) {
     display: inline-flex;
     align-items: center;
@@ -730,18 +840,18 @@
   }
 
   :global(.btn-primary) {
-    background-color: #58cc02;
+    background-color: var(--color-success, #58cc02);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #58a700;
+    box-shadow: 0 4px 0 var(--color-success-hover, #58a700);
   }
   :global(.btn-primary:hover) {
-    background-color: #61e002;
+    background-color: var(--color-success, #61e002);
     filter: brightness(1.05);
   }
   :global(.btn-primary:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #58a700;
+    box-shadow: 0 0 0 var(--color-success-hover, #58a700);
   }
 
   :global(.btn-secondary) {
@@ -770,33 +880,33 @@
   }
 
   :global(.btn-ai) {
-    background-color: #ce82ff;
+    background-color: var(--color-ai, #ce82ff);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #a561d4;
+    box-shadow: 0 4px 0 var(--color-ai-hover, #a561d4);
   }
   :global(.btn-ai:hover) {
-    background-color: #d697ff;
+    background-color: var(--color-ai, #d697ff);
     filter: brightness(1.05);
   }
   :global(.btn-ai:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #a561d4;
+    box-shadow: 0 0 0 var(--color-ai-hover, #a561d4);
   }
 
   :global(.btn-danger) {
-    background-color: #ff4b4b;
+    background-color: var(--color-danger, #ff4b4b);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #ea2b2b;
+    box-shadow: 0 4px 0 var(--color-danger-hover, #ea2b2b);
   }
   :global(.btn-danger:hover) {
-    background-color: #ff6666;
+    background-color: var(--color-danger, #ff6666);
     filter: brightness(1.05);
   }
   :global(.btn-danger:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #ea2b2b;
+    box-shadow: 0 0 0 var(--color-danger-hover, #ea2b2b);
   }
 
   /* ── Standardized back-navigation button ──────────────────────────── */
@@ -830,9 +940,9 @@
   :global(.card-duo) {
     background-color: var(--card-bg, #ffffff);
     border: 2px solid var(--card-border, #e5e7eb);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-3xl, 1.5rem);
     padding: 1.5rem;
-    box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
+    box-shadow: var(--shadow-duo);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
   }
@@ -1065,19 +1175,7 @@
   }
 
   :global(html[data-theme='dark']) {
-    --bg-color: #1a1d23;
-    --text-color: #e2e8f0;
-    --text-muted: #94a3b8;
-    --header-bg: #21252e;
-    --header-border: #2d3340;
-    --card-bg: #21252e;
-    --card-border: #2d3340;
-    --link-color: #60a5fa;
-    --link-hover-bg: #2a303c;
-    --brand-color: #3b82f6;
-    --input-bg: #2a303c;
-    --input-border: #3a4150;
-    --input-text: #e2e8f0;
+    /* Variables now loaded from variables.css */
   }
 
   :global(html[data-theme='dark'] .info-card),
@@ -1105,7 +1203,8 @@
   .app-container {
     display: grid;
     grid-template-columns: 250px 1fr;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .app-container.no-sidebar {
@@ -1117,9 +1216,7 @@
     border-right: 2px solid var(--header-border, #e5e7eb);
     display: flex;
     flex-direction: column;
-    position: sticky;
-    top: 0;
-    max-height: 100vh;
+    height: 100%;
     z-index: 50;
     padding: 1.5rem 1rem;
     box-sizing: border-box;
@@ -1195,19 +1292,6 @@
     width: 1.5rem;
     height: 1.5rem;
     flex-shrink: 0;
-  }
-
-  .nav-badge {
-    margin-left: auto;
-    background: #ef4444;
-    color: white;
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    padding: 0.1rem 0.45rem;
-    min-width: 1.25rem;
-    text-align: center;
-    line-height: 1.4;
   }
 
   .sidebar-footer {
@@ -1462,6 +1546,8 @@
     flex: 1;
     width: 100%;
     box-sizing: border-box;
+    overflow-y: auto;
+    height: 100%;
   }
 
   .site-footer {
@@ -1513,6 +1599,8 @@
     .app-container {
       display: flex;
       flex-direction: column;
+      height: auto;
+      overflow: visible;
     }
 
     .desktop-topbar {
@@ -1610,10 +1698,6 @@
     :global(html[data-theme='dark']) .admin-fab:hover,
     :global(html[data-theme='dark']) .admin-fab.active {
       background-color: #4f46e5;
-    }
-
-    .mobile-theme-toggle {
-      display: none;
     }
 
     .content-wrapper {
@@ -1750,5 +1834,24 @@
       bottom: 0;
       margin-left: 0.5rem;
     }
+  }
+
+  /* Tooltip portal */
+  #tooltip-portal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    z-index: 9999;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* Suppress native CSS tooltip when the portal clone is active */
+  :global([data-tooltip-portal-active] > .tooltip-content),
+  :global([data-tooltip-portal-active] > .word-tooltip) {
+    visibility: hidden !important;
+    opacity: 0 !important;
   }
 </style>

@@ -132,4 +132,14 @@ describe('recordTokenUsage', () => {
     mockUpsert.mockRejectedValue(new Error('DB error'));
     await expect(recordTokenUsage('user-123', 100)).resolves.toBeUndefined();
   });
+
+  it('handles recordTokenUsage with extremely large values', async () => {
+    mockUpsert.mockResolvedValue({});
+    await recordTokenUsage('user-123', 1000000);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ tokensUsed: 1000000 })
+      })
+    );
+  });
 });

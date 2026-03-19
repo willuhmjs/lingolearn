@@ -3,6 +3,7 @@
   import toast from 'svelte-french-toast';
   import { page } from '$app/stores';
   import { getFlagEmoji } from '$lib/utils/playTypes';
+  import Skeleton from '$lib/components/Skeleton.svelte';
 
   let {
     myGames,
@@ -97,7 +98,15 @@
       showClassModal = true;
     }
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && showClassModal) {
+      showClassModal = false;
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="games-wrapper" in:fly={{ y: 20, duration: 400, delay: 100 }}>
   <div class="header-section">
@@ -200,11 +209,12 @@
       Community Quizzes
     </h2>
 
-    <div class="category-pills">
+    <div class="category-pills" role="group" aria-label="Filter quizzes by category">
       {#each categories as category}
         <button
           class="filter-pill"
           class:active={currentCategory === category}
+          aria-pressed={currentCategory === category}
           onclick={() => handleCategoryChange(category)}
         >
           {category}
@@ -269,9 +279,25 @@
 
       {#if communityGames.length < totalCommunityGames}
         <div class="load-more-container" style="text-align: center; margin-top: 2rem;">
-          <button class="btn-load-more" onclick={loadMore} disabled={loadingMore}>
-            {loadingMore ? 'Loading...' : 'Load More'}
-          </button>
+          {#if loadingMore}
+            <div class="games-grid">
+              {#each Array(3) as _}
+                <div class="card-duo game-card">
+                  <div class="game-card-content">
+                    <Skeleton width="60%" height="1.5rem" className="mb-2" />
+                    <Skeleton width="100%" height="1rem" className="mb-1" />
+                    <Skeleton width="100%" height="1rem" className="mb-4" />
+                    <Skeleton width="40%" height="1rem" />
+                  </div>
+                  <div class="game-actions">
+                    <Skeleton width="100%" height="2.5rem" borderRadius="var(--radius-md)" />
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <button class="btn-load-more" onclick={loadMore}> Load More </button>
+          {/if}
         </div>
       {/if}
     {/if}
@@ -279,17 +305,23 @@
 </div>
 
 {#if showClassModal}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="modal-backdrop"
     transition:fade={{ duration: 200 }}
     onclick={() => (showClassModal = false)}
   >
-    <div class="modal" onclick={(e) => e.stopPropagation()}>
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="class-modal-title"
+      onclick={(e) => e.stopPropagation()}
+    >
       <div class="modal-header">
-        <h2>Select a Class</h2>
-        <button class="close-btn" onclick={() => (showClassModal = false)}>×</button>
+        <h2 id="class-modal-title">Select a Class</h2>
+        <button class="close-btn" onclick={() => (showClassModal = false)} aria-label="Close modal">
+          ×
+        </button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">Which class do you want to start this live session for?</p>
@@ -392,11 +424,15 @@
     transition:
       transform 0.2s,
       box-shadow 0.2s;
+    background-color: var(--card-bg, #ffffff);
+    border: 2px solid var(--card-border, #e5e7eb);
+    border-radius: var(--radius-xl, 1rem);
+    box-shadow: var(--shadow-duo);
   }
 
   .game-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 0 var(--card-border, #e5e7eb);
   }
 
   .game-card-content {

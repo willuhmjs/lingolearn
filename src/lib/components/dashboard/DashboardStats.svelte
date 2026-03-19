@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { SRS_COLORS } from '$lib/utils/srsColors';
+
   const srsColors: Record<string, string> = {
-    LOCKED: 'var(--color-locked, #94a3b8)',
-    UNSEEN: 'var(--color-unseen, #e2e8f0)',
-    LEARNING: 'var(--color-learning, #fef08a)',
-    KNOWN: 'var(--color-known, #6ee7b7)',
-    MASTERED: 'var(--color-mastered, #10b981)'
+    LOCKED: '#94a3b8',
+    ...SRS_COLORS
   };
+
+  // Logical display order for the stacked bar (LOCKED excluded — it is vocab-only edge case)
+  const SRS_ORDER = ['UNSEEN', 'LEARNING', 'KNOWN', 'MASTERED'] as const;
 
   interface Props {
     vocabularies: any[];
@@ -29,6 +31,14 @@
       {} as Record<string, number>
     )
   );
+  // Segments for the vocab stacked bar (omit states with 0 count)
+  let vocabBarSegments = $derived(
+    SRS_ORDER.filter((state) => (vocabSrsBreakdown[state] ?? 0) > 0).map((state) => ({
+      state,
+      color: SRS_COLORS[state],
+      pct: totalVocab > 0 ? (vocabSrsBreakdown[state] / totalVocab) * 100 : 0
+    }))
+  );
 
   let totalGrammar = $derived(grammarRules.length);
   let avgGrammarElo = $derived(
@@ -44,6 +54,14 @@
       },
       {} as Record<string, number>
     )
+  );
+  // Segments for the grammar stacked bar (omit states with 0 count)
+  let grammarBarSegments = $derived(
+    SRS_ORDER.filter((state) => (grammarSrsBreakdown[state] ?? 0) > 0).map((state) => ({
+      state,
+      color: SRS_COLORS[state],
+      pct: totalGrammar > 0 ? (grammarSrsBreakdown[state] / totalGrammar) * 100 : 0
+    }))
   );
 </script>
 
@@ -62,10 +80,23 @@
       </div>
       <div class="srs-breakdown">
         <h4>SRS State Breakdown</h4>
+        <div class="srs-bar-track" aria-hidden="true">
+          {#if totalVocab === 0}
+            <div class="srs-bar-empty"></div>
+          {:else}
+            {#each vocabBarSegments as seg}
+              <div
+                class="srs-bar-seg"
+                style="width:{seg.pct}%; background-color:{seg.color};"
+                title="{seg.state}: {vocabSrsBreakdown[seg.state]}"
+              ></div>
+            {/each}
+          {/if}
+        </div>
         {#each Object.entries(srsColors) as [state, color]}
           <div class="breakdown-row">
             <div class="breakdown-label">
-              <span class="color-box" style="background-color: {color}"></span>
+              <span class="srs-dot" style="background-color: {color}"></span>
               {state}
             </div>
             <span>{vocabSrsBreakdown[state] || 0}</span>
@@ -85,10 +116,23 @@
       </div>
       <div class="srs-breakdown">
         <h4>SRS State Breakdown</h4>
+        <div class="srs-bar-track" aria-hidden="true">
+          {#if totalGrammar === 0}
+            <div class="srs-bar-empty"></div>
+          {:else}
+            {#each grammarBarSegments as seg}
+              <div
+                class="srs-bar-seg"
+                style="width:{seg.pct}%; background-color:{seg.color};"
+                title="{seg.state}: {grammarSrsBreakdown[seg.state]}"
+              ></div>
+            {/each}
+          {/if}
+        </div>
         {#each Object.entries(srsColors) as [state, color]}
           <div class="breakdown-row">
             <div class="breakdown-label">
-              <span class="color-box" style="background-color: {color}"></span>
+              <span class="srs-dot" style="background-color: {color}"></span>
               {state}
             </div>
             <span>{grammarSrsBreakdown[state] || 0}</span>
@@ -105,13 +149,11 @@
   }
 
   h2 {
-    font-size: 1.75rem;
-    color: var(--text-color, #0f172a);
-    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    color: var(--text-color);
+    margin-bottom: 1rem;
     font-weight: 800;
     letter-spacing: -0.025em;
-    position: relative;
-    display: inline-block;
   }
 
   .summary-grid {
@@ -128,17 +170,15 @@
 
   .summary-card {
     background: var(--card-bg, #ffffff);
-    border-radius: 1rem;
+    border: 2px solid var(--card-border, #e5e7eb);
+    border-radius: var(--radius-xl, 1rem);
     padding: 2rem;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.05),
-      0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-duo);
     transition:
       transform 0.3s ease,
       box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .summary-card::before {
@@ -148,7 +188,7 @@
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-ai));
   }
 
   .summary-card:hover {
@@ -161,7 +201,7 @@
   .summary-card h3 {
     margin-top: 0;
     margin-bottom: 1.5rem;
-    color: var(--text-color, #0f172a);
+    color: var(--text-color);
     font-size: 1.5rem;
     font-weight: 700;
     display: flex;
@@ -176,7 +216,7 @@
     margin-bottom: 1rem;
     font-size: 1.1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--card-border);
   }
 
   .stat-row:last-of-type {
@@ -184,50 +224,33 @@
   }
 
   .stat-label {
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 500;
   }
 
-  :global(html[data-theme='dark']) .stat-label {
-    color: #94a3b8;
-  }
-
   .stat-value {
-    color: #0f172a;
+    color: var(--text-color);
     font-weight: 700;
     font-size: 1.25rem;
-    background: #f1f5f9;
+    background: var(--link-hover-bg);
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
   }
 
-  :global(html[data-theme='dark']) .stat-value {
-    background: #1e293b;
-    color: #f1f5f9;
-  }
-
   .srs-breakdown {
     margin-top: 2rem;
-    background: #f8fafc;
+    background: var(--link-hover-bg);
     padding: 1.5rem;
-    border-radius: 0.75rem;
-  }
-
-  :global(html[data-theme='dark']) .srs-breakdown {
-    background: #1e293b;
+    border-radius: var(--radius-lg);
   }
 
   .srs-breakdown h4 {
-    font-size: 1rem;
-    color: #475569;
+    font-size: 0.8rem;
+    color: var(--text-muted);
     margin-bottom: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
-  }
-
-  :global(html[data-theme='dark']) .srs-breakdown h4 {
-    color: #94a3b8;
   }
 
   .breakdown-row {
@@ -246,23 +269,38 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: #334155;
+    color: var(--text-color);
     font-weight: 500;
   }
 
-  :global(html[data-theme='dark']) .breakdown-label {
-    color: #94a3b8;
+  /* Stacked SRS progress bar */
+  .srs-bar-track {
+    display: flex;
+    height: 0.6rem;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: var(--card-border, #e2e8f0);
+    margin-bottom: 1rem;
   }
 
-  :global(html[data-theme='dark']) .breakdown-row > span {
-    color: #94a3b8;
+  .srs-bar-seg {
+    height: 100%;
+    transition: width 0.4s ease;
   }
 
-  .color-box {
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 4px;
+  .srs-bar-empty {
+    width: 100%;
+    height: 100%;
+    background: var(--card-border, #e2e8f0);
+  }
+
+  /* Legend dot replaces the old square color-box */
+  .srs-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
     display: inline-block;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
   }
 </style>

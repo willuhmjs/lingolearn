@@ -2,9 +2,11 @@
   import { fly, fade } from 'svelte/transition';
   import { spring } from 'svelte/motion';
   import { marked } from 'marked';
+  import CefrBadge from '$lib/components/CefrBadge.svelte';
   import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
   import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
   import TranslationView from '$lib/components/play/TranslationView.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let {
     challenge,
@@ -69,17 +71,22 @@
     >
       &larr; Change Mode
     </button>
-    <span class="session-progress-badge" in:fade={{ delay: 200 }}
-      >Challenge {displayedChallengeNumber}</span
-    >
+    <div class="challenge-badges">
+      {#if sentenceEstimatedLevel}
+        <CefrBadge level={sentenceEstimatedLevel} />
+      {/if}
+      <span class="session-progress-badge" in:fade={{ delay: 200 }}
+        >Challenge {displayedChallengeNumber}</span
+      >
+    </div>
   </div>
-  {#if sentenceTooComplex && sentenceEstimatedLevel}
+  {#if sentenceTooComplex}
     <div
       class="difficulty-notice"
-      title="This sentence uses {sentenceEstimatedLevel}-level structures — a good stretch!"
+      title="This sentence uses advanced structures — a good stretch!"
       in:fly={{ x: -10, duration: 400 }}
     >
-      ⚡ Advanced structure ({sentenceEstimatedLevel})
+      ⚡ Advanced structure
     </div>
   {/if}
   <div class="challenge-section">
@@ -209,8 +216,9 @@
 
     {#if !feedback}
       {#if challenge.gameMode !== 'multiple-choice'}
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={submitting ||
             !challenge?.targetSentence ||
             (challenge.gameMode === 'fill-blank'
@@ -218,11 +226,11 @@
               : challenge.gameMode === 'multiple-choice'
                 ? !selectedChoice
                 : !userInput.trim())}
-          class="btn-duo btn-primary submit-btn"
+          loading={submitting}
           style="margin-top: 1.5rem; width: 100%;"
         >
-          {submitting ? 'Evaluating...' : 'Submit Answer'}
-        </button>
+          Submit Answer
+        </Button>
       {/if}
     {/if}
   </form>
@@ -234,6 +242,12 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
+  }
+
+  .challenge-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
   }
 
   .session-progress-badge {

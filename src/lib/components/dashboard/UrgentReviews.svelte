@@ -186,23 +186,13 @@
 {/if}
 
 <style>
-  h2 {
-    font-size: 1.75rem;
-    color: var(--text-color, #0f172a);
-    margin-bottom: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    position: relative;
-    display: inline-block;
-  }
-
   .insights-section {
     margin-bottom: 2.5rem;
   }
   .insights-section h2 {
     font-size: 1.25rem;
     font-weight: 800;
-    color: var(--text-color, #1e293b);
+    color: var(--text-color);
     margin: 0 0 1rem;
   }
   .insights-grid {
@@ -213,12 +203,9 @@
   .insight-card {
     background: var(--card-bg, #ffffff);
     border: 2px solid var(--card-border, #e2e8f0);
-    border-radius: 1rem;
-    box-shadow: 0 3px 0 var(--card-border, #e2e8f0);
+    border-radius: var(--radius-xl, 1rem);
+    box-shadow: var(--shadow-duo);
     padding: 1.25rem;
-  }
-  :global(html[data-theme='dark']) .insight-card {
-    box-shadow: 0 3px 0 var(--card-border, #374151);
   }
   .insight-card h3 {
     display: flex;
@@ -231,7 +218,7 @@
   }
   .insight-desc {
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--text-muted, #64748b);
     margin: 0 0 0.85rem;
   }
 
@@ -256,7 +243,7 @@
     min-width: 80px;
   }
   .urgent-meaning {
-    color: #64748b;
+    color: var(--text-muted, #64748b);
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -308,14 +295,14 @@
   .error-count {
     font-family: ui-monospace, monospace;
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--text-muted, #64748b);
     width: 24px;
     text-align: right;
   }
   .override-note {
     margin: 0.75rem 0 0;
     font-size: 0.78rem;
-    color: #64748b;
+    color: var(--text-muted, #64748b);
     font-style: italic;
   }
 

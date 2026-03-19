@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 
-const FREEZE_XP_COST = 200;
+const FREEZE_XP_COST = 500;
 
 export async function POST({ locals }) {
   if (!locals.user) {

@@ -159,7 +159,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 8px;
+    height: 6px;
     background-color: #f1f5f9;
     z-index: 10;
   }
@@ -173,6 +173,31 @@
     background: linear-gradient(90deg, #3b82f6, #60a5fa);
     transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     border-radius: 0 4px 4px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: progress-shimmer 1.6s ease-in-out infinite;
+    transform: translateX(-100%);
+  }
+
+  @keyframes progress-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
   }
 
   .review-content {

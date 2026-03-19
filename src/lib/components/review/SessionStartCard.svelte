@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
+  import Button from '$lib/components/Button.svelte';
 
   let { reviewCount, onstart }: { reviewCount: number; onstart: () => void } = $props();
 </script>
@@ -17,8 +18,8 @@
     You have <strong>{reviewCount}</strong>
     {reviewCount === 1 ? 'card' : 'cards'} due for review.
   </p>
-  <button class="btn-duo btn-primary start-session-btn" onclick={onstart}> Start Reviewing </button>
-  <a href="/dashboard" class="btn-skip">Not now</a>
+  <Button variant="primary" onclick={onstart} class="start-session-btn">Start Reviewing</Button>
+  <Button variant="ghost" href="/dashboard" class="btn-skip">Not now</Button>
 </div>
 
 <style>

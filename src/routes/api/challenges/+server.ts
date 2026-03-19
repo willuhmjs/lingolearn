@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import type { RequestHandler } from './$types';
+import { successResponse, errorResponse } from '$lib/server/apiResponse';
 
 export const GET: RequestHandler = async ({ locals }) => {
   const session = await locals.auth();
   if (!session?.user?.id) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return errorResponse('Unauthorized', 401);
   }
 
   try {
@@ -27,24 +27,24 @@ export const GET: RequestHandler = async ({ locals }) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    return json({ challenges });
+    return successResponse({ challenges });
   } catch (error) {
     console.error('Failed to fetch challenges:', error);
-    return json({ error: 'Failed to fetch challenges' }, { status: 500 });
+    return errorResponse('Failed to fetch challenges', 500);
   }
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session?.user?.id) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return errorResponse('Unauthorized', 401);
   }
 
   try {
     const { gameId, challengeeId, scoreToBeat } = await request.json();
 
     if (!gameId || !challengeeId || scoreToBeat === undefined) {
-      return json({ error: 'gameId, challengeeId, and scoreToBeat are required' }, { status: 400 });
+      return errorResponse('gameId, challengeeId, and scoreToBeat are required', 400);
     }
 
     // Verify game exists
@@ -53,7 +53,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
     if (!game) {
-      return json({ error: 'Game not found' }, { status: 404 });
+      return errorResponse('Game not found', 404);
     }
 
     // Create challenge
@@ -67,24 +67,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }
     });
 
-    return json({ challenge });
+    return successResponse({ challenge });
   } catch (error) {
     console.error('Failed to create challenge:', error);
-    return json({ error: 'Failed to create challenge' }, { status: 500 });
+    return errorResponse('Failed to create challenge', 500);
   }
 };
 
 export const PATCH: RequestHandler = async ({ request, locals }) => {
   const session = await locals.auth();
   if (!session?.user?.id) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return errorResponse('Unauthorized', 401);
   }
 
   try {
     const { challengeId, status } = await request.json();
 
     if (!challengeId || !['ACCEPTED', 'DECLINED', 'COMPLETED'].includes(status)) {
-      return json({ error: 'Invalid data' }, { status: 400 });
+      return errorResponse('Invalid data', 400);
     }
 
     const challenge = await prisma.challenge.findUnique({
@@ -92,11 +92,11 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
     });
 
     if (!challenge) {
-      return json({ error: 'Challenge not found' }, { status: 404 });
+      return errorResponse('Challenge not found', 404);
     }
 
     if (challenge.challengeeId !== session.user.id) {
-      return json({ error: 'Forbidden' }, { status: 403 });
+      return errorResponse('Forbidden', 403);
     }
 
     const updated = await prisma.challenge.update({
@@ -104,9 +104,9 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
       data: { status }
     });
 
-    return json({ challenge: updated });
+    return successResponse({ challenge: updated });
   } catch (error) {
     console.error('Failed to update challenge:', error);
-    return json({ error: 'Failed to update challenge' }, { status: 500 });
+    return errorResponse('Failed to update challenge', 500);
   }
 };

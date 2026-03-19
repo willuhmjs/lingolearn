@@ -81,13 +81,49 @@ describe('CefrService.getCefrProgress', () => {
     mockPrisma.userGrammarRule.count
       .mockResolvedValueOnce(8) // masteredGrammar
       .mockResolvedValueOnce(5); // interactedGrammar
-    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1100 }]);
-    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1050 }]);
-    mockPrisma.userVocabulary.count.mockResolvedValue(40); // 40 of top-50 mastered
+    mockPrisma.userVocabulary.findMany.mockResolvedValueOnce(
+      Array.from({ length: 40 }, () => ({
+        eloRating: 1100,
+        vocabulary: { progress: [] }
+      }))
+    ); // freqGateItems
+    mockPrisma.userGrammarRule.findMany.mockResolvedValueOnce([
+      { eloRating: 1050, grammarRule: { progress: [] } }
+    ]); // grammarGateItems
+    mockPrisma.userVocabulary.count.mockResolvedValue(100); // totalMasteredVocab (separate from freq-gate)
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
     expect(result.freqCoverageCount).toBe(40);
     expect(result.freqCoverageTarget).toBe(50);
+  });
+
+  it('handles user with extreme ELOs (above max CEFR baseline)', async () => {
+    mockPrisma.userProgress.findUnique.mockResolvedValue({ id: 'p', cefrLevel: 'C2' });
+    mockPrisma.vocabulary.findMany.mockResolvedValue([]);
+    mockPrisma.grammarRule.count.mockResolvedValue(0);
+    mockPrisma.userGrammarRule.count.mockResolvedValue(0);
+    mockPrisma.userVocabulary.findMany.mockResolvedValueOnce([]);
+    mockPrisma.userGrammarRule.findMany.mockResolvedValueOnce([]);
+    mockPrisma.userVocabulary.count.mockResolvedValue(5000);
+
+    const result = await CefrService.getCefrProgress('user-1', 'lang-1');
+    expect(result.currentLevel).toBe('C2');
+    expect(result.percentComplete).toBe(100);
+  });
+
+  it('handles negative or zero counts gracefully', async () => {
+    mockPrisma.userProgress.findUnique.mockResolvedValue({ id: 'p', cefrLevel: 'A1' });
+    mockPrisma.vocabulary.findMany.mockResolvedValue([]);
+    mockPrisma.grammarRule.count.mockResolvedValue(0);
+    mockPrisma.userGrammarRule.count.mockResolvedValue(0);
+    mockPrisma.userVocabulary.findMany.mockResolvedValue([]);
+    mockPrisma.userGrammarRule.findMany.mockResolvedValue([]);
+    mockPrisma.userVocabulary.count.mockResolvedValue(0);
+
+    const result = await CefrService.getCefrProgress('user-1', 'lang-1');
+    // We expect a non-zero percentComplete because some sub-progresses default to 1 (like totalVocabProgress when target=0)
+    expect(result.percentComplete).toBeGreaterThanOrEqual(0);
+    expect(result.freqCoverageCount).toBe(0);
   });
 
   it('percentComplete is between 0 and 100', async () => {
@@ -98,11 +134,19 @@ describe('CefrService.getCefrProgress', () => {
     );
     mockPrisma.grammarRule.count.mockResolvedValue(8);
     mockPrisma.userGrammarRule.count
-      .mockResolvedValueOnce(5) // masteredGrammar
-      .mockResolvedValueOnce(4); // interactedGrammar
-    mockPrisma.userVocabulary.findMany.mockResolvedValue([{ eloRating: 1400 }]);
-    mockPrisma.userGrammarRule.findMany.mockResolvedValue([{ eloRating: 1300 }]);
-    mockPrisma.userVocabulary.count.mockResolvedValue(35); // mastered from top-70
+      .mockResolvedValueOnce(4) // totalInteracted (interactedGrammar)
+      .mockResolvedValueOnce(2); // totalMastered (not used this way anymore)
+
+    mockPrisma.userVocabulary.findMany.mockResolvedValueOnce(
+      Array.from({ length: 35 }, () => ({
+        eloRating: 1400,
+        vocabulary: { progress: [] }
+      }))
+    ); // freqGateItems
+    mockPrisma.userGrammarRule.findMany.mockResolvedValueOnce([
+      { eloRating: 1300, grammarRule: { progress: [] } }
+    ]); // grammarGateItems
+    mockPrisma.userVocabulary.count.mockResolvedValue(200);
 
     const result = await CefrService.getCefrProgress('user-1', 'lang-1');
     expect(result.percentComplete).toBeGreaterThanOrEqual(0);
@@ -128,11 +172,11 @@ describe('CefrService.applyEloDecay', () => {
     const _expectedDecayed = currentElo - (currentElo - baseline) * CEFR_CONFIG.DECAY.RATE;
 
     mockPrisma.userVocabulary.findMany.mockResolvedValue([
-      { id: 'uv-1', eloRating: currentElo, vocabulary: { cefrLevel: 'A1' } }
+      { id: 'uv-1', vocabularyId: 'v-1', eloRating: currentElo, vocabulary: { cefrLevel: 'A1' } }
     ]);
     mockPrisma.userGrammarRule.findMany.mockResolvedValue([]);
     mockPrisma.userVocabularyProgress.findMany.mockResolvedValue([
-      { vocabularyId: 'uv-1', stability: 5, repetitions: 3, lapses: 0 }
+      { vocabularyId: 'v-1', stability: 5, repetitions: 3, lapses: 0 }
     ]);
     mockPrisma.userGrammarRuleProgress.findMany.mockResolvedValue([]);
     mockPrisma.userVocabulary.update.mockResolvedValue({});
@@ -148,7 +192,7 @@ describe('CefrService.applyEloDecay', () => {
   it('skips items already at or below baseline (no update needed)', async () => {
     const baseline = CEFR_CONFIG.BASE_ELO.A1; // 1000
     mockPrisma.userVocabulary.findMany.mockResolvedValue([
-      { id: 'uv-1', eloRating: baseline, vocabulary: { cefrLevel: 'A1' } }
+      { id: 'uv-1', vocabularyId: 'v-1', eloRating: baseline, vocabulary: { cefrLevel: 'A1' } }
     ]);
     mockPrisma.userGrammarRule.findMany.mockResolvedValue([]);
     mockPrisma.userVocabularyProgress.findMany.mockResolvedValue([]);

@@ -1,7 +1,7 @@
 <script lang="ts">
   import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
   import VoiceDictation from '$lib/components/VoiceDictation.svelte';
-  import { requiresSpecialKeyboard } from '$lib/utils/keyboard';
+  import { requiresSpecialKeyboard, languageToLocale } from '$lib/utils/keyboard';
 
   let {
     typedAnswer = $bindable(),
@@ -32,8 +32,12 @@
 
 <div class="typing-section">
   <div class="typing-label-row">
-    <label class="typing-label" for="review-input"> Type your answer (optional) </label>
-    <VoiceDictation lang="en-US" bind:value={typedAnswer} inputElement={reviewInputRef} />
+    <label class="typing-label" for="review-input"> Type your translation </label>
+    <VoiceDictation
+      lang={languageToLocale(activeLangName)}
+      bind:value={typedAnswer}
+      inputElement={reviewInputRef}
+    />
   </div>
   {#if requiresSpecialKeyboard(lemma, activeLangName)}
     <SpecialCharKeyboard

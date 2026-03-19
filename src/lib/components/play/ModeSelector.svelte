@@ -2,6 +2,7 @@
   import { fly } from 'svelte/transition';
   import { goto } from '$app/navigation';
   import type { GameMode, CyclableMode, LeitnerItem } from '$lib/utils/playTypes';
+  import Button from '../Button.svelte';
 
   let {
     gameMode = $bindable<GameMode>('native-to-target'),
@@ -80,6 +81,7 @@
             gameMode !== 'chat' &&
             gameMode !== 'immerse' &&
             localEma < 0.55}
+          aria-pressed={pinnedMode.has('multiple-choice')}
           onclick={() => {
             const s = new Set(pinnedMode);
             if (s.has('multiple-choice')) s.delete('multiple-choice');
@@ -98,6 +100,7 @@
             gameMode !== 'immerse' &&
             localEma >= 0.4 &&
             localEma < 0.7}
+          aria-pressed={pinnedMode.has('target-to-native')}
           onclick={() => {
             const s = new Set(pinnedMode);
             if (s.has('target-to-native')) s.delete('target-to-native');
@@ -117,6 +120,7 @@
             gameMode !== 'immerse' &&
             localEma >= 0.55 &&
             localEma < 0.85}
+          aria-pressed={pinnedMode.has('fill-blank')}
           onclick={() => {
             const s = new Set(pinnedMode);
             if (s.has('fill-blank')) s.delete('fill-blank');
@@ -134,6 +138,7 @@
             gameMode !== 'chat' &&
             gameMode !== 'immerse' &&
             localEma >= 0.7}
+          aria-pressed={pinnedMode.has('native-to-target')}
           onclick={() => {
             const s = new Set(pinnedMode);
             if (s.has('native-to-target')) s.delete('native-to-target');
@@ -147,7 +152,7 @@
         </button>
       </div>
 
-      <div class="chat-separator">
+      <div class="chat-separator" aria-hidden="true">
         <span class="separator-line"></span>
         <span class="separator-text">or</span>
         <span class="separator-line"></span>
@@ -156,6 +161,7 @@
       <button
         class="chat-cta-btn"
         class:active={gameMode === 'chat'}
+        aria-pressed={gameMode === 'chat'}
         onclick={() => {
           gameMode = gameMode === 'chat' ? 'native-to-target' : 'chat';
         }}
@@ -164,11 +170,12 @@
         <span class="chat-cta-subtitle">Practice conversation with an AI tutor</span>
       </button>
 
-      <div class="immerse-gap"></div>
+      <div class="immerse-gap" aria-hidden="true"></div>
 
       <button
         class="chat-cta-btn immerse-cta-btn"
         class:active={gameMode === 'immerse'}
+        aria-pressed={gameMode === 'immerse'}
         onclick={() => {
           gameMode = gameMode === 'immerse' ? 'native-to-target' : 'immerse';
         }}
@@ -180,7 +187,7 @@
       </button>
     {/if}
   </div>
-  <button onclick={handleGenerate} class="btn-duo btn-ai" style="margin-top: 1.5rem; width: 100%;">
+  <Button variant="ai" onclick={handleGenerate} style="margin-top: 1.5rem; width: 100%;">
     <svg
       viewBox="0 0 24 24"
       fill="none"
@@ -198,20 +205,16 @@
       : gameMode === 'immerse'
         ? 'Start Immersive Reading'
         : 'Generate Next Challenge'}
-  </button>
+  </Button>
 </div>
 
 <style>
   .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    background: #f8fafc;
+    background: var(--card-bg, #f8fafc);
     border: 2px solid var(--card-border, #e2e8f0);
-    border-radius: 12px;
-  }
-
-  :global(html[data-theme='dark']) .empty-state {
-    background: #1e293b;
+    border-radius: var(--radius-xl, 12px);
   }
 
   .empty-state h2 {

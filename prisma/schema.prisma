@@ -270,6 +270,7 @@ model UserVocabularyProgress {
   lastReviewDate   DateTime?
   medianResponseMs Int? // running median response time in ms (updated each review)
   reviewCount      Int       @default(0) // total reviews — used to update running median
+  hasProduced      Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -314,6 +315,7 @@ model UserGrammarRuleProgress {
   lastReviewDate   DateTime?
   medianResponseMs Int? // running median response time in ms
   reviewCount      Int       @default(0)
+  hasProduced      Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -345,6 +347,7 @@ model ReviewLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([itemType, itemId])
   @@index([createdAt]) // for bulk pruning by date
 }
 
@@ -426,7 +429,7 @@ model Game {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  creator      User           @relation(fields: [creatorId], references: [id])
+  creator      User           @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   questions    GameQuestion[]
   liveSessions LiveSession[]
   assignments  Assignment[]

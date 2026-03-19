@@ -2,7 +2,9 @@
   import type { PageData } from './$types';
   import Confetti from '$lib/components/Confetti.svelte';
   import { haptics } from '$lib/utils/haptic';
+  import toast from 'svelte-french-toast';
   import { page } from '$app/stores';
+  import { invalidateAll } from '$app/navigation';
   import ReviewHeader from '$lib/components/review/ReviewHeader.svelte';
   import KeyboardShortcutsModal from '$lib/components/review/KeyboardShortcutsModal.svelte';
   import NoReviewsCard from '$lib/components/review/NoReviewsCard.svelte';
@@ -66,6 +68,20 @@
     userOverride !== null ? (userOverride ? 1.0 : 0.0) : (gradeResult?.score ?? 0)
   );
 
+  // Retry: reset session state and refetch due reviews
+  async function retrySession() {
+    sessionStarted = false;
+    currentReviewIndex = 0;
+    sessionResults = [];
+    undoStack = [];
+    gradeResult = null;
+    userOverride = null;
+    typedAnswer = '';
+    confettiFired = false;
+    await invalidateAll();
+    sessionStarted = true;
+  }
+
   // Summary stats
   let correctCount = $derived(sessionResults.filter((r) => r.correct).length);
   let accuracyPct = $derived(
@@ -125,9 +141,7 @@
   }
 
   function reportError() {
-    alert(
-      'Error reporting feature coming soon! This will allow you to flag incorrect translations or mistakes.'
-    );
+    toast('Error reporting coming soon — thanks for the feedback!', { duration: 4000 });
   }
 
   let lastResponseTimeMs: number | null = $state(null);
@@ -284,7 +298,7 @@
         }}
       />
     {:else if isFinished}
-      <SessionSummary {sessionResults} />
+      <SessionSummary {sessionResults} onretry={retrySession} />
     {:else if currentReview}
       <ReviewCard
         review={currentReview}

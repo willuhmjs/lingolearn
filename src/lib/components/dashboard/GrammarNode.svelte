@@ -15,6 +15,19 @@
 
   let { data: rawData }: NodeProps<Node<GrammarNodeData>> = $props();
   let data = $derived(rawData);
+
+  let lockedTitle = $derived(
+    data.isLocked
+      ? (() => {
+          const deps: any[] = data.rule?.grammarRule?.dependencies || [];
+          if (deps.length > 0) {
+            const names = deps.map((d: any) => d.title || d.id).join(', ');
+            return `Locked — complete prerequisites first: ${names}`;
+          }
+          return 'Unlock by completing prerequisites';
+        })()
+      : undefined
+  );
 </script>
 
 <div
@@ -26,6 +39,7 @@
   role="button"
   tabindex="0"
   aria-label="View grammar rule: {data.title}"
+  title={lockedTitle}
 >
   <Handle type="target" position={Position.Top} />
 
@@ -77,7 +91,7 @@
     padding: 0.5rem 1.25rem 0.5rem 0.5rem;
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 0 10px var(--node-color) 40;
+      0 0 10px var(--node-color);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     min-width: 150px;
@@ -92,7 +106,7 @@
     transform: translateY(-2px) scale(1.05);
     box-shadow:
       0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 0 15px var(--node-color) 60;
+      0 0 15px var(--node-color);
     z-index: 10;
   }
 
@@ -159,7 +173,7 @@
     position: absolute;
     bottom: calc(100% + 12px);
     left: 50%;
-    transform: translateX(-50%) translateY(5px);
+    transform: translateX(-50%);
     margin-bottom: 0;
     background-color: #0f172a;
     color: #f8fafc;
@@ -170,7 +184,6 @@
     min-width: 140px;
     max-width: 200px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
     z-index: 100;
     pointer-events: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -191,7 +204,6 @@
   .tooltip-trigger:hover .tooltip-content {
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
   }
 
   .tooltip-header {

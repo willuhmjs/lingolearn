@@ -4,7 +4,6 @@
   import { fly } from 'svelte/transition';
   import { onMount } from 'svelte';
   import { toastSuccess, toastError } from '$lib/utils/toast';
-  import { invalidateAll } from '$app/navigation';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { theme } from '$lib/theme.svelte';
 
@@ -26,36 +25,6 @@
   $effect(() => {
     usernameSuggestion = (form as any)?.usernameSuggestion ?? null;
   });
-
-  // Streak freeze
-  let isBuyingFreeze = $state(false);
-  let freezeCount = $state<number>(0);
-  let freezeXp = $state<number>(0);
-  $effect(() => {
-    freezeCount = (data.user as any)?.streakFreezes ?? 0;
-    freezeXp = (data.user as any)?.totalXp ?? 0;
-  });
-
-  async function buyStreakFreeze() {
-    if (isBuyingFreeze) return;
-    isBuyingFreeze = true;
-    try {
-      const res = await fetch('/api/user/streak-freeze', { method: 'POST' });
-      const json = await res.json();
-      if (res.ok) {
-        freezeCount = json.streakFreezes;
-        freezeXp = json.totalXp;
-        toastSuccess('Streak freeze purchased!');
-        invalidateAll();
-      } else {
-        toastError(json.error || 'Failed to buy streak freeze');
-      }
-    } catch {
-      toastError('An error occurred');
-    } finally {
-      isBuyingFreeze = false;
-    }
-  }
 
   // LLM settings
   let llmBaseUrl = $state('');
@@ -269,43 +238,6 @@
           <p class="quota-desc">You're using a custom LLM server — no daily quota applies.</p>
         </section>
       {/if}
-
-      <!-- Streak Freeze -->
-      <section class="card streak-card">
-        <h2>Streak Freeze</h2>
-        <p class="card-desc">
-          A streak freeze protects your streak if you miss a day. It's consumed automatically when
-          you return after exactly one missed day.
-        </p>
-        <div class="freeze-row">
-          <div class="freeze-shields">
-            {#each Array(5) as _, i}
-              <span
-                class="freeze-shield"
-                class:active={i < freezeCount}
-                aria-label={i < freezeCount ? 'Active freeze' : 'Empty slot'}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7L12 2z" />
-                </svg>
-              </span>
-            {/each}
-            <span class="freeze-count">{freezeCount}/5</span>
-          </div>
-          <div class="freeze-buy">
-            <span class="freeze-xp-cost">200 XP</span>
-            <button
-              type="button"
-              class="btn-buy-freeze"
-              onclick={buyStreakFreeze}
-              disabled={isBuyingFreeze || freezeCount >= 5 || freezeXp < 200}
-            >
-              {isBuyingFreeze ? 'Buying...' : 'Buy Freeze'}
-            </button>
-            <span class="freeze-xp-balance">You have {freezeXp} XP</span>
-          </div>
-        </div>
-      </section>
 
       <!-- Mobile-only: theme & logout -->
       <section class="card profile-mobile-actions">
@@ -880,99 +812,6 @@
     font-size: 0.8rem;
     color: #ef4444;
     font-weight: 500;
-  }
-
-  /* Streak freeze */
-  .streak-card {
-    border-radius: 0.75rem;
-  }
-
-  .freeze-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .freeze-shields {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .freeze-shield {
-    width: 2rem;
-    height: 2rem;
-    color: #cbd5e1;
-    transition:
-      color 0.2s,
-      transform 0.2s;
-  }
-
-  .freeze-shield svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .freeze-shield.active {
-    color: #3b82f6;
-    transform: scale(1.1);
-  }
-
-  .freeze-count {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #64748b;
-    margin-left: 0.25rem;
-  }
-
-  .freeze-buy {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .freeze-xp-cost {
-    font-size: 0.875rem;
-    font-weight: 800;
-    color: #f59e0b;
-  }
-
-  .btn-buy-freeze {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 0.75rem;
-    padding: 0.5rem 1.1rem;
-    font-size: 0.875rem;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 3px 0 #2563eb;
-    font-family: inherit;
-    transition: all 0.15s;
-  }
-
-  .btn-buy-freeze:hover:not(:disabled) {
-    background: #2563eb;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 0 #1d4ed8;
-  }
-
-  .btn-buy-freeze:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .freeze-xp-balance {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #94a3b8;
-  }
-
-  :global(html[data-theme='dark']) .freeze-count {
-    color: #94a3b8;
   }
 
   .fetch-models-btn {

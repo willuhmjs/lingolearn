@@ -5,6 +5,8 @@
   import { page } from '$app/stores';
   import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
   import GrammarWeb from '$lib/components/dashboard/GrammarWeb.svelte';
+  import VocabDetailModal from '$lib/components/VocabDetailModal.svelte';
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import { toastError } from '$lib/utils/toast';
   import { getLanguageConfig } from '$lib/languages';
 
@@ -17,6 +19,7 @@
     if ($page.url.searchParams.get('tab') === 'grammar') {
       activeTab = 'grammar';
     }
+    loadRecommendedWords();
   });
   let query = $state('');
   let results: any[] = $state([]);
@@ -39,7 +42,7 @@
         copiedId = null;
       }, 1500);
     } catch {
-      /* clipboard unavailable */
+      toastError('Failed to copy to clipboard. Please copy manually.');
     }
   }
 
@@ -133,6 +136,27 @@
   $effect(() => {
     learningWords = data.learningWords || [];
   });
+
+  // Recommended words
+  let recommendedWords = $state<any[]>([]);
+  let recommendedLevel = $state('');
+  let loadingRecommended = $state(false);
+
+  async function loadRecommendedWords() {
+    loadingRecommended = true;
+    try {
+      const res = await fetch('/api/vocabulary/recommended?limit=20');
+      if (res.ok) {
+        const recData = await res.json();
+        recommendedWords = recData.words ?? [];
+        recommendedLevel = recData.userLevel ?? '';
+      }
+    } catch (e) {
+      console.error('Failed to load recommended words', e);
+    } finally {
+      loadingRecommended = false;
+    }
+  }
   let displayResults = $derived(query.trim() ? results : learningWords);
 
   let grammarSortMode: 'prereq' | 'alpha' = $state('prereq');
@@ -321,6 +345,8 @@
       if (res.ok) {
         // Update local state to show it was added
         addedWords = [...addedWords, vocabularyId];
+        // Remove from recommended list if it came from there
+        recommendedWords = recommendedWords.filter((w) => w.id !== vocabularyId);
         searchInputEl?.focus();
       } else {
         console.error('Failed to add word');
@@ -759,19 +785,62 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
       </div>
     </div>
 
+    <!-- Recommended Words (shown when not searching) -->
+    {#if activeTab === 'vocabulary' && !query.trim()}
+      {#if loadingRecommended}
+        <div class="rec-loading">Loading recommendations...</div>
+      {:else if recommendedWords.length > 0}
+        <div class="rec-section">
+          <div class="rec-header">
+            <span class="rec-title">Recommended for you</span>
+            {#if recommendedLevel}
+              <span class="rec-subtitle"
+                >High-frequency {recommendedLevel} words you haven't learned yet</span
+              >
+            {/if}
+          </div>
+          <div class="rec-grid">
+            {#each recommendedWords as word (word.id)}
+              <button
+                class="rec-card"
+                class:rec-card-added={addedWords.includes(word.id)}
+                onclick={() => handleAddWord(word.id)}
+                disabled={addedWords.includes(word.id)}
+                type="button"
+              >
+                <div class="rec-card-top">
+                  <span class="rec-lemma">{word.lemma}</span>
+                  <span class="rec-cefr" data-level={word.cefrLevel}>{word.cefrLevel}</span>
+                </div>
+                <span class="rec-meaning">{word.meaning}</span>
+                {#if word.partOfSpeech}
+                  <span class="rec-pos">{word.partOfSpeech}</span>
+                {/if}
+                {#if addedWords.includes(word.id)}
+                  <span class="rec-added-label">Added ✓</span>
+                {:else}
+                  <span class="rec-add-label">+ Add to vocabulary</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    {/if}
+
     <div class="results-section">
       {#if loading && query.trim().length > 1}
-        <ul class="results-list skeleton-list" aria-busy="true" aria-label="Loading results">
+        <ul class="results-list" aria-busy="true" aria-label="Loading results">
           {#each [1, 2, 3] as _}
             <li class="result-item">
               <div class="result-content">
                 <div class="result-details">
-                  <div class="skeleton-word"></div>
-                  <div class="skeleton-meaning"></div>
-                  <div class="skeleton-pos"></div>
+                  <Skeleton width="35%" height="1.25rem" className="mb-2" />
+                  <Skeleton width="70%" height="1rem" className="mb-2" />
+                  <Skeleton width="20%" height="0.75rem" />
                 </div>
                 <div class="result-action">
-                  <div class="skeleton-btn"></div>
+                  <Skeleton width="3.5rem" height="2rem" borderRadius="var(--radius-md)" />
                 </div>
               </div>
             </li>
@@ -1601,361 +1670,7 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   </div>
 </dialog>
 
-{#if selectedResult}
-  <div
-    class="modal-backdrop"
-    role="presentation"
-    onclick={closeModal}
-    transition:fade={{ duration: 200 }}
-  >
-    <div
-      class="modal-content"
-      role="dialog"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-      transition:fly={{ y: 20, duration: 200 }}
-    >
-      <!-- Header band -->
-      <div
-        class="modal-header"
-        class:gender-feminine={selectedResult.gender?.toLowerCase() === 'feminine'}
-        class:gender-masculine={selectedResult.gender?.toLowerCase() === 'masculine'}
-        class:gender-neuter={selectedResult.gender?.toLowerCase() === 'neuter'}
-      >
-        <button class="modal-close" onclick={closeModal} aria-label="Close">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
-          >
-        </button>
-        <div class="modal-header-main">
-          <div class="modal-title-row">
-            <h2 class="modal-title">{selectedResult.lemma}</h2>
-            <button
-              class="copy-btn copy-btn-modal"
-              onclick={() =>
-                copyWord(
-                  'modal-' + selectedResult.id,
-                  selectedResult.lemma +
-                    (selectedResult.meanings?.[0]?.value
-                      ? ' — ' + selectedResult.meanings[0].value
-                      : '')
-                )}
-              title="Copy word"
-              aria-label="Copy {selectedResult.lemma}"
-              >{#if copiedId === 'modal-' + selectedResult.id}✓{:else}<svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  style="width:1rem;height:1rem"
-                  ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  ></path></svg
-                >{/if}</button
-            >
-          </div>
-          <div class="modal-header-meta">
-            {#if selectedResult.partOfSpeech}
-              <span class="modal-pos-badge">{selectedResult.partOfSpeech}</span>
-            {/if}
-            {#if selectedResult.gender}
-              <span class="modal-gender-badge gender-badge-{selectedResult.gender.toLowerCase()}">
-                {selectedResult.gender.toLowerCase()}
-              </span>
-            {/if}
-            {#if selectedResult.metadata?.level}
-              <span class="modal-level-badge level-{selectedResult.metadata.level.toLowerCase()}"
-                >{selectedResult.metadata.level}</span
-              >
-            {/if}
-            {#if selectedResult.frequency != null}
-              {@const rank = selectedResult.frequency}
-              <span
-                class="modal-freq-badge"
-                title="Corpus frequency rank #{rank} — lower = more common"
-              >
-                #{rank.toLocaleString()}
-              </span>
-            {/if}
-            {#if enriching}
-              <span class="modal-enriching-badge">
-                <span class="spinner-tiny"></span> Enriching
-              </span>
-            {/if}
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-body">
-        <!-- Meaning -->
-        <div class="dict-entry">
-          <span class="dict-entry-icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
-                d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-              /></svg
-            >
-          </span>
-          <div class="dict-entry-body">
-            <span class="dict-label">meaning</span>
-            <p class="dict-meaning">
-              {selectedResult.meanings?.[0]?.value || 'No meaning provided'}
-            </p>
-          </div>
-        </div>
-
-        {#if selectedResult.plural}
-          <div class="dict-entry">
-            <span class="dict-entry-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                ><rect x="2" y="7" width="8" height="14" rx="1" /><rect
-                  x="14"
-                  y="3"
-                  width="8"
-                  height="18"
-                  rx="1"
-                /></svg
-              >
-            </span>
-            <div class="dict-entry-body">
-              <span class="dict-label">plural</span>
-              <p class="dict-value">{selectedResult.plural}</p>
-            </div>
-          </div>
-        {/if}
-
-        {#if selectedResult.metadata}
-          {#if selectedResult.metadata.declensions}
-            <div class="dict-entry dict-entry-block">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><rect x="3" y="3" width="18" height="18" rx="2" /><path
-                    d="M3 9h18M3 15h18M9 3v18"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">declensions</span>
-                <table class="declension-table">
-                  <thead>
-                    <tr>
-                      <th>case</th>
-                      {#if typeof Object.values(selectedResult.metadata.declensions)[0] === 'object'}
-                        {#each Object.keys(Object.values(selectedResult.metadata.declensions)[0] as Record<string, string>) as col}
-                          <th>{col}</th>
-                        {/each}
-                      {:else}
-                        <th>form</th>
-                      {/if}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each Object.entries(selectedResult.metadata.declensions) as [caseName, forms]}
-                      <tr>
-                        <td class="case-name">{caseName}</td>
-                        {#if typeof forms === 'string'}
-                          <td>{forms}</td>
-                        {:else}
-                          {#each Object.values(forms as Record<string, string>) as val}
-                            <td>{val}</td>
-                          {/each}
-                        {/if}
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          {/if}
-
-          {#if selectedResult.metadata.example}
-            <div class="dict-entry dict-entry-example">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">example</span>
-                <p class="example-sentence">&#8220;{selectedResult.metadata.example}&#8221;</p>
-                {#if selectedResult.metadata.exampleTranslation}
-                  <p class="example-translation">{selectedResult.metadata.exampleTranslation}</p>
-                {/if}
-              </div>
-            </div>
-          {/if}
-
-          {#if selectedResult.metadata.synonyms?.length > 0 || selectedResult.metadata.antonyms?.length > 0}
-            <div class="dict-entry">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M7 16V4m0 0L3 8m4-4 4 4" /><path d="M17 8v12m0 0 4-4m-4 4-4-4" /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                {#if selectedResult.metadata.synonyms?.length > 0}
-                  <span class="dict-label">synonyms</span>
-                  <div class="word-tags">
-                    {#each selectedResult.metadata.synonyms as word}
-                      <span class="word-tag word-tag-syn">{word}</span>
-                    {/each}
-                  </div>
-                {/if}
-                {#if selectedResult.metadata.antonyms?.length > 0}
-                  <span class="dict-label" style="margin-top:0.5rem">antonyms</span>
-                  <div class="word-tags">
-                    {#each selectedResult.metadata.antonyms as word}
-                      <span class="word-tag word-tag-ant">{word}</span>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {/if}
-
-          {#if selectedResult.metadata.conjugations}
-            <div class="dict-entry dict-entry-block">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M12 20h9" /><path
-                    d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">conjugations</span>
-                {#each Object.entries(selectedResult.metadata.conjugations) as [tense, forms]}
-                  <p class="conj-tense-label">{tense}</p>
-                  {#if forms !== null && typeof forms === 'object' && !Array.isArray(forms)}
-                    <table class="declension-table">
-                      <tbody>
-                        {#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
-                          <tr>
-                            <td class="case-name">{person}</td>
-                            <td>{conjugation}</td>
-                          </tr>
-                        {/each}
-                      </tbody>
-                    </table>
-                  {:else}
-                    <p class="conj-form">{forms}</p>
-                  {/if}
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          {#if !selectedResult.metadata.conjugations && !selectedResult.metadata.declensions && !selectedResult.metadata.example && !selectedResult.metadata.synonyms && !selectedResult.metadata.antonyms && !selectedResult.metadata.level && Object.keys(selectedResult.metadata).length > 0}
-            <div class="dict-entry">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
-                    x1="12"
-                    y1="16"
-                    x2="12.01"
-                    y2="16"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">details</span>
-                <pre class="modal-metadata">{JSON.stringify(selectedResult.metadata, null, 2)}</pre>
-              </div>
-            </div>
-          {/if}
-        {/if}
-      </div>
-
-      <div class="modal-footer">
-        {#if addedWords.includes(selectedResult.id)}
-          <button disabled class="btn-added">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="width:1rem;height:1rem"><polyline points="20 6 9 17 4 12" /></svg
-            >
-            Added to List
-          </button>
-        {:else}
-          <button
-            onclick={() => {
-              handleAddWord(selectedResult.id);
-              closeModal();
-            }}
-            class="btn-add"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="width:1rem;height:1rem"
-              ><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg
-            >
-            Add to My List
-          </button>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
+<VocabDetailModal vocab={selectedResult} {enriching} onclose={closeModal} />
 
 <style>
   .dict-header {
@@ -2013,8 +1728,8 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   .search-input {
     display: block;
     width: 100%;
-    border-radius: 0.5rem;
-    border: 1px solid var(--card-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--input-border, #d1d5db);
     background-color: var(--input-bg, #f9fafb);
     padding: 1rem;
     padding-left: 2.5rem;
@@ -2110,53 +1825,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     margin: 0;
     display: grid;
     gap: 1rem;
-  }
-
-  /* Skeleton loading */
-  @keyframes skeleton-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.4;
-    }
-  }
-
-  .skeleton-list .result-item {
-    pointer-events: none;
-  }
-
-  .skeleton-word,
-  .skeleton-meaning,
-  .skeleton-pos,
-  .skeleton-btn {
-    background: var(--card-border, #e5e7eb);
-    border-radius: 0.375rem;
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
-  }
-
-  .skeleton-word {
-    height: 1.25rem;
-    width: 35%;
-    margin-bottom: 0.5rem;
-  }
-
-  .skeleton-meaning {
-    height: 1rem;
-    width: 70%;
-    margin-bottom: 0.375rem;
-  }
-
-  .skeleton-pos {
-    height: 0.75rem;
-    width: 20%;
-  }
-
-  .skeleton-btn {
-    height: 2rem;
-    width: 3.5rem;
-    border-radius: 0.375rem;
   }
 
   .result-item {
@@ -3316,391 +2984,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     margin: 1.5rem 0;
   }
 
-  /* Modal Styles */
-  .modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-    padding: 1rem;
-    backdrop-filter: blur(2px);
-  }
-
-  .modal-content {
-    background-color: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: 0.875rem;
-    box-shadow:
-      0 24px 48px -8px rgba(0, 0, 0, 0.22),
-      0 0 0 1px rgba(0, 0, 0, 0.04);
-    max-width: 34rem;
-    width: 100%;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Header band */
-  .modal-header {
-    padding: 1.25rem 1.5rem 1.125rem;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--card-border, #e5e7eb);
-    position: relative;
-  }
-
-  .modal-header::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: #9ca3af;
-    border-radius: 0.875rem 0 0 0;
-  }
-
-  .modal-header.gender-feminine::before {
-    background: #ec4899;
-  }
-  .modal-header.gender-masculine::before {
-    background: #3b82f6;
-  }
-  .modal-header.gender-neuter::before {
-    background: #10b981;
-  }
-
-  .modal-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: transparent;
-    border: none;
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.375rem;
-    color: var(--text-color, #9ca3af);
-    opacity: 0.6;
-    cursor: pointer;
-    transition:
-      opacity 0.15s,
-      background 0.15s;
-    padding: 0;
-  }
-
-  .modal-close svg {
-    width: 1rem;
-    height: 1rem;
-  }
-  .modal-close:hover {
-    opacity: 1;
-    background: var(--link-hover-bg, #f3f4f6);
-  }
-
-  .modal-header-main {
-    padding-left: 0.5rem;
-  }
-
-  .modal-title {
-    font-size: 1.875rem;
-    font-weight: 800;
-    margin: 0 2rem 0.375rem 0;
-    line-height: 1.1;
-    color: var(--text-color, #111827);
-    letter-spacing: -0.02em;
-  }
-
-  .modal-header-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .modal-pos-badge {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-color, #6b7280);
-    background: var(--link-hover-bg, #f3f4f6);
-    border: 1px solid var(--card-border, #e5e7eb);
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-  }
-
-  .modal-freq-badge {
-    font-size: 0.7rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: #6366f1;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-  }
-
-  :global(html[data-theme='dark']) .modal-freq-badge {
-    color: #a5b4fc;
-    background: #1e1b4b;
-    border-color: #3730a3;
-  }
-
-  .modal-gender-badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-  }
-
-  .gender-badge-feminine {
-    background: #fce7f3;
-    color: #be185d;
-  }
-  .gender-badge-masculine {
-    background: #dbeafe;
-    color: #1d4ed8;
-  }
-  .gender-badge-neuter {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
-  .modal-level-badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .modal-enriching-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    background: #7c3aed;
-    color: white;
-    box-shadow: 0 1px 2px rgba(124, 58, 237, 0.3);
-  }
-
-  .spinner-tiny {
-    display: inline-block;
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 9999px;
-    border: 1.5px solid rgba(255, 255, 255, 0.4);
-    border-bottom-color: white;
-    animation: spin 1s linear infinite;
-    flex-shrink: 0;
-  }
-
-  /* Body */
-  .modal-body {
-    padding: 0.75rem 0;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* Dictionary entry rows */
-  .dict-entry {
-    display: flex;
-    gap: 0.875rem;
-    padding: 0.875rem 1.5rem;
-    border-bottom: 1px solid var(--card-border, #f3f4f6);
-    align-items: flex-start;
-  }
-
-  .dict-entry:last-child {
-    border-bottom: none;
-  }
-
-  .dict-entry-icon {
-    flex-shrink: 0;
-    width: 1.5rem;
-    height: 1.5rem;
-    margin-top: 0.125rem;
-    color: var(--text-color, #9ca3af);
-    opacity: 0.5;
-  }
-
-  .dict-entry-icon svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .dict-entry-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .dict-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-color, #9ca3af);
-    opacity: 0.8;
-  }
-
-  .dict-meaning {
-    font-size: 1.0625rem;
-    font-weight: 500;
-    color: var(--text-color, #111827);
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .dict-value {
-    font-size: 0.9375rem;
-    color: var(--text-color, #374151);
-    margin: 0;
-  }
-
-  /* Declension / conjugation table */
-  .dict-entry-block {
-    align-items: flex-start;
-  }
-
-  .declension-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 0.5rem;
-    font-size: 0.8125rem;
-  }
-
-  .declension-table th {
-    text-align: left;
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-color, #9ca3af);
-    padding: 0.25rem 0.625rem 0.375rem 0;
-    border-bottom: 1px solid var(--card-border, #e5e7eb);
-  }
-
-  .declension-table td {
-    padding: 0.3rem 0.625rem 0.3rem 0;
-    color: var(--text-color, #374151);
-    border-bottom: 1px solid var(--card-border, #f3f4f6);
-  }
-
-  .declension-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .case-name {
-    font-weight: 600;
-    color: var(--text-color, #6b7280) !important;
-    font-size: 0.75rem;
-    text-transform: lowercase;
-    width: 6rem;
-  }
-
-  .conj-tense-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-color, #6b7280);
-    margin: 0.75rem 0 0.125rem;
-  }
-
-  .conj-form {
-    font-size: 0.8125rem;
-    color: var(--text-color, #374151);
-    margin: 0.125rem 0 0.5rem;
-  }
-
-  /* Example block */
-  .dict-entry-example {
-    background: var(--link-hover-bg, #f9fafb);
-  }
-
-  .example-sentence {
-    font-size: 0.9375rem;
-    font-style: italic;
-    color: var(--text-color, #111827);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .example-translation {
-    font-size: 0.8125rem;
-    color: var(--text-color, #6b7280);
-    margin: 0.25rem 0 0;
-  }
-
-  /* Word tags */
-  .word-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    margin-top: 0.125rem;
-  }
-
-  .word-tag {
-    font-size: 0.8rem;
-    padding: 0.2rem 0.625rem;
-    border-radius: 999px;
-    font-weight: 500;
-  }
-
-  .word-tag-syn {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-  }
-  .word-tag-ant {
-    background: #fff1f2;
-    color: #be123c;
-    border: 1px solid #fecdd3;
-  }
-
-  .modal-metadata {
-    font-size: 0.75rem;
-    background: var(--link-hover-bg, #f9fafb);
-    border-radius: 0.375rem;
-    padding: 0.75rem;
-    overflow-x: auto;
-    color: var(--text-color, #374151);
-    margin: 0;
-  }
-
-  .modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--card-border, #e5e7eb);
-    display: flex;
-    justify-content: flex-start;
-    background-color: var(--card-bg, #ffffff);
-    flex-shrink: 0;
-  }
-
   /* No Results & Empty State */
   .no-results {
     display: flex;
@@ -3881,5 +3164,152 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-bottom-color: white;
     animation: spin 1s linear infinite;
+  }
+
+  /* ---- Recommended Words ---- */
+  .rec-loading {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    padding: 0.75rem 0;
+  }
+
+  .rec-section {
+    margin-bottom: 2rem;
+  }
+
+  .rec-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .rec-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-color, #0f172a);
+    letter-spacing: -0.01em;
+  }
+
+  .rec-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.625rem;
+  }
+
+  .rec-card {
+    background: var(--card-bg, #ffffff);
+    border: 1.5px solid var(--card-border, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .rec-card:hover:not(:disabled) {
+    border-color: #22c55e;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .rec-card-added {
+    border-color: #86efac !important;
+    background: #f0fdf4;
+    cursor: default;
+    transform: none !important;
+  }
+
+  :global(html[data-theme='dark']) .rec-card-added {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: #166534 !important;
+  }
+
+  .rec-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .rec-lemma {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color, #0f172a);
+  }
+
+  .rec-cefr {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0.1rem 0.3rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .rec-cefr[data-level='A1'],
+  .rec-cefr[data-level='A2'] {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .rec-cefr[data-level='B1'],
+  .rec-cefr[data-level='B2'] {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+  .rec-cefr[data-level='C1'],
+  .rec-cefr[data-level='C2'] {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .rec-meaning {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.3;
+  }
+
+  .rec-pos {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-style: italic;
+    text-transform: capitalize;
+  }
+
+  .rec-add-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #22c55e;
+    margin-top: 0.15rem;
+  }
+
+  .rec-added-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #16a34a;
+    margin-top: 0.15rem;
+  }
+
+  :global(html[data-theme='dark']) .rec-lemma {
+    color: #e2e8f0;
+  }
+  :global(html[data-theme='dark']) .rec-meaning {
+    color: #94a3b8;
+  }
+  :global(html[data-theme='dark']) .rec-card {
+    border-color: #334155;
+  }
+  :global(html[data-theme='dark']) .rec-title {
+    color: #e2e8f0;
   }
 </style>
