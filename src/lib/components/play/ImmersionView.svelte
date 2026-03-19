@@ -554,7 +554,7 @@
               ? ' (das)'
               : ''}
       </div>
-      {#each (r.meanings || []).slice(0, 3) as m}
+      {#each [...new Map((r.meanings || []).map( (m: any) => [`${m.partOfSpeech}|${m.value}`, m] )).values()].slice(0, 3) as m}
         <div class="word-popup-meaning">
           {#if m.partOfSpeech}<span class="word-popup-pos">{m.partOfSpeech}</span>{/if}
           {m.value}
