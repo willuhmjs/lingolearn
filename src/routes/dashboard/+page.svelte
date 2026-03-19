@@ -347,7 +347,7 @@
   async function handleAddWord(vocabularyId: string) {
     if (addedWords.includes(vocabularyId)) return;
     try {
-      const res = await fetch('/api/vocabulary/add', {
+      const res = await fetch('/api/user/vocabulary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vocabularyId })
