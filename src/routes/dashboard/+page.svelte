@@ -847,159 +847,161 @@
         {#if data.retentionStats && data.retentionStats.totalReviewed > 0}
           {@const rs = data.retentionStats}
           <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 300 }}>
-        <button
-          class="accordion-toggle"
-          onclick={() => (showMemoryHealth = !showMemoryHealth)}
-          aria-expanded={showMemoryHealth}
-        >
-          <span class="accordion-title">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              width="18"
-              height="18"
-              aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg
+            <button
+              class="accordion-toggle"
+              onclick={() => (showMemoryHealth = !showMemoryHealth)}
+              aria-expanded={showMemoryHealth}
             >
-            Memory Health
-          </span>
-          <span class="accordion-meta"
-            >{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span
-          >
-          <svg
-            class="accordion-chevron"
-            class:rotated={showMemoryHealth}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            width="18"
-            height="18"
-            aria-hidden="true"
-            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-          >
-        </button>
-        {#if showMemoryHealth}
-          <div class="accordion-body" transition:slide={{ duration: 280 }}>
-            <div class="retention-kpi-row">
-              <div class="retention-kpi">
-                <span class="retention-kpi-value">{rs.avgRetentionPct}%</span>
-                <span class="retention-kpi-label">Avg. Retention</span>
-              </div>
-              <div class="retention-kpi">
-                <span class="retention-kpi-value">{rs.avgStabilityDays}d</span>
-                <span class="retention-kpi-label">Avg. Stability</span>
-              </div>
-              <div class="retention-kpi">
-                <span class="retention-kpi-value">{rs.totalReviewed}</span>
-                <span class="retention-kpi-label">Words Reviewed</span>
-              </div>
-              <div class="retention-kpi">
-                <span class="retention-kpi-value">{rs.totalLapses}</span>
-                <span class="retention-kpi-label">Total Lapses</span>
-              </div>
-            </div>
-
-            <div class="retention-charts-row">
-              <div class="retention-chart-card">
-                <h3>Retention Distribution</h3>
-                <div class="bar-chart" aria-label="Retention distribution">
-                  {#each rs.retentionBuckets as bucket}
-                    {@const maxCount = Math.max(...rs.retentionBuckets.map((b) => b.count), 1)}
-                    <div class="bar-row">
-                      <span class="bar-label">{bucket.label}</span>
-                      <div class="bar-track">
-                        <div
-                          class="bar-fill retention-fill"
-                          style="width: {Math.round((bucket.count / maxCount) * 100)}%"
-                        ></div>
-                      </div>
-                      <span class="bar-count">{bucket.count}</span>
-                    </div>
-                  {/each}
+              <span class="accordion-title">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg
+                >
+                Memory Health
+              </span>
+              <span class="accordion-meta"
+                >{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span
+              >
+              <svg
+                class="accordion-chevron"
+                class:rotated={showMemoryHealth}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                width="18"
+                height="18"
+                aria-hidden="true"
+                ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+              >
+            </button>
+            {#if showMemoryHealth}
+              <div class="accordion-body" transition:slide={{ duration: 280 }}>
+                <div class="retention-kpi-row">
+                  <div class="retention-kpi">
+                    <span class="retention-kpi-value">{rs.avgRetentionPct}%</span>
+                    <span class="retention-kpi-label">Avg. Retention</span>
+                  </div>
+                  <div class="retention-kpi">
+                    <span class="retention-kpi-value">{rs.avgStabilityDays}d</span>
+                    <span class="retention-kpi-label">Avg. Stability</span>
+                  </div>
+                  <div class="retention-kpi">
+                    <span class="retention-kpi-value">{rs.totalReviewed}</span>
+                    <span class="retention-kpi-label">Words Reviewed</span>
+                  </div>
+                  <div class="retention-kpi">
+                    <span class="retention-kpi-value">{rs.totalLapses}</span>
+                    <span class="retention-kpi-label">Total Lapses</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="retention-chart-card">
-                <h3>Stability Distribution</h3>
-                <div class="bar-chart" aria-label="Stability distribution">
-                  {#each rs.stabilityBuckets as bucket}
-                    {@const maxCount = Math.max(...rs.stabilityBuckets.map((b) => b.count), 1)}
-                    <div class="bar-row">
-                      <span class="bar-label">{bucket.label}</span>
-                      <div class="bar-track">
-                        <div
-                          class="bar-fill stability-fill"
-                          style="width: {Math.round((bucket.count / maxCount) * 100)}%"
-                        ></div>
-                      </div>
-                      <span class="bar-count">{bucket.count}</span>
+                <div class="retention-charts-row">
+                  <div class="retention-chart-card">
+                    <h3>Retention Distribution</h3>
+                    <div class="bar-chart" aria-label="Retention distribution">
+                      {#each rs.retentionBuckets as bucket}
+                        {@const maxCount = Math.max(...rs.retentionBuckets.map((b) => b.count), 1)}
+                        <div class="bar-row">
+                          <span class="bar-label">{bucket.label}</span>
+                          <div class="bar-track">
+                            <div
+                              class="bar-fill retention-fill"
+                              style="width: {Math.round((bucket.count / maxCount) * 100)}%"
+                            ></div>
+                          </div>
+                          <span class="bar-count">{bucket.count}</span>
+                        </div>
+                      {/each}
                     </div>
-                  {/each}
+                  </div>
+
+                  <div class="retention-chart-card">
+                    <h3>Stability Distribution</h3>
+                    <div class="bar-chart" aria-label="Stability distribution">
+                      {#each rs.stabilityBuckets as bucket}
+                        {@const maxCount = Math.max(...rs.stabilityBuckets.map((b) => b.count), 1)}
+                        <div class="bar-row">
+                          <span class="bar-label">{bucket.label}</span>
+                          <div class="bar-track">
+                            <div
+                              class="bar-fill stability-fill"
+                              style="width: {Math.round((bucket.count / maxCount) * 100)}%"
+                            ></div>
+                          </div>
+                          <span class="bar-count">{bucket.count}</span>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+
+                  <div class="retention-chart-card">
+                    <h3>Forgetting Curve <span class="chart-subtitle">(median item)</span></h3>
+                    <div class="bar-chart" aria-label="Predicted retention over time">
+                      {#each rs.forgettingCurve as point}
+                        <div class="bar-row">
+                          <span class="bar-label">{point.days}d</span>
+                          <div class="bar-track">
+                            <div
+                              class="bar-fill forgetting-fill"
+                              style="width: {point.retentionPct}%"
+                            ></div>
+                          </div>
+                          <span class="bar-count">{point.retentionPct}%</span>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div class="retention-chart-card">
-                <h3>Forgetting Curve <span class="chart-subtitle">(median item)</span></h3>
-                <div class="bar-chart" aria-label="Predicted retention over time">
-                  {#each rs.forgettingCurve as point}
-                    <div class="bar-row">
-                      <span class="bar-label">{point.days}d</span>
-                      <div class="bar-track">
-                        <div
-                          class="bar-fill forgetting-fill"
-                          style="width: {point.retentionPct}%"
-                        ></div>
-                      </div>
-                      <span class="bar-count">{point.retentionPct}%</span>
+                {#if data.newWordIntake && data.newWordIntake.some((w) => w.count > 0)}
+                  {@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
+                  <div class="intake-card">
+                    <h3>New Word Intake</h3>
+                    <p class="insight-desc">
+                      Words added to your vocabulary over the past 8 weeks.
+                    </p>
+                    <div class="intake-bars">
+                      {#each data.newWordIntake as week}
+                        <div class="intake-col">
+                          <span class="intake-count">{week.count > 0 ? week.count : ''}</span>
+                          <div class="intake-bar-track">
+                            <div
+                              class="intake-bar-fill"
+                              style="height:{Math.round((week.count / maxIntake) * 100)}%"
+                            ></div>
+                          </div>
+                          <span class="intake-label">{week.label}</span>
+                        </div>
+                      {/each}
                     </div>
-                  {/each}
-                </div>
-              </div>
-            </div>
+                  </div>
+                {/if}
 
-            {#if data.newWordIntake && data.newWordIntake.some((w) => w.count > 0)}
-              {@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
-              <div class="intake-card">
-                <h3>New Word Intake</h3>
-                <p class="insight-desc">Words added to your vocabulary over the past 8 weeks.</p>
-                <div class="intake-bars">
-                  {#each data.newWordIntake as week}
-                    <div class="intake-col">
-                      <span class="intake-count">{week.count > 0 ? week.count : ''}</span>
-                      <div class="intake-bar-track">
-                        <div
-                          class="intake-bar-fill"
-                          style="height:{Math.round((week.count / maxIntake) * 100)}%"
-                        ></div>
-                      </div>
-                      <span class="intake-label">{week.label}</span>
+                <div class="upcoming-reviews">
+                  <h3>Upcoming Reviews</h3>
+                  <div class="upcoming-row">
+                    <div class="upcoming-chip">
+                      <span class="upcoming-count">{rs.upcomingReviews.in1Day}</span>
+                      <span class="upcoming-label">due today</span>
                     </div>
-                  {/each}
+                    <div class="upcoming-chip">
+                      <span class="upcoming-count">{rs.upcomingReviews.in7Days}</span>
+                      <span class="upcoming-label">due in 7 days</span>
+                    </div>
+                    <div class="upcoming-chip">
+                      <span class="upcoming-count">{rs.upcomingReviews.in30Days}</span>
+                      <span class="upcoming-label">due in 30 days</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             {/if}
-
-            <div class="upcoming-reviews">
-              <h3>Upcoming Reviews</h3>
-              <div class="upcoming-row">
-                <div class="upcoming-chip">
-                  <span class="upcoming-count">{rs.upcomingReviews.in1Day}</span>
-                  <span class="upcoming-label">due today</span>
-                </div>
-                <div class="upcoming-chip">
-                  <span class="upcoming-count">{rs.upcomingReviews.in7Days}</span>
-                  <span class="upcoming-label">due in 7 days</span>
-                </div>
-                <div class="upcoming-chip">
-                  <span class="upcoming-count">{rs.upcomingReviews.in30Days}</span>
-                  <span class="upcoming-label">due in 30 days</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        {/if}
           </section>
         {/if}
 
@@ -1017,367 +1019,382 @@
             vocabulary_gap: 'Vocabulary Gap'
           }}
           <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 400 }}>
-        <button
-          class="accordion-toggle"
-          onclick={() => (showInsights = !showInsights)}
-          aria-expanded={showInsights}
-        >
-          <span class="accordion-title">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              width="18"
-              height="18"
-              aria-hidden="true"
-              ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
-                cx="12"
-                cy="12"
-                r="3"
-              /></svg
+            <button
+              class="accordion-toggle"
+              onclick={() => (showInsights = !showInsights)}
+              aria-expanded={showInsights}
             >
-            Learning Insights
-          </span>
-          <span class="accordion-meta">
-            {#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0}
-              · errors tracked{/if}
-          </span>
-          <svg
-            class="accordion-chevron"
-            class:rotated={showInsights}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            width="18"
-            height="18"
-            aria-hidden="true"
-            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-          >
-        </button>
-        {#if showInsights}
-          <div class="accordion-body" transition:slide={{ duration: 280 }}>
-            <div class="insights-grid">
-              {#if urgent.length > 0}
-                <div class="insight-card urgent-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
-                        x1="12"
-                        y1="16"
-                        x2="12.01"
-                        y2="16"
-                      /></svg
-                    >
-                    Fading Fast
-                  </h3>
-                  <p class="insight-desc">
-                    Words your memory of has dropped below 70% — review them soon.
-                  </p>
-                  <ul class="urgent-list">
-                    {#each urgent as item}
-                      <li class="urgent-row">
-                        <span class="urgent-lemma">{item.lemma}</span>
-                        {#if item.meaning}<span class="urgent-meaning">{item.meaning}</span>{/if}
-                        <span
-                          class="urgent-ret"
-                          style="color: {item.retrievabilityPct < 40
-                            ? '#ef4444'
-                            : item.retrievabilityPct < 60
-                              ? '#f97316'
-                              : '#eab308'}">{item.retrievabilityPct}%</span
+              <span class="accordion-title">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"
+                  ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                  /></svg
+                >
+                Learning Insights
+              </span>
+              <span class="accordion-meta">
+                {#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0}
+                  · errors tracked{/if}
+              </span>
+              <svg
+                class="accordion-chevron"
+                class:rotated={showInsights}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                width="18"
+                height="18"
+                aria-hidden="true"
+                ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+              >
+            </button>
+            {#if showInsights}
+              <div class="accordion-body" transition:slide={{ duration: 280 }}>
+                <div class="insights-grid">
+                  {#if urgent.length > 0}
+                    <div class="insight-card urgent-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><circle cx="12" cy="12" r="10" /><line
+                            x1="12"
+                            y1="8"
+                            x2="12"
+                            y2="12"
+                          /><line x1="12" y1="16" x2="12.01" y2="16" /></svg
                         >
-                        {#if item.lapses > 0}<span class="urgent-lapses"
-                            >{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span
-                          >{/if}
-                      </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
+                        Fading Fast
+                      </h3>
+                      <p class="insight-desc">
+                        Words your memory of has dropped below 70% — review them soon.
+                      </p>
+                      <ul class="urgent-list">
+                        {#each urgent as item}
+                          <li class="urgent-row">
+                            <span class="urgent-lemma">{item.lemma}</span>
+                            {#if item.meaning}<span class="urgent-meaning">{item.meaning}</span
+                              >{/if}
+                            <span
+                              class="urgent-ret"
+                              style="color: {item.retrievabilityPct < 40
+                                ? '#ef4444'
+                                : item.retrievabilityPct < 60
+                                  ? '#f97316'
+                                  : '#eab308'}">{item.retrievabilityPct}%</span
+                            >
+                            {#if item.lapses > 0}<span class="urgent-lapses"
+                                >{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span
+                              >{/if}
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
+                  {/if}
 
-              {#if Object.keys(errors).length > 0}
-                {@const totalErrors = Object.values(errors).reduce(
-                  (a, b) => (a as number) + (b as number),
-                  0
-                ) as number}
-                <div class="insight-card error-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
-                    >
-                    Error Breakdown
-                  </h3>
-                  <p class="insight-desc">Types of mistakes in your most recent answers.</p>
-                  <div class="error-bars">
-                    {#each Object.entries(errors).sort((a, b) => (b[1] as number) - (a[1] as number)) as [type, count]}
-                      <div class="error-bar-row">
-                        <span class="error-label">{errorLabels[type] ?? type}</span>
-                        <div class="error-track">
-                          <div
-                            class="error-fill"
-                            style="width:{Math.round(((count as number) / totalErrors) * 100)}%"
-                          ></div>
-                        </div>
-                        <span class="error-count">{count as number}</span>
+                  {#if Object.keys(errors).length > 0}
+                    {@const totalErrors = Object.values(errors).reduce(
+                      (a, b) => (a as number) + (b as number),
+                      0
+                    ) as number}
+                    <div class="insight-card error-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
+                        >
+                        Error Breakdown
+                      </h3>
+                      <p class="insight-desc">Types of mistakes in your most recent answers.</p>
+                      <div class="error-bars">
+                        {#each Object.entries(errors).sort((a, b) => (b[1] as number) - (a[1] as number)) as [type, count]}
+                          <div class="error-bar-row">
+                            <span class="error-label">{errorLabels[type] ?? type}</span>
+                            <div class="error-track">
+                              <div
+                                class="error-fill"
+                                style="width:{Math.round(((count as number) / totalErrors) * 100)}%"
+                              ></div>
+                            </div>
+                            <span class="error-count">{count as number}</span>
+                          </div>
+                        {/each}
                       </div>
-                    {/each}
-                  </div>
-                  {#if data.totalOverrides > 0}
-                    <p class="override-note">
-                      {data.totalOverrides} self-correction{data.totalOverrides !== 1 ? 's' : ''} recorded
-                    </p>
+                      {#if data.totalOverrides > 0}
+                        <p class="override-note">
+                          {data.totalOverrides} self-correction{data.totalOverrides !== 1
+                            ? 's'
+                            : ''} recorded
+                        </p>
+                      {/if}
+                    </div>
+                  {/if}
+
+                  {#if coverage}
+                    <div class="insight-card coverage-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
+                            d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+                          /></svg
+                        >
+                        Grammar Coverage
+                      </h3>
+                      <p class="insight-desc">{coverage.total} total rules in this language.</p>
+                      <div class="coverage-rows">
+                        <div class="coverage-row">
+                          <span class="coverage-dot" style="background:#10b981"></span>
+                          <span class="coverage-label">Mastered / Known</span>
+                          <span class="coverage-val">{coverage.mastered}</span>
+                        </div>
+                        <div class="coverage-row">
+                          <span
+                            class="coverage-dot"
+                            style="background:#fef08a;border:1px solid #ca8a04"
+                          ></span>
+                          <span class="coverage-label">Interacted</span>
+                          <span class="coverage-val">{coverage.interacted - coverage.mastered}</span
+                          >
+                        </div>
+                        <div class="coverage-row">
+                          <span
+                            class="coverage-dot"
+                            style="background:#e2e8f0;border:1px solid #94a3b8"
+                          ></span>
+                          <span class="coverage-label">Available to Learn</span>
+                          <span class="coverage-val">{coverage.available}</span>
+                        </div>
+                        <div class="coverage-row">
+                          <span class="coverage-dot" style="background:#94a3b8"></span>
+                          <span class="coverage-label">Locked (prereqs unmet)</span>
+                          <span class="coverage-val">{coverage.locked}</span>
+                        </div>
+                      </div>
+                      <div class="coverage-bar-track">
+                        <div
+                          class="coverage-seg mastered-seg"
+                          style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
+                        ></div>
+                        <div
+                          class="coverage-seg learning-seg"
+                          style="width:{Math.round(
+                            ((coverage.interacted - coverage.mastered) / coverage.total) * 100
+                          )}%"
+                        ></div>
+                        <div
+                          class="coverage-seg available-seg"
+                          style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
+                        ></div>
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Recently Mastered -->
+                  {#if data.recentlyMastered && data.recentlyMastered.length > 0}
+                    <div class="insight-card mastered-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+                        >
+                        Recently Mastered
+                      </h3>
+                      <p class="insight-desc">Your most recently learned words.</p>
+                      <div class="mastered-chips">
+                        {#each data.recentlyMastered as word}
+                          <span class="mastered-chip" title={word.partOfSpeech ?? ''}
+                            >{word.lemma}</span
+                          >
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Most Confused Words -->
+                  {#if data.mostConfusedWords?.length > 0}
+                    <div class="insight-card confused-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><circle cx="12" cy="12" r="10" /><path
+                            d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                          /><line x1="12" y1="17" x2="12.01" y2="17" /></svg
+                        >
+                        Most Confused
+                      </h3>
+                      <p class="insight-desc">
+                        Words you've forgotten most often — they need extra attention.
+                      </p>
+                      <ul class="confused-list">
+                        {#each data.mostConfusedWords as word}
+                          <li class="confused-row">
+                            <span class="confused-lemma">{word.lemma}</span>
+                            {#if word.meaning}<span class="confused-meaning">{word.meaning}</span
+                              >{/if}
+                            <span class="confused-lapses"
+                              >{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
+                  {/if}
+
+                  <!-- Part of Speech Breakdown -->
+                  {#if data.posBreakdown && data.posBreakdown.length > 0}
+                    {@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
+                    <div class="insight-card pos-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><rect x="3" y="3" width="18" height="18" rx="2" /><path
+                            d="M3 9h18M9 21V9"
+                          /></svg
+                        >
+                        Parts of Speech
+                      </h3>
+                      <p class="insight-desc">Breakdown of your vocabulary by word type.</p>
+                      <div class="pos-bars">
+                        {#each data.posBreakdown as p}
+                          <div class="pos-bar-row">
+                            <span class="pos-label"
+                              >{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span
+                            >
+                            <div class="pos-track">
+                              <div
+                                class="pos-fill"
+                                style="width:{Math.round((p.count / totalPos) * 100)}%"
+                              ></div>
+                            </div>
+                            <span class="pos-count">{p.count}</span>
+                          </div>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- CEFR Level Breakdown -->
+                  {#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
+                    <div class="insight-card cefr-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg
+                        >
+                        CEFR Level Breakdown
+                      </h3>
+                      <p class="insight-desc">
+                        Vocab and grammar rules you've touched at each proficiency level.
+                      </p>
+                      <div class="cefr-grid">
+                        {#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
+                          <div class="cefr-row">
+                            <span class="cefr-badge cefr-{row.level.toLowerCase()}"
+                              >{row.level}</span
+                            >
+                            <div class="cefr-bar-wrap">
+                              <div class="cefr-bar-track">
+                                <div
+                                  class="cefr-bar-fill"
+                                  style="width:{Math.round(
+                                    (row.known / Math.max(row.total, 1)) * 100
+                                  )}%"
+                                ></div>
+                              </div>
+                              <span class="cefr-nums">{row.known}/{row.total} vocab</span>
+                            </div>
+                          </div>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- Next Grammar Unlocks -->
+                  {#if data.nextUnlocks && data.nextUnlocks.length > 0}
+                    <div class="insight-card unlocks-card">
+                      <h3>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path
+                            d="M7 11V7a5 5 0 0 1 9.9-1"
+                          /></svg
+                        >
+                        Next Grammar Unlocks
+                      </h3>
+                      <p class="insight-desc">
+                        Rules you can start learning now — all prerequisites mastered.
+                      </p>
+                      <ul class="unlocks-list">
+                        {#each data.nextUnlocks as rule}
+                          <li class="unlock-row">
+                            <span class="unlock-title">{rule.title}</span>
+                            <span class="cefr-badge cefr-{rule.level.toLowerCase()}"
+                              >{rule.level}</span
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
                   {/if}
                 </div>
-              {/if}
-
-              {#if coverage}
-                <div class="insight-card coverage-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
-                        d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-                      /></svg
-                    >
-                    Grammar Coverage
-                  </h3>
-                  <p class="insight-desc">{coverage.total} total rules in this language.</p>
-                  <div class="coverage-rows">
-                    <div class="coverage-row">
-                      <span class="coverage-dot" style="background:#10b981"></span>
-                      <span class="coverage-label">Mastered / Known</span>
-                      <span class="coverage-val">{coverage.mastered}</span>
-                    </div>
-                    <div class="coverage-row">
-                      <span class="coverage-dot" style="background:#fef08a;border:1px solid #ca8a04"
-                      ></span>
-                      <span class="coverage-label">Interacted</span>
-                      <span class="coverage-val">{coverage.interacted - coverage.mastered}</span>
-                    </div>
-                    <div class="coverage-row">
-                      <span class="coverage-dot" style="background:#e2e8f0;border:1px solid #94a3b8"
-                      ></span>
-                      <span class="coverage-label">Available to Learn</span>
-                      <span class="coverage-val">{coverage.available}</span>
-                    </div>
-                    <div class="coverage-row">
-                      <span class="coverage-dot" style="background:#94a3b8"></span>
-                      <span class="coverage-label">Locked (prereqs unmet)</span>
-                      <span class="coverage-val">{coverage.locked}</span>
-                    </div>
-                  </div>
-                  <div class="coverage-bar-track">
-                    <div
-                      class="coverage-seg mastered-seg"
-                      style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
-                    ></div>
-                    <div
-                      class="coverage-seg learning-seg"
-                      style="width:{Math.round(
-                        ((coverage.interacted - coverage.mastered) / coverage.total) * 100
-                      )}%"
-                    ></div>
-                    <div
-                      class="coverage-seg available-seg"
-                      style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
-                    ></div>
-                  </div>
-                </div>
-              {/if}
-
-              <!-- Recently Mastered -->
-              {#if data.recentlyMastered && data.recentlyMastered.length > 0}
-                <div class="insight-card mastered-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
-                    >
-                    Recently Mastered
-                  </h3>
-                  <p class="insight-desc">Your most recently learned words.</p>
-                  <div class="mastered-chips">
-                    {#each data.recentlyMastered as word}
-                      <span class="mastered-chip" title={word.partOfSpeech ?? ''}>{word.lemma}</span
-                      >
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-
-              <!-- Most Confused Words -->
-              {#if data.mostConfusedWords?.length > 0}
-                <div class="insight-card confused-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><circle cx="12" cy="12" r="10" /><path
-                        d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                      /><line x1="12" y1="17" x2="12.01" y2="17" /></svg
-                    >
-                    Most Confused
-                  </h3>
-                  <p class="insight-desc">
-                    Words you've forgotten most often — they need extra attention.
-                  </p>
-                  <ul class="confused-list">
-                    {#each data.mostConfusedWords as word}
-                      <li class="confused-row">
-                        <span class="confused-lemma">{word.lemma}</span>
-                        {#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
-                        <span class="confused-lapses"
-                          >{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span
-                        >
-                      </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-
-              <!-- Part of Speech Breakdown -->
-              {#if data.posBreakdown && data.posBreakdown.length > 0}
-                {@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
-                <div class="insight-card pos-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><rect x="3" y="3" width="18" height="18" rx="2" /><path
-                        d="M3 9h18M9 21V9"
-                      /></svg
-                    >
-                    Parts of Speech
-                  </h3>
-                  <p class="insight-desc">Breakdown of your vocabulary by word type.</p>
-                  <div class="pos-bars">
-                    {#each data.posBreakdown as p}
-                      <div class="pos-bar-row">
-                        <span class="pos-label"
-                          >{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span
-                        >
-                        <div class="pos-track">
-                          <div
-                            class="pos-fill"
-                            style="width:{Math.round((p.count / totalPos) * 100)}%"
-                          ></div>
-                        </div>
-                        <span class="pos-count">{p.count}</span>
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-
-              <!-- CEFR Level Breakdown -->
-              {#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
-                <div class="insight-card cefr-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg
-                    >
-                    CEFR Level Breakdown
-                  </h3>
-                  <p class="insight-desc">
-                    Vocab and grammar rules you've touched at each proficiency level.
-                  </p>
-                  <div class="cefr-grid">
-                    {#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
-                      <div class="cefr-row">
-                        <span class="cefr-badge cefr-{row.level.toLowerCase()}">{row.level}</span>
-                        <div class="cefr-bar-wrap">
-                          <div class="cefr-bar-track">
-                            <div
-                              class="cefr-bar-fill"
-                              style="width:{Math.round(
-                                (row.known / Math.max(row.total, 1)) * 100
-                              )}%"
-                            ></div>
-                          </div>
-                          <span class="cefr-nums">{row.known}/{row.total} vocab</span>
-                        </div>
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-
-              <!-- Next Grammar Unlocks -->
-              {#if data.nextUnlocks && data.nextUnlocks.length > 0}
-                <div class="insight-card unlocks-card">
-                  <h3>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path
-                        d="M7 11V7a5 5 0 0 1 9.9-1"
-                      /></svg
-                    >
-                    Next Grammar Unlocks
-                  </h3>
-                  <p class="insight-desc">
-                    Rules you can start learning now — all prerequisites mastered.
-                  </p>
-                  <ul class="unlocks-list">
-                    {#each data.nextUnlocks as rule}
-                      <li class="unlock-row">
-                        <span class="unlock-title">{rule.title}</span>
-                        <span class="cefr-badge cefr-{rule.level.toLowerCase()}">{rule.level}</span>
-                      </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-            </div>
-          </div>
-        {/if}
+              </div>
+            {/if}
           </section>
         {/if}
 
@@ -1388,385 +1405,396 @@
             class="accordion-card accordion-technical"
             in:fly={{ y: 16, duration: 400, delay: 500 }}
           >
-        <button
-          class="accordion-toggle"
-          onclick={() => (showIntelligence = !showIntelligence)}
-          aria-expanded={showIntelligence}
-        >
-          <span class="accordion-title">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              width="18"
-              height="18"
-              aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg
+            <button
+              class="accordion-toggle"
+              onclick={() => (showIntelligence = !showIntelligence)}
+              aria-expanded={showIntelligence}
             >
-            Learning Intelligence
-          </span>
-          <span class="accordion-meta">Adaptive · FSRS-5 · Bandit</span>
-          <svg
-            class="accordion-chevron"
-            class:rotated={showIntelligence}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            width="18"
-            height="18"
-            aria-hidden="true"
-            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-          >
-        </button>
-        {#if showIntelligence}
-          <div class="accordion-body" transition:slide={{ duration: 280 }}>
-            <p class="algo-intro">
-              Live signals from the scheduling algorithms personalised to your session history.
-            </p>
-            <div class="algo-grid">
-              <div class="algo-card">
-                <h3 class="algo-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg
-                  >
-                  Adaptive Pace
-                </h3>
-                <p class="algo-card-desc">
-                  Your recent answer accuracy drives how many new words are introduced each day.
+              <span class="accordion-title">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg
+                >
+                Learning Intelligence
+              </span>
+              <span class="accordion-meta">Adaptive · FSRS-5 · Bandit</span>
+              <svg
+                class="accordion-chevron"
+                class:rotated={showIntelligence}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                width="18"
+                height="18"
+                aria-hidden="true"
+                ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
+              >
+            </button>
+            {#if showIntelligence}
+              <div class="accordion-body" transition:slide={{ duration: 280 }}>
+                <p class="algo-intro">
+                  Live signals from the scheduling algorithms personalised to your session history.
                 </p>
-                <div class="algo-stat-row">
-                  <span class="algo-stat-label">Session accuracy (EMA)</span>
-                  <span class="algo-stat-value">{ad.sessionEma}%</span>
-                </div>
-                <div class="algo-ema-bar">
-                  <div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
-                </div>
-                <div class="algo-stat-row" style="margin-top:0.5rem">
-                  <span class="algo-stat-label">Today's new-word cap</span>
-                  <span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
-                </div>
-                <p class="algo-footnote">
-                  Range 5–20. Higher accuracy → more new words introduced.
-                </p>
-              </div>
-
-              <!-- Bandit interleave card -->
-              <div class="algo-card">
-                <h3 class="algo-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
-                  >
-                  Review Mix (Bandit)
-                </h3>
-                <p class="algo-card-desc">
-                  A Thompson-sampling bandit learns how many mastered items to interleave per lesson
-                  for best retention.
-                </p>
-                {#if ad.banditArmMeans}
-                  <div class="bandit-arms">
-                    {#each ad.banditArmMeans as arm}
-                      <div
-                        class="bandit-arm-row"
-                        class:bandit-best={arm.interleaveCount === ad.bestBanditArm.interleaveCount}
+                <div class="algo-grid">
+                  <div class="algo-card">
+                    <h3 class="algo-card-title">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        width="16"
+                        height="16"
+                        aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg
                       >
-                        <span class="bandit-arm-label"
-                          >{arm.interleaveCount} review{arm.interleaveCount !== 1 ? 's' : ''}</span
-                        >
-                        <div class="bandit-arm-track">
-                          <div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
-                        </div>
-                        <span class="bandit-arm-pct">{arm.mean}%</span>
-                        <span class="bandit-arm-obs"
-                          >{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
-                        >
-                      </div>
-                    {/each}
+                      Adaptive Pace
+                    </h3>
+                    <p class="algo-card-desc">
+                      Your recent answer accuracy drives how many new words are introduced each day.
+                    </p>
+                    <div class="algo-stat-row">
+                      <span class="algo-stat-label">Session accuracy (EMA)</span>
+                      <span class="algo-stat-value">{ad.sessionEma}%</span>
+                    </div>
+                    <div class="algo-ema-bar">
+                      <div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
+                    </div>
+                    <div class="algo-stat-row" style="margin-top:0.5rem">
+                      <span class="algo-stat-label">Today's new-word cap</span>
+                      <span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
+                    </div>
+                    <p class="algo-footnote">
+                      Range 5–20. Higher accuracy → more new words introduced.
+                    </p>
                   </div>
-                  <p class="algo-footnote">
-                    Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad
-                      .bestBanditArm.mean}% success rate)
-                  </p>
-                {/if}
-              </div>
 
-              <!-- ELO confidence card -->
-              {#if ad.highVarianceVocab?.length > 0}
-                <div class="algo-card">
-                  <h3 class="algo-card-title">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
-                    >
-                    ELO Uncertainty
-                  </h3>
-                  <p class="algo-card-desc">
-                    Words where the algorithm is least certain of your true proficiency — expect
-                    them to appear more often.
-                  </p>
-                  <ul class="variance-list">
-                    {#each ad.highVarianceVocab as v}
-                      <li class="variance-row">
-                        <span class="variance-lemma">{v.lemma}</span>
-                        <span class="variance-level">{v.level}</span>
-                        <span class="variance-elo">{v.elo}</span>
-                        <span class="variance-sigma" title="ELO uncertainty (±σ)">±{v.sigma}</span>
-                      </li>
-                    {/each}
-                  </ul>
-                  <p class="algo-footnote">σ shrinks with each review. New items start at σ≈20.</p>
-                </div>
-              {/if}
+                  <!-- Bandit interleave card -->
+                  <div class="algo-card">
+                    <h3 class="algo-card-title">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        width="16"
+                        height="16"
+                        aria-hidden="true"
+                        ><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
+                      >
+                      Review Mix (Bandit)
+                    </h3>
+                    <p class="algo-card-desc">
+                      A Thompson-sampling bandit learns how many mastered items to interleave per
+                      lesson for best retention.
+                    </p>
+                    {#if ad.banditArmMeans}
+                      <div class="bandit-arms">
+                        {#each ad.banditArmMeans as arm}
+                          <div
+                            class="bandit-arm-row"
+                            class:bandit-best={arm.interleaveCount ===
+                              ad.bestBanditArm.interleaveCount}
+                          >
+                            <span class="bandit-arm-label"
+                              >{arm.interleaveCount} review{arm.interleaveCount !== 1
+                                ? 's'
+                                : ''}</span
+                            >
+                            <div class="bandit-arm-track">
+                              <div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
+                            </div>
+                            <span class="bandit-arm-pct">{arm.mean}%</span>
+                            <span class="bandit-arm-obs"
+                              >{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
+                            >
+                          </div>
+                        {/each}
+                      </div>
+                      <p class="algo-footnote">
+                        Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad
+                          .bestBanditArm.mean}% success rate)
+                      </p>
+                    {/if}
+                  </div>
 
-              <!-- PFA at-risk grammar card -->
-              {#if ad.pfaAtRisk?.length > 0}
-                <div class="algo-card">
-                  <h3 class="algo-card-title">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><path
-                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                      /><line x1="12" y1="9" x2="12" y2="13" /><line
-                        x1="12"
-                        y1="17"
-                        x2="12.01"
-                        y2="17"
-                      /></svg
-                    >
-                    Grammar at Risk
-                  </h3>
-                  <p class="algo-card-desc">
-                    Rules the Performance Factor model predicts you're likely to get wrong — they'll
-                    be prioritised in lessons.
-                  </p>
-                  <ul class="pfa-list">
-                    {#each ad.pfaAtRisk as g}
-                      <li class="pfa-row">
-                        <span class="pfa-title">{g.title}</span>
-                        <span class="pfa-level">{g.level}</span>
-                        <span
-                          class="pfa-p"
-                          style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
-                          >{Math.round((g.pCorrect ?? 0) * 100)}%</span
+                  <!-- ELO confidence card -->
+                  {#if ad.highVarianceVocab?.length > 0}
+                    <div class="algo-card">
+                      <h3 class="algo-card-title">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
                         >
-                      </li>
-                    {/each}
-                  </ul>
-                  <p class="algo-footnote">P(correct) from PFA model — below 60% means at-risk.</p>
-                </div>
-              {/if}
+                        ELO Uncertainty
+                      </h3>
+                      <p class="algo-card-desc">
+                        Words where the algorithm is least certain of your true proficiency — expect
+                        them to appear more often.
+                      </p>
+                      <ul class="variance-list">
+                        {#each ad.highVarianceVocab as v}
+                          <li class="variance-row">
+                            <span class="variance-lemma">{v.lemma}</span>
+                            <span class="variance-level">{v.level}</span>
+                            <span class="variance-elo">{v.elo}</span>
+                            <span class="variance-sigma" title="ELO uncertainty (±σ)"
+                              >±{v.sigma}</span
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                      <p class="algo-footnote">
+                        σ shrinks with each review. New items start at σ≈20.
+                      </p>
+                    </div>
+                  {/if}
 
-              <!-- Error co-occurrence card -->
-              {#if ad.coOccurrencePairs?.length > 0}
-                {@const errorLabels: Record<string, string> = {
+                  <!-- PFA at-risk grammar card -->
+                  {#if ad.pfaAtRisk?.length > 0}
+                    <div class="algo-card">
+                      <h3 class="algo-card-title">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                          /><line x1="12" y1="9" x2="12" y2="13" /><line
+                            x1="12"
+                            y1="17"
+                            x2="12.01"
+                            y2="17"
+                          /></svg
+                        >
+                        Grammar at Risk
+                      </h3>
+                      <p class="algo-card-desc">
+                        Rules the Performance Factor model predicts you're likely to get wrong —
+                        they'll be prioritised in lessons.
+                      </p>
+                      <ul class="pfa-list">
+                        {#each ad.pfaAtRisk as g}
+                          <li class="pfa-row">
+                            <span class="pfa-title">{g.title}</span>
+                            <span class="pfa-level">{g.level}</span>
+                            <span
+                              class="pfa-p"
+                              style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
+                              >{Math.round((g.pCorrect ?? 0) * 100)}%</span
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                      <p class="algo-footnote">
+                        P(correct) from PFA model — below 60% means at-risk.
+                      </p>
+                    </div>
+                  {/if}
+
+                  <!-- Error co-occurrence card -->
+                  {#if ad.coOccurrencePairs?.length > 0}
+                    {@const errorLabels: Record<string, string> = {
 						wrong_case: 'Wrong Case', wrong_tense: 'Wrong Tense', wrong_gender: 'Wrong Gender',
 						spelling: 'Spelling', word_order: 'Word Order', vocabulary_gap: 'Vocab Gap'
 					}}
-                <div class="algo-card">
-                  <h3 class="algo-card-title">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
-                        cx="18"
-                        cy="19"
-                        r="3"
-                      /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
-                        x1="15.41"
-                        y1="6.51"
-                        x2="8.59"
-                        y2="10.49"
-                      /></svg
-                    >
-                    Error Patterns
-                  </h3>
-                  <p class="algo-card-desc">
-                    Error types that tend to appear together across learners — fixing one often
-                    helps the other.
-                  </p>
-                  <ul class="coerr-list">
-                    {#each ad.coOccurrencePairs as pair}
-                      <li class="coerr-row">
-                        <span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
-                        <span class="coerr-arrow">↔</span>
-                        <span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
-                        <span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span>
-                      </li>
-                    {/each}
-                  </ul>
-                  <p class="algo-footnote">
-                    Grammar rules addressing co-occurring errors are surfaced first.
-                  </p>
-                </div>
-              {/if}
+                    <div class="algo-card">
+                      <h3 class="algo-card-title">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
+                            cx="18"
+                            cy="19"
+                            r="3"
+                          /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
+                            x1="15.41"
+                            y1="6.51"
+                            x2="8.59"
+                            y2="10.49"
+                          /></svg
+                        >
+                        Error Patterns
+                      </h3>
+                      <p class="algo-card-desc">
+                        Error types that tend to appear together across learners — fixing one often
+                        helps the other.
+                      </p>
+                      <ul class="coerr-list">
+                        {#each ad.coOccurrencePairs as pair}
+                          <li class="coerr-row">
+                            <span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
+                            <span class="coerr-arrow">↔</span>
+                            <span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
+                            <span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                      <p class="algo-footnote">
+                        Grammar rules addressing co-occurring errors are surfaced first.
+                      </p>
+                    </div>
+                  {/if}
 
-              <!-- FSRS personalisation card -->
-              <div class="algo-card">
-                <h3 class="algo-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><path d="M12 20h9" /><path
-                      d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                    /></svg
-                  >
-                  FSRS Personalisation
-                </h3>
-                <p class="algo-card-desc">
-                  The spaced-repetition scheduler fits 19 weights to your review history daily.
-                </p>
-                <div class="algo-stat-row">
-                  <span class="algo-stat-label">Personal weights</span>
-                  <span
-                    class="algo-stat-value"
-                    style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
-                    >{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
-                  >
-                </div>
-                <div class="algo-stat-row">
-                  <span class="algo-stat-label">Target retention</span>
-                  <span class="algo-stat-value">{ad.fsrsRetention}%</span>
-                </div>
-                <div class="algo-stat-row">
-                  <span class="algo-stat-label">Algorithm version</span>
-                  <span class="algo-stat-value">FSRS-5</span>
+                  <!-- FSRS personalisation card -->
+                  <div class="algo-card">
+                    <h3 class="algo-card-title">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        width="16"
+                        height="16"
+                        aria-hidden="true"
+                        ><path d="M12 20h9" /><path
+                          d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                        /></svg
+                      >
+                      FSRS Personalisation
+                    </h3>
+                    <p class="algo-card-desc">
+                      The spaced-repetition scheduler fits 19 weights to your review history daily.
+                    </p>
+                    <div class="algo-stat-row">
+                      <span class="algo-stat-label">Personal weights</span>
+                      <span
+                        class="algo-stat-value"
+                        style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
+                        >{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
+                      >
+                    </div>
+                    <div class="algo-stat-row">
+                      <span class="algo-stat-label">Target retention</span>
+                      <span class="algo-stat-value">{ad.fsrsRetention}%</span>
+                    </div>
+                    <div class="algo-stat-row">
+                      <span class="algo-stat-label">Algorithm version</span>
+                      <span class="algo-stat-value">FSRS-5</span>
+                    </div>
+                  </div>
+
+                  <!-- ELO Calibration scatter -->
+                  {#if ad.eloCalibration?.length > 1}
+                    <div class="algo-card">
+                      <h3 class="algo-card-title">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle
+                            cx="14"
+                            cy="18"
+                            r="2"
+                          /><circle cx="6" cy="10" r="2" /><line
+                            x1="2"
+                            y1="22"
+                            x2="22"
+                            y2="2"
+                            stroke-dasharray="3 3"
+                          /></svg
+                        >
+                        ELO Calibration
+                      </h3>
+                      <p class="algo-card-desc">
+                        Does your ELO score actually predict how often you answer correctly? A
+                        well-calibrated model rises left-to-right.
+                      </p>
+                      <div class="calibration-chart">
+                        {#each ad.eloCalibration as point}
+                          <div class="cal-col">
+                            <span class="cal-pct">{point.actualPassPct}%</span>
+                            <div class="cal-bar-track">
+                              <div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
+                            </div>
+                            <span class="cal-elo">{point.elo}</span>
+                            <span class="cal-n">n={point.sampleSize}</span>
+                          </div>
+                        {/each}
+                      </div>
+                      <p class="algo-footnote">
+                        ELO buckets vs actual pass rate across all your reviews.
+                      </p>
+                    </div>
+                  {/if}
+
+                  <!-- Word Frequency Coverage -->
+                  {#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
+                    <div class="algo-card">
+                      <h3 class="algo-card-title">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          width="16"
+                          height="16"
+                          aria-hidden="true"
+                          ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path
+                            d="M2 17l10 5 10-5M2 12l10 5 10-5"
+                          /></svg
+                        >
+                        Word Frequency Coverage
+                      </h3>
+                      <p class="algo-card-desc">
+                        How many of the most common words in this language you've mastered or know.
+                      </p>
+                      <div class="freq-coverage-rows">
+                        {#each data.freqCoverage as tier}
+                          {#if tier.total > 0}
+                            <div class="freq-row">
+                              <span class="freq-label"
+                                >Top {tier.threshold >= 1000
+                                  ? tier.threshold / 1000 + 'k'
+                                  : tier.threshold}</span
+                              >
+                              <div class="freq-track">
+                                <div
+                                  class="freq-fill"
+                                  style="width:{Math.round((tier.known / tier.total) * 100)}%"
+                                ></div>
+                              </div>
+                              <span class="freq-stat">{tier.known}/{tier.total}</span>
+                              <span class="freq-pct"
+                                >{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span
+                              >
+                            </div>
+                          {/if}
+                        {/each}
+                      </div>
+                      <p class="algo-footnote">
+                        Based on corpus frequency rank. Only words in your vocabulary are counted.
+                      </p>
+                    </div>
+                  {/if}
                 </div>
               </div>
-
-              <!-- ELO Calibration scatter -->
-              {#if ad.eloCalibration?.length > 1}
-                <div class="algo-card">
-                  <h3 class="algo-card-title">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle
-                        cx="14"
-                        cy="18"
-                        r="2"
-                      /><circle cx="6" cy="10" r="2" /><line
-                        x1="2"
-                        y1="22"
-                        x2="22"
-                        y2="2"
-                        stroke-dasharray="3 3"
-                      /></svg
-                    >
-                    ELO Calibration
-                  </h3>
-                  <p class="algo-card-desc">
-                    Does your ELO score actually predict how often you answer correctly? A
-                    well-calibrated model rises left-to-right.
-                  </p>
-                  <div class="calibration-chart">
-                    {#each ad.eloCalibration as point}
-                      <div class="cal-col">
-                        <span class="cal-pct">{point.actualPassPct}%</span>
-                        <div class="cal-bar-track">
-                          <div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
-                        </div>
-                        <span class="cal-elo">{point.elo}</span>
-                        <span class="cal-n">n={point.sampleSize}</span>
-                      </div>
-                    {/each}
-                  </div>
-                  <p class="algo-footnote">
-                    ELO buckets vs actual pass rate across all your reviews.
-                  </p>
-                </div>
-              {/if}
-
-              <!-- Word Frequency Coverage -->
-              {#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
-                <div class="algo-card">
-                  <h3 class="algo-card-title">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                      ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path
-                        d="M2 17l10 5 10-5M2 12l10 5 10-5"
-                      /></svg
-                    >
-                    Word Frequency Coverage
-                  </h3>
-                  <p class="algo-card-desc">
-                    How many of the most common words in this language you've mastered or know.
-                  </p>
-                  <div class="freq-coverage-rows">
-                    {#each data.freqCoverage as tier}
-                      {#if tier.total > 0}
-                        <div class="freq-row">
-                          <span class="freq-label"
-                            >Top {tier.threshold >= 1000
-                              ? tier.threshold / 1000 + 'k'
-                              : tier.threshold}</span
-                          >
-                          <div class="freq-track">
-                            <div
-                              class="freq-fill"
-                              style="width:{Math.round((tier.known / tier.total) * 100)}%"
-                            ></div>
-                          </div>
-                          <span class="freq-stat">{tier.known}/{tier.total}</span>
-                          <span class="freq-pct"
-                            >{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span
-                          >
-                        </div>
-                      {/if}
-                    {/each}
-                  </div>
-                  <p class="algo-footnote">
-                    Based on corpus frequency rank. Only words in your vocabulary are counted.
-                  </p>
-                </div>
-              {/if}
-            </div>
-          </div>
-        {/if}
+            {/if}
           </section>
         {/if}
       </div>
@@ -1782,211 +1810,218 @@
 
         <!-- SOCIAL -->
         <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
-      <h2 class="social-heading">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          width="20"
-          height="20"
-          aria-hidden="true"
-        >
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        Social
-        {#if incomingRequests.length > 0}
-          <span class="social-badge">{incomingRequests.length}</span>
-        {/if}
-      </h2>
-
-      <div class="social-grid">
-        <!-- Add Friend -->
-        <div class="card">
-          <h3 class="social-card-title">Add Friend</h3>
-          <form
-            onsubmit={(e) => {
-              e.preventDefault();
-              sendFriendRequest();
-            }}
-          >
-            <div class="social-input-group">
-              <input
-                type="text"
-                bind:value={newFriendUsername}
-                placeholder="Enter username…"
-                disabled={friendLoading}
-              />
-              <button
-                type="submit"
-                class="btn-duo btn-primary"
-                disabled={friendLoading || !newFriendUsername}
-              >
-                {friendLoading ? 'Sending…' : 'Add'}
-              </button>
-            </div>
-            {#if friendError}
-              <p class="social-field-error">{friendError}</p>
-            {/if}
-          </form>
-          <div class="social-invite-row">
-            <span class="social-invite-label">Or share an invite link</span>
-            <button
-              class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}"
-              onclick={copyInviteLink}
-              disabled={copyLinkLoading}
+          <h2 class="social-heading">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="20"
+              height="20"
+              aria-hidden="true"
             >
-              {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
-            </button>
-          </div>
-        </div>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Social
+            {#if incomingRequests.length > 0}
+              <span class="social-badge">{incomingRequests.length}</span>
+            {/if}
+          </h2>
 
-        <!-- Requests -->
-        <div class="social-requests-col">
-          {#if incomingRequests.length > 0}
+          <div class="social-grid">
+            <!-- Add Friend -->
+            <div class="card">
+              <h3 class="social-card-title">Add Friend</h3>
+              <form
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  sendFriendRequest();
+                }}
+              >
+                <div class="social-input-group">
+                  <input
+                    type="text"
+                    bind:value={newFriendUsername}
+                    placeholder="Enter username…"
+                    disabled={friendLoading}
+                  />
+                  <button
+                    type="submit"
+                    class="btn-duo btn-primary"
+                    disabled={friendLoading || !newFriendUsername}
+                  >
+                    {friendLoading ? 'Sending…' : 'Add'}
+                  </button>
+                </div>
+                {#if friendError}
+                  <p class="social-field-error">{friendError}</p>
+                {/if}
+              </form>
+              <div class="social-invite-row">
+                <span class="social-invite-label">Or share an invite link</span>
+                <button
+                  class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}"
+                  onclick={copyInviteLink}
+                  disabled={copyLinkLoading}
+                >
+                  {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
+                </button>
+              </div>
+            </div>
+
+            <!-- Requests -->
+            <div class="social-requests-col">
+              {#if incomingRequests.length > 0}
+                <div class="card">
+                  <h3 class="social-card-title">
+                    Friend Requests <span class="social-count-badge">{incomingRequests.length}</span
+                    >
+                  </h3>
+                  <ul class="social-user-list">
+                    {#each incomingRequests as request}
+                      <li class="social-user-item">
+                        <div class="social-user-info">
+                          <img
+                            src={request.initiator.image || '/default-avatar.png'}
+                            alt=""
+                            class="social-avatar"
+                          />
+                          <div>
+                            <a href="/u/{request.initiator.username}" class="social-username"
+                              >{request.initiator.username}</a
+                            >
+                            {#if request.initiator.name}<p class="social-meta">
+                                {request.initiator.name}
+                              </p>{/if}
+                          </div>
+                        </div>
+                        <div class="social-actions">
+                          <button
+                            class="social-btn-sm social-btn-accept"
+                            onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
+                          >
+                          <button
+                            class="social-btn-sm social-btn-decline"
+                            onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
+                          >
+                        </div>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+
+              {#if outgoingRequests.length > 0}
+                <div class="card">
+                  <h3 class="social-card-title">Sent Requests</h3>
+                  <ul class="social-user-list">
+                    {#each outgoingRequests as request}
+                      <li class="social-user-item">
+                        <div class="social-user-info">
+                          <img
+                            src={request.receiver.image || '/default-avatar.png'}
+                            alt=""
+                            class="social-avatar"
+                          />
+                          <div>
+                            <a href="/u/{request.receiver.username}" class="social-username"
+                              >{request.receiver.username}</a
+                            >
+                            {#if request.receiver.name}<p class="social-meta">
+                                {request.receiver.name}
+                              </p>{/if}
+                          </div>
+                        </div>
+                        <span class="social-status-pill social-pending">Pending</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+            </div>
+
+            <!-- Friends list -->
             <div class="card">
               <h3 class="social-card-title">
-                Friend Requests <span class="social-count-badge">{incomingRequests.length}</span>
+                Friends <span class="social-count-badge">{friends.length}</span>
               </h3>
-              <ul class="social-user-list">
-                {#each incomingRequests as request}
-                  <li class="social-user-item">
-                    <div class="social-user-info">
-                      <img
-                        src={request.initiator.image || '/default-avatar.png'}
-                        alt=""
-                        class="social-avatar"
-                      />
-                      <div>
-                        <a href="/u/{request.initiator.username}" class="social-username"
-                          >{request.initiator.username}</a
-                        >
-                        {#if request.initiator.name}<p class="social-meta">
-                            {request.initiator.name}
-                          </p>{/if}
+              {#if friends.length === 0}
+                <p class="social-empty">No friends yet. Add some people to see them here!</p>
+              {:else}
+                <ul class="social-user-list">
+                  {#each friends as friendship}
+                    {@const friend =
+                      friendship.initiatorId === data.userId
+                        ? friendship.receiver
+                        : friendship.initiator}
+                    <li class="social-user-item">
+                      <div class="social-user-info">
+                        <img
+                          src={friend.image || '/default-avatar.png'}
+                          alt=""
+                          class="social-avatar"
+                        />
+                        <div>
+                          <a href="/u/{friend.username}" class="social-username"
+                            >{friend.username}</a
+                          >
+                          <p class="social-meta">
+                            Active {new Date(friend.lastActive).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div class="social-actions">
                       <button
-                        class="social-btn-sm social-btn-accept"
-                        onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
+                        class="social-btn-sm social-btn-remove"
+                        onclick={() => removeFriend(friendship.id)}>Remove</button
                       >
-                      <button
-                        class="social-btn-sm social-btn-decline"
-                        onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
-                      >
-                    </div>
-                  </li>
-                {/each}
-              </ul>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
             </div>
-          {/if}
 
-          {#if outgoingRequests.length > 0}
-            <div class="card">
-              <h3 class="social-card-title">Sent Requests</h3>
-              <ul class="social-user-list">
-                {#each outgoingRequests as request}
-                  <li class="social-user-item">
-                    <div class="social-user-info">
-                      <img
-                        src={request.receiver.image || '/default-avatar.png'}
-                        alt=""
-                        class="social-avatar"
-                      />
-                      <div>
-                        <a href="/u/{request.receiver.username}" class="social-username"
-                          >{request.receiver.username}</a
-                        >
-                        {#if request.receiver.name}<p class="social-meta">
-                            {request.receiver.name}
-                          </p>{/if}
+            <!-- Challenges -->
+            {#if data.challenges && data.challenges.length > 0}
+              <div class="card">
+                <h3 class="social-card-title">Active Challenges</h3>
+                <ul class="social-challenge-list">
+                  {#each data.challenges as challenge}
+                    <li class="social-challenge-item">
+                      <div class="social-challenge-info">
+                        <span class="social-game-title">{challenge.game.title}</span>
+                        <p class="social-meta">
+                          {#if challenge.challengerId === data.userId}
+                            You challenged <strong>{challenge.challengee.username}</strong>
+                          {:else}
+                            <strong>{challenge.challenger.username}</strong> challenged you
+                          {/if}
+                        </p>
+                        <p class="social-meta">
+                          Score to beat: <strong>{challenge.scoreToBeat}</strong>
+                        </p>
                       </div>
-                    </div>
-                    <span class="social-status-pill social-pending">Pending</span>
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {/if}
-        </div>
-
-        <!-- Friends list -->
-        <div class="card">
-          <h3 class="social-card-title">
-            Friends <span class="social-count-badge">{friends.length}</span>
-          </h3>
-          {#if friends.length === 0}
-            <p class="social-empty">No friends yet. Add some people to see them here!</p>
-          {:else}
-            <ul class="social-user-list">
-              {#each friends as friendship}
-                {@const friend =
-                  friendship.initiatorId === data.userId
-                    ? friendship.receiver
-                    : friendship.initiator}
-                <li class="social-user-item">
-                  <div class="social-user-info">
-                    <img src={friend.image || '/default-avatar.png'} alt="" class="social-avatar" />
-                    <div>
-                      <a href="/u/{friend.username}" class="social-username">{friend.username}</a>
-                      <p class="social-meta">
-                        Active {new Date(friend.lastActive).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    class="social-btn-sm social-btn-remove"
-                    onclick={() => removeFriend(friendship.id)}>Remove</button
-                  >
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </div>
-
-        <!-- Challenges -->
-        {#if data.challenges && data.challenges.length > 0}
-          <div class="card">
-            <h3 class="social-card-title">Active Challenges</h3>
-            <ul class="social-challenge-list">
-              {#each data.challenges as challenge}
-                <li class="social-challenge-item">
-                  <div class="social-challenge-info">
-                    <span class="social-game-title">{challenge.game.title}</span>
-                    <p class="social-meta">
-                      {#if challenge.challengerId === data.userId}
-                        You challenged <strong>{challenge.challengee.username}</strong>
-                      {:else}
-                        <strong>{challenge.challenger.username}</strong> challenged you
-                      {/if}
-                    </p>
-                    <p class="social-meta">
-                      Score to beat: <strong>{challenge.scoreToBeat}</strong>
-                    </p>
-                  </div>
-                  <div class="social-challenge-right">
-                    <span class="social-status-pill social-{challenge.status.toLowerCase()}"
-                      >{challenge.status}</span
-                    >
-                    {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
-                      <a
-                        href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
-                        class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a
-                      >
-                    {/if}
-                  </div>
-                </li>
-              {/each}
-            </ul>
+                      <div class="social-challenge-right">
+                        <span class="social-status-pill social-{challenge.status.toLowerCase()}"
+                          >{challenge.status}</span
+                        >
+                        {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
+                          <a
+                            href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
+                            class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a
+                          >
+                        {/if}
+                      </div>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
           </div>
-        {/if}
-      </div>
         </section>
       </div>
     </div>
