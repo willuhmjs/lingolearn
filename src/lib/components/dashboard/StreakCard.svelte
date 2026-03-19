@@ -11,7 +11,7 @@
 
   let { currentStreak, longestStreak, streakFreezes, totalXp }: Props = $props();
 
-  const FREEZE_COST = 200;
+  const FREEZE_COST = 500;
   const MAX_FREEZES = 5;
 
   let isBuying = $state(false);
@@ -214,10 +214,18 @@
   }
 
   .streak-best {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
     margin: 0 0 0.75rem;
-    font-weight: 500;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--link-hover-bg);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
   }
 
   .divider {
