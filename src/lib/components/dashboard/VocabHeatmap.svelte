@@ -32,7 +32,8 @@
       lemma: vocab.vocabulary?.lemma,
       gender: vocab.vocabulary?.gender,
       plural: vocab.vocabulary?.plural,
-      partOfSpeech: vocab.vocabulary?.partOfSpeech
+      partOfSpeech: vocab.vocabulary?.partOfSpeech,
+      meanings: vocab.vocabulary?.meanings
     });
   }
 </script>

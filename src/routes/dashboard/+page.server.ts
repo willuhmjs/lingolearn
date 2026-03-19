@@ -42,7 +42,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         userId: user.id,
         vocabulary: { languageId: user.activeLanguage?.id }
       },
-      include: { vocabulary: true },
+      include: { vocabulary: { include: { meanings: { select: { value: true }, take: 1 } } } },
       orderBy: { eloRating: 'desc' }
     }),
     prisma.userGrammarRule.findMany({
