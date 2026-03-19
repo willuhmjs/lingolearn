@@ -29,7 +29,10 @@ export const load: PageServerLoad = async ({ locals }) => {
         sessionSuccessEma: true,
         interleaveBanditState: true,
         fsrsWeights: true,
-        fsrsRetention: true
+        fsrsRetention: true,
+        streakFreezes: true,
+        longestStreak: true,
+        totalXp: true
       }
     }),
     prisma.userVocabulary.findMany({
@@ -505,6 +508,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     friendships,
     challenges,
     userId: user.id,
+    streakFreezes: userRecord?.streakFreezes ?? 0,
+    longestStreak: userRecord?.longestStreak ?? 0,
+    totalXp: userRecord?.totalXp ?? 0,
     ...analytics
   };
 };

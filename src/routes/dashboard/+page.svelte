@@ -7,6 +7,7 @@
   import { page } from '$app/stores';
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
   import DashboardSkeleton from '$lib/components/dashboard/DashboardSkeleton.svelte';
+  import StreakCard from '$lib/components/dashboard/StreakCard.svelte';
   import { SRS_COLORS } from '$lib/utils/srsColors';
   import { vocabModal } from '$lib/stores/vocabModal.svelte';
   import { navigating } from '$app/stores';
@@ -849,32 +850,41 @@
       </section>
     </div>
 
-    <!-- QUICK STATS -->
-    <div class="quick-stats-row" in:fly={{ y: 16, duration: 400, delay: 200 }}>
-      <div class="qstat">
-        <span class="qstat-value">{totalVocab}</span>
-        <span class="qstat-label">Words Learned</span>
-      </div>
-      <div class="qstat qstat-green">
-        <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
-        <span class="qstat-label">Words Mastered</span>
-      </div>
-      <div class="qstat qstat-purple">
-        <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
-        <span class="qstat-label">Rules Mastered</span>
-      </div>
-      {#if (data as any).sessionEma !== undefined}
-        <div class="qstat qstat-blue">
-          <span class="qstat-value">{(data as any).sessionEma}%</span>
-          <span class="qstat-label">Session Accuracy</span>
+    <!-- QUICK STATS + STREAK -->
+    <div class="stats-streak-layout" in:fly={{ y: 16, duration: 400, delay: 200 }}>
+      <div class="quick-stats-row">
+        <div class="qstat">
+          <span class="qstat-value">{totalVocab}</span>
+          <span class="qstat-label">Words Learned</span>
         </div>
-      {/if}
-      {#if data.dueReviewCount > 0}
-        <div class="qstat qstat-warn">
-          <span class="qstat-value">{data.dueReviewCount}</span>
-          <span class="qstat-label">Due for Review</span>
+        <div class="qstat qstat-green">
+          <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
+          <span class="qstat-label">Words Mastered</span>
         </div>
-      {/if}
+        <div class="qstat qstat-purple">
+          <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
+          <span class="qstat-label">Rules Mastered</span>
+        </div>
+        {#if (data as any).sessionEma !== undefined}
+          <div class="qstat qstat-blue">
+            <span class="qstat-value">{(data as any).sessionEma}%</span>
+            <span class="qstat-label">Session Accuracy</span>
+          </div>
+        {/if}
+        {#if data.dueReviewCount > 0}
+          <div class="qstat qstat-warn">
+            <span class="qstat-value">{data.dueReviewCount}</span>
+            <span class="qstat-label">Due for Review</span>
+          </div>
+        {/if}
+      </div>
+
+      <StreakCard
+        currentStreak={$page.data.user?.currentStreak ?? 0}
+        longestStreak={(data as any).longestStreak ?? 0}
+        streakFreezes={(data as any).streakFreezes ?? 0}
+        totalXp={(data as any).totalXp ?? 0}
+      />
     </div>
 
     <!-- MEMORY HEALTH (collapsible) -->
@@ -2357,25 +2367,39 @@
 {/if}
 
 <style>
+  /* ── Stats + Streak layout ── */
+  .stats-streak-layout {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.25rem;
+    align-items: start;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .stats-streak-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
   /* ── Quick-stats KPI chips ── */
   .quick-stats-row {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    margin-bottom: 1.5rem;
   }
 
   .qstat {
     flex: 1 1 120px;
     background: var(--card-bg, #ffffff);
-    border-radius: 0.875rem;
+    border-radius: var(--radius-xl, 1rem);
     padding: 1rem 1.25rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-duo);
+    border: 2px solid var(--card-border, #e5e7eb);
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease;
@@ -2383,14 +2407,14 @@
 
   .qstat:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   }
 
   .qstat-value {
     font-size: 1.75rem;
     font-weight: 800;
     line-height: 1;
-    color: #0f172a;
+    color: var(--text-color, #0f172a);
     letter-spacing: -0.02em;
   }
 
@@ -2399,7 +2423,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #64748b;
+    color: var(--text-muted, #64748b);
   }
 
   .qstat-green .qstat-value {
@@ -2409,29 +2433,18 @@
     color: #8b5cf6;
   }
   .qstat-blue .qstat-value {
-    color: #3b82f6;
+    color: var(--color-primary, #3b82f6);
   }
   .qstat-warn .qstat-value {
     color: #f97316;
   }
 
-  :global(html[data-theme='dark']) .qstat {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.06);
-  }
-  :global(html[data-theme='dark']) .qstat-value {
-    color: #f1f5f9;
-  }
-  :global(html[data-theme='dark']) .qstat-label {
-    color: #94a3b8;
-  }
-
   /* ── Accordion cards ── */
   .accordion-card {
     background: var(--card-bg, #ffffff);
-    border-radius: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-xl, 1rem);
+    box-shadow: var(--shadow-duo);
+    border: 2px solid var(--card-border, #e5e7eb);
     margin-bottom: 1rem;
     overflow: hidden;
   }

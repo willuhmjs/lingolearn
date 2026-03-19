@@ -104,13 +104,11 @@
   }
 
   h2 {
-    font-size: 1.75rem;
-    color: var(--text-color, #0f172a);
-    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    color: var(--text-color);
+    margin-bottom: 1rem;
     font-weight: 800;
     letter-spacing: -0.025em;
-    position: relative;
-    display: inline-block;
   }
 
   .summary-grid {
@@ -158,7 +156,7 @@
   .summary-card h3 {
     margin-top: 0;
     margin-bottom: 1.5rem;
-    color: var(--text-color, #0f172a);
+    color: var(--text-color);
     font-size: 1.5rem;
     font-weight: 700;
     display: flex;
@@ -173,7 +171,7 @@
     margin-bottom: 1rem;
     font-size: 1.1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--card-border);
   }
 
   .stat-row:last-of-type {
@@ -181,50 +179,33 @@
   }
 
   .stat-label {
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 500;
   }
 
-  :global(html[data-theme='dark']) .stat-label {
-    color: #94a3b8;
-  }
-
   .stat-value {
-    color: #0f172a;
+    color: var(--text-color);
     font-weight: 700;
     font-size: 1.25rem;
-    background: #f1f5f9;
+    background: var(--link-hover-bg);
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
   }
 
-  :global(html[data-theme='dark']) .stat-value {
-    background: #1e293b;
-    color: #f1f5f9;
-  }
-
   .srs-breakdown {
     margin-top: 2rem;
-    background: #f8fafc;
+    background: var(--link-hover-bg);
     padding: 1.5rem;
-    border-radius: 0.75rem;
-  }
-
-  :global(html[data-theme='dark']) .srs-breakdown {
-    background: #1e293b;
+    border-radius: var(--radius-lg);
   }
 
   .srs-breakdown h4 {
-    font-size: 1rem;
-    color: #475569;
+    font-size: 0.8rem;
+    color: var(--text-muted);
     margin-bottom: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
-  }
-
-  :global(html[data-theme='dark']) .srs-breakdown h4 {
-    color: #94a3b8;
   }
 
   .breakdown-row {
@@ -243,16 +224,8 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: #334155;
+    color: var(--text-color);
     font-weight: 500;
-  }
-
-  :global(html[data-theme='dark']) .breakdown-label {
-    color: #94a3b8;
-  }
-
-  :global(html[data-theme='dark']) .breakdown-row > span {
-    color: #94a3b8;
   }
 
   .color-box {
