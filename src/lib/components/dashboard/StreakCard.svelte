@@ -7,9 +7,16 @@
     longestStreak: number;
     streakFreezes: number;
     totalXp: number;
+    studiedToday?: boolean;
   }
 
-  let { currentStreak, longestStreak, streakFreezes, totalXp }: Props = $props();
+  let {
+    currentStreak,
+    longestStreak,
+    streakFreezes,
+    totalXp,
+    studiedToday = false
+  }: Props = $props();
 
   const FREEZE_COST = 500;
   const MAX_FREEZES = 5;
@@ -47,6 +54,27 @@
   let canBuy = $derived(!isBuying && localFreezes < MAX_FREEZES && localXp >= FREEZE_COST);
 </script>
 
+<!-- Hidden SVG sprite: define reusable symbols here -->
+<svg aria-hidden="true" style="display:none">
+  <symbol
+    id="icon-freeze"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  >
+    <line x1="12" y1="2" x2="12" y2="22" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+    <polyline points="9,3 12,6 15,3" />
+    <polyline points="3,9 6,12 3,15" />
+    <polyline points="15,21 12,18 9,21" />
+    <polyline points="21,15 18,12 21,9" />
+  </symbol>
+</svg>
+
 <div class="streak-card">
   <!-- Flame + streak count -->
   <div class="streak-hero">
@@ -63,6 +91,15 @@
     </div>
   </div>
 
+  <!-- Studied-today status pill -->
+  {#if studiedToday}
+    <p class="streak-status streak-status--done" aria-live="polite">&#10003; Done for today</p>
+  {:else if currentStreak > 0}
+    <p class="streak-status streak-status--warn" aria-live="polite">Keep your streak alive!</p>
+  {:else}
+    <p class="streak-status streak-status--muted" aria-live="polite">Start your streak!</p>
+  {/if}
+
   <!-- Longest streak -->
   {#if longestStreak > 0}
     <p class="streak-best" title="Personal best: {longestStreak} days">
@@ -78,25 +115,8 @@
   <!-- Freeze shields -->
   <div class="freeze-section">
     <div class="freeze-label-row">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        width="14"
-        height="14"
-        aria-hidden="true"
-        class="freeze-icon-small"
-      >
-        <line x1="12" y1="2" x2="12" y2="22" />
-        <line x1="2" y1="12" x2="22" y2="12" />
-        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
-        <polyline points="9,3 12,6 15,3" />
-        <polyline points="3,9 6,12 3,15" />
-        <polyline points="15,21 12,18 9,21" />
-        <polyline points="21,15 18,12 21,9" />
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" class="freeze-icon-small">
+        <use href="#icon-freeze" />
       </svg>
       <span class="freeze-label">Streak Freezes</span>
       <span class="freeze-count-badge">{localFreezes}/{MAX_FREEZES}</span>
@@ -109,22 +129,8 @@
           class:active={i < localFreezes}
           aria-label={i < localFreezes ? 'Active freeze' : 'Empty slot'}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="2" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-            <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
-            <polyline points="9,3 12,6 15,3" />
-            <polyline points="3,9 6,12 3,15" />
-            <polyline points="15,21 12,18 9,21" />
-            <polyline points="21,15 18,12 21,9" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <use href="#icon-freeze" />
           </svg>
         </span>
       {/each}
@@ -240,6 +246,49 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-top: 0.1rem;
+  }
+
+  /* Studied-today status pill */
+  .streak-status {
+    display: inline-block;
+    margin: 0 0 0.5rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    align-self: flex-start;
+  }
+
+  .streak-status--done {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  :global(html[data-theme='dark']) .streak-status--done {
+    background: #14532d;
+    color: #4ade80;
+  }
+
+  .streak-status--warn {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  :global(html[data-theme='dark']) .streak-status--warn {
+    background: #431407;
+    color: #fb923c;
+  }
+
+  .streak-status--muted {
+    background: var(--link-hover-bg, #f3f4f6);
+    color: var(--text-muted, #6b7280);
+  }
+
+  :global(html[data-theme='dark']) .streak-status--muted {
+    background: #1e2433;
+    color: #94a3b8;
   }
 
   .streak-best {

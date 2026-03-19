@@ -6,6 +6,9 @@
     ...SRS_COLORS
   };
 
+  // Logical display order for the stacked bar (LOCKED excluded — it is vocab-only edge case)
+  const SRS_ORDER = ['UNSEEN', 'LEARNING', 'KNOWN', 'MASTERED'] as const;
+
   interface Props {
     vocabularies: any[];
     grammarRules: any[];
@@ -28,6 +31,14 @@
       {} as Record<string, number>
     )
   );
+  // Segments for the vocab stacked bar (omit states with 0 count)
+  let vocabBarSegments = $derived(
+    SRS_ORDER.filter((state) => (vocabSrsBreakdown[state] ?? 0) > 0).map((state) => ({
+      state,
+      color: SRS_COLORS[state],
+      pct: totalVocab > 0 ? (vocabSrsBreakdown[state] / totalVocab) * 100 : 0
+    }))
+  );
 
   let totalGrammar = $derived(grammarRules.length);
   let avgGrammarElo = $derived(
@@ -43,6 +54,14 @@
       },
       {} as Record<string, number>
     )
+  );
+  // Segments for the grammar stacked bar (omit states with 0 count)
+  let grammarBarSegments = $derived(
+    SRS_ORDER.filter((state) => (grammarSrsBreakdown[state] ?? 0) > 0).map((state) => ({
+      state,
+      color: SRS_COLORS[state],
+      pct: totalGrammar > 0 ? (grammarSrsBreakdown[state] / totalGrammar) * 100 : 0
+    }))
   );
 </script>
 
@@ -61,10 +80,23 @@
       </div>
       <div class="srs-breakdown">
         <h4>SRS State Breakdown</h4>
+        <div class="srs-bar-track" aria-hidden="true">
+          {#if totalVocab === 0}
+            <div class="srs-bar-empty"></div>
+          {:else}
+            {#each vocabBarSegments as seg}
+              <div
+                class="srs-bar-seg"
+                style="width:{seg.pct}%; background-color:{seg.color};"
+                title="{seg.state}: {vocabSrsBreakdown[seg.state]}"
+              ></div>
+            {/each}
+          {/if}
+        </div>
         {#each Object.entries(srsColors) as [state, color]}
           <div class="breakdown-row">
             <div class="breakdown-label">
-              <span class="color-box" style="background-color: {color}"></span>
+              <span class="srs-dot" style="background-color: {color}"></span>
               {state}
             </div>
             <span>{vocabSrsBreakdown[state] || 0}</span>
@@ -84,10 +116,23 @@
       </div>
       <div class="srs-breakdown">
         <h4>SRS State Breakdown</h4>
+        <div class="srs-bar-track" aria-hidden="true">
+          {#if totalGrammar === 0}
+            <div class="srs-bar-empty"></div>
+          {:else}
+            {#each grammarBarSegments as seg}
+              <div
+                class="srs-bar-seg"
+                style="width:{seg.pct}%; background-color:{seg.color};"
+                title="{seg.state}: {grammarSrsBreakdown[seg.state]}"
+              ></div>
+            {/each}
+          {/if}
+        </div>
         {#each Object.entries(srsColors) as [state, color]}
           <div class="breakdown-row">
             <div class="breakdown-label">
-              <span class="color-box" style="background-color: {color}"></span>
+              <span class="srs-dot" style="background-color: {color}"></span>
               {state}
             </div>
             <span>{grammarSrsBreakdown[state] || 0}</span>
@@ -228,11 +273,34 @@
     font-weight: 500;
   }
 
-  .color-box {
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 4px;
+  /* Stacked SRS progress bar */
+  .srs-bar-track {
+    display: flex;
+    height: 0.6rem;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: var(--card-border, #e2e8f0);
+    margin-bottom: 1rem;
+  }
+
+  .srs-bar-seg {
+    height: 100%;
+    transition: width 0.4s ease;
+  }
+
+  .srs-bar-empty {
+    width: 100%;
+    height: 100%;
+    background: var(--card-border, #e2e8f0);
+  }
+
+  /* Legend dot replaces the old square color-box */
+  .srs-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
     display: inline-block;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
   }
 </style>

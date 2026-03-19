@@ -8,8 +8,8 @@
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
   import DashboardSkeleton from '$lib/components/dashboard/DashboardSkeleton.svelte';
   import StreakCard from '$lib/components/dashboard/StreakCard.svelte';
+  import VocabHeatmap from '$lib/components/dashboard/VocabHeatmap.svelte';
   import { SRS_COLORS } from '$lib/utils/srsColors';
-  import { vocabModal } from '$lib/stores/vocabModal.svelte';
   import { navigating } from '$app/stores';
 
   let { data }: { data: PageData } = $props();
@@ -363,6 +363,7 @@
   let friendError = $state<string | null>(null);
   let copyLinkLoading = $state(false);
   let copyLinkSuccess = $state(false);
+  let confirmRemoveFriendshipId = $state<string | null>(null);
 
   let friends = $derived(data.friendships?.filter((f: any) => f.status === 'ACCEPTED') ?? []);
   let incomingRequests = $derived(
@@ -411,8 +412,14 @@
     }
   }
 
-  async function removeFriend(friendshipId: string) {
-    if (!confirm('Are you sure you want to remove this friend?')) return;
+  function removeFriend(friendshipId: string) {
+    confirmRemoveFriendshipId = friendshipId;
+  }
+
+  async function doRemoveFriend() {
+    if (!confirmRemoveFriendshipId) return;
+    const friendshipId = confirmRemoveFriendshipId;
+    confirmRemoveFriendshipId = null;
     try {
       const res = await fetch('/api/friends', {
         method: 'DELETE',
@@ -457,8 +464,8 @@
       <h1>Proficiency Dashboard</h1>
       <p>Track your language learning progress.</p>
 
-      {#if (data as any).cefrProgress}
-        <CefrProgress cefrProgress={(data as any).cefrProgress} />
+      {#if data.cefrProgress}
+        <CefrProgress cefrProgress={data.cefrProgress} />
       {/if}
 
       <div class="header-actions">
@@ -467,8 +474,8 @@
           <a href="/review" class="btn-duo btn-secondary">Review ({data.dueReviewCount})</a>
         {/if}
         <a href="/play?tab=games" class="btn-duo btn-secondary">Play a Quiz</a>
-        {#if (data as any).activeLiveSessions?.length > 0}
-          {@const session = (data as any).activeLiveSessions[0]}
+        {#if data.activeLiveSessions?.length > 0}
+          {@const session = data.activeLiveSessions[0]}
           <a href="/classes/{session.classId}/live/student" class="btn-duo btn-live">
             <span class="live-pulse" aria-hidden="true"></span>
             <svg
@@ -484,8 +491,8 @@
             <span class="live-class-name">{session.class.name}</span>
           </a>
         {/if}
-        {#if (data as any).dueSoonAssignments?.length > 0}
-          {@const assignment = (data as any).dueSoonAssignments[0]}
+        {#if data.dueSoonAssignments?.length > 0}
+          {@const assignment = data.dueSoonAssignments[0]}
           {@const hoursLeft = Math.round(
             (new Date(assignment.dueDate).getTime() - Date.now()) / 3600000
           )}
@@ -513,7 +520,7 @@
         {/if}
       </div>
 
-      {#if (data as any).dueSoonAssignments?.length > 0}
+      {#if data.dueSoonAssignments?.length > 0}
         <div class="due-soon-banner">
           <div class="due-soon-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -524,7 +531,7 @@
           <div class="due-soon-content">
             <p class="due-soon-label">Assignments due soon</p>
             <ul class="due-soon-list">
-              {#each (data as any).dueSoonAssignments as a}
+              {#each data.dueSoonAssignments as a}
                 {@const hoursLeft = Math.round(
                   (new Date(a.dueDate).getTime() - Date.now()) / 3600000
                 )}
@@ -544,126 +551,7 @@
 
     <!-- PRIMARY VISUALS: Vocabulary Heatmap + Grammar Web -->
     <div class="dashboard-content" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-      <section class="vocabulary-section">
-        <h2>Vocabulary Heatmap</h2>
-        <div class="heatmap-legend">
-          <div class="legend-item">
-            <span class="color-box" style="background-color: {srsColors.UNSEEN}"></span> Unseen
-          </div>
-          <div class="legend-item">
-            <span class="color-box" style="background-color: {srsColors.LEARNING}"></span> Learning
-          </div>
-          <div class="legend-item">
-            <span class="color-box" style="background-color: {srsColors.KNOWN}"></span> Known
-          </div>
-          <div class="legend-item">
-            <span class="color-box" style="background-color: {srsColors.MASTERED}"></span> Mastered
-          </div>
-        </div>
-
-        {#if data.vocabularies.length === 0}
-          <div class="empty-state-vocab">
-            <p class="empty-state-vocab-title">No vocabulary added yet</p>
-            <p class="empty-state-vocab-desc">
-              Start a lesson to build your word bank and track your progress here.
-            </p>
-            <a href="/play" class="empty-state-vocab-btn">Start Learning</a>
-          </div>
-        {:else}
-          <div class="heatmap-grid">
-            {#each data.vocabularies as vocab}
-              {@const isUnseen = vocab.srsState === 'UNSEEN'}
-              {@const elo = vocab.eloRating !== undefined ? Math.round(vocab.eloRating) : 1000}
-              {@const level = vocab.srsState}
-              {@const levelText = isUnseen
-                ? 'Unseen'
-                : level.charAt(0) + level.slice(1).toLowerCase()}
-              {@const cellColor = srsColors[level]}
-              {@const progressPct = Math.max(
-                0,
-                Math.min(
-                  100,
-                  level === 'LEARNING'
-                    ? ((elo - 1000) / 50) * 100
-                    : level === 'KNOWN'
-                      ? ((elo - 1050) / 100) * 100
-                      : 100
-                )
-              )}
-              <button
-                class="heatmap-cell tooltip-trigger"
-                style="background-color: {cellColor}"
-                onclick={() => {
-                  const langId = $page.data.user?.activeLanguage?.id || '';
-                  vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
-                    id: vocab.vocabularyId || vocab.vocabulary?.id,
-                    lemma: vocab.vocabulary?.lemma,
-                    gender: vocab.vocabulary?.gender,
-                    plural: vocab.vocabulary?.plural,
-                    partOfSpeech: vocab.vocabulary?.partOfSpeech
-                  });
-                }}
-                onkeydown={(e) =>
-                  e.key === 'Enter' &&
-                  (() => {
-                    const langId = $page.data.user?.activeLanguage?.id || '';
-                    vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
-                      id: vocab.vocabularyId || vocab.vocabulary?.id,
-                      lemma: vocab.vocabulary?.lemma,
-                      gender: vocab.vocabulary?.gender,
-                      plural: vocab.vocabulary?.plural,
-                      partOfSpeech: vocab.vocabulary?.partOfSpeech
-                    });
-                  })()}
-                aria-label="View details for {vocab.vocabulary.lemma}"
-              >
-                <span class="sr-only">{vocab.vocabulary.lemma}</span>
-                <div class="tooltip-content">
-                  <div class="tooltip-header">
-                    {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun'}
-                      {vocab.vocabulary.lemma.charAt(0).toUpperCase() +
-                        vocab.vocabulary.lemma.slice(1)}
-                    {:else}
-                      {vocab.vocabulary.lemma}
-                    {/if}
-                  </div>
-                  <div class="tooltip-body">
-                    {#if vocab.eloRating !== undefined && !isUnseen}
-                      <div class="word-tooltip-elo">
-                        <div class="elo-header">
-                          <span>Mastery: {levelText}</span><span class="elo-score">ELO {elo}</span>
-                        </div>
-                        <div class="elo-progress-track">
-                          <div
-                            class="elo-progress-fill {levelText.toLowerCase()}"
-                            style="width: {progressPct}%"
-                          ></div>
-                        </div>
-                      </div>
-                    {:else if isUnseen}
-                      <div class="word-tooltip-elo">
-                        <div class="elo-header"><span>Status: {levelText}</span></div>
-                      </div>
-                    {/if}
-                    {#if vocab.vocabulary.partOfSpeech}
-                      <div><strong>POS:</strong> {vocab.vocabulary.partOfSpeech}</div>
-                    {/if}
-                    {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun' && vocab.vocabulary.gender}
-                      <div><strong>Gender:</strong> {vocab.vocabulary.gender}</div>
-                    {/if}
-                    {#if vocab.vocabulary.plural}
-                      <div><strong>Plural:</strong> {vocab.vocabulary.plural}</div>
-                    {/if}
-                    {#if (vocab.vocabulary as any).meaning}
-                      <div><strong>Meaning:</strong> {(vocab.vocabulary as any).meaning}</div>
-                    {/if}
-                  </div>
-                </div>
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </section>
+      <VocabHeatmap vocabularies={data.vocabularies} {srsColors} />
 
       <section class="grammar-section">
         <div class="grammar-header-row">
@@ -899,9 +787,9 @@
             <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
             <span class="qstat-label">Rules Mastered</span>
           </div>
-          {#if (data as any).sessionEma !== undefined}
+          {#if data.sessionEma !== undefined}
             <div class="qstat qstat-blue">
-              <span class="qstat-value">{(data as any).sessionEma}%</span>
+              <span class="qstat-value">{data.sessionEma}%</span>
               <span class="qstat-label">Session Accuracy</span>
             </div>
           {/if}
@@ -949,9 +837,10 @@
 
       <StreakCard
         currentStreak={$page.data.user?.currentStreak ?? 0}
-        longestStreak={(data as any).longestStreak ?? 0}
-        streakFreezes={(data as any).streakFreezes ?? 0}
-        totalXp={(data as any).totalXp ?? 0}
+        longestStreak={data.longestStreak ?? 0}
+        streakFreezes={data.streakFreezes ?? 0}
+        totalXp={data.totalXp ?? 0}
+        studiedToday={data.studiedToday ?? false}
       />
     </div>
 
@@ -1117,9 +1006,9 @@
 
     <!-- LEARNING INSIGHTS (collapsible) -->
     {#if totalVocab > 0}
-      {@const urgent = (data as any).urgentItems ?? []}
-      {@const errors = (data as any).errorTypeCounts ?? {}}
-      {@const coverage = (data as any).grammarCoverage}
+      {@const urgent = data.urgentItems ?? []}
+      {@const errors = data.errorTypeCounts ?? {}}
+      {@const coverage = data.grammarCoverage}
       {@const errorLabels: Record<string, string> = {
 			wrong_case: 'Wrong Case',
 			wrong_tense: 'Wrong Tense',
@@ -1249,12 +1138,9 @@
                       </div>
                     {/each}
                   </div>
-                  {#if (data as any).totalOverrides > 0}
+                  {#if data.totalOverrides > 0}
                     <p class="override-note">
-                      {(data as any).totalOverrides} self-correction{(data as any)
-                        .totalOverrides !== 1
-                        ? 's'
-                        : ''} recorded
+                      {data.totalOverrides} self-correction{data.totalOverrides !== 1 ? 's' : ''} recorded
                     </p>
                   {/if}
                 </div>
@@ -1347,7 +1233,7 @@
               {/if}
 
               <!-- Most Confused Words -->
-              {#if (data as any).mostConfusedWords?.length > 0}
+              {#if data.mostConfusedWords?.length > 0}
                 <div class="insight-card confused-card">
                   <h3>
                     <svg
@@ -1368,7 +1254,7 @@
                     Words you've forgotten most often — they need extra attention.
                   </p>
                   <ul class="confused-list">
-                    {#each (data as any).mostConfusedWords as word}
+                    {#each data.mostConfusedWords as word}
                       <li class="confused-row">
                         <span class="confused-lemma">{word.lemma}</span>
                         {#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
@@ -1497,8 +1383,8 @@
     {/if}
 
     <!-- LEARNING INTELLIGENCE (collapsible, power users) -->
-    {#if (data as any).sessionEma !== undefined}
-      {@const ad = data as any}
+    {#if data.sessionEma !== undefined}
+      {@const ad = data}
       <section
         class="accordion-card accordion-technical"
         in:fly={{ y: 16, duration: 400, delay: 500 }}
@@ -2094,6 +1980,39 @@
       </div>
     </section>
   </div>
+
+  {#if confirmRemoveFriendshipId !== null}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="modal-backdrop"
+      onclick={() => (confirmRemoveFriendshipId = null)}
+      onkeydown={(e) => e.key === 'Escape' && (confirmRemoveFriendshipId = null)}
+    >
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="modal-content confirm-remove-modal" onclick={(e) => e.stopPropagation()}>
+        <button class="modal-close" onclick={() => (confirmRemoveFriendshipId = null)}
+          >&times;</button
+        >
+        <h3 class="modal-title">Remove friend?</h3>
+        <div class="modal-body">
+          <p class="modal-desc">
+            This will remove the friend from your list. You can always send a new request later.
+          </p>
+          <div class="confirm-modal-actions">
+            <button
+              class="btn-duo btn-secondary"
+              onclick={() => (confirmRemoveFriendshipId = null)}
+              type="button">Cancel</button
+            >
+            <button class="btn-duo btn-danger" onclick={doRemoveFriend} type="button">Remove</button
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if selectedModalItem}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -3124,73 +3043,6 @@
     display: inline-block;
   }
 
-  /* Vocabulary Heatmap */
-  .heatmap-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-    font-size: 0.9rem;
-    background: #f8fafc;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    justify-content: center;
-  }
-
-  :global(html[data-theme='dark']) .heatmap-legend {
-    background: #1e293b;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    color: #475569;
-  }
-
-  .color-box {
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 4px;
-    display: inline-block;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .heatmap-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    background: var(--card-bg, #ffffff);
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.05),
-      0 4px 6px -4px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    max-width: 100%;
-    box-sizing: border-box;
-    max-height: 500px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    align-content: flex-start;
-  }
-
-  .heatmap-cell {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .heatmap-cell:hover {
-    transform: scale(1.1) translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    z-index: 10;
-  }
-
   .tooltip-trigger {
     position: relative;
   }
@@ -3606,53 +3458,6 @@
     border-color: #475569;
   }
 
-  .empty-state-vocab {
-    text-align: center;
-    padding: 3rem 2rem;
-    background: #f8fafc;
-    border-radius: 1rem;
-    border: 2px dashed #cbd5e1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  :global(html[data-theme='dark']) .empty-state-vocab {
-    background: #1e293b;
-    border-color: #475569;
-  }
-
-  .empty-state-vocab-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-color, #0f172a);
-    margin: 0;
-  }
-
-  .empty-state-vocab-desc {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  .empty-state-vocab-btn {
-    margin-top: 0.75rem;
-    display: inline-block;
-    background: #1cb0f6;
-    color: #fff;
-    font-weight: 700;
-    padding: 0.6rem 1.5rem;
-    border-radius: 0.75rem;
-    text-decoration: none;
-    font-size: 0.95rem;
-    transition: background 0.15s;
-  }
-
-  .empty-state-vocab-btn:hover {
-    background: #0ea5e9;
-  }
-
   @media (max-width: 768px) {
     h2 {
       font-size: 1.4rem;
@@ -3686,36 +3491,6 @@
 
     .dashboard-content {
       gap: 1.5rem;
-    }
-
-    .heatmap-legend {
-      gap: 0.5rem;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
-      justify-content: flex-start;
-    }
-
-    .legend-item {
-      font-size: 0.7rem;
-      gap: 0.25rem;
-    }
-
-    .color-box {
-      width: 0.75rem;
-      height: 0.75rem;
-    }
-
-    .heatmap-grid {
-      padding: 0.75rem;
-      gap: 6px;
-      justify-content: center;
-      max-height: 350px;
-    }
-
-    .heatmap-cell {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
     }
 
     .insights-grid {
@@ -3760,6 +3535,33 @@
     .qstat-label {
       font-size: 0.65rem;
     }
+  }
+
+  /* Danger button for friend removal modal */
+  :global(.btn-danger) {
+    background-color: #ef4444;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 3px 0 #b91c1c;
+  }
+  :global(.btn-danger:hover) {
+    background-color: #f87171;
+    transform: scale(1.02);
+  }
+  :global(.btn-danger:active) {
+    transform: scale(0.98) translateY(2px);
+    box-shadow: 0 1px 0 #b91c1c;
+  }
+
+  .confirm-remove-modal {
+    max-width: 380px;
+  }
+
+  .confirm-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
 
   /* Modal CSS */

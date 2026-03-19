@@ -32,7 +32,9 @@ export const load: PageServerLoad = async ({ locals }) => {
         fsrsRetention: true,
         streakFreezes: true,
         longestStreak: true,
-        totalXp: true
+        totalXp: true,
+        lastActivityDate: true,
+        timezone: true
       }
     }),
     prisma.userVocabulary.findMany({
@@ -496,6 +498,18 @@ export const load: PageServerLoad = async ({ locals }) => {
     })
   ]);
 
+  // Compute studiedToday: check whether lastActivityDate falls on today's date
+  // in the user's timezone (falling back to UTC when no timezone is set).
+  const studiedToday = (() => {
+    const lastActivity = userRecord?.lastActivityDate;
+    if (!lastActivity) return false;
+    const tz = userRecord?.timezone ?? 'UTC';
+    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, dateStyle: 'short' });
+    const todayStr = fmt.format(new Date());
+    const activityStr = fmt.format(lastActivity);
+    return activityStr === todayStr;
+  })();
+
   return {
     vocabularies,
     grammarRules,
@@ -511,6 +525,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     streakFreezes: userRecord?.streakFreezes ?? 0,
     longestStreak: userRecord?.longestStreak ?? 0,
     totalXp: userRecord?.totalXp ?? 0,
+    studiedToday,
     ...analytics
   };
 };
