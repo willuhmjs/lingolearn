@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { toastSuccess, toastError } from '$lib/utils/toast';
+  import Button from '../Button.svelte';
 
   interface Props {
     currentStreak: number;
@@ -150,19 +151,19 @@
         </svg>
         {FREEZE_COST} XP
       </span>
-      <button
-        type="button"
-        class="btn-buy"
+      <Button
+        variant="primary"
         onclick={buyFreeze}
         disabled={!canBuy}
+        loading={isBuying}
         title={localFreezes >= MAX_FREEZES
           ? 'Maximum freezes reached'
           : localXp < FREEZE_COST
             ? `Need ${FREEZE_COST} XP (you have ${localXp})`
             : 'Buy a streak freeze'}
       >
-        {isBuying ? 'Buying…' : localFreezes >= MAX_FREEZES ? 'Full' : 'Buy Freeze'}
-      </button>
+        {localFreezes >= MAX_FREEZES ? 'Full' : 'Buy Freeze'}
+      </Button>
     </div>
     <p class="xp-balance">You have {localXp.toLocaleString()} XP</p>
   </div>
@@ -413,42 +414,6 @@
 
   .xp-bolt {
     color: var(--color-warning, #f59e0b);
-  }
-
-  .btn-buy {
-    background: var(--color-primary, #3b82f6);
-    color: #ffffff;
-    border: none;
-    border-radius: var(--radius-lg, 0.75rem);
-    padding: 0.4rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 800;
-    font-family: inherit;
-    cursor: pointer;
-    box-shadow: 0 3px 0 var(--color-primary-hover, #2563eb);
-    transition:
-      background-color 0.15s,
-      transform 0.1s,
-      box-shadow 0.1s;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-  }
-
-  .btn-buy:hover:not(:disabled) {
-    background: var(--color-primary-hover, #2563eb);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 0 #1d4ed8;
-  }
-
-  .btn-buy:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: 0 1px 0 var(--color-primary-hover, #2563eb);
-  }
-
-  .btn-buy:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
   }
 
   .xp-balance {

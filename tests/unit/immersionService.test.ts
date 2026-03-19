@@ -22,7 +22,8 @@ vi.mock('../../src/lib/server/assignmentService', () => ({
 }));
 
 vi.mock('../../src/lib/server/grader', () => ({
-  updateSrsMetrics: vi.fn()
+  updateSrsMetrics: vi.fn(),
+  updateSrsMetricsBatch: vi.fn()
 }));
 
 import { gradeImmersionAnswer } from '../../src/lib/server/immersionService';
@@ -31,7 +32,7 @@ import { isQuotaExceeded } from '../../src/lib/server/aiQuota';
 import { isClearlyCorrect } from '../../src/lib/server/fuzzyGrade';
 import { updateGamification } from '../../src/lib/server/gamification';
 import { updateImmersionAssignmentScore } from '../../src/lib/server/assignmentService';
-import { updateSrsMetrics } from '../../src/lib/server/grader';
+import { updateSrsMetricsBatch } from '../../src/lib/server/grader';
 
 describe('immersionService', () => {
   beforeEach(() => {
@@ -126,8 +127,7 @@ describe('immersionService', () => {
         false
       );
 
-      expect(updateSrsMetrics).toHaveBeenCalledWith('u1', 'v1', 1.0);
-      expect(updateSrsMetrics).toHaveBeenCalledWith('u1', 'v2', 1.0);
+      expect(updateSrsMetricsBatch).toHaveBeenCalledWith('u1', ['v1', 'v2'], 1.0);
     });
 
     it('throws error if quota exceeded', async () => {

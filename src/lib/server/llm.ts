@@ -4,6 +4,7 @@ import { decrypt } from '$lib/server/crypto';
 import { prisma } from '$lib/server/prisma';
 import { getSiteSettings } from '$lib/server/settings';
 import OpenAI from 'openai';
+import { z } from 'zod';
 
 /**
  * Rejects URLs that resolve to private/loopback/link-local ranges to prevent SSRF.
@@ -68,6 +69,8 @@ export interface GenerateChatCompletionOptions {
     completionTokens: number;
     totalTokens: number;
   }) => void;
+  /** Optional Zod schema to validate the JSON response. If validation fails, throws an error. */
+  schema?: z.ZodType<any>;
 }
 
 /**
@@ -85,7 +88,8 @@ export async function generateChatCompletion({
   stream = false,
   signal,
   addLanguageConstraint = false,
-  onUsage
+  onUsage,
+  schema
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: GenerateChatCompletionOptions): Promise<any> {
   // 1. Fetch user credentials from database and site settings
@@ -253,6 +257,18 @@ export async function generateChatCompletion({
       }
     }
 
+    if (schema && completion.choices?.[0]?.message?.content) {
+      try {
+        const parsed = JSON.parse(completion.choices[0].message.content);
+        schema.parse(parsed);
+      } catch (error) {
+        console.error('LLM JSON validation failed:', error);
+        throw new Error(
+          `LLM response did not match the required schema: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
     return completion;
   } catch (e) {
     const error = e as Error;
@@ -324,18 +340,27 @@ Respond ONLY with valid JSON in this exact format:
     const content = response.choices?.[0]?.message?.content ?? '';
     const firstBrace = content.indexOf('{');
     const lastBrace = content.lastIndexOf('}');
-    const json =
+    const jsonStr =
       firstBrace !== -1 && lastBrace > firstBrace
         ? content.substring(firstBrace, lastBrace + 1)
         : content;
 
-    const result = JSON.parse(json);
+    const schema = z.object({
+      approved: z.boolean(),
+      reason: z.string().optional(),
+      suggestion: z.string().optional()
+    });
+
+    const parsed = JSON.parse(jsonStr);
+    const result = schema.parse(parsed);
+
     return {
       approved: result.approved === true,
       reason: result.reason ?? '',
       suggestion: result.suggestion ?? ''
     };
-  } catch {
+  } catch (error) {
+    console.error('Username check failed:', error);
     // On any failure (LLM down, parse error) allow through — don't block signup
     return { approved: true, reason: '', suggestion: '' };
   }
@@ -368,13 +393,14 @@ Rules:
       messages: [{ role: 'user', content: JSON.stringify(words) }],
       systemPrompt,
       jsonMode: true,
+      schema: z.object({
+        normalizedWords: z.array(z.string())
+      }),
       temperature: 0.1
     });
 
     const result = JSON.parse(response.choices[0].message.content);
-    if (result && Array.isArray(result.normalizedWords)) {
-      return result.normalizedWords;
-    }
+    return result.normalizedWords;
   } catch (e) {
     console.error('Failed to normalize words', e);
   }

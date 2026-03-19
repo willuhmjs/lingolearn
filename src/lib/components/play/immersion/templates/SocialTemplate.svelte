@@ -2,11 +2,9 @@
   import TokenizedText from '../TokenizedText.svelte';
 
   let {
-    data,
-    onWordClick
+    data
   }: {
     data: any;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 </script>
 
@@ -20,7 +18,7 @@
     <span class="social-timestamp">{data.timestamp}</span>
   </div>
   <p class="social-content">
-    <TokenizedText text={data.content || ''} {onWordClick} />
+    <TokenizedText text={data.content || ''} />
   </p>
   {#if data.hashtags?.length}
     <p class="social-hashtags">

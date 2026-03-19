@@ -30,14 +30,12 @@
     session,
     language,
     disableHoverTranslation,
-    MEDIA_LABELS,
-    onWordClick
+    MEDIA_LABELS
   }: {
     session: ImmersionSession;
     language: any;
     disableHoverTranslation: boolean;
     MEDIA_LABELS: Record<MediaType, { label: string; icon: string }>;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 
   const components = {
@@ -80,7 +78,7 @@
     <div class="template-container">
       {#if components[session.mediaType]}
         {@const Template = components[session.mediaType]}
-        <Template data={session.templateData} {onWordClick} />
+        <Template data={session.templateData} />
       {/if}
     </div>
   </div>

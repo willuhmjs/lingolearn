@@ -2,11 +2,9 @@
   import TokenizedText from '../TokenizedText.svelte';
 
   let {
-    data,
-    onWordClick
+    data
   }: {
     data: any;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 </script>
 
@@ -16,17 +14,17 @@
     <span class="news-date">{data.date}</span>
   </div>
   <h1 class="news-headline">
-    <TokenizedText text={data.headline || ''} {onWordClick} />
+    <TokenizedText text={data.headline || ''} />
   </h1>
   <p class="news-byline">
-    <TokenizedText text={data.byline || ''} {onWordClick} />
+    <TokenizedText text={data.byline || ''} />
   </p>
   <hr class="news-rule" />
   <p class="news-lead">
-    <TokenizedText text={data.lead || ''} {onWordClick} />
+    <TokenizedText text={data.lead || ''} />
   </p>
   <p class="news-body">
-    <TokenizedText text={data.body || ''} {onWordClick} />
+    <TokenizedText text={data.body || ''} />
   </p>
 </div>
 

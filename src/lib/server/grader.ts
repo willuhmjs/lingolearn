@@ -57,6 +57,8 @@ function logReview(
     })
     .catch((err: unknown) => console.error('[ReviewLog] write failed:', err));
 }
+import { srsRepository } from './srsRepository';
+import type { SrsType } from './srsRepository';
 import type {
   Vocabulary as PrismaVocabulary,
   UserVocabulary as PrismaUserVocabulary,
@@ -512,7 +514,7 @@ export async function updateSrsMetrics(
   userId: string,
   itemId: string,
   score: number,
-  type: 'vocabulary' | 'grammar' = 'vocabulary',
+  type: SrsType = 'vocabulary',
   overridden = false,
   responseTimeMs: number | null = null,
   isProduction = false
@@ -526,69 +528,7 @@ export async function updateSrsMetrics(
   const userWeights = userPrefs?.fsrsWeights?.length === 19 ? userPrefs.fsrsWeights : undefined;
 
   const hasProducedUpdate = isProduction && score >= 0.8;
-
-  if (type === 'grammar') {
-    const currentProgress = await prisma.userGrammarRuleProgress.findUnique({
-      where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } }
-    });
-
-    const priorState = {
-      difficulty: currentProgress?.difficulty ?? 5.0,
-      stability: currentProgress?.stability ?? 0.0,
-      retrievability: currentProgress?.retrievability ?? 1.0,
-      repetitions: currentProgress?.repetitions ?? 0,
-      lapses: currentProgress?.lapses ?? 0,
-      lastReviewDate: currentProgress?.lastReviewDate ?? null,
-      medianResponseMs: currentProgress?.medianResponseMs ?? null
-    };
-
-    const fsrs = await computeFsrsUpdate(
-      score,
-      priorState,
-      userRetention,
-      userWeights,
-      responseTimeMs
-    );
-    const newMedianMs =
-      responseTimeMs !== null
-        ? updateRunningMedian(currentProgress?.medianResponseMs ?? null, responseTimeMs)
-        : undefined;
-
-    await prisma.userGrammarRuleProgress.upsert({
-      where: { userId_grammarRuleId: { userId, grammarRuleId: itemId } },
-      create: {
-        userId,
-        grammarRuleId: itemId,
-        ...fsrs,
-        reviewCount: 1,
-        hasProduced: hasProducedUpdate,
-        ...(newMedianMs !== undefined ? { medianResponseMs: newMedianMs } : {})
-      },
-      update: {
-        ...fsrs,
-        reviewCount: { increment: 1 },
-        ...(hasProducedUpdate ? { hasProduced: true } : {}),
-        ...(newMedianMs !== undefined ? { medianResponseMs: newMedianMs } : {})
-      }
-    });
-
-    logReview(
-      userId,
-      itemId,
-      'grammar',
-      scoreToRating(score),
-      priorState.stability,
-      priorState.difficulty,
-      priorState.lastReviewDate,
-      responseTimeMs
-    );
-
-    return fsrs;
-  }
-
-  const currentProgress = await prisma.userVocabularyProgress.findUnique({
-    where: { userId_vocabularyId: { userId, vocabularyId: itemId } }
-  });
+  const currentProgress = await srsRepository.getProgress(userId, itemId, type);
 
   const priorState = {
     difficulty: currentProgress?.difficulty ?? 5.0,
@@ -608,36 +548,25 @@ export async function updateSrsMetrics(
     responseTimeMs
   );
 
-  const overrideIncrement = overridden ? 1 : 0;
-  const newMedianMsVocab =
+  const newMedianMs =
     responseTimeMs !== null
       ? updateRunningMedian(currentProgress?.medianResponseMs ?? null, responseTimeMs)
       : undefined;
 
-  await prisma.userVocabularyProgress.upsert({
-    where: { userId_vocabularyId: { userId, vocabularyId: itemId } },
-    create: {
-      userId,
-      vocabularyId: itemId,
-      ...fsrs,
-      overrideCount: overrideIncrement,
-      reviewCount: 1,
-      hasProduced: hasProducedUpdate,
-      ...(newMedianMsVocab !== undefined ? { medianResponseMs: newMedianMsVocab } : {})
-    },
-    update: {
-      ...fsrs,
-      overrideCount: { increment: overrideIncrement },
-      reviewCount: { increment: 1 },
-      ...(hasProducedUpdate ? { hasProduced: true } : {}),
-      ...(newMedianMsVocab !== undefined ? { medianResponseMs: newMedianMsVocab } : {})
-    }
+  await srsRepository.update({
+    userId,
+    itemId,
+    type,
+    fsrs: { ...fsrs, nextReviewDate: fsrs.nextReviewDate },
+    medianResponseMs: newMedianMs,
+    hasProduced: hasProducedUpdate,
+    overrideIncrement: overridden ? 1 : 0
   });
 
   logReview(
     userId,
     itemId,
-    'vocabulary',
+    type,
     scoreToRating(score),
     priorState.stability,
     priorState.difficulty,
@@ -646,6 +575,113 @@ export async function updateSrsMetrics(
   );
 
   return fsrs;
+}
+
+export async function updateSrsMetricsBatch(
+  userId: string,
+  itemIds: string[],
+  score: number,
+  type: SrsType = 'vocabulary',
+  overridden = false,
+  responseTimeMs: number | null = null,
+  isProduction = false
+) {
+  if (itemIds.length === 0) return;
+
+  const [userPrefs, progressRows] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { fsrsRetention: true, fsrsWeights: true }
+    }),
+    type === 'vocabulary'
+      ? prisma.userVocabularyProgress.findMany({ where: { userId, vocabularyId: { in: itemIds } } })
+      : prisma.userGrammarRuleProgress.findMany({
+          where: { userId, grammarRuleId: { in: itemIds } }
+        })
+  ]);
+
+  const userRetention = userPrefs?.fsrsRetention ?? DEFAULT_FSRS_PARAMETERS.requestRetention;
+  const userWeights = userPrefs?.fsrsWeights?.length === 19 ? userPrefs.fsrsWeights : undefined;
+
+  const progressMap = new Map<string, any>(
+    progressRows.map(
+      (p) =>
+        [
+          type === 'vocabulary'
+            ? (p as PrismaUserVocabularyProgress).vocabularyId
+            : (p as PrismaUserGrammarRuleProgress).grammarRuleId,
+          p
+        ] as [string, any]
+    )
+  );
+
+  // Also need frequency/CEFR info if it's vocabulary for HLR initialization on first review
+  let vocabInfoMap = new Map<string, any>();
+  if (type === 'vocabulary') {
+    const vocabRows = await prisma.vocabulary.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, frequency: true, cefrLevel: true, partOfSpeech: true }
+    });
+    vocabInfoMap = new Map(vocabRows.map((v) => [v.id, v]));
+  }
+
+  const updateParams: import('./srsRepository').SrsUpdateParams[] = [];
+
+  for (const itemId of itemIds) {
+    const currentProgress = progressMap.get(itemId) as any;
+    const vocabInfo = vocabInfoMap.get(itemId);
+
+    const priorState = {
+      difficulty: currentProgress?.difficulty ?? 5.0,
+      stability: currentProgress?.stability ?? 0.0,
+      retrievability: currentProgress?.retrievability ?? 1.0,
+      repetitions: currentProgress?.repetitions ?? 0,
+      lapses: currentProgress?.lapses ?? 0,
+      lastReviewDate: currentProgress?.lastReviewDate ?? null,
+      medianResponseMs: currentProgress?.medianResponseMs ?? null,
+      frequencyRank: vocabInfo?.frequency ?? null,
+      cefrLevel: vocabInfo?.cefrLevel ?? 'A1',
+      partOfSpeech: vocabInfo?.partOfSpeech ?? null
+    };
+
+    const fsrs = await computeFsrsUpdate(
+      score,
+      priorState,
+      userRetention,
+      userWeights,
+      responseTimeMs
+    );
+
+    const newMedianMs =
+      responseTimeMs !== null
+        ? updateRunningMedian(priorState.medianResponseMs, responseTimeMs)
+        : undefined;
+
+    const hasProducedUpdate = isProduction && score >= 0.8;
+
+    updateParams.push({
+      userId,
+      itemId,
+      type,
+      fsrs: { ...fsrs, nextReviewDate: fsrs.nextReviewDate },
+      medianResponseMs: newMedianMs,
+      hasProduced: hasProducedUpdate,
+      overrideIncrement: overridden ? 1 : 0
+    });
+
+    logReview(
+      userId,
+      itemId,
+      type,
+      scoreToRating(score),
+      priorState.stability,
+      priorState.difficulty,
+      priorState.lastReviewDate,
+      responseTimeMs
+    );
+  }
+
+  await srsRepository.batchUpdateSrsMetrics(updateParams);
 }
 
 /**
@@ -736,21 +772,42 @@ export async function updateEloRatings(
     grammarProgressRows.map((p: PrismaUserGrammarRuleProgress) => [p.grammarRuleId, p])
   );
 
-  // Process a single vocabulary update using prefetched data (zero extra reads).
-  async function processVocabUpdate(vocabUpdate: EvaluationPayload['vocabularyUpdates'][number]) {
-    let vocab = vocabMap.get(vocabUpdate.id);
-    if (!vocab) {
-      // Rare case: ID came from LLM and doesn't exist yet — create a stub.
-      vocab = await prisma.vocabulary.create({
-        data: { id: vocabUpdate.id, lemma: vocabUpdate.id }
-      });
+  // Process a single item update (vocabulary or grammar) using prefetched data (zero extra reads).
+  async function processItemUpdate(
+    itemUpdate:
+      | EvaluationPayload['vocabularyUpdates'][number]
+      | EvaluationPayload['grammarUpdates'][number],
+    itemType: SrsType
+  ) {
+    let itemBase: any;
+    if (itemType === 'vocabulary') {
+      itemBase = vocabMap.get(itemUpdate.id);
+      if (!itemBase) {
+        // Rare case: ID came from LLM and doesn't exist yet — create a stub.
+        itemBase = await prisma.vocabulary.create({
+          data: { id: itemUpdate.id, lemma: itemUpdate.id }
+        });
+      }
+    } else {
+      itemBase = grammarMap.get(itemUpdate.id);
+      if (!itemBase) {
+        console.warn(`Attempted to update non-existent grammar rule: ${itemUpdate.id}`);
+        return;
+      }
     }
 
-    const baseDifficulty = mapLevelToElo((vocab as { cefrLevel?: string }).cefrLevel || 'A1');
-    const currentElo = userVocabMap.get(vocab.id)?.eloRating ?? baseDifficulty;
+    const level = itemType === 'vocabulary' ? itemBase.cefrLevel || 'A1' : itemBase.level || 'A1';
+    const baseDifficulty = mapLevelToElo(level);
+    const metrics =
+      itemType === 'vocabulary' ? userVocabMap.get(itemBase.id) : userGrammarMap.get(itemBase.id);
+    const currentElo = metrics?.eloRating ?? baseDifficulty;
+    const currentVariance = metrics?.eloVariance ?? 400;
 
-    const currentProgress = vocabProgressMap.get(vocab.id);
-    const priorVocabState = {
+    const currentProgress =
+      itemType === 'vocabulary'
+        ? vocabProgressMap.get(itemBase.id)
+        : grammarProgressMap.get(itemBase.id);
+    const priorState = {
       difficulty: currentProgress?.difficulty ?? 5.0,
       stability: currentProgress?.stability ?? 0.0,
       retrievability: currentProgress?.retrievability ?? 1.0,
@@ -758,210 +815,69 @@ export async function updateEloRatings(
       lapses: currentProgress?.lapses ?? 0,
       lastReviewDate: currentProgress?.lastReviewDate ?? null,
       medianResponseMs: currentProgress?.medianResponseMs ?? null,
-      frequencyRank: (vocab as any).frequency ?? null,
-      cefrLevel: (vocab as any).cefrLevel ?? 'A1',
-      partOfSpeech: (vocab as any).partOfSpeech ?? null
+      frequencyRank: itemType === 'vocabulary' ? (itemBase.frequency ?? null) : null,
+      cefrLevel: level,
+      partOfSpeech: itemType === 'vocabulary' ? (itemBase.partOfSpeech ?? null) : null
     };
+
     const fsrs = await computeFsrsUpdate(
-      vocabUpdate.score,
-      priorVocabState,
+      itemUpdate.score,
+      priorState,
       userRetention,
       userWeightsForElo,
       responseTimeMs
     );
 
-    const currentVarianceVocab = userVocabMap.get(vocab.id)?.eloVariance ?? 400;
-    const { newMu: newEloVocab, newVariance: newVarianceVocab } = calculateNewElo(
+    const { newMu: newElo, newVariance } = calculateNewElo(
       currentElo,
-      currentVarianceVocab,
-      vocabUpdate.score,
+      currentVariance,
+      itemUpdate.score,
       baseDifficulty,
       gameMode
     );
-    vocabUpdate.eloBefore = currentElo;
-    vocabUpdate.eloAfter = newEloVocab;
+
+    itemUpdate.eloBefore = currentElo;
+    itemUpdate.eloAfter = newElo;
+
     const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
+    const errorType = itemUpdate.score < 0.8 ? (itemUpdate.errorType ?? null) : null;
 
-    // Persist errorType: set on incorrect answers, clear on correct ones.
-    const errorType = vocabUpdate.score < 0.8 ? (vocabUpdate.errorType ?? null) : null;
-
-    // Update the persistent decayed error-count vector.
-    const currentVocabErrorCounts = parseErrorCounts(currentProgress?.errorCounts ?? null);
-    const newVocabErrorCounts = updateErrorCounts(
-      currentVocabErrorCounts,
-      priorVocabState.lastReviewDate,
+    const currentErrorCounts = parseErrorCounts(currentProgress?.errorCounts ?? null);
+    const newErrorCounts = updateErrorCounts(
+      currentErrorCounts,
+      priorState.lastReviewDate,
       errorType
     );
 
-    const vocabMedianMs =
+    const newMedianMs =
       responseTimeMs !== null
-        ? updateRunningMedian(priorVocabState.medianResponseMs, responseTimeMs)
+        ? updateRunningMedian(priorState.medianResponseMs, responseTimeMs)
         : undefined;
 
     const isProduction = gameMode === 'native-to-target' || gameMode === 'fill-blank';
-    const hasProducedUpdate = isProduction && vocabUpdate.score >= 0.8;
+    const hasProducedUpdate = isProduction && itemUpdate.score >= 0.8;
 
-    await Promise.all([
-      prisma.userVocabularyProgress.upsert({
-        where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-        create: {
-          userId,
-          vocabularyId: vocab.id,
-          ...fsrs,
-          lastErrorType: errorType,
-          errorCounts: newVocabErrorCounts,
-          reviewCount: 1,
-          hasProduced: hasProducedUpdate,
-          ...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
-        },
-        update: {
-          ...fsrs,
-          lastErrorType: errorType,
-          errorCounts: newVocabErrorCounts,
-          reviewCount: { increment: 1 },
-          ...(hasProducedUpdate ? { hasProduced: true } : {}),
-          ...(vocabMedianMs !== undefined ? { medianResponseMs: vocabMedianMs } : {})
-        }
-      }),
-      prisma.userVocabulary.upsert({
-        where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-        create: {
-          userId,
-          vocabularyId: vocab.id,
-          eloRating: newEloVocab,
-          eloVariance: newVarianceVocab,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        },
-        update: {
-          eloRating: newEloVocab,
-          eloVariance: newVarianceVocab,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        }
-      })
-    ]);
+    await srsRepository.update({
+      userId,
+      itemId: itemBase.id,
+      type: itemType,
+      fsrs: { ...fsrs, nextReviewDate: fsrs.nextReviewDate },
+      elo: { rating: newElo, variance: newVariance },
+      state: newState,
+      errorType,
+      errorCounts: newErrorCounts,
+      medianResponseMs: newMedianMs,
+      hasProduced: hasProducedUpdate
+    });
 
     logReview(
       userId,
-      vocab.id,
-      'vocabulary',
-      scoreToRating(vocabUpdate.score),
-      priorVocabState.stability,
-      priorVocabState.difficulty,
-      priorVocabState.lastReviewDate,
-      responseTimeMs
-    );
-  }
-
-  // Process a single grammar update using prefetched data (zero extra reads).
-  async function processGrammarUpdate(grammarUpdate: EvaluationPayload['grammarUpdates'][number]) {
-    const grammar = grammarMap.get(grammarUpdate.id);
-    if (!grammar) {
-      console.warn(`Attempted to update non-existent grammar rule: ${grammarUpdate.id}`);
-      return;
-    }
-
-    const baseDifficulty = mapLevelToElo(grammar.level || 'A1');
-    const currentElo = userGrammarMap.get(grammar.id)?.eloRating ?? baseDifficulty;
-
-    const currentProgress = grammarProgressMap.get(grammar.id);
-    const priorGrammarState = {
-      difficulty: currentProgress?.difficulty ?? 5.0,
-      stability: currentProgress?.stability ?? 0.0,
-      retrievability: currentProgress?.retrievability ?? 1.0,
-      repetitions: currentProgress?.repetitions ?? 0,
-      lapses: currentProgress?.lapses ?? 0,
-      lastReviewDate: currentProgress?.lastReviewDate ?? null,
-      medianResponseMs: currentProgress?.medianResponseMs ?? null
-    };
-    const fsrs = await computeFsrsUpdate(
-      grammarUpdate.score,
-      priorGrammarState,
-      userRetention,
-      userWeightsForElo,
-      responseTimeMs
-    );
-
-    const currentVarianceGrammar = userGrammarMap.get(grammar.id)?.eloVariance ?? 400;
-    const { newMu: newEloGrammar, newVariance: newVarianceGrammar } = calculateNewElo(
-      currentElo,
-      currentVarianceGrammar,
-      grammarUpdate.score,
-      baseDifficulty,
-      gameMode
-    );
-    grammarUpdate.eloBefore = currentElo;
-    grammarUpdate.eloAfter = newEloGrammar;
-    const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
-
-    const errorType = grammarUpdate.score < 0.8 ? (grammarUpdate.errorType ?? null) : null;
-
-    // Update the persistent decayed error-count vector.
-    const currentGrammarErrorCounts = parseErrorCounts(currentProgress?.errorCounts ?? null);
-    const newGrammarErrorCounts = updateErrorCounts(
-      currentGrammarErrorCounts,
-      priorGrammarState.lastReviewDate,
-      errorType
-    );
-
-    const grammarMedianMs =
-      responseTimeMs !== null
-        ? updateRunningMedian(priorGrammarState.medianResponseMs, responseTimeMs)
-        : undefined;
-
-    const isProductionGrammar = gameMode === 'native-to-target' || gameMode === 'fill-blank';
-    const hasProducedUpdateGrammar = isProductionGrammar && grammarUpdate.score >= 0.8;
-
-    await Promise.all([
-      prisma.userGrammarRuleProgress.upsert({
-        where: { userId_grammarRuleId: { userId, grammarRuleId: grammar.id } },
-        create: {
-          userId,
-          grammarRuleId: grammar.id,
-          ...fsrs,
-          lastErrorType: errorType,
-          errorCounts: newGrammarErrorCounts,
-          reviewCount: 1,
-          hasProduced: hasProducedUpdateGrammar,
-          ...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
-        },
-        update: {
-          ...fsrs,
-          lastErrorType: errorType,
-          errorCounts: newGrammarErrorCounts,
-          reviewCount: { increment: 1 },
-          ...(hasProducedUpdateGrammar ? { hasProduced: true } : {}),
-          ...(grammarMedianMs !== undefined ? { medianResponseMs: grammarMedianMs } : {})
-        }
-      }),
-      prisma.userGrammarRule.upsert({
-        where: { userId_grammarRuleId: { userId, grammarRuleId: grammar.id } },
-        create: {
-          userId,
-          grammarRuleId: grammar.id,
-          eloRating: newEloGrammar,
-          eloVariance: newVarianceGrammar,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        },
-        update: {
-          eloRating: newEloGrammar,
-          eloVariance: newVarianceGrammar,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        }
-      })
-    ]);
-
-    logReview(
-      userId,
-      grammar.id,
-      'grammar',
-      scoreToRating(grammarUpdate.score),
-      priorGrammarState.stability,
-      priorGrammarState.difficulty,
-      priorGrammarState.lastReviewDate,
+      itemBase.id,
+      itemType,
+      scoreToRating(itemUpdate.score),
+      priorState.stability,
+      priorState.difficulty,
+      priorState.lastReviewDate,
       responseTimeMs
     );
   }
@@ -1007,41 +923,25 @@ export async function updateEloRatings(
     );
     const newState = deriveSrsStateFromFsrs(fsrs.repetitions, fsrs.stability, fsrs.lapses);
 
-    await Promise.all([
-      prisma.userVocabularyProgress.upsert({
-        where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-        create: { userId, vocabularyId: vocab.id, ...fsrs },
-        update: fsrs
-      }),
-      prisma.userVocabulary.upsert({
-        where: { userId_vocabularyId: { userId, vocabularyId: vocab.id } },
-        create: {
-          userId,
-          vocabularyId: vocab.id,
-          eloRating: newEloExtra,
-          eloVariance: newVarianceExtra,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        },
-        update: {
-          eloRating: newEloExtra,
-          eloVariance: newVarianceExtra,
-          srsState: newState,
-          nextReviewDate: fsrs.nextReviewDate
-        }
-      })
-    ]);
+    await srsRepository.update({
+      userId,
+      itemId: vocab.id,
+      type: 'vocabulary',
+      fsrs: { ...fsrs, nextReviewDate: fsrs.nextReviewDate },
+      elo: { rating: newEloExtra, variance: newVarianceExtra },
+      state: newState
+    });
   }
 
   // Run all vocab, grammar, and extra-lemma updates in parallel.
   await Promise.all([
     ...(payload.vocabularyUpdates || []).map((u) =>
-      processVocabUpdate(u).catch((err) =>
+      processItemUpdate(u, 'vocabulary').catch((err) =>
         console.error(`Failed to update user vocabulary ${u.id}:`, err)
       )
     ),
     ...(payload.grammarUpdates || []).map((u) =>
-      processGrammarUpdate(u).catch((err) =>
+      processItemUpdate(u, 'grammar').catch((err) =>
         console.error(`Failed to update user grammar rule ${u.id}:`, err)
       )
     ),

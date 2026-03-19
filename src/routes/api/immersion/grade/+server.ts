@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { gradeImmersionAnswer } from '$lib/server/immersionService';
+import { successResponse, errorResponse } from '$lib/server/apiResponse';
 
 export async function POST({ request, locals }) {
   if (!locals.user) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
+    return errorResponse('Unauthorized', 401);
   }
 
   const userId = locals.user.id;
@@ -17,11 +17,11 @@ export async function POST({ request, locals }) {
   try {
     const data = await request.json();
     const result = await gradeImmersionAnswer(userId, data, useLocalLlm);
-    return json(result);
+    return successResponse(result);
   } catch (error) {
     console.error('Immersion grade error:', error);
     const message =
       error instanceof Error ? error.message : 'Could not grade your answer. Please try again.';
-    return json({ score: 0, feedback: message });
+    return successResponse({ score: 0, feedback: message });
   }
 }

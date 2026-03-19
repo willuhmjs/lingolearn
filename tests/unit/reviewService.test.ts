@@ -48,11 +48,12 @@ describe('reviewService', () => {
       expect(generateChatCompletion).toHaveBeenCalled();
     });
 
-    it('returns 0 score if quota is exceeded', async () => {
+    it('throws error if quota is exceeded', async () => {
       vi.mocked(isClearlyCorrect).mockReturnValue(false);
       vi.mocked(isQuotaExceeded).mockResolvedValue(true);
-      const result = await gradeReviewAnswer('u1', 'pomme', 'pomme', 'apple', false);
-      expect(result).toEqual({ correct: false, score: 0 });
+      await expect(gradeReviewAnswer('u1', 'pomme', 'pomme', 'apple', false)).rejects.toThrow(
+        'Daily AI quota exceeded. Please try again tomorrow.'
+      );
       expect(generateChatCompletion).not.toHaveBeenCalled();
     });
 

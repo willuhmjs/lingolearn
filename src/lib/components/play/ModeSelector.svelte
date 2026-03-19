@@ -2,6 +2,7 @@
   import { fly } from 'svelte/transition';
   import { goto } from '$app/navigation';
   import type { GameMode, CyclableMode, LeitnerItem } from '$lib/utils/playTypes';
+  import Button from '../Button.svelte';
 
   let {
     gameMode = $bindable<GameMode>('native-to-target'),
@@ -186,7 +187,7 @@
       </button>
     {/if}
   </div>
-  <button onclick={handleGenerate} class="btn-duo btn-ai" style="margin-top: 1.5rem; width: 100%;">
+  <Button variant="ai" onclick={handleGenerate} style="margin-top: 1.5rem; width: 100%;">
     <svg
       viewBox="0 0 24 24"
       fill="none"
@@ -204,7 +205,7 @@
       : gameMode === 'immerse'
         ? 'Start Immersive Reading'
         : 'Generate Next Challenge'}
-  </button>
+  </Button>
 </div>
 
 <style>

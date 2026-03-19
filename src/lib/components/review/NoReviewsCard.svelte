@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
+  import Button from '$lib/components/Button.svelte';
 </script>
 
 <div class="card-duo finished-card" in:fly={{ y: 20, duration: 400, delay: 100 }}>
@@ -12,8 +13,8 @@
   <p>No reviews due right now. Great job keeping your streak alive!</p>
   <p class="empty-cta-desc">Want to keep practicing? Head over to Play to learn new words.</p>
   <div class="empty-cta-row">
-    <a href="/play" class="btn-duo btn-primary">Go to Play</a>
-    <a href="/dashboard" class="btn-duo btn-secondary">Dashboard</a>
+    <Button href="/play" variant="primary">Go to Play</Button>
+    <Button href="/dashboard" variant="secondary">Dashboard</Button>
   </div>
 </div>
 

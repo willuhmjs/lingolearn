@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { fade, fly } from 'svelte/transition';
   import { toastError } from '$lib/utils/toast';
+  import BaseModal from './BaseModal.svelte';
 
   let {
     vocab,
@@ -25,160 +25,113 @@
       toastError('Failed to copy to clipboard. Please copy manually.');
     }
   }
-
-  let previouslyFocusedElement: HTMLElement | null = null;
-  let modalRef: HTMLElement | null = $state(null);
-
-  $effect(() => {
-    if (vocab) {
-      previouslyFocusedElement = document.activeElement as HTMLElement;
-      setTimeout(() => {
-        const firstFocusable = modalRef?.querySelector(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        ) as HTMLElement;
-        firstFocusable?.focus();
-      }, 50);
-    } else if (previouslyFocusedElement) {
-      previouslyFocusedElement.focus();
-      previouslyFocusedElement = null;
-    }
-  });
-
-  function handleTrapFocus(e: KeyboardEvent) {
-    if (e.key !== 'Tab' || !vocab || !modalRef) return;
-
-    const focusableElements = Array.from(
-      modalRef.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-    ) as HTMLElement[];
-
-    if (focusableElements.length === 0) return;
-
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-
-    if (e.shiftKey) {
-      if (document.activeElement === firstElement) {
-        lastElement.focus();
-        e.preventDefault();
-      }
-    } else {
-      if (document.activeElement === lastElement) {
-        firstElement.focus();
-        e.preventDefault();
-      }
-    }
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && vocab !== null) {
-      onclose();
-    }
-    handleTrapFocus(e);
-  }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-{#if vocab}
-  <div
-    class="modal-backdrop"
-    role="presentation"
-    onclick={onclose}
-    transition:fade={{ duration: 200 }}
-  >
+<BaseModal open={!!vocab} {onclose} showCloseButton={false} noPadding={true} maxWidth="34rem">
+  {#if vocab}
+    <!-- Header band -->
     <div
-      bind:this={modalRef}
-      class="modal-content"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="vocab-modal-title"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-      transition:fly={{ y: 20, duration: 200 }}
+      class="modal-header"
+      class:gender-feminine={vocab.gender?.toLowerCase() === 'feminine'}
+      class:gender-masculine={vocab.gender?.toLowerCase() === 'masculine'}
+      class:gender-neuter={vocab.gender?.toLowerCase() === 'neuter'}
     >
-      <!-- Header band -->
-      <div
-        class="modal-header"
-        class:gender-feminine={vocab.gender?.toLowerCase() === 'feminine'}
-        class:gender-masculine={vocab.gender?.toLowerCase() === 'masculine'}
-        class:gender-neuter={vocab.gender?.toLowerCase() === 'neuter'}
-      >
-        <button class="modal-close" onclick={onclose} aria-label="Close modal">
+      <button class="modal-close" onclick={onclose} aria-label="Close modal">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          ><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+        >
+      </button>
+      <div class="modal-header-main">
+        <div class="modal-title-row">
+          <h2 id="vocab-modal-title" class="vocab-title">{vocab.lemma}</h2>
+          <button
+            class="copy-btn copy-btn-modal"
+            onclick={() =>
+              copyWord(
+                'modal-' + vocab.id,
+                vocab.lemma + (vocab.meanings?.[0]?.value ? ' — ' + vocab.meanings[0].value : '')
+              )}
+            title="Copy word"
+            aria-label="Copy {vocab.lemma} to clipboard"
+            >{#if copiedId === 'modal-' + vocab.id}✓{:else}<svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                style="width:1rem;height:1rem"
+                ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                ></path></svg
+              >{/if}</button
+          >
+        </div>
+        <div class="modal-header-meta">
+          {#if vocab.partOfSpeech}
+            <span class="modal-pos-badge">{vocab.partOfSpeech}</span>
+          {/if}
+          {#if vocab.gender}
+            <span class="modal-gender-badge gender-badge-{vocab.gender.toLowerCase()}">
+              {vocab.gender.toLowerCase()}
+            </span>
+          {/if}
+          {#if vocab.metadata?.level}
+            <span class="modal-level-badge level-{vocab.metadata.level.toLowerCase()}"
+              >{vocab.metadata.level}</span
+            >
+          {/if}
+          {#if vocab.frequency != null}
+            {@const rank = vocab.frequency}
+            <span
+              class="modal-freq-badge"
+              title="Corpus frequency rank #{rank} — lower = more common"
+            >
+              #{rank.toLocaleString()}
+            </span>
+          {/if}
+          {#if enriching}
+            <span class="modal-enriching-badge">
+              <span class="spinner-tiny"></span> Enriching
+            </span>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <!-- Meaning -->
+      <div class="dict-entry">
+        <span class="dict-entry-icon">
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2.5"
+            stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            aria-hidden="true"
-            ><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+            ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
+              d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            /></svg
           >
-        </button>
-        <div class="modal-header-main">
-          <div class="modal-title-row">
-            <h2 id="vocab-modal-title" class="modal-title">{vocab.lemma}</h2>
-            <button
-              class="copy-btn copy-btn-modal"
-              onclick={() =>
-                copyWord(
-                  'modal-' + vocab.id,
-                  vocab.lemma + (vocab.meanings?.[0]?.value ? ' — ' + vocab.meanings[0].value : '')
-                )}
-              title="Copy word"
-              aria-label="Copy {vocab.lemma} to clipboard"
-              >{#if copiedId === 'modal-' + vocab.id}✓{:else}<svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                  style="width:1rem;height:1rem"
-                  ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  ></path></svg
-                >{/if}</button
-            >
-          </div>
-          <div class="modal-header-meta">
-            {#if vocab.partOfSpeech}
-              <span class="modal-pos-badge">{vocab.partOfSpeech}</span>
-            {/if}
-            {#if vocab.gender}
-              <span class="modal-gender-badge gender-badge-{vocab.gender.toLowerCase()}">
-                {vocab.gender.toLowerCase()}
-              </span>
-            {/if}
-            {#if vocab.metadata?.level}
-              <span class="modal-level-badge level-{vocab.metadata.level.toLowerCase()}"
-                >{vocab.metadata.level}</span
-              >
-            {/if}
-            {#if vocab.frequency != null}
-              {@const rank = vocab.frequency}
-              <span
-                class="modal-freq-badge"
-                title="Corpus frequency rank #{rank} — lower = more common"
-              >
-                #{rank.toLocaleString()}
-              </span>
-            {/if}
-            {#if enriching}
-              <span class="modal-enriching-badge">
-                <span class="spinner-tiny"></span> Enriching
-              </span>
-            {/if}
-          </div>
+        </span>
+        <div class="dict-entry-body">
+          <span class="dict-label">meaning</span>
+          <p class="dict-meaning">
+            {vocab.meanings?.[0]?.value || 'No meaning provided'}
+          </p>
         </div>
       </div>
 
-      <div class="modal-body">
-        <!-- Meaning -->
+      {#if vocab.plural}
         <div class="dict-entry">
           <span class="dict-entry-icon">
             <svg
@@ -188,20 +141,96 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-              ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
-                d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+              ><rect x="2" y="7" width="8" height="14" rx="1" /><rect
+                x="14"
+                y="3"
+                width="8"
+                height="18"
+                rx="1"
               /></svg
             >
           </span>
           <div class="dict-entry-body">
-            <span class="dict-label">meaning</span>
-            <p class="dict-meaning">
-              {vocab.meanings?.[0]?.value || 'No meaning provided'}
-            </p>
+            <span class="dict-label">plural</span>
+            <p class="dict-value">{vocab.plural}</p>
           </div>
         </div>
+      {/if}
 
-        {#if vocab.plural}
+      {#if vocab.metadata}
+        {#if vocab.metadata.declensions}
+          <div class="dict-entry dict-entry-block">
+            <span class="dict-entry-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><rect x="3" y="3" width="18" height="18" rx="2" /><path
+                  d="M3 9h18M3 15h18M9 3v18"
+                /></svg
+              >
+            </span>
+            <div class="dict-entry-body">
+              <span class="dict-label">declensions</span>
+              <table class="declension-table">
+                <thead>
+                  <tr>
+                    <th>case</th>
+                    {#if typeof Object.values(vocab.metadata.declensions)[0] === 'object'}
+                      {#each Object.keys(Object.values(vocab.metadata.declensions)[0] as Record<string, string>) as col}
+                        <th>{col}</th>
+                      {/each}
+                    {:else}
+                      <th>form</th>
+                    {/if}
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each Object.entries(vocab.metadata.declensions) as [caseName, forms]}
+                    <tr>
+                      <td class="case-name">{caseName}</td>
+                      {#if typeof forms === 'string'}
+                        <td>{forms}</td>
+                      {:else}
+                        {#each Object.values(forms as Record<string, string>) as val}
+                          <td>{val}</td>
+                        {/each}
+                      {/if}
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/if}
+
+        {#if vocab.metadata.example}
+          <div class="dict-entry dict-entry-example">
+            <span class="dict-entry-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
+              >
+            </span>
+            <div class="dict-entry-body">
+              <span class="dict-label">example</span>
+              <p class="example-sentence">&#8220;{vocab.metadata.example}&#8221;</p>
+              {#if vocab.metadata.exampleTranslation}
+                <p class="example-translation">{vocab.metadata.exampleTranslation}</p>
+              {/if}
+            </div>
+          </div>
+        {/if}
+
+        {#if vocab.metadata.synonyms?.length > 0 || vocab.metadata.antonyms?.length > 0}
           <div class="dict-entry">
             <span class="dict-entry-icon">
               <svg
@@ -211,230 +240,98 @@
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                ><rect x="2" y="7" width="8" height="14" rx="1" /><rect
-                  x="14"
-                  y="3"
-                  width="8"
-                  height="18"
-                  rx="1"
-                /></svg
+                ><path d="M7 16V4m0 0L3 8m4-4 4 4" /><path d="M17 8v12m0 0 4-4m-4 4-4-4" /></svg
               >
             </span>
             <div class="dict-entry-body">
-              <span class="dict-label">plural</span>
-              <p class="dict-value">{vocab.plural}</p>
+              {#if vocab.metadata.synonyms?.length > 0}
+                <span class="dict-label">synonyms</span>
+                <div class="word-tags">
+                  {#each vocab.metadata.synonyms as word}
+                    <span class="word-tag word-tag-syn">{word}</span>
+                  {/each}
+                </div>
+              {/if}
+              {#if vocab.metadata.antonyms?.length > 0}
+                <span class="dict-label" style="margin-top:0.5rem">antonyms</span>
+                <div class="word-tags">
+                  {#each vocab.metadata.antonyms as word}
+                    <span class="word-tag word-tag-ant">{word}</span>
+                  {/each}
+                </div>
+              {/if}
             </div>
           </div>
         {/if}
 
-        {#if vocab.metadata}
-          {#if vocab.metadata.declensions}
-            <div class="dict-entry dict-entry-block">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><rect x="3" y="3" width="18" height="18" rx="2" /><path
-                    d="M3 9h18M3 15h18M9 3v18"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">declensions</span>
-                <table class="declension-table">
-                  <thead>
-                    <tr>
-                      <th>case</th>
-                      {#if typeof Object.values(vocab.metadata.declensions)[0] === 'object'}
-                        {#each Object.keys(Object.values(vocab.metadata.declensions)[0] as Record<string, string>) as col}
-                          <th>{col}</th>
-                        {/each}
-                      {:else}
-                        <th>form</th>
-                      {/if}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each Object.entries(vocab.metadata.declensions) as [caseName, forms]}
-                      <tr>
-                        <td class="case-name">{caseName}</td>
-                        {#if typeof forms === 'string'}
-                          <td>{forms}</td>
-                        {:else}
-                          {#each Object.values(forms as Record<string, string>) as val}
-                            <td>{val}</td>
-                          {/each}
-                        {/if}
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          {/if}
-
-          {#if vocab.metadata.example}
-            <div class="dict-entry dict-entry-example">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">example</span>
-                <p class="example-sentence">&#8220;{vocab.metadata.example}&#8221;</p>
-                {#if vocab.metadata.exampleTranslation}
-                  <p class="example-translation">{vocab.metadata.exampleTranslation}</p>
+        {#if vocab.metadata.conjugations}
+          <div class="dict-entry dict-entry-block">
+            <span class="dict-entry-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path d="M12 20h9" /><path
+                  d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                /></svg
+              >
+            </span>
+            <div class="dict-entry-body">
+              <span class="dict-label">conjugations</span>
+              {#each Object.entries(vocab.metadata.conjugations) as [tense, forms]}
+                <p class="conj-tense-label">{tense}</p>
+                {#if forms !== null && typeof forms === 'object' && !Array.isArray(forms)}
+                  <table class="declension-table">
+                    <tbody>
+                      {#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
+                        <tr>
+                          <td class="case-name">{person}</td>
+                          <td>{conjugation}</td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                {:else}
+                  <p class="conj-form">{forms}</p>
                 {/if}
-              </div>
+              {/each}
             </div>
-          {/if}
-
-          {#if vocab.metadata.synonyms?.length > 0 || vocab.metadata.antonyms?.length > 0}
-            <div class="dict-entry">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M7 16V4m0 0L3 8m4-4 4 4" /><path d="M17 8v12m0 0 4-4m-4 4-4-4" /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                {#if vocab.metadata.synonyms?.length > 0}
-                  <span class="dict-label">synonyms</span>
-                  <div class="word-tags">
-                    {#each vocab.metadata.synonyms as word}
-                      <span class="word-tag word-tag-syn">{word}</span>
-                    {/each}
-                  </div>
-                {/if}
-                {#if vocab.metadata.antonyms?.length > 0}
-                  <span class="dict-label" style="margin-top:0.5rem">antonyms</span>
-                  <div class="word-tags">
-                    {#each vocab.metadata.antonyms as word}
-                      <span class="word-tag word-tag-ant">{word}</span>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            </div>
-          {/if}
-
-          {#if vocab.metadata.conjugations}
-            <div class="dict-entry dict-entry-block">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path d="M12 20h9" /><path
-                    d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">conjugations</span>
-                {#each Object.entries(vocab.metadata.conjugations) as [tense, forms]}
-                  <p class="conj-tense-label">{tense}</p>
-                  {#if forms !== null && typeof forms === 'object' && !Array.isArray(forms)}
-                    <table class="declension-table">
-                      <tbody>
-                        {#each Object.entries(forms as Record<string, string>) as [person, conjugation]}
-                          <tr>
-                            <td class="case-name">{person}</td>
-                            <td>{conjugation}</td>
-                          </tr>
-                        {/each}
-                      </tbody>
-                    </table>
-                  {:else}
-                    <p class="conj-form">{forms}</p>
-                  {/if}
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          {#if !vocab.metadata.conjugations && !vocab.metadata.declensions && !vocab.metadata.example && !vocab.metadata.synonyms && !vocab.metadata.antonyms && !vocab.metadata.level && Object.keys(vocab.metadata).length > 0}
-            <div class="dict-entry">
-              <span class="dict-entry-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
-                    x1="12"
-                    y1="16"
-                    x2="12.01"
-                    y2="16"
-                  /></svg
-                >
-              </span>
-              <div class="dict-entry-body">
-                <span class="dict-label">details</span>
-                <pre class="modal-metadata">{JSON.stringify(vocab.metadata, null, 2)}</pre>
-              </div>
-            </div>
-          {/if}
+          </div>
         {/if}
-      </div>
+
+        {#if !vocab.metadata.conjugations && !vocab.metadata.declensions && !vocab.metadata.example && !vocab.metadata.synonyms && !vocab.metadata.antonyms && !vocab.metadata.level && Object.keys(vocab.metadata).length > 0}
+          <div class="dict-entry">
+            <span class="dict-entry-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
+                  x1="12"
+                  y1="16"
+                  x2="12.01"
+                  y2="16"
+                /></svg
+              >
+            </span>
+            <div class="dict-entry-body">
+              <span class="dict-label">details</span>
+              <pre class="modal-metadata">{JSON.stringify(vocab.metadata, null, 2)}</pre>
+            </div>
+          </div>
+        {/if}
+      {/if}
     </div>
-  </div>
-{/if}
+  {/if}
+</BaseModal>
 
 <style>
-  /* Modal Styles */
-  .modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1050;
-    padding: 1rem;
-    backdrop-filter: blur(2px);
-  }
-
-  .modal-content {
-    background-color: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: var(--radius-xl, 0.875rem);
-    box-shadow:
-      0 24px 48px -8px rgba(0, 0, 0, 0.22),
-      0 0 0 1px rgba(0, 0, 0, 0.04);
-    max-width: 34rem;
-    width: 100%;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-  }
-
   /* Header band */
   .modal-header {
     padding: 1.25rem 1.5rem 1.125rem;
@@ -498,7 +395,7 @@
     padding-left: 0.5rem;
   }
 
-  .modal-title {
+  .vocab-title {
     font-size: 1.875rem;
     font-weight: 800;
     margin: 0 2rem 0.375rem 0;

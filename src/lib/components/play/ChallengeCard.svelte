@@ -6,6 +6,7 @@
   import FillInBlankView from '$lib/components/play/FillInBlankView.svelte';
   import MultipleChoiceView from '$lib/components/play/MultipleChoiceView.svelte';
   import TranslationView from '$lib/components/play/TranslationView.svelte';
+  import Button from '$lib/components/Button.svelte';
 
   let {
     challenge,
@@ -215,8 +216,9 @@
 
     {#if !feedback}
       {#if challenge.gameMode !== 'multiple-choice'}
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={submitting ||
             !challenge?.targetSentence ||
             (challenge.gameMode === 'fill-blank'
@@ -224,11 +226,11 @@
               : challenge.gameMode === 'multiple-choice'
                 ? !selectedChoice
                 : !userInput.trim())}
-          class="btn-duo btn-primary submit-btn"
+          loading={submitting}
           style="margin-top: 1.5rem; width: 100%;"
         >
-          {submitting ? 'Evaluating...' : 'Submit Answer'}
-        </button>
+          Submit Answer
+        </Button>
       {/if}
     {/if}
   </form>

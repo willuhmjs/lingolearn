@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import toast from 'svelte-french-toast';
   import { getLanguageConfig } from '$lib/languages';
+  import { dictionaryService } from '$lib/services/dictionary.svelte';
 
   // Sub-components
   import WordPopup from './immersion/WordPopup.svelte';
@@ -24,6 +25,13 @@
     assignmentProgress?: { score: number; targetScore: number; passed: boolean } | null;
     disableHoverTranslation?: boolean;
   } = $props();
+
+  $effect(() => {
+    dictionaryService.setContext(
+      language ? { id: language.id || '', name: language.name } : null,
+      disableHoverTranslation
+    );
+  });
 
   type MediaType =
     | 'news_article'
@@ -113,9 +121,7 @@
     answers = {};
     totalXpEarned = 0;
     sessionComplete = false;
-    wordPopup = null;
-    wordLookupCache.clear();
-    wordInflightSet.clear();
+    dictionaryService.close();
 
     const dests = langConfig.destinations;
     const chosenDest = dests[Math.floor(Math.random() * dests.length)];
@@ -140,24 +146,12 @@
     }
   }
 
-  // Word lookup popup state
-  type WordPopupType = {
-    word: string;
-    x: number;
-    y: number;
-    loading: boolean;
-    result: any | null;
-    error: string;
-  };
-  let wordPopup = $state<WordPopupType | null>(null);
   let wordAddedSet = $state(new Set<string>());
   let wordAddingId = $state<string | null>(null);
 
   const skeletonType = $derived(
     selectedMediaType === 'random' ? 'news_article' : selectedMediaType
   );
-  let wordLookupCache = new Map<string, any>();
-  let wordInflightSet = new Set<string>();
 
   async function addWordToVocabulary(vocabularyId: string) {
     if (!vocabularyId || wordAddedSet.has(vocabularyId) || wordAddingId) return;
@@ -178,114 +172,7 @@
     }
   }
 
-  function cleanWord(raw: string): string {
-    return raw.replace(/^[«»„""[\]().,!?;:'"–—]+|[«»„""[\]().,!?;:'"–—]+$/g, '').trim();
-  }
-
   let langConfig = $derived(getLanguageConfig(language?.name || 'German'));
-
-  function isSparseMeta(vocab: any): boolean {
-    if (!vocab?.meanings?.length) return true;
-    const isNoun = vocab.partOfSpeech === 'noun';
-    if (isNoun && langConfig.hasGender && !vocab.gender) return true;
-    const meta = vocab?.metadata;
-    if (!meta) return true;
-    return !(meta.example || meta.declensions || meta.conjugations);
-  }
-
-  async function handleWordClick(e: MouseEvent | KeyboardEvent, rawWord: string) {
-    if (disableHoverTranslation || !language?.id) return;
-    const word = cleanWord(rawWord);
-    if (!word || word.length < 2 || /^\d+$/.test(word)) return;
-    e.stopPropagation();
-
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    let x = Math.min(rect.left, window.innerWidth - 260);
-    x = Math.max(0, x);
-    let y = Math.min(rect.bottom + 6, window.innerHeight - 200);
-    y = Math.max(0, y);
-
-    const wordKey = word.toLowerCase();
-
-    if (wordLookupCache.has(wordKey)) {
-      wordPopup = { word, x, y, loading: false, result: wordLookupCache.get(wordKey), error: '' };
-      return;
-    }
-
-    if (wordInflightSet.has(wordKey)) {
-      if (!wordPopup || wordPopup.word !== word) {
-        wordPopup = { word, x, y, loading: true, result: null, error: '' };
-      }
-      return;
-    }
-
-    wordPopup = { word, x, y, loading: true, result: null, error: '' };
-    let dbVocab: any = null;
-    try {
-      const dbRes = await fetch(`/api/vocabulary/search?q=${encodeURIComponent(word)}`);
-      if (dbRes.ok) {
-        const dbData = await dbRes.json();
-        dbVocab =
-          dbData.results?.find((r: any) => r.lemma.toLowerCase() === word.toLowerCase()) ?? null;
-      }
-    } catch {
-      /* non-critical */
-    }
-
-    if (dbVocab) {
-      wordPopup = { word, x, y, loading: false, result: dbVocab, error: '' };
-      if (!isSparseMeta(dbVocab)) {
-        wordLookupCache.set(wordKey, dbVocab);
-        return;
-      }
-    }
-
-    const enriching = !!dbVocab;
-    if (!enriching) {
-      wordPopup = { word, x, y, loading: true, result: null, error: '' };
-    }
-
-    wordInflightSet.add(wordKey);
-    try {
-      const res = await fetch('/api/vocabulary/llm-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          word,
-          languageId: language.id,
-          ...(dbVocab?.id ? { existingId: dbVocab.id } : {})
-        })
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        wordLookupCache.set(wordKey, data.data);
-        if (wordPopup?.word === word) {
-          wordPopup = { word, x, y, loading: false, result: data.data, error: '' };
-        }
-      } else if (!enriching) {
-        if (wordPopup?.word === word) {
-          wordPopup = {
-            word,
-            x,
-            y,
-            loading: false,
-            result: null,
-            error: data.error || 'Word not found.'
-          };
-        }
-      }
-    } catch {
-      if (!enriching && wordPopup?.word === word) {
-        wordPopup = { word, x, y, loading: false, result: null, error: 'Lookup failed.' };
-      }
-    } finally {
-      wordInflightSet.delete(wordKey);
-    }
-  }
-
-  function closeWordPopup() {
-    wordPopup = null;
-  }
 
   function handleMcqSelect(questionId: string, optionIndex: number, question: Question) {
     if (answers[questionId]?.mcqSubmitted) return;
@@ -428,12 +315,12 @@
     }
 
     function handleOutsideClick(e: MouseEvent) {
-      if (!wordPopup) return;
+      if (!dictionaryService.isOpen) return;
       const popup = document.querySelector('.word-popup');
       if (popup && !popup.contains(e.target as Node)) {
         const mediaCard = document.querySelector('.media-card');
         if (mediaCard && mediaCard.contains(e.target as Node)) return;
-        wordPopup = null;
+        dictionaryService.close();
       }
     }
     document.addEventListener('click', handleOutsideClick);
@@ -488,8 +375,8 @@
   }
 </script>
 
-{#if wordPopup}
-  <WordPopup {wordPopup} {wordAddedSet} {wordAddingId} {closeWordPopup} {addWordToVocabulary} />
+{#if dictionaryService.isOpen}
+  <WordPopup {wordAddedSet} {wordAddingId} {addWordToVocabulary} />
 {/if}
 
 <div class="immersion-root">
@@ -514,13 +401,7 @@
   {/if}
 
   {#if session && !loading}
-    <MediaCard
-      {session}
-      {language}
-      {disableHoverTranslation}
-      {MEDIA_LABELS}
-      onWordClick={handleWordClick}
-    />
+    <MediaCard {session} {language} {disableHoverTranslation} {MEDIA_LABELS} />
 
     <QuestionSection
       {session}

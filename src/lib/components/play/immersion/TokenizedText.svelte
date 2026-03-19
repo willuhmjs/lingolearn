@@ -1,12 +1,12 @@
 <script lang="ts">
+  import { dictionaryService } from '$lib/services/dictionary.svelte';
+
   type Token = { word: true; value: string } | { word: false; value: string };
 
   let {
-    text = '',
-    onWordClick
+    text = ''
   }: {
     text: string;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 
   function tokenize(text: string): Token[] {
@@ -27,8 +27,9 @@
       role="button"
       tabindex="0"
       aria-label="Look up {tok.value}"
-      onclick={(e) => onWordClick(e, tok.value)}
-      onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onWordClick(e, tok.value)}
+      onclick={(e) => dictionaryService.handleWordClick(e, tok.value)}
+      onkeydown={(e) =>
+        (e.key === 'Enter' || e.key === ' ') && dictionaryService.handleWordClick(e, tok.value)}
     >
       {tok.value}
     </span>

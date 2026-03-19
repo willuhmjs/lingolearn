@@ -322,6 +322,15 @@
   // Recommended words
   let recommendedWords = $state<any[]>([]);
   let addedWords = $state<string[]>([]);
+  let recSectionWidth = $state(0);
+  let visibleRecommendedWords = $derived.by(() => {
+    // 150px card width + 10px (0.625rem) gap
+    const cardWidth = 150;
+    const gap = 10;
+    if (recSectionWidth <= 0) return recommendedWords;
+    const count = Math.floor((recSectionWidth + gap) / (cardWidth + gap));
+    return recommendedWords.slice(0, Math.max(0, count));
+  });
 
   onMount(async () => {
     try {
@@ -802,12 +811,12 @@
         </div>
 
         {#if recommendedWords.length > 0}
-          <div class="rec-section">
+          <div class="rec-section" bind:clientWidth={recSectionWidth}>
             <div class="rec-header">
               <span class="rec-title">Recommended for you</span>
             </div>
             <div class="rec-row">
-              {#each recommendedWords as word (word.id)}
+              {#each visibleRecommendedWords as word (word.id)}
                 <button
                   class="rec-card"
                   class:rec-card-added={addedWords.includes(word.id)}

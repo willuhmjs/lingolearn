@@ -2,27 +2,25 @@
   import TokenizedText from '../TokenizedText.svelte';
 
   let {
-    data,
-    onWordClick
+    data
   }: {
     data: any;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 </script>
 
 <div class="template ad-template">
   <div class="ad-brand">{data.brand}</div>
   <h2 class="ad-product">
-    <TokenizedText text={data.product || ''} {onWordClick} />
+    <TokenizedText text={data.product || ''} />
   </h2>
   <p class="ad-slogan">
-    "<TokenizedText text={data.slogan || ''} {onWordClick} />"
+    "<TokenizedText text={data.slogan || ''} />"
   </p>
   {#if data.features?.length}
     <ul class="ad-features">
       {#each data.features as feat}
         <li>
-          <TokenizedText text={feat || ''} {onWordClick} />
+          <TokenizedText text={feat || ''} />
         </li>
       {/each}
     </ul>

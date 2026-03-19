@@ -1,22 +1,13 @@
 <script lang="ts">
+  import { dictionaryService } from '$lib/services/dictionary.svelte';
+
   let {
-    wordPopup,
     wordAddedSet,
     wordAddingId,
-    closeWordPopup,
     addWordToVocabulary
   }: {
-    wordPopup: {
-      word: string;
-      x: number;
-      y: number;
-      loading: boolean;
-      result: any | null;
-      error: string;
-    };
     wordAddedSet: Set<string>;
     wordAddingId: string | null;
-    closeWordPopup: () => void;
     addWordToVocabulary: (vocabularyId: string) => void;
   } = $props();
 </script>
@@ -26,21 +17,23 @@
   role="dialog"
   aria-label="Word lookup"
   tabindex="-1"
-  style="left:{wordPopup.x}px;top:{wordPopup.y}px"
+  style="left:{dictionaryService.x}px;top:{dictionaryService.y}px"
   onclick={(e) => e.stopPropagation()}
   onkeydown={(e) => e.stopPropagation()}
 >
   <div class="word-popup-header">
-    <span class="word-popup-word">{wordPopup.word}</span>
-    <button class="word-popup-close" onclick={closeWordPopup} aria-label="Close">×</button>
+    <span class="word-popup-word">{dictionaryService.word}</span>
+    <button class="word-popup-close" onclick={() => dictionaryService.close()} aria-label="Close"
+      >×</button
+    >
   </div>
-  {#if wordPopup.loading}
+  {#if dictionaryService.isLoading}
     <div class="word-popup-loading">
       <span class="spinner"></span>
       Looking up...
     </div>
-  {:else if wordPopup.result}
-    {@const r = wordPopup.result}
+  {:else if dictionaryService.lookupResult}
+    {@const r = dictionaryService.lookupResult}
     <div class="word-popup-lemma">
       {r.lemma}{r.gender === 'MASCULINE'
         ? ' (der)'
@@ -70,8 +63,8 @@
         {/if}
       </div>
     {/if}
-  {:else if wordPopup.error}
-    <div class="word-popup-error">{wordPopup.error}</div>
+  {:else if dictionaryService.error}
+    <div class="word-popup-error">{dictionaryService.error}</div>
   {/if}
 </div>
 

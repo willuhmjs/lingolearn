@@ -2,11 +2,9 @@
   import TokenizedText from '../TokenizedText.svelte';
 
   let {
-    data,
-    onWordClick
+    data
   }: {
     data: any;
-    onWordClick: (e: MouseEvent | KeyboardEvent, rawWord: string) => void;
   } = $props();
 
   function starRating(n: number) {
@@ -26,11 +24,11 @@
     </div>
   </div>
   <p class="review-body">
-    <TokenizedText text={data.body || ''} {onWordClick} />
+    <TokenizedText text={data.body || ''} />
   </p>
   <div class="review-verdict">
     <strong>Fazit:</strong>
-    <TokenizedText text={data.verdict || ''} {onWordClick} />
+    <TokenizedText text={data.verdict || ''} />
   </div>
 </div>
 
