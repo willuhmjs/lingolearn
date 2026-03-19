@@ -136,8 +136,10 @@ describe('recordTokenUsage', () => {
   it('handles recordTokenUsage with extremely large values', async () => {
     mockUpsert.mockResolvedValue({});
     await recordTokenUsage('user-123', 1000000);
-    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      create: expect.objectContaining({ tokensUsed: 1000000 })
-    }));
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ tokensUsed: 1000000 })
+      })
+    );
   });
 });

@@ -61,7 +61,9 @@ describe('reviewService', () => {
       vi.mocked(isQuotaExceeded).mockResolvedValue(false);
       vi.mocked(generateChatCompletion).mockImplementation(async ({ onUsage }: any) => {
         if (onUsage) onUsage({ totalTokens: 100 });
-        return { choices: [{ message: { content: JSON.stringify({ correct: true, score: 1.0 }) } }] } as any;
+        return {
+          choices: [{ message: { content: JSON.stringify({ correct: true, score: 1.0 }) } }]
+        } as any;
       });
 
       await gradeReviewAnswer('u1', 'pomme', 'pomme', 'apple', false);
@@ -72,7 +74,9 @@ describe('reviewService', () => {
       vi.mocked(isClearlyCorrect).mockReturnValue(false);
       vi.mocked(generateChatCompletion).mockImplementation(async ({ onUsage }: any) => {
         if (onUsage) onUsage({ totalTokens: 100 });
-        return { choices: [{ message: { content: JSON.stringify({ correct: true, score: 1.0 }) } }] } as any;
+        return {
+          choices: [{ message: { content: JSON.stringify({ correct: true, score: 1.0 }) } }]
+        } as any;
       });
 
       await gradeReviewAnswer('u1', 'pomme', 'pomme', 'apple', true);

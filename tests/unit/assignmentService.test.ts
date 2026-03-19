@@ -15,7 +15,10 @@ vi.mock('../../src/lib/server/prisma', () => ({
   }
 }));
 
-import { updateAssignmentScore, updateImmersionAssignmentScore } from '../../src/lib/server/assignmentService';
+import {
+  updateAssignmentScore,
+  updateImmersionAssignmentScore
+} from '../../src/lib/server/assignmentService';
 import { prisma } from '../../src/lib/server/prisma';
 
 describe('assignmentService', () => {
@@ -30,30 +33,57 @@ describe('assignmentService', () => {
     });
 
     it('throws error if user is not a class member', async () => {
-      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({ id: 'a1', classId: 'c1' } as any);
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({
+        id: 'a1',
+        classId: 'c1'
+      } as any);
       vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce(null);
-      await expect(updateAssignmentScore('a1', 'u1', true)).rejects.toThrow('User is not a member of this class');
+      await expect(updateAssignmentScore('a1', 'u1', true)).rejects.toThrow(
+        'User is not a member of this class'
+      );
     });
 
     it('increments score and updates passed status', async () => {
-      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({ id: 'a1', classId: 'c1', targetScore: 10 } as any);
-      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({ classId: 'c1', userId: 'u1' } as any);
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({
+        id: 'a1',
+        classId: 'c1',
+        targetScore: 10
+      } as any);
+      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({
+        classId: 'c1',
+        userId: 'u1'
+      } as any);
       vi.mocked(prisma.assignmentScore.findUnique).mockResolvedValueOnce({ score: 9 } as any);
-      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({ score: 10, passed: true } as any);
+      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({
+        score: 10,
+        passed: true
+      } as any);
 
       const result = await updateAssignmentScore('a1', 'u1', true);
 
       expect(result).toEqual({ score: 10, targetScore: 10, passed: true });
-      expect(prisma.assignmentScore.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        update: { score: 10, passed: true }
-      }));
+      expect(prisma.assignmentScore.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { score: 10, passed: true }
+        })
+      );
     });
 
     it('does not increment score if incorrect', async () => {
-      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({ id: 'a1', classId: 'c1', targetScore: 10 } as any);
-      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({ classId: 'c1', userId: 'u1' } as any);
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({
+        id: 'a1',
+        classId: 'c1',
+        targetScore: 10
+      } as any);
+      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({
+        classId: 'c1',
+        userId: 'u1'
+      } as any);
       vi.mocked(prisma.assignmentScore.findUnique).mockResolvedValueOnce({ score: 5 } as any);
-      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({ score: 5, passed: false } as any);
+      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({
+        score: 5,
+        passed: false
+      } as any);
 
       const result = await updateAssignmentScore('a1', 'u1', false);
 
@@ -70,17 +100,29 @@ describe('assignmentService', () => {
     });
 
     it('adds correctCount to existing score', async () => {
-      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({ id: 'a1', classId: 'c1', targetScore: 20 } as any);
-      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({ classId: 'c1', userId: 'u1' } as any);
+      vi.mocked(prisma.assignment.findUnique).mockResolvedValueOnce({
+        id: 'a1',
+        classId: 'c1',
+        targetScore: 20
+      } as any);
+      vi.mocked(prisma.classMember.findUnique).mockResolvedValueOnce({
+        classId: 'c1',
+        userId: 'u1'
+      } as any);
       vi.mocked(prisma.assignmentScore.findUnique).mockResolvedValueOnce({ score: 10 } as any);
-      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({ score: 15, passed: false } as any);
+      vi.mocked(prisma.assignmentScore.upsert).mockResolvedValueOnce({
+        score: 15,
+        passed: false
+      } as any);
 
       const result = await updateImmersionAssignmentScore('a1', 'u1', 5);
 
       expect(result).toEqual({ score: 15, targetScore: 20, passed: false });
-      expect(prisma.assignmentScore.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        update: { score: 15, passed: false }
-      }));
+      expect(prisma.assignmentScore.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { score: 15, passed: false }
+        })
+      );
     });
   });
 });
