@@ -319,6 +319,39 @@
     });
   }
 
+  // Recommended words
+  let recommendedWords = $state<any[]>([]);
+  let addedWords = $state<string[]>([]);
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/vocabulary/recommended?limit=20');
+      if (res.ok) {
+        const recData = await res.json();
+        recommendedWords = recData.words ?? [];
+      }
+    } catch {
+      // silently ignore
+    }
+  });
+
+  async function handleAddWord(vocabularyId: string) {
+    if (addedWords.includes(vocabularyId)) return;
+    try {
+      const res = await fetch('/api/vocabulary/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vocabularyId })
+      });
+      if (res.ok) {
+        addedWords = [...addedWords, vocabularyId];
+        recommendedWords = recommendedWords.filter((w: any) => w.id !== vocabularyId);
+      }
+    } catch {
+      // silently ignore
+    }
+  }
+
   // Collapsible section states
   let showMemoryHealth = $state(false);
   let showInsights = $state(false);
@@ -852,29 +885,64 @@
 
     <!-- QUICK STATS + STREAK -->
     <div class="stats-streak-layout" in:fly={{ y: 16, duration: 400, delay: 200 }}>
-      <div class="quick-stats-row">
-        <div class="qstat">
-          <span class="qstat-value">{totalVocab}</span>
-          <span class="qstat-label">Words Learned</span>
-        </div>
-        <div class="qstat qstat-green">
-          <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
-          <span class="qstat-label">Words Mastered</span>
-        </div>
-        <div class="qstat qstat-purple">
-          <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
-          <span class="qstat-label">Rules Mastered</span>
-        </div>
-        {#if (data as any).sessionEma !== undefined}
-          <div class="qstat qstat-blue">
-            <span class="qstat-value">{(data as any).sessionEma}%</span>
-            <span class="qstat-label">Session Accuracy</span>
+      <div class="left-col">
+        <div class="quick-stats-row">
+          <div class="qstat">
+            <span class="qstat-value">{totalVocab}</span>
+            <span class="qstat-label">Words Learned</span>
           </div>
-        {/if}
-        {#if data.dueReviewCount > 0}
-          <div class="qstat qstat-warn">
-            <span class="qstat-value">{data.dueReviewCount}</span>
-            <span class="qstat-label">Due for Review</span>
+          <div class="qstat qstat-green">
+            <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
+            <span class="qstat-label">Words Mastered</span>
+          </div>
+          <div class="qstat qstat-purple">
+            <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
+            <span class="qstat-label">Rules Mastered</span>
+          </div>
+          {#if (data as any).sessionEma !== undefined}
+            <div class="qstat qstat-blue">
+              <span class="qstat-value">{(data as any).sessionEma}%</span>
+              <span class="qstat-label">Session Accuracy</span>
+            </div>
+          {/if}
+          {#if data.dueReviewCount > 0}
+            <div class="qstat qstat-warn">
+              <span class="qstat-value">{data.dueReviewCount}</span>
+              <span class="qstat-label">Due for Review</span>
+            </div>
+          {/if}
+        </div>
+
+        {#if recommendedWords.length > 0}
+          <div class="rec-section">
+            <div class="rec-header">
+              <span class="rec-title">Recommended for you</span>
+            </div>
+            <div class="rec-row">
+              {#each recommendedWords as word (word.id)}
+                <button
+                  class="rec-card"
+                  class:rec-card-added={addedWords.includes(word.id)}
+                  onclick={() => handleAddWord(word.id)}
+                  disabled={addedWords.includes(word.id)}
+                  type="button"
+                >
+                  <div class="rec-card-top">
+                    <span class="rec-lemma">{word.lemma}</span>
+                    <span class="rec-cefr" data-level={word.cefrLevel}>{word.cefrLevel}</span>
+                  </div>
+                  <span class="rec-meaning">{word.meaning}</span>
+                  {#if word.partOfSpeech}
+                    <span class="rec-pos">{word.partOfSpeech}</span>
+                  {/if}
+                  {#if addedWords.includes(word.id)}
+                    <span class="rec-added-label">Added ✓</span>
+                  {:else}
+                    <span class="rec-add-label">+ Add to vocabulary</span>
+                  {/if}
+                </button>
+              {/each}
+            </div>
           </div>
         {/if}
       </div>
@@ -2382,6 +2450,146 @@
     }
   }
 
+  /* ── Recommended words strip ── */
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+
+  .rec-section {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .rec-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .rec-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-color);
+    letter-spacing: -0.01em;
+  }
+
+  .rec-row {
+    display: flex;
+    flex-direction: row;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+    /* give hover shadow room — overflow: hidden on .rec-section clips cards,
+       but padding here keeps the shadow inside the clipping box */
+    padding: 4px 4px 12px;
+    margin: -4px -4px -12px;
+  }
+
+  .rec-row .rec-card {
+    flex: 0 0 150px;
+    min-width: 0;
+  }
+
+  .rec-card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .rec-card:hover:not(:disabled) {
+    border-color: var(--color-success);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .rec-card-added {
+    border-color: #86efac !important;
+    background: #f0fdf4;
+    cursor: default;
+    transform: none !important;
+  }
+
+  :global(html[data-theme='dark']) .rec-card-added {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: #166534 !important;
+  }
+
+  .rec-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .rec-lemma {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .rec-cefr {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0.1rem 0.3rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .rec-cefr[data-level='A1'],
+  .rec-cefr[data-level='A2'] {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .rec-cefr[data-level='B1'],
+  .rec-cefr[data-level='B2'] {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+  .rec-cefr[data-level='C1'],
+  .rec-cefr[data-level='C2'] {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .rec-meaning {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  .rec-pos {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-transform: capitalize;
+  }
+
+  .rec-add-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-success);
+    margin-top: 0.2rem;
+  }
+
+  .rec-added-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+  }
+
   /* ── Quick-stats KPI chips ── */
   .quick-stats-row {
     display: flex;
@@ -2993,7 +3201,7 @@
     position: absolute;
     bottom: calc(100% + 6px);
     left: 50%;
-    transform: translateX(-50%) translateY(5px);
+    transform: translateX(-50%);
     margin-bottom: 0;
     background-color: #0f172a;
     color: #f8fafc;
@@ -3004,7 +3212,6 @@
     min-width: 140px;
     max-width: 200px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
     z-index: 100;
     pointer-events: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3031,12 +3238,11 @@
   .tooltip-trigger:hover .tooltip-content {
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
   }
 
   @media (max-width: 768px) {
     .tooltip-trigger:hover .tooltip-content {
-      transform: translateX(0) translateY(0);
+      transform: translateX(0);
     }
   }
 

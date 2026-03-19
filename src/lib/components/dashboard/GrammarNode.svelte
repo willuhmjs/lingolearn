@@ -173,7 +173,7 @@
     position: absolute;
     bottom: calc(100% + 12px);
     left: 50%;
-    transform: translateX(-50%) translateY(5px);
+    transform: translateX(-50%);
     margin-bottom: 0;
     background-color: #0f172a;
     color: #f8fafc;
@@ -184,7 +184,6 @@
     min-width: 140px;
     max-width: 200px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
     z-index: 100;
     pointer-events: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -205,7 +204,6 @@
   .tooltip-trigger:hover .tooltip-content {
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
   }
 
   .tooltip-header {

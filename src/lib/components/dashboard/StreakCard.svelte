@@ -67,7 +67,7 @@
   {#if longestStreak > 0}
     <p class="streak-best" title="Personal best: {longestStreak} days">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="best-icon">
-        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
       </svg>
       {longestStreak}
     </p>
@@ -80,13 +80,23 @@
     <div class="freeze-label-row">
       <svg
         viewBox="0 0 24 24"
-        fill="currentColor"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
         width="14"
         height="14"
         aria-hidden="true"
-        class="shield-icon-small"
+        class="freeze-icon-small"
       >
-        <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7L12 2z" />
+        <line x1="12" y1="2" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+        <polyline points="9,3 12,6 15,3" />
+        <polyline points="3,9 6,12 3,15" />
+        <polyline points="15,21 12,18 9,21" />
+        <polyline points="21,15 18,12 21,9" />
       </svg>
       <span class="freeze-label">Streak Freezes</span>
       <span class="freeze-count-badge">{localFreezes}/{MAX_FREEZES}</span>
@@ -99,8 +109,22 @@
           class:active={i < localFreezes}
           aria-label={i < localFreezes ? 'Active freeze' : 'Empty slot'}
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7L12 2z" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+            <polyline points="9,3 12,6 15,3" />
+            <polyline points="3,9 6,12 3,15" />
+            <polyline points="15,21 12,18 9,21" />
+            <polyline points="21,15 18,12 21,9" />
           </svg>
         </span>
       {/each}
@@ -256,7 +280,7 @@
     gap: 0.4rem;
   }
 
-  .shield-icon-small {
+  .freeze-icon-small {
     color: #3b82f6;
     flex-shrink: 0;
   }
