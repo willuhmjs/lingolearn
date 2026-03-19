@@ -21,57 +21,54 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const user = locals.user;
 
-  // Fetch user fields needed for new algorithm panels
-  const userRecord = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      sessionSuccessEma: true,
-      interleaveBanditState: true,
-      fsrsWeights: true,
-      fsrsRetention: true
-    }
-  });
-
-  if (user.activeLanguage?.id) {
-    const progress = await prisma.userProgress.findUnique({
-      where: {
-        userId_languageId: {
-          userId: user.id,
-          languageId: user.activeLanguage.id
-        }
+  // Fetch user fields and progress records in one go if possible
+  const [userRecord, vocabularies, grammarRules, allGrammarRules] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        sessionSuccessEma: true,
+        interleaveBanditState: true,
+        fsrsWeights: true,
+        fsrsRetention: true
       }
-    });
+    }),
+    prisma.userVocabulary.findMany({
+      where: {
+        userId: user.id,
+        vocabulary: { languageId: user.activeLanguage?.id }
+      },
+      include: { vocabulary: true },
+      orderBy: { eloRating: 'desc' }
+    }),
+    prisma.userGrammarRule.findMany({
+      where: {
+        userId: user.id,
+        grammarRule: { languageId: user.activeLanguage?.id }
+      },
+      include: {
+        grammarRule: {
+          select: {
+            id: true,
+            title: true,
+            level: true,
+            pfaGamma: true,
+            pfaRho: true,
+            pfaDelta: true
+          }
+        }
+      },
+      orderBy: { eloRating: 'desc' }
+    }),
+    prisma.grammarRule.findMany({
+      where: { languageId: user.activeLanguage?.id },
+      include: { dependencies: true },
+      orderBy: { level: 'asc' }
+    })
+  ]);
 
-    if (!progress?.hasOnboarded) {
-      throw redirect(302, '/onboarding');
-    }
-  } else {
+  if (!user.activeLanguage?.id || !user.hasOnboarded) {
     throw redirect(302, '/onboarding');
   }
-
-  const vocabularies = await prisma.userVocabulary.findMany({
-    where: {
-      userId: user.id,
-      vocabulary: { languageId: user.activeLanguage?.id }
-    },
-    include: { vocabulary: true },
-    orderBy: { eloRating: 'desc' }
-  });
-
-  const grammarRules = await prisma.userGrammarRule.findMany({
-    where: {
-      userId: user.id,
-      grammarRule: { languageId: user.activeLanguage?.id }
-    },
-    include: { grammarRule: true },
-    orderBy: { eloRating: 'desc' }
-  });
-
-  const allGrammarRules = await prisma.grammarRule.findMany({
-    where: { languageId: user.activeLanguage?.id },
-    include: { dependencies: true },
-    orderBy: { level: 'asc' }
-  });
 
   const in48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
@@ -250,26 +247,17 @@ export const load: PageServerLoad = async ({ locals }) => {
     }));
     const bestBanditArm = banditArmMeans.reduce((best, arm) => (arm.mean > best.mean ? arm : best));
 
-    const highVarianceVocab = await prisma.userVocabulary.findMany({
-      where: { userId: user.id, vocabulary: { languageId: user.activeLanguage?.id } },
-      orderBy: { eloVariance: 'desc' },
-      take: 8,
-      select: {
-        eloRating: true,
-        eloVariance: true,
-        vocabulary: { select: { lemma: true, cefrLevel: true } }
-      }
-    });
+    const highVarianceVocab = [...vocabularies]
+      .sort((a, b) => (b.eloVariance ?? 0) - (a.eloVariance ?? 0))
+      .slice(0, 8)
+      .map((v) => ({
+        eloRating: v.eloRating,
+        eloVariance: v.eloVariance,
+        vocabulary: { lemma: v.vocabulary.lemma, cefrLevel: v.vocabulary.cefrLevel }
+      }));
 
-    const grammarWithPfa = await prisma.userGrammarRule.findMany({
-      where: { userId: user.id, grammarRule: { languageId: user.activeLanguage?.id } },
-      select: {
-        grammarRuleId: true,
-        grammarRule: {
-          select: { title: true, level: true, pfaGamma: true, pfaRho: true, pfaDelta: true }
-        }
-      }
-    });
+    const grammarWithPfa = grammarRules;
+
     const grammarProgressForDash = await prisma.userGrammarRuleProgress.findMany({
       where: {
         userId: user.id,

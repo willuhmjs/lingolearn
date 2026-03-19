@@ -6,6 +6,7 @@
   import SpecialCharKeyboard from '$lib/components/SpecialCharKeyboard.svelte';
   import GrammarWeb from '$lib/components/dashboard/GrammarWeb.svelte';
   import VocabDetailModal from '$lib/components/VocabDetailModal.svelte';
+  import Skeleton from '$lib/components/Skeleton.svelte';
   import { toastError } from '$lib/utils/toast';
   import { getLanguageConfig } from '$lib/languages';
 
@@ -829,17 +830,17 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
 
     <div class="results-section">
       {#if loading && query.trim().length > 1}
-        <ul class="results-list skeleton-list" aria-busy="true" aria-label="Loading results">
+        <ul class="results-list" aria-busy="true" aria-label="Loading results">
           {#each [1, 2, 3] as _}
             <li class="result-item">
               <div class="result-content">
                 <div class="result-details">
-                  <div class="skeleton-word"></div>
-                  <div class="skeleton-meaning"></div>
-                  <div class="skeleton-pos"></div>
+                  <Skeleton width="35%" height="1.25rem" className="mb-2" />
+                  <Skeleton width="70%" height="1rem" className="mb-2" />
+                  <Skeleton width="20%" height="0.75rem" />
                 </div>
                 <div class="result-action">
-                  <div class="skeleton-btn"></div>
+                  <Skeleton width="3.5rem" height="2rem" borderRadius="var(--radius-md)" />
                 </div>
               </div>
             </li>
@@ -1727,8 +1728,8 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
   .search-input {
     display: block;
     width: 100%;
-    border-radius: 0.5rem;
-    border: 1px solid var(--card-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--input-border, #d1d5db);
     background-color: var(--input-bg, #f9fafb);
     padding: 1rem;
     padding-left: 2.5rem;
@@ -1824,53 +1825,6 @@ table.vocab-table th{background:#f8fafc;color:#475569;border-top:2px solid #2563
     margin: 0;
     display: grid;
     gap: 1rem;
-  }
-
-  /* Skeleton loading */
-  @keyframes skeleton-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.4;
-    }
-  }
-
-  .skeleton-list .result-item {
-    pointer-events: none;
-  }
-
-  .skeleton-word,
-  .skeleton-meaning,
-  .skeleton-pos,
-  .skeleton-btn {
-    background: var(--card-border, #e5e7eb);
-    border-radius: 0.375rem;
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
-  }
-
-  .skeleton-word {
-    height: 1.25rem;
-    width: 35%;
-    margin-bottom: 0.5rem;
-  }
-
-  .skeleton-meaning {
-    height: 1rem;
-    width: 70%;
-    margin-bottom: 0.375rem;
-  }
-
-  .skeleton-pos {
-    height: 0.75rem;
-    width: 20%;
-  }
-
-  .skeleton-btn {
-    height: 2rem;
-    width: 3.5rem;
-    border-radius: 0.375rem;
   }
 
   .result-item {

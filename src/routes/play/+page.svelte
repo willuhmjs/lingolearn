@@ -3378,6 +3378,31 @@
     background: linear-gradient(to right, #7c3aed, #6d28d9);
     border-radius: 999px;
     transition: width 0.12s linear;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .load-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: progress-shimmer 1.6s ease-in-out infinite;
+    transform: translateX(-100%);
+  }
+
+  @keyframes progress-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
   }
 
   .load-progress-fill.local-mode-fill {

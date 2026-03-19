@@ -9,6 +9,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { theme } from '$lib/theme.svelte';
   import { vocabModal } from '$lib/stores/vocabModal.svelte';
+  import '$lib/styles/variables.css';
 
   let { data, children } = $props();
   let user = $derived(data.user);
@@ -839,18 +840,18 @@
   }
 
   :global(.btn-primary) {
-    background-color: #58cc02;
+    background-color: var(--color-success, #58cc02);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #58a700;
+    box-shadow: 0 4px 0 var(--color-success-hover, #58a700);
   }
   :global(.btn-primary:hover) {
-    background-color: #61e002;
+    background-color: var(--color-success, #61e002);
     filter: brightness(1.05);
   }
   :global(.btn-primary:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #58a700;
+    box-shadow: 0 0 0 var(--color-success-hover, #58a700);
   }
 
   :global(.btn-secondary) {
@@ -879,33 +880,33 @@
   }
 
   :global(.btn-ai) {
-    background-color: #ce82ff;
+    background-color: var(--color-ai, #ce82ff);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #a561d4;
+    box-shadow: 0 4px 0 var(--color-ai-hover, #a561d4);
   }
   :global(.btn-ai:hover) {
-    background-color: #d697ff;
+    background-color: var(--color-ai, #d697ff);
     filter: brightness(1.05);
   }
   :global(.btn-ai:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #a561d4;
+    box-shadow: 0 0 0 var(--color-ai-hover, #a561d4);
   }
 
   :global(.btn-danger) {
-    background-color: #ff4b4b;
+    background-color: var(--color-danger, #ff4b4b);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 0 #ea2b2b;
+    box-shadow: 0 4px 0 var(--color-danger-hover, #ea2b2b);
   }
   :global(.btn-danger:hover) {
-    background-color: #ff6666;
+    background-color: var(--color-danger, #ff6666);
     filter: brightness(1.05);
   }
   :global(.btn-danger:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #ea2b2b;
+    box-shadow: 0 0 0 var(--color-danger-hover, #ea2b2b);
   }
 
   /* ── Standardized back-navigation button ──────────────────────────── */
@@ -939,9 +940,9 @@
   :global(.card-duo) {
     background-color: var(--card-bg, #ffffff);
     border: 2px solid var(--card-border, #e5e7eb);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-3xl, 1.5rem);
     padding: 1.5rem;
-    box-shadow: 0 4px 0 var(--card-border, #e5e7eb);
+    box-shadow: var(--shadow-duo);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
   }
@@ -1174,19 +1175,7 @@
   }
 
   :global(html[data-theme='dark']) {
-    --bg-color: #1a1d23;
-    --text-color: #e2e8f0;
-    --text-muted: #94a3b8;
-    --header-bg: #21252e;
-    --header-border: #2d3340;
-    --card-bg: #21252e;
-    --card-border: #2d3340;
-    --link-color: #60a5fa;
-    --link-hover-bg: #2a303c;
-    --brand-color: #3b82f6;
-    --input-bg: #2a303c;
-    --input-border: #3a4150;
-    --input-text: #e2e8f0;
+    /* Variables now loaded from variables.css */
   }
 
   :global(html[data-theme='dark'] .info-card),

@@ -26,10 +26,56 @@
     }
   }
 
+  let previouslyFocusedElement: HTMLElement | null = null;
+  let modalRef: HTMLElement | null = $state(null);
+
+  $effect(() => {
+    if (vocab) {
+      previouslyFocusedElement = document.activeElement as HTMLElement;
+      setTimeout(() => {
+        const firstFocusable = modalRef?.querySelector(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as HTMLElement;
+        firstFocusable?.focus();
+      }, 50);
+    } else if (previouslyFocusedElement) {
+      previouslyFocusedElement.focus();
+      previouslyFocusedElement = null;
+    }
+  });
+
+  function handleTrapFocus(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !vocab || !modalRef) return;
+
+    const focusableElements = Array.from(
+      modalRef.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+    ) as HTMLElement[];
+
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === firstElement) {
+        lastElement.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === lastElement) {
+        firstElement.focus();
+        e.preventDefault();
+      }
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && vocab !== null) {
       onclose();
     }
+    handleTrapFocus(e);
   }
 </script>
 
@@ -43,8 +89,11 @@
     transition:fade={{ duration: 200 }}
   >
     <div
+      bind:this={modalRef}
       class="modal-content"
       role="dialog"
+      aria-modal="true"
+      aria-labelledby="vocab-modal-title"
       tabindex="-1"
       onclick={(e) => e.stopPropagation()}
       onkeydown={(e) => e.stopPropagation()}
@@ -57,7 +106,7 @@
         class:gender-masculine={vocab.gender?.toLowerCase() === 'masculine'}
         class:gender-neuter={vocab.gender?.toLowerCase() === 'neuter'}
       >
-        <button class="modal-close" onclick={onclose} aria-label="Close">
+        <button class="modal-close" onclick={onclose} aria-label="Close modal">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -65,12 +114,13 @@
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
+            aria-hidden="true"
             ><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
           >
         </button>
         <div class="modal-header-main">
           <div class="modal-title-row">
-            <h2 class="modal-title">{vocab.lemma}</h2>
+            <h2 id="vocab-modal-title" class="modal-title">{vocab.lemma}</h2>
             <button
               class="copy-btn copy-btn-modal"
               onclick={() =>
@@ -79,7 +129,7 @@
                   vocab.lemma + (vocab.meanings?.[0]?.value ? ' — ' + vocab.meanings[0].value : '')
                 )}
               title="Copy word"
-              aria-label="Copy {vocab.lemma}"
+              aria-label="Copy {vocab.lemma} to clipboard"
               >{#if copiedId === 'modal-' + vocab.id}✓{:else}<svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -87,6 +137,7 @@
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
+                  aria-hidden="true"
                   style="width:1rem;height:1rem"
                   ><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path
                     d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
@@ -371,7 +422,7 @@
   .modal-content {
     background-color: var(--card-bg, #ffffff);
     border: 1px solid var(--card-border, #e5e7eb);
-    border-radius: 0.875rem;
+    border-radius: var(--radius-xl, 0.875rem);
     box-shadow:
       0 24px 48px -8px rgba(0, 0, 0, 0.22),
       0 0 0 1px rgba(0, 0, 0, 0.04);

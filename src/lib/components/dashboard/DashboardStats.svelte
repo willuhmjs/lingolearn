@@ -127,17 +127,15 @@
 
   .summary-card {
     background: var(--card-bg, #ffffff);
-    border-radius: 1rem;
+    border: 2px solid var(--card-border, #e5e7eb);
+    border-radius: var(--radius-xl, 1rem);
     padding: 2rem;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.05),
-      0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-duo);
     transition:
       transform 0.3s ease,
       box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .summary-card::before {
@@ -147,7 +145,7 @@
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-ai));
   }
 
   .summary-card:hover {

@@ -27,36 +27,70 @@
 
       // Focus the first button in the modal
       setTimeout(() => {
-        const confirmBtn = document.querySelector('.modal-btn-confirm') as HTMLElement;
-        confirmBtn?.focus();
-      }, 250);
+        const modalContainer = document.querySelector('.modal-container') as HTMLElement;
+        const focusableElements = modalContainer?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements && focusableElements.length > 0) {
+          (focusableElements[0] as HTMLElement).focus();
+        }
+      }, 50);
     } else if (previouslyFocusedElement) {
       // Restore focus when modal closes
       previouslyFocusedElement.focus();
       previouslyFocusedElement = null;
     }
   });
+
+  function handleTrapFocus(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !modalState) return;
+
+    const modalContainer = document.querySelector('.modal-container') as HTMLElement;
+    if (!modalContainer) return;
+
+    const focusableElements = Array.from(
+      modalContainer.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+    ) as HTMLElement[];
+
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === firstElement) {
+        lastElement.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === lastElement) {
+        firstElement.focus();
+        e.preventDefault();
+      }
+    }
+  }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window
+  onkeydown={(e) => {
+    handleKeydown(e);
+    handleTrapFocus(e);
+  }}
+/>
 
 {#if modalState}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="modal-backdrop"
-    role="dialog"
-    tabindex="-1"
-    aria-modal="true"
-    aria-labelledby={modalState.title ? 'modal-title' : undefined}
-    aria-describedby="modal-message"
-    transition:fade={{ duration: 200 }}
-    onclick={handleBackdropClick}
-  >
+  <div class="modal-backdrop" transition:fade={{ duration: 200 }} onclick={handleBackdropClick}>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="modal-container"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={modalState.title ? 'modal-title' : undefined}
+      aria-describedby="modal-message"
       transition:scale={{ duration: 200, start: 0.95 }}
       onclick={(e) => e.stopPropagation()}
     >
@@ -137,11 +171,11 @@
   .modal-container {
     background-color: var(--card-bg, #ffffff);
     border: 2px solid var(--card-border, #e5e7eb);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-3xl, 1.5rem);
     box-shadow:
       0 10px 25px -5px rgba(0, 0, 0, 0.2),
       0 8px 10px -6px rgba(0, 0, 0, 0.1),
-      0 4px 0 var(--card-border, #e5e7eb);
+      var(--shadow-duo);
     max-width: 28rem;
     width: 100%;
     overflow: hidden;
@@ -275,11 +309,11 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #ffffff;
-    background-color: #22c55e;
+    background-color: var(--color-success, #22c55e);
     border: 2px solid transparent;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-lg, 0.75rem);
     cursor: pointer;
-    box-shadow: 0 3px 0 #16a34a;
+    box-shadow: 0 3px 0 var(--color-success-hover, #16a34a);
     transition:
       background-color 0.15s,
       transform 0.1s,
@@ -287,12 +321,12 @@
   }
 
   .modal-btn-confirm:hover {
-    background-color: #4ade80;
+    background-color: var(--color-success, #4ade80);
     transform: scale(1.02);
   }
 
   .modal-btn-confirm:active {
     transform: scale(0.98) translateY(2px);
-    box-shadow: 0 1px 0 #16a34a;
+    box-shadow: 0 1px 0 var(--color-success-hover, #16a34a);
   }
 </style>

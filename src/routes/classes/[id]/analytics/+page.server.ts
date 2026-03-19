@@ -17,40 +17,61 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     await requireClassRole(classId, session.user.id, 'TEACHER');
   }
 
-  // Get class details
+  // Get class details and all students with their basic user info in one query
   const classData = await prisma.class.findUnique({
     where: { id: classId },
-    select: { id: true, name: true, primaryLanguage: true }
+    select: {
+      id: true,
+      name: true,
+      primaryLanguage: true,
+      members: {
+        where: { role: 'STUDENT' },
+        select: {
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              totalXp: true,
+              currentStreak: true,
+              progress: {
+                select: { userId: true, cefrLevel: true, languageId: true }
+              }
+            }
+          }
+        }
+      }
+    }
   });
 
   if (!classData) {
     throw error(404, 'Class not found');
   }
 
-  // Get all students in the class
-  const students = await prisma.classMember.findMany({
-    where: {
-      classId,
-      role: 'STUDENT'
-    },
-    select: {
-      userId: true
-    }
-  });
+  const studentIds = classData.members.map((m) => m.userId);
 
-  const studentIds = students.map((s) => s.userId);
-
-  // Get all vocabulary progress for these students
-  const progressRecords = await prisma.userVocabularyProgress.findMany({
-    where: {
-      userId: {
-        in: studentIds
+  // Get all vocabulary progress and grammar progress for these students in parallel
+  const [progressRecords, grammarProgressRecords] = await Promise.all([
+    prisma.userVocabularyProgress.findMany({
+      where: { userId: { in: studentIds } },
+      include: {
+        vocabulary: { include: { meanings: true } }
       }
-    },
-    include: {
-      vocabulary: { include: { meanings: true } }
-    }
-  });
+    }),
+    prisma.userGrammarRuleProgress.findMany({
+      where: { userId: { in: studentIds } },
+      select: {
+        userId: true,
+        grammarRuleId: true,
+        difficulty: true,
+        lapses: true,
+        repetitions: true,
+        lastErrorType: true,
+        grammarRule: { select: { title: true, level: true } }
+      }
+    })
+  ]);
 
   // Aggregate data — in FSRS, difficulty is [1,10] where higher = harder
   const aggregationMap = new Map<
@@ -65,7 +86,13 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     }
   >();
 
+  const vocabByStudent = new Map<string, typeof progressRecords>();
+
   for (const record of progressRecords) {
+    // Grouping for per-student summary later
+    if (!vocabByStudent.has(record.userId)) vocabByStudent.set(record.userId, []);
+    vocabByStudent.get(record.userId)!.push(record);
+
     const vocabId = record.vocabularyId;
     if (!aggregationMap.has(vocabId)) {
       aggregationMap.set(vocabId, {
@@ -96,7 +123,6 @@ export const load: PageServerLoad = async ({ locals, params }) => {
       totalStudentsLearned: data.count
     }))
     .filter((data) => data.totalStudentsLearned > 0)
-    // Sort by highest difficulty (hardest first) then struggle percentage
     .sort((a, b) => {
       if (a.averageDifficulty !== b.averageDifficulty) {
         return b.averageDifficulty - a.averageDifficulty;
@@ -105,19 +131,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     })
     .slice(0, 50);
 
-  // --- Grammar struggles ---
-  const grammarProgressRecords = await prisma.userGrammarRuleProgress.findMany({
-    where: { userId: { in: studentIds } },
-    select: {
-      grammarRuleId: true,
-      difficulty: true,
-      lapses: true,
-      repetitions: true,
-      lastErrorType: true,
-      grammarRule: { select: { title: true, level: true } }
-    }
-  });
-
+  // Aggregate grammar struggles
   type GrammarAgg = {
     grammarRuleId: string;
     title: string;
@@ -157,48 +171,19 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     .sort((a, b) => b.averageDifficulty - a.averageDifficulty)
     .slice(0, 30);
 
-  // --- Per-student summary ---
-  const studentUserIds = students.map((s) => s.userId);
-
-  const [studentUsers, studentProgress, studentVocabProgress] = await Promise.all([
-    prisma.user.findMany({
-      where: { id: { in: studentUserIds } },
-      select: { id: true, name: true, username: true, totalXp: true, currentStreak: true }
-    }),
-    prisma.userProgress.findMany({
-      where: {
-        userId: { in: studentUserIds },
-        languageId: classData.primaryLanguage !== 'international' ? undefined : undefined
-      },
-      select: { userId: true, cefrLevel: true, languageId: true }
-    }),
-    prisma.userVocabularyProgress.findMany({
-      where: { userId: { in: studentUserIds } },
-      select: {
-        userId: true,
-        stability: true,
-        retrievability: true,
-        lastReviewDate: true,
-        repetitions: true,
-        lapses: true
-      }
-    })
-  ]);
-
+  // --- Per-student summary using data already fetched ---
   const now = new Date();
-  const studentUserMap = new Map(studentUsers.map((u) => [u.id, u]));
-  const studentProgressMap = new Map(studentProgress.map((p) => [p.userId, p]));
+  const studentSummaries = classData.members.map((m) => {
+    const user = m.user;
+    const uid = m.userId;
+    // Find progress for the class's language
+    const prog =
+      user.progress.find(
+        (p) =>
+          classData.primaryLanguage === 'international' ||
+          p.languageId === classData.primaryLanguage
+      ) || user.progress[0];
 
-  // Group vocab progress by userId for retention computation
-  const vocabByStudent = new Map<string, typeof studentVocabProgress>();
-  for (const rec of studentVocabProgress) {
-    if (!vocabByStudent.has(rec.userId)) vocabByStudent.set(rec.userId, []);
-    vocabByStudent.get(rec.userId)!.push(rec);
-  }
-
-  const studentSummaries = studentUserIds.map((uid) => {
-    const user = studentUserMap.get(uid);
-    const prog = studentProgressMap.get(uid);
     const vocabRecs = (vocabByStudent.get(uid) ?? []).filter((r) => r.repetitions > 0);
 
     let avgRetentionPct: number | null = null;
@@ -234,19 +219,18 @@ export const load: PageServerLoad = async ({ locals, params }) => {
   // Error type breakdown across all students
   const errorTypeCounts: Record<string, number> = {};
   for (const rec of progressRecords) {
-    if ((rec as any).lastErrorType) {
-      const et = (rec as any).lastErrorType as string;
+    if (rec.lastErrorType) {
+      const et = rec.lastErrorType as string;
       errorTypeCounts[et] = (errorTypeCounts[et] ?? 0) + 1;
     }
   }
-  // Also count grammar error types
   for (const rec of grammarProgressRecords) {
     if (rec.lastErrorType) {
       errorTypeCounts[rec.lastErrorType] = (errorTypeCounts[rec.lastErrorType] ?? 0) + 1;
     }
   }
 
-  // CEFR distribution across students
+  // CEFR distribution
   const cefrDistribution: Record<string, number> = {};
   for (const s of studentSummaries) {
     cefrDistribution[s.cefrLevel] = (cefrDistribution[s.cefrLevel] ?? 0) + 1;

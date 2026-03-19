@@ -213,12 +213,9 @@
   .insight-card {
     background: var(--card-bg, #ffffff);
     border: 2px solid var(--card-border, #e2e8f0);
-    border-radius: 1rem;
-    box-shadow: 0 3px 0 var(--card-border, #e2e8f0);
+    border-radius: var(--radius-xl, 1rem);
+    box-shadow: var(--shadow-sm);
     padding: 1.25rem;
-  }
-  :global(html[data-theme='dark']) .insight-card {
-    box-shadow: 0 3px 0 var(--card-border, #374151);
   }
   .insight-card h3 {
     display: flex;

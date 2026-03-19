@@ -41,8 +41,8 @@
     display: inline-block;
     width: 2rem;
     height: 2rem;
-    border: 4px solid #e2e8f0;
-    border-top-color: #7c3aed;
+    border: 4px solid var(--card-border, #e2e8f0);
+    border-top-color: var(--color-primary, #7c3aed);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
@@ -58,7 +58,7 @@
     width: 80%;
     max-width: 320px;
     height: 5px;
-    background: #e2e8f0;
+    background: var(--card-border, #e2e8f0);
     border-radius: 999px;
     margin: 1.25rem auto 0;
     overflow: hidden;
@@ -66,13 +66,38 @@
 
   .load-progress-fill {
     height: 100%;
-    background: linear-gradient(to right, #7c3aed, #6d28d9);
+    background: linear-gradient(to right, var(--color-primary), var(--color-primary-hover));
     border-radius: 999px;
     transition: width 0.12s linear;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .load-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: progress-shimmer 1.6s ease-in-out infinite;
+    transform: translateX(-100%);
+  }
+
+  @keyframes progress-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
   }
 
   .load-progress-fill.local-mode-fill {
-    background: linear-gradient(to right, #f59e0b, #d97706);
+    background: linear-gradient(to right, var(--color-warning), var(--color-warning-hover));
   }
 
   .load-tip-container {
@@ -86,7 +111,7 @@
   }
 
   .load-tip {
-    color: #64748b;
+    color: var(--text-muted, #64748b);
     font-size: 0.85rem;
     margin: 0;
     max-width: 380px;

@@ -15,6 +15,7 @@
 
   let isExpanded = $state(false);
   let isShift = $state(false);
+  let activeIndex = $state(0); // 0 is Shift, 1+ are chars
 
   const normalizedLang = $derived(language?.toLowerCase() || 'en');
   const activeChars = $derived(
@@ -24,7 +25,8 @@
   );
   const displayChars = $derived(isShift ? activeChars.map((c) => c.toUpperCase()) : activeChars);
 
-  function insertChar(char: string) {
+  function insertChar(char: string, index: number) {
+    activeIndex = index + 1;
     const c: string = char;
     const input: any = inputElement;
     if (!input) {
@@ -48,10 +50,39 @@
 
   function toggleShift() {
     isShift = !isShift;
+    activeIndex = 0;
   }
 
   function toggleKeyboard() {
     isExpanded = !isExpanded;
+    if (isExpanded) {
+      activeIndex = 0;
+    }
+  }
+
+  function handleToolbarKeydown(e: KeyboardEvent) {
+    const totalButtons = displayChars.length + 1; // +1 for shift button
+
+    if (e.key === 'ArrowRight') {
+      activeIndex = (activeIndex + 1) % totalButtons;
+      focusActiveButton();
+    } else if (e.key === 'ArrowLeft') {
+      activeIndex = (activeIndex - 1 + totalButtons) % totalButtons;
+      focusActiveButton();
+    } else if (e.key === 'Home') {
+      activeIndex = 0;
+      focusActiveButton();
+    } else if (e.key === 'End') {
+      activeIndex = totalButtons - 1;
+      focusActiveButton();
+    }
+  }
+
+  function focusActiveButton() {
+    setTimeout(() => {
+      const buttons = document.querySelectorAll('.keyboard-panel button');
+      (buttons[activeIndex] as HTMLElement)?.focus();
+    }, 0);
   }
 </script>
 
@@ -69,31 +100,39 @@
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
+      aria-hidden="true"
     >
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
     </svg>
-    Special Characters
+    <span>Special Characters</span>
   </button>
 
   {#if isExpanded}
     <div transition:slide class="keyboard-panel-wrapper">
-      <div class="keyboard-panel" role="toolbar" aria-label="Special characters">
+      <div
+        class="keyboard-panel"
+        role="toolbar"
+        aria-label="Special characters"
+        onkeydown={handleToolbarKeydown}
+      >
         <button
           type="button"
           class="shift-button {isShift ? 'active' : ''}"
           onclick={toggleShift}
           aria-pressed={isShift}
           aria-label="Toggle uppercase"
+          tabindex={activeIndex === 0 ? 0 : -1}
         >
           Shift
         </button>
         <div class="char-keys">
-          {#each displayChars as char}
+          {#each displayChars as char, i}
             <button
               type="button"
               class="char-key"
-              onclick={() => insertChar(char)}
+              onclick={() => insertChar(char, i)}
               aria-label="Insert {char}"
+              tabindex={activeIndex === i + 1 ? 0 : -1}
             >
               {char}
             </button>
@@ -153,15 +192,15 @@
     display: flex;
     flex-wrap: nowrap;
     gap: 0.5rem;
-    background-color: var(--color-gray-50, #f9fafb);
+    background-color: var(--card-bg, #f9fafb);
     padding: 0.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--card-border, #e5e7eb);
     overflow-x: auto;
     align-items: center;
     /* Custom scrollbar for better look */
     scrollbar-width: thin;
-    scrollbar-color: var(--color-gray-300, #d1d5db) transparent;
+    scrollbar-color: var(--text-muted, #d1d5db) transparent;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -188,10 +227,10 @@
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
-    background-color: var(--color-gray-200, #e5e7eb);
-    color: var(--color-gray-800, #1f2937);
-    border: 1px solid var(--color-gray-300, #d1d5db);
-    border-radius: 0.25rem;
+    background-color: var(--card-border, #e5e7eb);
+    color: var(--text-color, #1f2937);
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     transition: all 0.15s ease;
   }

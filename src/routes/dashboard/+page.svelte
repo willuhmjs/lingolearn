@@ -6,10 +6,13 @@
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import CefrProgress from '$lib/components/dashboard/CefrProgress.svelte';
+  import DashboardSkeleton from '$lib/components/dashboard/DashboardSkeleton.svelte';
   import { SRS_COLORS } from '$lib/utils/srsColors';
   import { vocabModal } from '$lib/stores/vocabModal.svelte';
+  import { navigating } from '$app/stores';
 
   let { data }: { data: PageData } = $props();
+  let isLoading = $derived(!!$navigating);
 
   // SrsState enum values from Prisma schema
   const srsColors: Record<string, string> = {
@@ -410,160 +413,153 @@
   }
 </script>
 
-<div class="page-shell wide">
-  <header class="dashboard-header" in:fly={{ y: 20, duration: 400 }}>
-    <h1>Proficiency Dashboard</h1>
-    <p>Track your language learning progress.</p>
+{#if isLoading}
+  <div class="page-shell wide">
+    <DashboardSkeleton />
+  </div>
+{:else}
+  <div class="page-shell wide">
+    <header class="dashboard-header" in:fly={{ y: 20, duration: 400 }}>
+      <h1>Proficiency Dashboard</h1>
+      <p>Track your language learning progress.</p>
 
-    {#if (data as any).cefrProgress}
-      <CefrProgress cefrProgress={(data as any).cefrProgress} />
-    {/if}
+      {#if (data as any).cefrProgress}
+        <CefrProgress cefrProgress={(data as any).cefrProgress} />
+      {/if}
 
-    <div class="header-actions">
-      <a href="/play" class="btn-duo btn-primary">Start Lesson</a>
-      {#if data.dueReviewCount > 0}
-        <a href="/review" class="btn-duo btn-secondary">Review ({data.dueReviewCount})</a>
-      {/if}
-      <a href="/play?tab=games" class="btn-duo btn-secondary">Play a Quiz</a>
-      {#if (data as any).activeLiveSessions?.length > 0}
-        {@const session = (data as any).activeLiveSessions[0]}
-        <a href="/classes/{session.classId}/live/student" class="btn-duo btn-live">
-          <span class="live-pulse" aria-hidden="true"></span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3" /></svg
-          >
-          Join Live Session
-          <span class="live-class-name">{session.class.name}</span>
-        </a>
-      {/if}
+      <div class="header-actions">
+        <a href="/play" class="btn-duo btn-primary">Start Lesson</a>
+        {#if data.dueReviewCount > 0}
+          <a href="/review" class="btn-duo btn-secondary">Review ({data.dueReviewCount})</a>
+        {/if}
+        <a href="/play?tab=games" class="btn-duo btn-secondary">Play a Quiz</a>
+        {#if (data as any).activeLiveSessions?.length > 0}
+          {@const session = (data as any).activeLiveSessions[0]}
+          <a href="/classes/{session.classId}/live/student" class="btn-duo btn-live">
+            <span class="live-pulse" aria-hidden="true"></span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3" /></svg
+            >
+            Join Live Session
+            <span class="live-class-name">{session.class.name}</span>
+          </a>
+        {/if}
+        {#if (data as any).dueSoonAssignments?.length > 0}
+          {@const assignment = (data as any).dueSoonAssignments[0]}
+          {@const hoursLeft = Math.round(
+            (new Date(assignment.dueDate).getTime() - Date.now()) / 3600000
+          )}
+          <a href="/play?assignmentId={assignment.id}" class="btn-duo btn-assignment">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline
+                points="14 2 14 8 20 8"
+              /><line x1="16" y1="13" x2="8" y2="13" /><line
+                x1="16"
+                y1="17"
+                x2="8"
+                y2="17"
+              /><polyline points="10 9 9 9 8 9" /></svg
+            >
+            Assignment Due
+            <span class="assignment-meta">{assignment.title} · {hoursLeft}h left</span>
+          </a>
+        {/if}
+      </div>
+
       {#if (data as any).dueSoonAssignments?.length > 0}
-        {@const assignment = (data as any).dueSoonAssignments[0]}
-        {@const hoursLeft = Math.round(
-          (new Date(assignment.dueDate).getTime() - Date.now()) / 3600000
-        )}
-        <a href="/play?assignmentId={assignment.id}" class="btn-duo btn-assignment">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            ><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline
-              points="14 2 14 8 20 8"
-            /><line x1="16" y1="13" x2="8" y2="13" /><line
-              x1="16"
-              y1="17"
-              x2="8"
-              y2="17"
-            /><polyline points="10 9 9 9 8 9" /></svg
-          >
-          Assignment Due
-          <span class="assignment-meta">{assignment.title} · {hoursLeft}h left</span>
-        </a>
+        <div class="due-soon-banner">
+          <div class="due-soon-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+          <div class="due-soon-content">
+            <p class="due-soon-label">Assignments due soon</p>
+            <ul class="due-soon-list">
+              {#each (data as any).dueSoonAssignments as a}
+                {@const hoursLeft = Math.round(
+                  (new Date(a.dueDate).getTime() - Date.now()) / 3600000
+                )}
+                <li>
+                  <a href="/play?assignmentId={a.id}" class="due-soon-link">
+                    <span class="due-soon-title">{a.title}</span>
+                    <span class="due-soon-class">{a.class.name}</span>
+                  </a>
+                  <span class="due-soon-time">{hoursLeft}h left</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        </div>
       {/if}
-    </div>
+    </header>
 
-    {#if (data as any).dueSoonAssignments?.length > 0}
-      <div class="due-soon-banner">
-        <div class="due-soon-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
+    <!-- PRIMARY VISUALS: Vocabulary Heatmap + Grammar Web -->
+    <div class="dashboard-content" in:fly={{ y: 20, duration: 400, delay: 100 }}>
+      <section class="vocabulary-section">
+        <h2>Vocabulary Heatmap</h2>
+        <div class="heatmap-legend">
+          <div class="legend-item">
+            <span class="color-box" style="background-color: {srsColors.UNSEEN}"></span> Unseen
+          </div>
+          <div class="legend-item">
+            <span class="color-box" style="background-color: {srsColors.LEARNING}"></span> Learning
+          </div>
+          <div class="legend-item">
+            <span class="color-box" style="background-color: {srsColors.KNOWN}"></span> Known
+          </div>
+          <div class="legend-item">
+            <span class="color-box" style="background-color: {srsColors.MASTERED}"></span> Mastered
+          </div>
         </div>
-        <div class="due-soon-content">
-          <p class="due-soon-label">Assignments due soon</p>
-          <ul class="due-soon-list">
-            {#each (data as any).dueSoonAssignments as a}
-              {@const hoursLeft = Math.round(
-                (new Date(a.dueDate).getTime() - Date.now()) / 3600000
+
+        {#if data.vocabularies.length === 0}
+          <div class="empty-state-vocab">
+            <p class="empty-state-vocab-title">No vocabulary added yet</p>
+            <p class="empty-state-vocab-desc">
+              Start a lesson to build your word bank and track your progress here.
+            </p>
+            <a href="/play" class="empty-state-vocab-btn">Start Learning</a>
+          </div>
+        {:else}
+          <div class="heatmap-grid">
+            {#each data.vocabularies as vocab}
+              {@const isUnseen = vocab.srsState === 'UNSEEN'}
+              {@const elo = vocab.eloRating !== undefined ? Math.round(vocab.eloRating) : 1000}
+              {@const level = vocab.srsState}
+              {@const levelText = isUnseen
+                ? 'Unseen'
+                : level.charAt(0) + level.slice(1).toLowerCase()}
+              {@const cellColor = srsColors[level]}
+              {@const progressPct = Math.max(
+                0,
+                Math.min(
+                  100,
+                  level === 'LEARNING'
+                    ? ((elo - 1000) / 50) * 100
+                    : level === 'KNOWN'
+                      ? ((elo - 1050) / 100) * 100
+                      : 100
+                )
               )}
-              <li>
-                <a href="/play?assignmentId={a.id}" class="due-soon-link">
-                  <span class="due-soon-title">{a.title}</span>
-                  <span class="due-soon-class">{a.class.name}</span>
-                </a>
-                <span class="due-soon-time">{hoursLeft}h left</span>
-              </li>
-            {/each}
-          </ul>
-        </div>
-      </div>
-    {/if}
-  </header>
-
-  <!-- PRIMARY VISUALS: Vocabulary Heatmap + Grammar Web -->
-  <div class="dashboard-content" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-    <section class="vocabulary-section">
-      <h2>Vocabulary Heatmap</h2>
-      <div class="heatmap-legend">
-        <div class="legend-item">
-          <span class="color-box" style="background-color: {srsColors.UNSEEN}"></span> Unseen
-        </div>
-        <div class="legend-item">
-          <span class="color-box" style="background-color: {srsColors.LEARNING}"></span> Learning
-        </div>
-        <div class="legend-item">
-          <span class="color-box" style="background-color: {srsColors.KNOWN}"></span> Known
-        </div>
-        <div class="legend-item">
-          <span class="color-box" style="background-color: {srsColors.MASTERED}"></span> Mastered
-        </div>
-      </div>
-
-      {#if data.vocabularies.length === 0}
-        <div class="empty-state-vocab">
-          <p class="empty-state-vocab-title">No vocabulary added yet</p>
-          <p class="empty-state-vocab-desc">
-            Start a lesson to build your word bank and track your progress here.
-          </p>
-          <a href="/play" class="empty-state-vocab-btn">Start Learning</a>
-        </div>
-      {:else}
-        <div class="heatmap-grid">
-          {#each data.vocabularies as vocab}
-            {@const isUnseen = vocab.srsState === 'UNSEEN'}
-            {@const elo = vocab.eloRating !== undefined ? Math.round(vocab.eloRating) : 1000}
-            {@const level = vocab.srsState}
-            {@const levelText = isUnseen
-              ? 'Unseen'
-              : level.charAt(0) + level.slice(1).toLowerCase()}
-            {@const cellColor = srsColors[level]}
-            {@const progressPct = Math.max(
-              0,
-              Math.min(
-                100,
-                level === 'LEARNING'
-                  ? ((elo - 1000) / 50) * 100
-                  : level === 'KNOWN'
-                    ? ((elo - 1050) / 100) * 100
-                    : 100
-              )
-            )}
-            <button
-              class="heatmap-cell tooltip-trigger"
-              style="background-color: {cellColor}"
-              onclick={() => {
-                const langId = $page.data.user?.activeLanguage?.id || '';
-                vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
-                  id: vocab.vocabularyId || vocab.vocabulary?.id,
-                  lemma: vocab.vocabulary?.lemma,
-                  gender: vocab.vocabulary?.gender,
-                  plural: vocab.vocabulary?.plural,
-                  partOfSpeech: vocab.vocabulary?.partOfSpeech
-                });
-              }}
-              onkeydown={(e) =>
-                e.key === 'Enter' &&
-                (() => {
+              <button
+                class="heatmap-cell tooltip-trigger"
+                style="background-color: {cellColor}"
+                onclick={() => {
                   const langId = $page.data.user?.activeLanguage?.id || '';
                   vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
                     id: vocab.vocabularyId || vocab.vocabulary?.id,
@@ -572,469 +568,481 @@
                     plural: vocab.vocabulary?.plural,
                     partOfSpeech: vocab.vocabulary?.partOfSpeech
                   });
-                })()}
-              aria-label="View details for {vocab.vocabulary.lemma}"
+                }}
+                onkeydown={(e) =>
+                  e.key === 'Enter' &&
+                  (() => {
+                    const langId = $page.data.user?.activeLanguage?.id || '';
+                    vocabModal.open(vocab.vocabularyId || vocab.vocabulary?.id, langId, {
+                      id: vocab.vocabularyId || vocab.vocabulary?.id,
+                      lemma: vocab.vocabulary?.lemma,
+                      gender: vocab.vocabulary?.gender,
+                      plural: vocab.vocabulary?.plural,
+                      partOfSpeech: vocab.vocabulary?.partOfSpeech
+                    });
+                  })()}
+                aria-label="View details for {vocab.vocabulary.lemma}"
+              >
+                <span class="sr-only">{vocab.vocabulary.lemma}</span>
+                <div class="tooltip-content">
+                  <div class="tooltip-header">
+                    {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun'}
+                      {vocab.vocabulary.lemma.charAt(0).toUpperCase() +
+                        vocab.vocabulary.lemma.slice(1)}
+                    {:else}
+                      {vocab.vocabulary.lemma}
+                    {/if}
+                  </div>
+                  <div class="tooltip-body">
+                    {#if vocab.eloRating !== undefined && !isUnseen}
+                      <div class="word-tooltip-elo">
+                        <div class="elo-header">
+                          <span>Mastery: {levelText}</span><span class="elo-score">ELO {elo}</span>
+                        </div>
+                        <div class="elo-progress-track">
+                          <div
+                            class="elo-progress-fill {levelText.toLowerCase()}"
+                            style="width: {progressPct}%"
+                          ></div>
+                        </div>
+                      </div>
+                    {:else if isUnseen}
+                      <div class="word-tooltip-elo">
+                        <div class="elo-header"><span>Status: {levelText}</span></div>
+                      </div>
+                    {/if}
+                    {#if vocab.vocabulary.partOfSpeech}
+                      <div><strong>POS:</strong> {vocab.vocabulary.partOfSpeech}</div>
+                    {/if}
+                    {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun' && vocab.vocabulary.gender}
+                      <div><strong>Gender:</strong> {vocab.vocabulary.gender}</div>
+                    {/if}
+                    {#if vocab.vocabulary.plural}
+                      <div><strong>Plural:</strong> {vocab.vocabulary.plural}</div>
+                    {/if}
+                    {#if (vocab.vocabulary as any).meaning}
+                      <div><strong>Meaning:</strong> {(vocab.vocabulary as any).meaning}</div>
+                    {/if}
+                  </div>
+                </div>
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </section>
+
+      <section class="grammar-section">
+        <div class="grammar-header-row">
+          <h2>Grammar Web</h2>
+          <div class="grammar-header-controls">
+            <div class="sort-control">
+              <label for="grammar-sort">Sort by:</label>
+              <select id="grammar-sort" bind:value={grammarSortOrder}>
+                <option value="easiest">Easiest to Hardest</option>
+                <option value="hardest">Hardest to Easiest</option>
+              </select>
+            </div>
+            <div class="view-toggle" role="group" aria-label="Grammar view mode">
+              <button
+                class="view-toggle-btn"
+                class:active={grammarView === 'web'}
+                onclick={() => (grammarView = 'web')}
+                aria-pressed={grammarView === 'web'}
+                title="Web view"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                >
+                  <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle
+                    cx="19"
+                    cy="19"
+                    r="2"
+                  />
+                  <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
+                </svg>
+              </button>
+              <button
+                class="view-toggle-btn"
+                class:active={grammarView === 'list'}
+                onclick={() => (grammarView = 'list')}
+                aria-pressed={grammarView === 'list'}
+                title="List view"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                >
+                  <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line
+                    x1="8"
+                    y1="18"
+                    x2="21"
+                    y2="18"
+                  />
+                  <line x1="3" y1="6" x2="3.01" y2="6" /><line
+                    x1="3"
+                    y1="12"
+                    x2="3.01"
+                    y2="12"
+                  /><line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <a
+              href="/dictionary?tab=grammar"
+              class="grammar-expand-btn"
+              title="Open full grammar map"
+              aria-label="Open full grammar map in library"
             >
-              <span class="sr-only">{vocab.vocabulary.lemma}</span>
-              <div class="tooltip-content">
-                <div class="tooltip-header">
-                  {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun'}
-                    {vocab.vocabulary.lemma.charAt(0).toUpperCase() +
-                      vocab.vocabulary.lemma.slice(1)}
-                  {:else}
-                    {vocab.vocabulary.lemma}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        {#if grammarWebNodes.length === 0}
+          <p class="empty-state">No grammar rules available for this language.</p>
+        {:else if grammarView === 'list'}
+          <div class="grammar-list">
+            {#each grammarWebNodes as rule}
+              {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
+              {@const eloPercent = rule.isLocked
+                ? 0
+                : Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      rule.srsState === 'LEARNING'
+                        ? ((rule.eloRating - 1000) / 50) * 100
+                        : rule.srsState === 'KNOWN'
+                          ? ((rule.eloRating - 1050) / 100) * 100
+                          : 100
+                    )
+                  )}
+              <button
+                class="grammar-list-row"
+                class:locked={rule.isLocked}
+                onclick={() => openGrammarModal(rule, srsColor, eloPercent)}
+                aria-label="View grammar rule: {rule.grammarRule.title}"
+              >
+                <div class="grammar-list-dot" style="background-color: {srsColor}"></div>
+                <div class="grammar-list-info">
+                  <span class="grammar-list-title">{rule.grammarRule.title}</span>
+                  {#if rule.grammarRule.level}
+                    <span class="grammar-list-level">{rule.grammarRule.level}</span>
                   {/if}
                 </div>
-                <div class="tooltip-body">
-                  {#if vocab.eloRating !== undefined && !isUnseen}
-                    <div class="word-tooltip-elo">
-                      <div class="elo-header">
-                        <span>Mastery: {levelText}</span><span class="elo-score">ELO {elo}</span>
+                <span class="grammar-list-state" style="color: {srsColor}">{rule.srsState}</span>
+                <svg
+                  class="grammar-list-chevron"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <div class="grammar-web-container">
+            <div class="grammar-web-scroll-content">
+              <svg class="web-svg-lines" width="100%" height="100%">
+                {#each grammarWebNodes as _rule, i}
+                  {#if i < grammarWebNodes.length - 1}
+                    <line
+                      x1="50%"
+                      y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
+                      x2="50%"
+                      y2="{(100 / grammarWebNodes.length) * (i + 1) +
+                        100 / grammarWebNodes.length / 2}%"
+                      class="web-connection-line"
+                    />
+                  {/if}
+                {/each}
+              </svg>
+              <div class="web-tree-layout">
+                {#each grammarWebNodes as rule}
+                  {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
+                  {@const eloPercent = rule.isLocked
+                    ? 0
+                    : Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          rule.srsState === 'LEARNING'
+                            ? ((rule.eloRating - 1000) / 50) * 100
+                            : rule.srsState === 'KNOWN'
+                              ? ((rule.eloRating - 1050) / 100) * 100
+                              : 100
+                        )
+                      )}
+                  <button
+                    class="web-node-pill"
+                    class:locked={rule.isLocked}
+                    style="--node-color: {srsColor}"
+                    onclick={() => openGrammarModal(rule, srsColor, eloPercent)}
+                    aria-label="View grammar rule: {rule.grammarRule.title}"
+                  >
+                    <div class="node-pill-content tooltip-trigger">
+                      <div class="node-icon" style="background-color: {srsColor}">
+                        <span class="sr-only">{rule.srsState}</span>
                       </div>
-                      <div class="elo-progress-track">
-                        <div
-                          class="elo-progress-fill {levelText.toLowerCase()}"
-                          style="width: {progressPct}%"
-                        ></div>
+                      <span class="node-title">{rule.grammarRule.title}</span>
+                      <div class="tooltip-content">
+                        <div class="tooltip-header">{rule.grammarRule.title}</div>
+                        <div class="tooltip-body">
+                          <div class="word-tooltip-elo">
+                            <div class="elo-header">
+                              <span>Status: {rule.srsState}</span>
+                              {#if !rule.isLocked}
+                                <span class="elo-score">ELO {Math.ceil(rule.eloRating)}</span>
+                              {/if}
+                            </div>
+                            {#if !rule.isLocked}
+                              <div class="elo-progress-track">
+                                <div
+                                  class="elo-progress-fill {rule.srsState.toLowerCase()}"
+                                  style="width: {eloPercent}%; background-color: {srsColor}"
+                                ></div>
+                              </div>
+                            {/if}
+                          </div>
+                          <p class="node-desc">
+                            {rule.grammarRule.description || 'No description available.'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  {:else if isUnseen}
-                    <div class="word-tooltip-elo">
-                      <div class="elo-header"><span>Status: {levelText}</span></div>
-                    </div>
-                  {/if}
-                  {#if vocab.vocabulary.partOfSpeech}
-                    <div><strong>POS:</strong> {vocab.vocabulary.partOfSpeech}</div>
-                  {/if}
-                  {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun' && vocab.vocabulary.gender}
-                    <div><strong>Gender:</strong> {vocab.vocabulary.gender}</div>
-                  {/if}
-                  {#if vocab.vocabulary.plural}
-                    <div><strong>Plural:</strong> {vocab.vocabulary.plural}</div>
-                  {/if}
-                  {#if (vocab.vocabulary as any).meaning}
-                    <div><strong>Meaning:</strong> {(vocab.vocabulary as any).meaning}</div>
-                  {/if}
-                </div>
+                  </button>
+                {/each}
               </div>
-            </button>
-          {/each}
+            </div>
+          </div>
+        {/if}
+      </section>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="quick-stats-row" in:fly={{ y: 16, duration: 400, delay: 200 }}>
+      <div class="qstat">
+        <span class="qstat-value">{totalVocab}</span>
+        <span class="qstat-label">Words Learned</span>
+      </div>
+      <div class="qstat qstat-green">
+        <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
+        <span class="qstat-label">Words Mastered</span>
+      </div>
+      <div class="qstat qstat-purple">
+        <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
+        <span class="qstat-label">Rules Mastered</span>
+      </div>
+      {#if (data as any).sessionEma !== undefined}
+        <div class="qstat qstat-blue">
+          <span class="qstat-value">{(data as any).sessionEma}%</span>
+          <span class="qstat-label">Session Accuracy</span>
         </div>
       {/if}
-    </section>
+      {#if data.dueReviewCount > 0}
+        <div class="qstat qstat-warn">
+          <span class="qstat-value">{data.dueReviewCount}</span>
+          <span class="qstat-label">Due for Review</span>
+        </div>
+      {/if}
+    </div>
 
-    <section class="grammar-section">
-      <div class="grammar-header-row">
-        <h2>Grammar Web</h2>
-        <div class="grammar-header-controls">
-          <div class="sort-control">
-            <label for="grammar-sort">Sort by:</label>
-            <select id="grammar-sort" bind:value={grammarSortOrder}>
-              <option value="easiest">Easiest to Hardest</option>
-              <option value="hardest">Hardest to Easiest</option>
-            </select>
-          </div>
-          <div class="view-toggle" role="group" aria-label="Grammar view mode">
-            <button
-              class="view-toggle-btn"
-              class:active={grammarView === 'web'}
-              onclick={() => (grammarView = 'web')}
-              aria-pressed={grammarView === 'web'}
-              title="Web view"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-                width="16"
-                height="16"
-              >
-                <circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle
-                  cx="19"
-                  cy="19"
-                  r="2"
-                />
-                <line x1="12" y1="7" x2="5" y2="17" /><line x1="12" y1="7" x2="19" y2="17" />
-              </svg>
-            </button>
-            <button
-              class="view-toggle-btn"
-              class:active={grammarView === 'list'}
-              onclick={() => (grammarView = 'list')}
-              aria-pressed={grammarView === 'list'}
-              title="List view"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-                width="16"
-                height="16"
-              >
-                <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line
-                  x1="8"
-                  y1="18"
-                  x2="21"
-                  y2="18"
-                />
-                <line x1="3" y1="6" x2="3.01" y2="6" /><line
-                  x1="3"
-                  y1="12"
-                  x2="3.01"
-                  y2="12"
-                /><line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <a
-            href="/dictionary?tab=grammar"
-            class="grammar-expand-btn"
-            title="Open full grammar map"
-            aria-label="Open full grammar map in library"
-          >
+    <!-- MEMORY HEALTH (collapsible) -->
+    {#if data.retentionStats && data.retentionStats.totalReviewed > 0}
+      {@const rs = data.retentionStats}
+      <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 300 }}>
+        <button
+          class="accordion-toggle"
+          onclick={() => (showMemoryHealth = !showMemoryHealth)}
+          aria-expanded={showMemoryHealth}
+        >
+          <span class="accordion-title">
             <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              width="16"
-              height="16"
-              aria-hidden="true"
+              width="18"
+              height="18"
+              aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg
             >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
-        </div>
-      </div>
-      {#if grammarWebNodes.length === 0}
-        <p class="empty-state">No grammar rules available for this language.</p>
-      {:else if grammarView === 'list'}
-        <div class="grammar-list">
-          {#each grammarWebNodes as rule}
-            {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
-            {@const eloPercent = rule.isLocked
-              ? 0
-              : Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    rule.srsState === 'LEARNING'
-                      ? ((rule.eloRating - 1000) / 50) * 100
-                      : rule.srsState === 'KNOWN'
-                        ? ((rule.eloRating - 1050) / 100) * 100
-                        : 100
-                  )
-                )}
-            <button
-              class="grammar-list-row"
-              class:locked={rule.isLocked}
-              onclick={() => openGrammarModal(rule, srsColor, eloPercent)}
-              aria-label="View grammar rule: {rule.grammarRule.title}"
-            >
-              <div class="grammar-list-dot" style="background-color: {srsColor}"></div>
-              <div class="grammar-list-info">
-                <span class="grammar-list-title">{rule.grammarRule.title}</span>
-                {#if rule.grammarRule.level}
-                  <span class="grammar-list-level">{rule.grammarRule.level}</span>
-                {/if}
-              </div>
-              <span class="grammar-list-state" style="color: {srsColor}">{rule.srsState}</span>
-              <svg
-                class="grammar-list-chevron"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                aria-hidden="true"
-                width="14"
-                height="14"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          {/each}
-        </div>
-      {:else}
-        <div class="grammar-web-container">
-          <div class="grammar-web-scroll-content">
-            <svg class="web-svg-lines" width="100%" height="100%">
-              {#each grammarWebNodes as _rule, i}
-                {#if i < grammarWebNodes.length - 1}
-                  <line
-                    x1="50%"
-                    y1="{(100 / grammarWebNodes.length) * i + 100 / grammarWebNodes.length / 2}%"
-                    x2="50%"
-                    y2="{(100 / grammarWebNodes.length) * (i + 1) +
-                      100 / grammarWebNodes.length / 2}%"
-                    class="web-connection-line"
-                  />
-                {/if}
-              {/each}
-            </svg>
-            <div class="web-tree-layout">
-              {#each grammarWebNodes as rule}
-                {@const srsColor = (srsColors as any)[rule.srsState] || srsColors.LOCKED}
-                {@const eloPercent = rule.isLocked
-                  ? 0
-                  : Math.max(
-                      0,
-                      Math.min(
-                        100,
-                        rule.srsState === 'LEARNING'
-                          ? ((rule.eloRating - 1000) / 50) * 100
-                          : rule.srsState === 'KNOWN'
-                            ? ((rule.eloRating - 1050) / 100) * 100
-                            : 100
-                      )
-                    )}
-                <button
-                  class="web-node-pill"
-                  class:locked={rule.isLocked}
-                  style="--node-color: {srsColor}"
-                  onclick={() => openGrammarModal(rule, srsColor, eloPercent)}
-                  aria-label="View grammar rule: {rule.grammarRule.title}"
-                >
-                  <div class="node-pill-content tooltip-trigger">
-                    <div class="node-icon" style="background-color: {srsColor}">
-                      <span class="sr-only">{rule.srsState}</span>
-                    </div>
-                    <span class="node-title">{rule.grammarRule.title}</span>
-                    <div class="tooltip-content">
-                      <div class="tooltip-header">{rule.grammarRule.title}</div>
-                      <div class="tooltip-body">
-                        <div class="word-tooltip-elo">
-                          <div class="elo-header">
-                            <span>Status: {rule.srsState}</span>
-                            {#if !rule.isLocked}
-                              <span class="elo-score">ELO {Math.ceil(rule.eloRating)}</span>
-                            {/if}
-                          </div>
-                          {#if !rule.isLocked}
-                            <div class="elo-progress-track">
-                              <div
-                                class="elo-progress-fill {rule.srsState.toLowerCase()}"
-                                style="width: {eloPercent}%; background-color: {srsColor}"
-                              ></div>
-                            </div>
-                          {/if}
-                        </div>
-                        <p class="node-desc">
-                          {rule.grammarRule.description || 'No description available.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              {/each}
-            </div>
-          </div>
-        </div>
-      {/if}
-    </section>
-  </div>
-
-  <!-- QUICK STATS -->
-  <div class="quick-stats-row" in:fly={{ y: 16, duration: 400, delay: 200 }}>
-    <div class="qstat">
-      <span class="qstat-value">{totalVocab}</span>
-      <span class="qstat-label">Words Learned</span>
-    </div>
-    <div class="qstat qstat-green">
-      <span class="qstat-value">{vocabSrsBreakdown['MASTERED'] || 0}</span>
-      <span class="qstat-label">Words Mastered</span>
-    </div>
-    <div class="qstat qstat-purple">
-      <span class="qstat-value">{grammarSrsBreakdown['MASTERED'] || 0}</span>
-      <span class="qstat-label">Rules Mastered</span>
-    </div>
-    {#if (data as any).sessionEma !== undefined}
-      <div class="qstat qstat-blue">
-        <span class="qstat-value">{(data as any).sessionEma}%</span>
-        <span class="qstat-label">Session Accuracy</span>
-      </div>
-    {/if}
-    {#if data.dueReviewCount > 0}
-      <div class="qstat qstat-warn">
-        <span class="qstat-value">{data.dueReviewCount}</span>
-        <span class="qstat-label">Due for Review</span>
-      </div>
-    {/if}
-  </div>
-
-  <!-- MEMORY HEALTH (collapsible) -->
-  {#if data.retentionStats && data.retentionStats.totalReviewed > 0}
-    {@const rs = data.retentionStats}
-    <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 300 }}>
-      <button
-        class="accordion-toggle"
-        onclick={() => (showMemoryHealth = !showMemoryHealth)}
-        aria-expanded={showMemoryHealth}
-      >
-        <span class="accordion-title">
+            Memory Health
+          </span>
+          <span class="accordion-meta"
+            >{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span
+          >
           <svg
+            class="accordion-chevron"
+            class:rotated={showMemoryHealth}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             width="18"
             height="18"
-            aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg
+            aria-hidden="true"
+            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
           >
-          Memory Health
-        </span>
-        <span class="accordion-meta"
-          >{rs.avgRetentionPct}% retention · {rs.totalReviewed} reviewed</span
-        >
-        <svg
-          class="accordion-chevron"
-          class:rotated={showMemoryHealth}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          width="18"
-          height="18"
-          aria-hidden="true"
-          ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-        >
-      </button>
-      {#if showMemoryHealth}
-        <div class="accordion-body" transition:slide={{ duration: 280 }}>
-          <div class="retention-kpi-row">
-            <div class="retention-kpi">
-              <span class="retention-kpi-value">{rs.avgRetentionPct}%</span>
-              <span class="retention-kpi-label">Avg. Retention</span>
+        </button>
+        {#if showMemoryHealth}
+          <div class="accordion-body" transition:slide={{ duration: 280 }}>
+            <div class="retention-kpi-row">
+              <div class="retention-kpi">
+                <span class="retention-kpi-value">{rs.avgRetentionPct}%</span>
+                <span class="retention-kpi-label">Avg. Retention</span>
+              </div>
+              <div class="retention-kpi">
+                <span class="retention-kpi-value">{rs.avgStabilityDays}d</span>
+                <span class="retention-kpi-label">Avg. Stability</span>
+              </div>
+              <div class="retention-kpi">
+                <span class="retention-kpi-value">{rs.totalReviewed}</span>
+                <span class="retention-kpi-label">Words Reviewed</span>
+              </div>
+              <div class="retention-kpi">
+                <span class="retention-kpi-value">{rs.totalLapses}</span>
+                <span class="retention-kpi-label">Total Lapses</span>
+              </div>
             </div>
-            <div class="retention-kpi">
-              <span class="retention-kpi-value">{rs.avgStabilityDays}d</span>
-              <span class="retention-kpi-label">Avg. Stability</span>
-            </div>
-            <div class="retention-kpi">
-              <span class="retention-kpi-value">{rs.totalReviewed}</span>
-              <span class="retention-kpi-label">Words Reviewed</span>
-            </div>
-            <div class="retention-kpi">
-              <span class="retention-kpi-value">{rs.totalLapses}</span>
-              <span class="retention-kpi-label">Total Lapses</span>
-            </div>
-          </div>
 
-          <div class="retention-charts-row">
-            <div class="retention-chart-card">
-              <h3>Retention Distribution</h3>
-              <div class="bar-chart" aria-label="Retention distribution">
-                {#each rs.retentionBuckets as bucket}
-                  {@const maxCount = Math.max(...rs.retentionBuckets.map((b) => b.count), 1)}
-                  <div class="bar-row">
-                    <span class="bar-label">{bucket.label}</span>
-                    <div class="bar-track">
-                      <div
-                        class="bar-fill retention-fill"
-                        style="width: {Math.round((bucket.count / maxCount) * 100)}%"
-                      ></div>
+            <div class="retention-charts-row">
+              <div class="retention-chart-card">
+                <h3>Retention Distribution</h3>
+                <div class="bar-chart" aria-label="Retention distribution">
+                  {#each rs.retentionBuckets as bucket}
+                    {@const maxCount = Math.max(...rs.retentionBuckets.map((b) => b.count), 1)}
+                    <div class="bar-row">
+                      <span class="bar-label">{bucket.label}</span>
+                      <div class="bar-track">
+                        <div
+                          class="bar-fill retention-fill"
+                          style="width: {Math.round((bucket.count / maxCount) * 100)}%"
+                        ></div>
+                      </div>
+                      <span class="bar-count">{bucket.count}</span>
                     </div>
-                    <span class="bar-count">{bucket.count}</span>
-                  </div>
-                {/each}
+                  {/each}
+                </div>
               </div>
-            </div>
 
-            <div class="retention-chart-card">
-              <h3>Stability Distribution</h3>
-              <div class="bar-chart" aria-label="Stability distribution">
-                {#each rs.stabilityBuckets as bucket}
-                  {@const maxCount = Math.max(...rs.stabilityBuckets.map((b) => b.count), 1)}
-                  <div class="bar-row">
-                    <span class="bar-label">{bucket.label}</span>
-                    <div class="bar-track">
-                      <div
-                        class="bar-fill stability-fill"
-                        style="width: {Math.round((bucket.count / maxCount) * 100)}%"
-                      ></div>
+              <div class="retention-chart-card">
+                <h3>Stability Distribution</h3>
+                <div class="bar-chart" aria-label="Stability distribution">
+                  {#each rs.stabilityBuckets as bucket}
+                    {@const maxCount = Math.max(...rs.stabilityBuckets.map((b) => b.count), 1)}
+                    <div class="bar-row">
+                      <span class="bar-label">{bucket.label}</span>
+                      <div class="bar-track">
+                        <div
+                          class="bar-fill stability-fill"
+                          style="width: {Math.round((bucket.count / maxCount) * 100)}%"
+                        ></div>
+                      </div>
+                      <span class="bar-count">{bucket.count}</span>
                     </div>
-                    <span class="bar-count">{bucket.count}</span>
-                  </div>
-                {/each}
+                  {/each}
+                </div>
               </div>
-            </div>
 
-            <div class="retention-chart-card">
-              <h3>Forgetting Curve <span class="chart-subtitle">(median item)</span></h3>
-              <div class="bar-chart" aria-label="Predicted retention over time">
-                {#each rs.forgettingCurve as point}
-                  <div class="bar-row">
-                    <span class="bar-label">{point.days}d</span>
-                    <div class="bar-track">
-                      <div
-                        class="bar-fill forgetting-fill"
-                        style="width: {point.retentionPct}%"
-                      ></div>
+              <div class="retention-chart-card">
+                <h3>Forgetting Curve <span class="chart-subtitle">(median item)</span></h3>
+                <div class="bar-chart" aria-label="Predicted retention over time">
+                  {#each rs.forgettingCurve as point}
+                    <div class="bar-row">
+                      <span class="bar-label">{point.days}d</span>
+                      <div class="bar-track">
+                        <div
+                          class="bar-fill forgetting-fill"
+                          style="width: {point.retentionPct}%"
+                        ></div>
+                      </div>
+                      <span class="bar-count">{point.retentionPct}%</span>
                     </div>
-                    <span class="bar-count">{point.retentionPct}%</span>
-                  </div>
-                {/each}
+                  {/each}
+                </div>
               </div>
             </div>
-          </div>
 
-          {#if data.newWordIntake && data.newWordIntake.some((w) => w.count > 0)}
-            {@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
-            <div class="intake-card">
-              <h3>New Word Intake</h3>
-              <p class="insight-desc">Words added to your vocabulary over the past 8 weeks.</p>
-              <div class="intake-bars">
-                {#each data.newWordIntake as week}
-                  <div class="intake-col">
-                    <span class="intake-count">{week.count > 0 ? week.count : ''}</span>
-                    <div class="intake-bar-track">
-                      <div
-                        class="intake-bar-fill"
-                        style="height:{Math.round((week.count / maxIntake) * 100)}%"
-                      ></div>
+            {#if data.newWordIntake && data.newWordIntake.some((w) => w.count > 0)}
+              {@const maxIntake = Math.max(...data.newWordIntake.map((w) => w.count), 1)}
+              <div class="intake-card">
+                <h3>New Word Intake</h3>
+                <p class="insight-desc">Words added to your vocabulary over the past 8 weeks.</p>
+                <div class="intake-bars">
+                  {#each data.newWordIntake as week}
+                    <div class="intake-col">
+                      <span class="intake-count">{week.count > 0 ? week.count : ''}</span>
+                      <div class="intake-bar-track">
+                        <div
+                          class="intake-bar-fill"
+                          style="height:{Math.round((week.count / maxIntake) * 100)}%"
+                        ></div>
+                      </div>
+                      <span class="intake-label">{week.label}</span>
                     </div>
-                    <span class="intake-label">{week.label}</span>
-                  </div>
-                {/each}
+                  {/each}
+                </div>
               </div>
-            </div>
-          {/if}
+            {/if}
 
-          <div class="upcoming-reviews">
-            <h3>Upcoming Reviews</h3>
-            <div class="upcoming-row">
-              <div class="upcoming-chip">
-                <span class="upcoming-count">{rs.upcomingReviews.in1Day}</span>
-                <span class="upcoming-label">due today</span>
-              </div>
-              <div class="upcoming-chip">
-                <span class="upcoming-count">{rs.upcomingReviews.in7Days}</span>
-                <span class="upcoming-label">due in 7 days</span>
-              </div>
-              <div class="upcoming-chip">
-                <span class="upcoming-count">{rs.upcomingReviews.in30Days}</span>
-                <span class="upcoming-label">due in 30 days</span>
+            <div class="upcoming-reviews">
+              <h3>Upcoming Reviews</h3>
+              <div class="upcoming-row">
+                <div class="upcoming-chip">
+                  <span class="upcoming-count">{rs.upcomingReviews.in1Day}</span>
+                  <span class="upcoming-label">due today</span>
+                </div>
+                <div class="upcoming-chip">
+                  <span class="upcoming-count">{rs.upcomingReviews.in7Days}</span>
+                  <span class="upcoming-label">due in 7 days</span>
+                </div>
+                <div class="upcoming-chip">
+                  <span class="upcoming-count">{rs.upcomingReviews.in30Days}</span>
+                  <span class="upcoming-label">due in 30 days</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      {/if}
-    </section>
-  {/if}
+        {/if}
+      </section>
+    {/if}
 
-  <!-- LEARNING INSIGHTS (collapsible) -->
-  {#if totalVocab > 0}
-    {@const urgent = (data as any).urgentItems ?? []}
-    {@const errors = (data as any).errorTypeCounts ?? {}}
-    {@const coverage = (data as any).grammarCoverage}
-    {@const errorLabels: Record<string, string> = {
+    <!-- LEARNING INSIGHTS (collapsible) -->
+    {#if totalVocab > 0}
+      {@const urgent = (data as any).urgentItems ?? []}
+      {@const errors = (data as any).errorTypeCounts ?? {}}
+      {@const coverage = (data as any).grammarCoverage}
+      {@const errorLabels: Record<string, string> = {
 			wrong_case: 'Wrong Case',
 			wrong_tense: 'Wrong Tense',
 			wrong_gender: 'Wrong Gender',
@@ -1042,492 +1050,418 @@
 			word_order: 'Word Order',
 			vocabulary_gap: 'Vocabulary Gap'
 		}}
-    <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 400 }}>
-      <button
-        class="accordion-toggle"
-        onclick={() => (showInsights = !showInsights)}
-        aria-expanded={showInsights}
-      >
-        <span class="accordion-title">
+      <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 400 }}>
+        <button
+          class="accordion-toggle"
+          onclick={() => (showInsights = !showInsights)}
+          aria-expanded={showInsights}
+        >
+          <span class="accordion-title">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              width="18"
+              height="18"
+              aria-hidden="true"
+              ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
+                cx="12"
+                cy="12"
+                r="3"
+              /></svg
+            >
+            Learning Insights
+          </span>
+          <span class="accordion-meta">
+            {#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0}
+              · errors tracked{/if}
+          </span>
           <svg
+            class="accordion-chevron"
+            class:rotated={showInsights}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             width="18"
             height="18"
             aria-hidden="true"
-            ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
-              cx="12"
-              cy="12"
-              r="3"
-            /></svg
+            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
           >
-          Learning Insights
-        </span>
-        <span class="accordion-meta">
-          {#if urgent.length > 0}{urgent.length} fading{:else}0 fading{/if}{#if Object.keys(errors).length > 0}
-            · errors tracked{/if}
-        </span>
-        <svg
-          class="accordion-chevron"
-          class:rotated={showInsights}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          width="18"
-          height="18"
-          aria-hidden="true"
-          ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-        >
-      </button>
-      {#if showInsights}
-        <div class="accordion-body" transition:slide={{ duration: 280 }}>
-          <div class="insights-grid">
-            {#if urgent.length > 0}
-              <div class="insight-card urgent-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
-                      x1="12"
-                      y1="16"
-                      x2="12.01"
-                      y2="16"
-                    /></svg
-                  >
-                  Fading Fast
-                </h3>
-                <p class="insight-desc">
-                  Words your memory of has dropped below 70% — review them soon.
-                </p>
-                <ul class="urgent-list">
-                  {#each urgent as item}
-                    <li class="urgent-row">
-                      <span class="urgent-lemma">{item.lemma}</span>
-                      {#if item.meaning}<span class="urgent-meaning">{item.meaning}</span>{/if}
-                      <span
-                        class="urgent-ret"
-                        style="color: {item.retrievabilityPct < 40
-                          ? '#ef4444'
-                          : item.retrievabilityPct < 60
-                            ? '#f97316'
-                            : '#eab308'}">{item.retrievabilityPct}%</span
-                      >
-                      {#if item.lapses > 0}<span class="urgent-lapses"
-                          >{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span
-                        >{/if}
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/if}
-
-            {#if Object.keys(errors).length > 0}
-              {@const totalErrors = Object.values(errors).reduce(
-                (a, b) => (a as number) + (b as number),
-                0
-              ) as number}
-              <div class="insight-card error-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
-                  >
-                  Error Breakdown
-                </h3>
-                <p class="insight-desc">Types of mistakes in your most recent answers.</p>
-                <div class="error-bars">
-                  {#each Object.entries(errors).sort((a, b) => (b[1] as number) - (a[1] as number)) as [type, count]}
-                    <div class="error-bar-row">
-                      <span class="error-label">{errorLabels[type] ?? type}</span>
-                      <div class="error-track">
-                        <div
-                          class="error-fill"
-                          style="width:{Math.round(((count as number) / totalErrors) * 100)}%"
-                        ></div>
-                      </div>
-                      <span class="error-count">{count as number}</span>
-                    </div>
-                  {/each}
-                </div>
-                {#if (data as any).totalOverrides > 0}
-                  <p class="override-note">
-                    {(data as any).totalOverrides} self-correction{(data as any).totalOverrides !==
-                    1
-                      ? 's'
-                      : ''} recorded
+        </button>
+        {#if showInsights}
+          <div class="accordion-body" transition:slide={{ duration: 280 }}>
+            <div class="insights-grid">
+              {#if urgent.length > 0}
+                <div class="insight-card urgent-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
+                        x1="12"
+                        y1="16"
+                        x2="12.01"
+                        y2="16"
+                      /></svg
+                    >
+                    Fading Fast
+                  </h3>
+                  <p class="insight-desc">
+                    Words your memory of has dropped below 70% — review them soon.
                   </p>
-                {/if}
-              </div>
-            {/if}
-
-            {#if coverage}
-              <div class="insight-card coverage-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
-                      d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-                    /></svg
-                  >
-                  Grammar Coverage
-                </h3>
-                <p class="insight-desc">{coverage.total} total rules in this language.</p>
-                <div class="coverage-rows">
-                  <div class="coverage-row">
-                    <span class="coverage-dot" style="background:#10b981"></span>
-                    <span class="coverage-label">Mastered / Known</span>
-                    <span class="coverage-val">{coverage.mastered}</span>
-                  </div>
-                  <div class="coverage-row">
-                    <span class="coverage-dot" style="background:#fef08a;border:1px solid #ca8a04"
-                    ></span>
-                    <span class="coverage-label">Interacted</span>
-                    <span class="coverage-val">{coverage.interacted - coverage.mastered}</span>
-                  </div>
-                  <div class="coverage-row">
-                    <span class="coverage-dot" style="background:#e2e8f0;border:1px solid #94a3b8"
-                    ></span>
-                    <span class="coverage-label">Available to Learn</span>
-                    <span class="coverage-val">{coverage.available}</span>
-                  </div>
-                  <div class="coverage-row">
-                    <span class="coverage-dot" style="background:#94a3b8"></span>
-                    <span class="coverage-label">Locked (prereqs unmet)</span>
-                    <span class="coverage-val">{coverage.locked}</span>
-                  </div>
+                  <ul class="urgent-list">
+                    {#each urgent as item}
+                      <li class="urgent-row">
+                        <span class="urgent-lemma">{item.lemma}</span>
+                        {#if item.meaning}<span class="urgent-meaning">{item.meaning}</span>{/if}
+                        <span
+                          class="urgent-ret"
+                          style="color: {item.retrievabilityPct < 40
+                            ? '#ef4444'
+                            : item.retrievabilityPct < 60
+                              ? '#f97316'
+                              : '#eab308'}">{item.retrievabilityPct}%</span
+                        >
+                        {#if item.lapses > 0}<span class="urgent-lapses"
+                            >{item.lapses} lapse{item.lapses !== 1 ? 's' : ''}</span
+                          >{/if}
+                      </li>
+                    {/each}
+                  </ul>
                 </div>
-                <div class="coverage-bar-track">
-                  <div
-                    class="coverage-seg mastered-seg"
-                    style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
-                  ></div>
-                  <div
-                    class="coverage-seg learning-seg"
-                    style="width:{Math.round(
-                      ((coverage.interacted - coverage.mastered) / coverage.total) * 100
-                    )}%"
-                  ></div>
-                  <div
-                    class="coverage-seg available-seg"
-                    style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
-                  ></div>
-                </div>
-              </div>
-            {/if}
+              {/if}
 
-            <!-- Recently Mastered -->
-            {#if data.recentlyMastered && data.recentlyMastered.length > 0}
-              <div class="insight-card mastered-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
-                  >
-                  Recently Mastered
-                </h3>
-                <p class="insight-desc">Your most recently learned words.</p>
-                <div class="mastered-chips">
-                  {#each data.recentlyMastered as word}
-                    <span class="mastered-chip" title={word.partOfSpeech ?? ''}>{word.lemma}</span>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-
-            <!-- Most Confused Words -->
-            {#if (data as any).mostConfusedWords?.length > 0}
-              <div class="insight-card confused-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><circle cx="12" cy="12" r="10" /><path
-                      d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                    /><line x1="12" y1="17" x2="12.01" y2="17" /></svg
-                  >
-                  Most Confused
-                </h3>
-                <p class="insight-desc">
-                  Words you've forgotten most often — they need extra attention.
-                </p>
-                <ul class="confused-list">
-                  {#each (data as any).mostConfusedWords as word}
-                    <li class="confused-row">
-                      <span class="confused-lemma">{word.lemma}</span>
-                      {#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
-                      <span class="confused-lapses"
-                        >{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span
-                      >
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/if}
-
-            <!-- Part of Speech Breakdown -->
-            {#if data.posBreakdown && data.posBreakdown.length > 0}
-              {@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
-              <div class="insight-card pos-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><rect x="3" y="3" width="18" height="18" rx="2" /><path
-                      d="M3 9h18M9 21V9"
-                    /></svg
-                  >
-                  Parts of Speech
-                </h3>
-                <p class="insight-desc">Breakdown of your vocabulary by word type.</p>
-                <div class="pos-bars">
-                  {#each data.posBreakdown as p}
-                    <div class="pos-bar-row">
-                      <span class="pos-label">{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span
-                      >
-                      <div class="pos-track">
-                        <div
-                          class="pos-fill"
-                          style="width:{Math.round((p.count / totalPos) * 100)}%"
-                        ></div>
-                      </div>
-                      <span class="pos-count">{p.count}</span>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-
-            <!-- CEFR Level Breakdown -->
-            {#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
-              <div class="insight-card cefr-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg
-                  >
-                  CEFR Level Breakdown
-                </h3>
-                <p class="insight-desc">
-                  Vocab and grammar rules you've touched at each proficiency level.
-                </p>
-                <div class="cefr-grid">
-                  {#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
-                    <div class="cefr-row">
-                      <span class="cefr-badge cefr-{row.level.toLowerCase()}">{row.level}</span>
-                      <div class="cefr-bar-wrap">
-                        <div class="cefr-bar-track">
+              {#if Object.keys(errors).length > 0}
+                {@const totalErrors = Object.values(errors).reduce(
+                  (a, b) => (a as number) + (b as number),
+                  0
+                ) as number}
+                <div class="insight-card error-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
+                    >
+                    Error Breakdown
+                  </h3>
+                  <p class="insight-desc">Types of mistakes in your most recent answers.</p>
+                  <div class="error-bars">
+                    {#each Object.entries(errors).sort((a, b) => (b[1] as number) - (a[1] as number)) as [type, count]}
+                      <div class="error-bar-row">
+                        <span class="error-label">{errorLabels[type] ?? type}</span>
+                        <div class="error-track">
                           <div
-                            class="cefr-bar-fill"
-                            style="width:{Math.round((row.known / Math.max(row.total, 1)) * 100)}%"
+                            class="error-fill"
+                            style="width:{Math.round(((count as number) / totalErrors) * 100)}%"
                           ></div>
                         </div>
-                        <span class="cefr-nums">{row.known}/{row.total} vocab</span>
+                        <span class="error-count">{count as number}</span>
                       </div>
-                    </div>
-                  {/each}
+                    {/each}
+                  </div>
+                  {#if (data as any).totalOverrides > 0}
+                    <p class="override-note">
+                      {(data as any).totalOverrides} self-correction{(data as any)
+                        .totalOverrides !== 1
+                        ? 's'
+                        : ''} recorded
+                    </p>
+                  {/if}
                 </div>
-              </div>
-            {/if}
+              {/if}
 
-            <!-- Next Grammar Unlocks -->
-            {#if data.nextUnlocks && data.nextUnlocks.length > 0}
-              <div class="insight-card unlocks-card">
-                <h3>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path
-                      d="M7 11V7a5 5 0 0 1 9.9-1"
-                    /></svg
-                  >
-                  Next Grammar Unlocks
-                </h3>
-                <p class="insight-desc">
-                  Rules you can start learning now — all prerequisites mastered.
-                </p>
-                <ul class="unlocks-list">
-                  {#each data.nextUnlocks as rule}
-                    <li class="unlock-row">
-                      <span class="unlock-title">{rule.title}</span>
-                      <span class="cefr-badge cefr-{rule.level.toLowerCase()}">{rule.level}</span>
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/if}
+              {#if coverage}
+                <div class="insight-card coverage-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path
+                        d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+                      /></svg
+                    >
+                    Grammar Coverage
+                  </h3>
+                  <p class="insight-desc">{coverage.total} total rules in this language.</p>
+                  <div class="coverage-rows">
+                    <div class="coverage-row">
+                      <span class="coverage-dot" style="background:#10b981"></span>
+                      <span class="coverage-label">Mastered / Known</span>
+                      <span class="coverage-val">{coverage.mastered}</span>
+                    </div>
+                    <div class="coverage-row">
+                      <span class="coverage-dot" style="background:#fef08a;border:1px solid #ca8a04"
+                      ></span>
+                      <span class="coverage-label">Interacted</span>
+                      <span class="coverage-val">{coverage.interacted - coverage.mastered}</span>
+                    </div>
+                    <div class="coverage-row">
+                      <span class="coverage-dot" style="background:#e2e8f0;border:1px solid #94a3b8"
+                      ></span>
+                      <span class="coverage-label">Available to Learn</span>
+                      <span class="coverage-val">{coverage.available}</span>
+                    </div>
+                    <div class="coverage-row">
+                      <span class="coverage-dot" style="background:#94a3b8"></span>
+                      <span class="coverage-label">Locked (prereqs unmet)</span>
+                      <span class="coverage-val">{coverage.locked}</span>
+                    </div>
+                  </div>
+                  <div class="coverage-bar-track">
+                    <div
+                      class="coverage-seg mastered-seg"
+                      style="width:{Math.round((coverage.mastered / coverage.total) * 100)}%"
+                    ></div>
+                    <div
+                      class="coverage-seg learning-seg"
+                      style="width:{Math.round(
+                        ((coverage.interacted - coverage.mastered) / coverage.total) * 100
+                      )}%"
+                    ></div>
+                    <div
+                      class="coverage-seg available-seg"
+                      style="width:{Math.round((coverage.available / coverage.total) * 100)}%"
+                    ></div>
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Recently Mastered -->
+              {#if data.recentlyMastered && data.recentlyMastered.length > 0}
+                <div class="insight-card mastered-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+                    >
+                    Recently Mastered
+                  </h3>
+                  <p class="insight-desc">Your most recently learned words.</p>
+                  <div class="mastered-chips">
+                    {#each data.recentlyMastered as word}
+                      <span class="mastered-chip" title={word.partOfSpeech ?? ''}>{word.lemma}</span
+                      >
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Most Confused Words -->
+              {#if (data as any).mostConfusedWords?.length > 0}
+                <div class="insight-card confused-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><circle cx="12" cy="12" r="10" /><path
+                        d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                      /><line x1="12" y1="17" x2="12.01" y2="17" /></svg
+                    >
+                    Most Confused
+                  </h3>
+                  <p class="insight-desc">
+                    Words you've forgotten most often — they need extra attention.
+                  </p>
+                  <ul class="confused-list">
+                    {#each (data as any).mostConfusedWords as word}
+                      <li class="confused-row">
+                        <span class="confused-lemma">{word.lemma}</span>
+                        {#if word.meaning}<span class="confused-meaning">{word.meaning}</span>{/if}
+                        <span class="confused-lapses"
+                          >{word.lapses} lapse{word.lapses !== 1 ? 's' : ''}</span
+                        >
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+
+              <!-- Part of Speech Breakdown -->
+              {#if data.posBreakdown && data.posBreakdown.length > 0}
+                {@const totalPos = data.posBreakdown.reduce((s, p) => s + p.count, 0)}
+                <div class="insight-card pos-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><rect x="3" y="3" width="18" height="18" rx="2" /><path
+                        d="M3 9h18M9 21V9"
+                      /></svg
+                    >
+                    Parts of Speech
+                  </h3>
+                  <p class="insight-desc">Breakdown of your vocabulary by word type.</p>
+                  <div class="pos-bars">
+                    {#each data.posBreakdown as p}
+                      <div class="pos-bar-row">
+                        <span class="pos-label"
+                          >{p.pos.charAt(0).toUpperCase() + p.pos.slice(1)}</span
+                        >
+                        <div class="pos-track">
+                          <div
+                            class="pos-fill"
+                            style="width:{Math.round((p.count / totalPos) * 100)}%"
+                          ></div>
+                        </div>
+                        <span class="pos-count">{p.count}</span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- CEFR Level Breakdown -->
+              {#if data.cefrBreakdown && (data.cefrBreakdown.vocab.some((v) => v.total > 0) || data.cefrBreakdown.grammar.some((g) => g.total > 0))}
+                <div class="insight-card cefr-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6" /></svg
+                    >
+                    CEFR Level Breakdown
+                  </h3>
+                  <p class="insight-desc">
+                    Vocab and grammar rules you've touched at each proficiency level.
+                  </p>
+                  <div class="cefr-grid">
+                    {#each data.cefrBreakdown.vocab.filter((v) => v.total > 0) as row}
+                      <div class="cefr-row">
+                        <span class="cefr-badge cefr-{row.level.toLowerCase()}">{row.level}</span>
+                        <div class="cefr-bar-wrap">
+                          <div class="cefr-bar-track">
+                            <div
+                              class="cefr-bar-fill"
+                              style="width:{Math.round(
+                                (row.known / Math.max(row.total, 1)) * 100
+                              )}%"
+                            ></div>
+                          </div>
+                          <span class="cefr-nums">{row.known}/{row.total} vocab</span>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Next Grammar Unlocks -->
+              {#if data.nextUnlocks && data.nextUnlocks.length > 0}
+                <div class="insight-card unlocks-card">
+                  <h3>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path
+                        d="M7 11V7a5 5 0 0 1 9.9-1"
+                      /></svg
+                    >
+                    Next Grammar Unlocks
+                  </h3>
+                  <p class="insight-desc">
+                    Rules you can start learning now — all prerequisites mastered.
+                  </p>
+                  <ul class="unlocks-list">
+                    {#each data.nextUnlocks as rule}
+                      <li class="unlock-row">
+                        <span class="unlock-title">{rule.title}</span>
+                        <span class="cefr-badge cefr-{rule.level.toLowerCase()}">{rule.level}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+            </div>
           </div>
-        </div>
-      {/if}
-    </section>
-  {/if}
+        {/if}
+      </section>
+    {/if}
 
-  <!-- LEARNING INTELLIGENCE (collapsible, power users) -->
-  {#if (data as any).sessionEma !== undefined}
-    {@const ad = data as any}
-    <section
-      class="accordion-card accordion-technical"
-      in:fly={{ y: 16, duration: 400, delay: 500 }}
-    >
-      <button
-        class="accordion-toggle"
-        onclick={() => (showIntelligence = !showIntelligence)}
-        aria-expanded={showIntelligence}
+    <!-- LEARNING INTELLIGENCE (collapsible, power users) -->
+    {#if (data as any).sessionEma !== undefined}
+      {@const ad = data as any}
+      <section
+        class="accordion-card accordion-technical"
+        in:fly={{ y: 16, duration: 400, delay: 500 }}
       >
-        <span class="accordion-title">
+        <button
+          class="accordion-toggle"
+          onclick={() => (showIntelligence = !showIntelligence)}
+          aria-expanded={showIntelligence}
+        >
+          <span class="accordion-title">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              width="18"
+              height="18"
+              aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg
+            >
+            Learning Intelligence
+          </span>
+          <span class="accordion-meta">Adaptive · FSRS-5 · Bandit</span>
           <svg
+            class="accordion-chevron"
+            class:rotated={showIntelligence}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.5"
             width="18"
             height="18"
-            aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" /></svg
+            aria-hidden="true"
+            ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
           >
-          Learning Intelligence
-        </span>
-        <span class="accordion-meta">Adaptive · FSRS-5 · Bandit</span>
-        <svg
-          class="accordion-chevron"
-          class:rotated={showIntelligence}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          width="18"
-          height="18"
-          aria-hidden="true"
-          ><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg
-        >
-      </button>
-      {#if showIntelligence}
-        <div class="accordion-body" transition:slide={{ duration: 280 }}>
-          <p class="algo-intro">
-            Live signals from the scheduling algorithms personalised to your session history.
-          </p>
-          <div class="algo-grid">
-            <div class="algo-card">
-              <h3 class="algo-card-title">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  width="16"
-                  height="16"
-                  aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg
-                >
-                Adaptive Pace
-              </h3>
-              <p class="algo-card-desc">
-                Your recent answer accuracy drives how many new words are introduced each day.
-              </p>
-              <div class="algo-stat-row">
-                <span class="algo-stat-label">Session accuracy (EMA)</span>
-                <span class="algo-stat-value">{ad.sessionEma}%</span>
-              </div>
-              <div class="algo-ema-bar">
-                <div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
-              </div>
-              <div class="algo-stat-row" style="margin-top:0.5rem">
-                <span class="algo-stat-label">Today's new-word cap</span>
-                <span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
-              </div>
-              <p class="algo-footnote">Range 5–20. Higher accuracy → more new words introduced.</p>
-            </div>
-
-            <!-- Bandit interleave card -->
-            <div class="algo-card">
-              <h3 class="algo-card-title">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  width="16"
-                  height="16"
-                  aria-hidden="true"
-                  ><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
-                >
-                Review Mix (Bandit)
-              </h3>
-              <p class="algo-card-desc">
-                A Thompson-sampling bandit learns how many mastered items to interleave per lesson
-                for best retention.
-              </p>
-              {#if ad.banditArmMeans}
-                <div class="bandit-arms">
-                  {#each ad.banditArmMeans as arm}
-                    <div
-                      class="bandit-arm-row"
-                      class:bandit-best={arm.interleaveCount === ad.bestBanditArm.interleaveCount}
-                    >
-                      <span class="bandit-arm-label"
-                        >{arm.interleaveCount} review{arm.interleaveCount !== 1 ? 's' : ''}</span
-                      >
-                      <div class="bandit-arm-track">
-                        <div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
-                      </div>
-                      <span class="bandit-arm-pct">{arm.mean}%</span>
-                      <span class="bandit-arm-obs"
-                        >{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
-                      >
-                    </div>
-                  {/each}
-                </div>
-                <p class="algo-footnote">
-                  Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad.bestBanditArm
-                    .mean}% success rate)
-                </p>
-              {/if}
-            </div>
-
-            <!-- ELO confidence card -->
-            {#if ad.highVarianceVocab?.length > 0}
+        </button>
+        {#if showIntelligence}
+          <div class="accordion-body" transition:slide={{ duration: 280 }}>
+            <p class="algo-intro">
+              Live signals from the scheduling algorithms personalised to your session history.
+            </p>
+            <div class="algo-grid">
               <div class="algo-card">
                 <h3 class="algo-card-title">
                   <svg
@@ -1537,30 +1471,30 @@
                     stroke-width="2"
                     width="16"
                     height="16"
-                    aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
+                    aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg
                   >
-                  ELO Uncertainty
+                  Adaptive Pace
                 </h3>
                 <p class="algo-card-desc">
-                  Words where the algorithm is least certain of your true proficiency — expect them
-                  to appear more often.
+                  Your recent answer accuracy drives how many new words are introduced each day.
                 </p>
-                <ul class="variance-list">
-                  {#each ad.highVarianceVocab as v}
-                    <li class="variance-row">
-                      <span class="variance-lemma">{v.lemma}</span>
-                      <span class="variance-level">{v.level}</span>
-                      <span class="variance-elo">{v.elo}</span>
-                      <span class="variance-sigma" title="ELO uncertainty (±σ)">±{v.sigma}</span>
-                    </li>
-                  {/each}
-                </ul>
-                <p class="algo-footnote">σ shrinks with each review. New items start at σ≈20.</p>
+                <div class="algo-stat-row">
+                  <span class="algo-stat-label">Session accuracy (EMA)</span>
+                  <span class="algo-stat-value">{ad.sessionEma}%</span>
+                </div>
+                <div class="algo-ema-bar">
+                  <div class="algo-ema-fill" style="width:{ad.sessionEma}%"></div>
+                </div>
+                <div class="algo-stat-row" style="margin-top:0.5rem">
+                  <span class="algo-stat-label">Today's new-word cap</span>
+                  <span class="algo-stat-value algo-cap">{ad.adaptiveCap} words</span>
+                </div>
+                <p class="algo-footnote">
+                  Range 5–20. Higher accuracy → more new words introduced.
+                </p>
               </div>
-            {/if}
 
-            <!-- PFA at-risk grammar card -->
-            {#if ad.pfaAtRisk?.length > 0}
+              <!-- Bandit interleave card -->
               <div class="algo-card">
                 <h3 class="algo-card-title">
                   <svg
@@ -1571,175 +1505,168 @@
                     width="16"
                     height="16"
                     aria-hidden="true"
-                    ><path
-                      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                    /><line x1="12" y1="9" x2="12" y2="13" /><line
-                      x1="12"
-                      y1="17"
-                      x2="12.01"
-                      y2="17"
-                    /></svg
+                    ><circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" /></svg
                   >
-                  Grammar at Risk
+                  Review Mix (Bandit)
                 </h3>
                 <p class="algo-card-desc">
-                  Rules the Performance Factor model predicts you're likely to get wrong — they'll
-                  be prioritised in lessons.
+                  A Thompson-sampling bandit learns how many mastered items to interleave per lesson
+                  for best retention.
                 </p>
-                <ul class="pfa-list">
-                  {#each ad.pfaAtRisk as g}
-                    <li class="pfa-row">
-                      <span class="pfa-title">{g.title}</span>
-                      <span class="pfa-level">{g.level}</span>
-                      <span
-                        class="pfa-p"
-                        style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
-                        >{Math.round((g.pCorrect ?? 0) * 100)}%</span
+                {#if ad.banditArmMeans}
+                  <div class="bandit-arms">
+                    {#each ad.banditArmMeans as arm}
+                      <div
+                        class="bandit-arm-row"
+                        class:bandit-best={arm.interleaveCount === ad.bestBanditArm.interleaveCount}
                       >
-                    </li>
-                  {/each}
-                </ul>
-                <p class="algo-footnote">P(correct) from PFA model — below 60% means at-risk.</p>
+                        <span class="bandit-arm-label"
+                          >{arm.interleaveCount} review{arm.interleaveCount !== 1 ? 's' : ''}</span
+                        >
+                        <div class="bandit-arm-track">
+                          <div class="bandit-arm-fill" style="width:{arm.mean}%"></div>
+                        </div>
+                        <span class="bandit-arm-pct">{arm.mean}%</span>
+                        <span class="bandit-arm-obs"
+                          >{arm.observations > 0 ? arm.observations + ' obs' : 'prior'}</span
+                        >
+                      </div>
+                    {/each}
+                  </div>
+                  <p class="algo-footnote">
+                    Best arm: {ad.bestBanditArm.interleaveCount} interleaved items ({ad
+                      .bestBanditArm.mean}% success rate)
+                  </p>
+                {/if}
               </div>
-            {/if}
 
-            <!-- Error co-occurrence card -->
-            {#if ad.coOccurrencePairs?.length > 0}
-              {@const errorLabels: Record<string, string> = {
+              <!-- ELO confidence card -->
+              {#if ad.highVarianceVocab?.length > 0}
+                <div class="algo-card">
+                  <h3 class="algo-card-title">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg
+                    >
+                    ELO Uncertainty
+                  </h3>
+                  <p class="algo-card-desc">
+                    Words where the algorithm is least certain of your true proficiency — expect
+                    them to appear more often.
+                  </p>
+                  <ul class="variance-list">
+                    {#each ad.highVarianceVocab as v}
+                      <li class="variance-row">
+                        <span class="variance-lemma">{v.lemma}</span>
+                        <span class="variance-level">{v.level}</span>
+                        <span class="variance-elo">{v.elo}</span>
+                        <span class="variance-sigma" title="ELO uncertainty (±σ)">±{v.sigma}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <p class="algo-footnote">σ shrinks with each review. New items start at σ≈20.</p>
+                </div>
+              {/if}
+
+              <!-- PFA at-risk grammar card -->
+              {#if ad.pfaAtRisk?.length > 0}
+                <div class="algo-card">
+                  <h3 class="algo-card-title">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><path
+                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                      /><line x1="12" y1="9" x2="12" y2="13" /><line
+                        x1="12"
+                        y1="17"
+                        x2="12.01"
+                        y2="17"
+                      /></svg
+                    >
+                    Grammar at Risk
+                  </h3>
+                  <p class="algo-card-desc">
+                    Rules the Performance Factor model predicts you're likely to get wrong — they'll
+                    be prioritised in lessons.
+                  </p>
+                  <ul class="pfa-list">
+                    {#each ad.pfaAtRisk as g}
+                      <li class="pfa-row">
+                        <span class="pfa-title">{g.title}</span>
+                        <span class="pfa-level">{g.level}</span>
+                        <span
+                          class="pfa-p"
+                          style="color:{(g.pCorrect ?? 0) < 0.4 ? '#ef4444' : '#f97316'}"
+                          >{Math.round((g.pCorrect ?? 0) * 100)}%</span
+                        >
+                      </li>
+                    {/each}
+                  </ul>
+                  <p class="algo-footnote">P(correct) from PFA model — below 60% means at-risk.</p>
+                </div>
+              {/if}
+
+              <!-- Error co-occurrence card -->
+              {#if ad.coOccurrencePairs?.length > 0}
+                {@const errorLabels: Record<string, string> = {
 						wrong_case: 'Wrong Case', wrong_tense: 'Wrong Tense', wrong_gender: 'Wrong Gender',
 						spelling: 'Spelling', word_order: 'Word Order', vocabulary_gap: 'Vocab Gap'
 					}}
-              <div class="algo-card">
-                <h3 class="algo-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
-                      cx="18"
-                      cy="19"
-                      r="3"
-                    /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
-                      x1="15.41"
-                      y1="6.51"
-                      x2="8.59"
-                      y2="10.49"
-                    /></svg
-                  >
-                  Error Patterns
-                </h3>
-                <p class="algo-card-desc">
-                  Error types that tend to appear together across learners — fixing one often helps
-                  the other.
-                </p>
-                <ul class="coerr-list">
-                  {#each ad.coOccurrencePairs as pair}
-                    <li class="coerr-row">
-                      <span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
-                      <span class="coerr-arrow">↔</span>
-                      <span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
-                      <span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span>
-                    </li>
-                  {/each}
-                </ul>
-                <p class="algo-footnote">
-                  Grammar rules addressing co-occurring errors are surfaced first.
-                </p>
-              </div>
-            {/if}
-
-            <!-- FSRS personalisation card -->
-            <div class="algo-card">
-              <h3 class="algo-card-title">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  width="16"
-                  height="16"
-                  aria-hidden="true"
-                  ><path d="M12 20h9" /><path
-                    d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                  /></svg
-                >
-                FSRS Personalisation
-              </h3>
-              <p class="algo-card-desc">
-                The spaced-repetition scheduler fits 19 weights to your review history daily.
-              </p>
-              <div class="algo-stat-row">
-                <span class="algo-stat-label">Personal weights</span>
-                <span
-                  class="algo-stat-value"
-                  style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
-                  >{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
-                >
-              </div>
-              <div class="algo-stat-row">
-                <span class="algo-stat-label">Target retention</span>
-                <span class="algo-stat-value">{ad.fsrsRetention}%</span>
-              </div>
-              <div class="algo-stat-row">
-                <span class="algo-stat-label">Algorithm version</span>
-                <span class="algo-stat-value">FSRS-5</span>
-              </div>
-            </div>
-
-            <!-- ELO Calibration scatter -->
-            {#if ad.eloCalibration?.length > 1}
-              <div class="algo-card">
-                <h3 class="algo-card-title">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                    ><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle
-                      cx="14"
-                      cy="18"
-                      r="2"
-                    /><circle cx="6" cy="10" r="2" /><line
-                      x1="2"
-                      y1="22"
-                      x2="22"
-                      y2="2"
-                      stroke-dasharray="3 3"
-                    /></svg
-                  >
-                  ELO Calibration
-                </h3>
-                <p class="algo-card-desc">
-                  Does your ELO score actually predict how often you answer correctly? A
-                  well-calibrated model rises left-to-right.
-                </p>
-                <div class="calibration-chart">
-                  {#each ad.eloCalibration as point}
-                    <div class="cal-col">
-                      <span class="cal-pct">{point.actualPassPct}%</span>
-                      <div class="cal-bar-track">
-                        <div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
-                      </div>
-                      <span class="cal-elo">{point.elo}</span>
-                      <span class="cal-n">n={point.sampleSize}</span>
-                    </div>
-                  {/each}
+                <div class="algo-card">
+                  <h3 class="algo-card-title">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
+                        cx="18"
+                        cy="19"
+                        r="3"
+                      /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line
+                        x1="15.41"
+                        y1="6.51"
+                        x2="8.59"
+                        y2="10.49"
+                      /></svg
+                    >
+                    Error Patterns
+                  </h3>
+                  <p class="algo-card-desc">
+                    Error types that tend to appear together across learners — fixing one often
+                    helps the other.
+                  </p>
+                  <ul class="coerr-list">
+                    {#each ad.coOccurrencePairs as pair}
+                      <li class="coerr-row">
+                        <span class="coerr-from">{errorLabels[pair.from] ?? pair.from}</span>
+                        <span class="coerr-arrow">↔</span>
+                        <span class="coerr-to">{errorLabels[pair.to] ?? pair.to}</span>
+                        <span class="coerr-strength coerr-{pair.strength}">{pair.strength}</span>
+                      </li>
+                    {/each}
+                  </ul>
+                  <p class="algo-footnote">
+                    Grammar rules addressing co-occurring errors are surfaced first.
+                  </p>
                 </div>
-                <p class="algo-footnote">
-                  ELO buckets vs actual pass rate across all your reviews.
-                </p>
-              </div>
-            {/if}
+              {/if}
 
-            <!-- Word Frequency Coverage -->
-            {#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
+              <!-- FSRS personalisation card -->
               <div class="algo-card">
                 <h3 class="algo-card-title">
                   <svg
@@ -1750,584 +1677,683 @@
                     width="16"
                     height="16"
                     aria-hidden="true"
-                    ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path
-                      d="M2 17l10 5 10-5M2 12l10 5 10-5"
+                    ><path d="M12 20h9" /><path
+                      d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
                     /></svg
                   >
-                  Word Frequency Coverage
+                  FSRS Personalisation
                 </h3>
                 <p class="algo-card-desc">
-                  How many of the most common words in this language you've mastered or know.
+                  The spaced-repetition scheduler fits 19 weights to your review history daily.
                 </p>
-                <div class="freq-coverage-rows">
-                  {#each data.freqCoverage as tier}
-                    {#if tier.total > 0}
-                      <div class="freq-row">
-                        <span class="freq-label"
-                          >Top {tier.threshold >= 1000
-                            ? tier.threshold / 1000 + 'k'
-                            : tier.threshold}</span
-                        >
-                        <div class="freq-track">
-                          <div
-                            class="freq-fill"
-                            style="width:{Math.round((tier.known / tier.total) * 100)}%"
-                          ></div>
+                <div class="algo-stat-row">
+                  <span class="algo-stat-label">Personal weights</span>
+                  <span
+                    class="algo-stat-value"
+                    style="color:{ad.hasPersonalizedWeights ? '#10b981' : '#94a3b8'}"
+                    >{ad.hasPersonalizedWeights ? 'Active' : 'Building (need 50 reviews)'}</span
+                  >
+                </div>
+                <div class="algo-stat-row">
+                  <span class="algo-stat-label">Target retention</span>
+                  <span class="algo-stat-value">{ad.fsrsRetention}%</span>
+                </div>
+                <div class="algo-stat-row">
+                  <span class="algo-stat-label">Algorithm version</span>
+                  <span class="algo-stat-value">FSRS-5</span>
+                </div>
+              </div>
+
+              <!-- ELO Calibration scatter -->
+              {#if ad.eloCalibration?.length > 1}
+                <div class="algo-card">
+                  <h3 class="algo-card-title">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><circle cx="8" cy="16" r="2" /><circle cx="16" cy="8" r="2" /><circle
+                        cx="14"
+                        cy="18"
+                        r="2"
+                      /><circle cx="6" cy="10" r="2" /><line
+                        x1="2"
+                        y1="22"
+                        x2="22"
+                        y2="2"
+                        stroke-dasharray="3 3"
+                      /></svg
+                    >
+                    ELO Calibration
+                  </h3>
+                  <p class="algo-card-desc">
+                    Does your ELO score actually predict how often you answer correctly? A
+                    well-calibrated model rises left-to-right.
+                  </p>
+                  <div class="calibration-chart">
+                    {#each ad.eloCalibration as point}
+                      <div class="cal-col">
+                        <span class="cal-pct">{point.actualPassPct}%</span>
+                        <div class="cal-bar-track">
+                          <div class="cal-bar-fill" style="height:{point.actualPassPct}%"></div>
                         </div>
-                        <span class="freq-stat">{tier.known}/{tier.total}</span>
-                        <span class="freq-pct"
-                          >{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span
-                        >
+                        <span class="cal-elo">{point.elo}</span>
+                        <span class="cal-n">n={point.sampleSize}</span>
                       </div>
-                    {/if}
-                  {/each}
+                    {/each}
+                  </div>
+                  <p class="algo-footnote">
+                    ELO buckets vs actual pass rate across all your reviews.
+                  </p>
                 </div>
-                <p class="algo-footnote">
-                  Based on corpus frequency rank. Only words in your vocabulary are counted.
-                </p>
-              </div>
-            {/if}
+              {/if}
+
+              <!-- Word Frequency Coverage -->
+              {#if data.freqCoverage && data.freqCoverage.some((f) => f.total > 0)}
+                <div class="algo-card">
+                  <h3 class="algo-card-title">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path
+                        d="M2 17l10 5 10-5M2 12l10 5 10-5"
+                      /></svg
+                    >
+                    Word Frequency Coverage
+                  </h3>
+                  <p class="algo-card-desc">
+                    How many of the most common words in this language you've mastered or know.
+                  </p>
+                  <div class="freq-coverage-rows">
+                    {#each data.freqCoverage as tier}
+                      {#if tier.total > 0}
+                        <div class="freq-row">
+                          <span class="freq-label"
+                            >Top {tier.threshold >= 1000
+                              ? tier.threshold / 1000 + 'k'
+                              : tier.threshold}</span
+                          >
+                          <div class="freq-track">
+                            <div
+                              class="freq-fill"
+                              style="width:{Math.round((tier.known / tier.total) * 100)}%"
+                            ></div>
+                          </div>
+                          <span class="freq-stat">{tier.known}/{tier.total}</span>
+                          <span class="freq-pct"
+                            >{Math.round((tier.known / Math.max(tier.total, 1)) * 100)}%</span
+                          >
+                        </div>
+                      {/if}
+                    {/each}
+                  </div>
+                  <p class="algo-footnote">
+                    Based on corpus frequency rank. Only words in your vocabulary are counted.
+                  </p>
+                </div>
+              {/if}
+            </div>
           </div>
-        </div>
-      {/if}
-    </section>
-  {/if}
+        {/if}
+      </section>
+    {/if}
 
-  <!-- SOCIAL -->
-  <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
-    <h2 class="social-heading">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
-        aria-hidden="true"
-      >
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
-      Social
-      {#if incomingRequests.length > 0}
-        <span class="social-badge">{incomingRequests.length}</span>
-      {/if}
-    </h2>
-
-    <div class="social-grid">
-      <!-- Add Friend -->
-      <div class="card">
-        <h3 class="social-card-title">Add Friend</h3>
-        <form
-          onsubmit={(e) => {
-            e.preventDefault();
-            sendFriendRequest();
-          }}
+    <!-- SOCIAL -->
+    <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
+      <h2 class="social-heading">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+          aria-hidden="true"
         >
-          <div class="social-input-group">
-            <input
-              type="text"
-              bind:value={newFriendUsername}
-              placeholder="Enter username…"
-              disabled={friendLoading}
-            />
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Social
+        {#if incomingRequests.length > 0}
+          <span class="social-badge">{incomingRequests.length}</span>
+        {/if}
+      </h2>
+
+      <div class="social-grid">
+        <!-- Add Friend -->
+        <div class="card">
+          <h3 class="social-card-title">Add Friend</h3>
+          <form
+            onsubmit={(e) => {
+              e.preventDefault();
+              sendFriendRequest();
+            }}
+          >
+            <div class="social-input-group">
+              <input
+                type="text"
+                bind:value={newFriendUsername}
+                placeholder="Enter username…"
+                disabled={friendLoading}
+              />
+              <button
+                type="submit"
+                class="btn-duo btn-primary"
+                disabled={friendLoading || !newFriendUsername}
+              >
+                {friendLoading ? 'Sending…' : 'Add'}
+              </button>
+            </div>
+            {#if friendError}
+              <p class="social-field-error">{friendError}</p>
+            {/if}
+          </form>
+          <div class="social-invite-row">
+            <span class="social-invite-label">Or share an invite link</span>
             <button
-              type="submit"
-              class="btn-duo btn-primary"
-              disabled={friendLoading || !newFriendUsername}
+              class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}"
+              onclick={copyInviteLink}
+              disabled={copyLinkLoading}
             >
-              {friendLoading ? 'Sending…' : 'Add'}
+              {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
             </button>
           </div>
-          {#if friendError}
-            <p class="social-field-error">{friendError}</p>
-          {/if}
-        </form>
-        <div class="social-invite-row">
-          <span class="social-invite-label">Or share an invite link</span>
-          <button
-            class="social-btn-copy {copyLinkSuccess ? 'copied' : ''}"
-            onclick={copyInviteLink}
-            disabled={copyLinkLoading}
-          >
-            {#if copyLinkSuccess}✓ Copied!{:else if copyLinkLoading}Copying…{:else}Copy Link{/if}
-          </button>
         </div>
-      </div>
 
-      <!-- Requests -->
-      <div class="social-requests-col">
-        {#if incomingRequests.length > 0}
-          <div class="card">
-            <h3 class="social-card-title">
-              Friend Requests <span class="social-count-badge">{incomingRequests.length}</span>
-            </h3>
+        <!-- Requests -->
+        <div class="social-requests-col">
+          {#if incomingRequests.length > 0}
+            <div class="card">
+              <h3 class="social-card-title">
+                Friend Requests <span class="social-count-badge">{incomingRequests.length}</span>
+              </h3>
+              <ul class="social-user-list">
+                {#each incomingRequests as request}
+                  <li class="social-user-item">
+                    <div class="social-user-info">
+                      <img
+                        src={request.initiator.image || '/default-avatar.png'}
+                        alt=""
+                        class="social-avatar"
+                      />
+                      <div>
+                        <a href="/u/{request.initiator.username}" class="social-username"
+                          >{request.initiator.username}</a
+                        >
+                        {#if request.initiator.name}<p class="social-meta">
+                            {request.initiator.name}
+                          </p>{/if}
+                      </div>
+                    </div>
+                    <div class="social-actions">
+                      <button
+                        class="social-btn-sm social-btn-accept"
+                        onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
+                      >
+                      <button
+                        class="social-btn-sm social-btn-decline"
+                        onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
+                      >
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+
+          {#if outgoingRequests.length > 0}
+            <div class="card">
+              <h3 class="social-card-title">Sent Requests</h3>
+              <ul class="social-user-list">
+                {#each outgoingRequests as request}
+                  <li class="social-user-item">
+                    <div class="social-user-info">
+                      <img
+                        src={request.receiver.image || '/default-avatar.png'}
+                        alt=""
+                        class="social-avatar"
+                      />
+                      <div>
+                        <a href="/u/{request.receiver.username}" class="social-username"
+                          >{request.receiver.username}</a
+                        >
+                        {#if request.receiver.name}<p class="social-meta">
+                            {request.receiver.name}
+                          </p>{/if}
+                      </div>
+                    </div>
+                    <span class="social-status-pill social-pending">Pending</span>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Friends list -->
+        <div class="card">
+          <h3 class="social-card-title">
+            Friends <span class="social-count-badge">{friends.length}</span>
+          </h3>
+          {#if friends.length === 0}
+            <p class="social-empty">No friends yet. Add some people to see them here!</p>
+          {:else}
             <ul class="social-user-list">
-              {#each incomingRequests as request}
+              {#each friends as friendship}
+                {@const friend =
+                  friendship.initiatorId === data.userId
+                    ? friendship.receiver
+                    : friendship.initiator}
                 <li class="social-user-item">
                   <div class="social-user-info">
-                    <img
-                      src={request.initiator.image || '/default-avatar.png'}
-                      alt=""
-                      class="social-avatar"
-                    />
+                    <img src={friend.image || '/default-avatar.png'} alt="" class="social-avatar" />
                     <div>
-                      <a href="/u/{request.initiator.username}" class="social-username"
-                        >{request.initiator.username}</a
-                      >
-                      {#if request.initiator.name}<p class="social-meta">
-                          {request.initiator.name}
-                        </p>{/if}
+                      <a href="/u/{friend.username}" class="social-username">{friend.username}</a>
+                      <p class="social-meta">
+                        Active {new Date(friend.lastActive).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <div class="social-actions">
-                    <button
-                      class="social-btn-sm social-btn-accept"
-                      onclick={() => updateFriendship(request.id, 'ACCEPTED')}>Accept</button
-                    >
-                    <button
-                      class="social-btn-sm social-btn-decline"
-                      onclick={() => updateFriendship(request.id, 'DECLINED')}>Decline</button
-                    >
-                  </div>
+                  <button
+                    class="social-btn-sm social-btn-remove"
+                    onclick={() => removeFriend(friendship.id)}>Remove</button
+                  >
                 </li>
               {/each}
             </ul>
-          </div>
-        {/if}
+          {/if}
+        </div>
 
-        {#if outgoingRequests.length > 0}
+        <!-- Challenges -->
+        {#if data.challenges && data.challenges.length > 0}
           <div class="card">
-            <h3 class="social-card-title">Sent Requests</h3>
-            <ul class="social-user-list">
-              {#each outgoingRequests as request}
-                <li class="social-user-item">
-                  <div class="social-user-info">
-                    <img
-                      src={request.receiver.image || '/default-avatar.png'}
-                      alt=""
-                      class="social-avatar"
-                    />
-                    <div>
-                      <a href="/u/{request.receiver.username}" class="social-username"
-                        >{request.receiver.username}</a
-                      >
-                      {#if request.receiver.name}<p class="social-meta">
-                          {request.receiver.name}
-                        </p>{/if}
-                    </div>
-                  </div>
-                  <span class="social-status-pill social-pending">Pending</span>
-                </li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
-      </div>
-
-      <!-- Friends list -->
-      <div class="card">
-        <h3 class="social-card-title">
-          Friends <span class="social-count-badge">{friends.length}</span>
-        </h3>
-        {#if friends.length === 0}
-          <p class="social-empty">No friends yet. Add some people to see them here!</p>
-        {:else}
-          <ul class="social-user-list">
-            {#each friends as friendship}
-              {@const friend =
-                friendship.initiatorId === data.userId ? friendship.receiver : friendship.initiator}
-              <li class="social-user-item">
-                <div class="social-user-info">
-                  <img src={friend.image || '/default-avatar.png'} alt="" class="social-avatar" />
-                  <div>
-                    <a href="/u/{friend.username}" class="social-username">{friend.username}</a>
+            <h3 class="social-card-title">Active Challenges</h3>
+            <ul class="social-challenge-list">
+              {#each data.challenges as challenge}
+                <li class="social-challenge-item">
+                  <div class="social-challenge-info">
+                    <span class="social-game-title">{challenge.game.title}</span>
                     <p class="social-meta">
-                      Active {new Date(friend.lastActive).toLocaleDateString()}
+                      {#if challenge.challengerId === data.userId}
+                        You challenged <strong>{challenge.challengee.username}</strong>
+                      {:else}
+                        <strong>{challenge.challenger.username}</strong> challenged you
+                      {/if}
+                    </p>
+                    <p class="social-meta">
+                      Score to beat: <strong>{challenge.scoreToBeat}</strong>
                     </p>
                   </div>
-                </div>
-                <button
-                  class="social-btn-sm social-btn-remove"
-                  onclick={() => removeFriend(friendship.id)}>Remove</button
-                >
-              </li>
-            {/each}
-          </ul>
+                  <div class="social-challenge-right">
+                    <span class="social-status-pill social-{challenge.status.toLowerCase()}"
+                      >{challenge.status}</span
+                    >
+                    {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
+                      <a
+                        href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
+                        class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a
+                      >
+                    {/if}
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          </div>
         {/if}
       </div>
+    </section>
+  </div>
 
-      <!-- Challenges -->
-      {#if data.challenges && data.challenges.length > 0}
-        <div class="card">
-          <h3 class="social-card-title">Active Challenges</h3>
-          <ul class="social-challenge-list">
-            {#each data.challenges as challenge}
-              <li class="social-challenge-item">
-                <div class="social-challenge-info">
-                  <span class="social-game-title">{challenge.game.title}</span>
-                  <p class="social-meta">
-                    {#if challenge.challengerId === data.userId}
-                      You challenged <strong>{challenge.challengee.username}</strong>
-                    {:else}
-                      <strong>{challenge.challenger.username}</strong> challenged you
-                    {/if}
-                  </p>
-                  <p class="social-meta">Score to beat: <strong>{challenge.scoreToBeat}</strong></p>
-                </div>
-                <div class="social-challenge-right">
-                  <span class="social-status-pill social-{challenge.status.toLowerCase()}"
-                    >{challenge.status}</span
-                  >
-                  {#if challenge.challengeeId === data.userId && challenge.status === 'PENDING'}
-                    <a
-                      href="/play/games/{challenge.gameId}/play?challengeId={challenge.id}"
-                      class="btn-duo btn-primary social-btn-sm-duo">Accept & Play</a
-                    >
-                  {/if}
-                </div>
-              </li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-    </div>
-  </section>
-</div>
-
-{#if selectedModalItem}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="modal-backdrop"
-    onclick={closeModal}
-    onkeydown={(e) => e.key === 'Escape' && closeModal()}
-  >
+  {#if selectedModalItem}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal-content" onclick={(e) => e.stopPropagation()}>
-      <button class="modal-close" onclick={closeModal}>&times;</button>
+    <div
+      class="modal-backdrop"
+      onclick={closeModal}
+      onkeydown={(e) => e.key === 'Escape' && closeModal()}
+    >
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+        <button class="modal-close" onclick={closeModal}>&times;</button>
 
-      {#if selectedModalItem.type === 'vocab'}
-        {@const vocab = selectedModalItem.data}
-        {@const isUnseen = vocab.srsState === 'UNSEEN'}
-        {@const elo = vocab.eloRating !== undefined ? Math.round(vocab.eloRating) : 1000}
-        {@const levelText = isUnseen
-          ? 'Unseen'
-          : vocab.srsState.charAt(0) + vocab.srsState.slice(1).toLowerCase()}
+        {#if selectedModalItem.type === 'vocab'}
+          {@const vocab = selectedModalItem.data}
+          {@const isUnseen = vocab.srsState === 'UNSEEN'}
+          {@const elo = vocab.eloRating !== undefined ? Math.round(vocab.eloRating) : 1000}
+          {@const levelText = isUnseen
+            ? 'Unseen'
+            : vocab.srsState.charAt(0) + vocab.srsState.slice(1).toLowerCase()}
 
-        <h3 class="modal-title">
-          {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun'}
-            {vocab.vocabulary.lemma.charAt(0).toUpperCase() + vocab.vocabulary.lemma.slice(1)}
-          {:else}
-            {vocab.vocabulary.lemma}
-          {/if}
-        </h3>
-
-        <div class="modal-body">
-          {#if !isUnseen}
-            <div class="modal-elo-section">
-              <div class="modal-elo-header">
-                <span>Mastery: {levelText}</span>
-                <span class="modal-elo-score" style="color: {selectedModalItem.color}"
-                  >ELO {elo}</span
-                >
-              </div>
-              <div class="elo-progress-track">
-                <div
-                  class="elo-progress-fill"
-                  style="width: {selectedModalItem.eloPercent}%; background-color: {selectedModalItem.color}"
-                ></div>
-              </div>
-            </div>
-          {:else}
-            <div class="modal-elo-section">
-              <div class="modal-elo-header"><span>Status: {levelText}</span></div>
-            </div>
-          {/if}
-
-          <div class="modal-details">
-            {#if vocab.vocabulary.partOfSpeech}
-              <div class="modal-detail-row">
-                <span class="detail-label">POS:</span>
-                <span>{vocab.vocabulary.partOfSpeech}</span>
-              </div>
-            {/if}
-            {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun' && vocab.vocabulary.gender}
-              <div class="modal-detail-row">
-                <span class="detail-label">Gender:</span>
-                <span>{vocab.vocabulary.gender}</span>
-              </div>
-            {/if}
-            {#if vocab.vocabulary.plural}
-              <div class="modal-detail-row">
-                <span class="detail-label">Plural:</span>
-                <span>{vocab.vocabulary.plural}</span>
-              </div>
-            {/if}
-            {#if (vocab.vocabulary as any).meaning}
-              <div class="modal-detail-row">
-                <span class="detail-label">Meaning:</span>
-                <span>{(vocab.vocabulary as any).meaning}</span>
-              </div>
-            {/if}
-          </div>
-        </div>
-      {:else if selectedModalItem.type === 'grammar'}
-        {@const rule = selectedModalItem.data}
-        {@const prereqs = getPrerequisiteProgress(rule)}
-        {@const allPrereqsMastered =
-          prereqs.length === 0 || prereqs.every((p: any) => p.srsState === 'MASTERED')}
-        {@const canTestOut = !rule.isLocked && rule.srsState !== 'MASTERED' && allPrereqsMastered}
-
-        <!-- Back navigation -->
-        {#if grammarModalPhase !== 'detail' || modalStack.length > 1}
-          <button class="modal-back-btn" onclick={goBack}>
-            ←
-            {#if grammarModalPhase !== 'detail'}
-              Back to Details
+          <h3 class="modal-title">
+            {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun'}
+              {vocab.vocabulary.lemma.charAt(0).toUpperCase() + vocab.vocabulary.lemma.slice(1)}
             {:else}
-              {modalStack[modalStack.length - 2]?.data?.grammarRule?.title || 'Back'}
+              {vocab.vocabulary.lemma}
             {/if}
-          </button>
-        {/if}
-
-        {#if grammarModalPhase === 'detail'}
-          <h3 class="modal-title">{rule.grammarRule.title}</h3>
+          </h3>
 
           <div class="modal-body">
-            <div class="modal-elo-section">
-              <div class="modal-elo-header">
-                <span>Status: {rule.srsState}</span>
-                {#if !rule.isLocked}
+            {#if !isUnseen}
+              <div class="modal-elo-section">
+                <div class="modal-elo-header">
+                  <span>Mastery: {levelText}</span>
                   <span class="modal-elo-score" style="color: {selectedModalItem.color}"
-                    >ELO {Math.ceil(rule.eloRating)}</span
+                    >ELO {elo}</span
                   >
-                {/if}
-              </div>
-              {#if !rule.isLocked}
+                </div>
                 <div class="elo-progress-track">
                   <div
                     class="elo-progress-fill"
                     style="width: {selectedModalItem.eloPercent}%; background-color: {selectedModalItem.color}"
                   ></div>
                 </div>
-              {/if}
-            </div>
-
-            {#if prereqs.length > 0}
-              <div class="prereq-section">
-                <h4 class="prereq-heading">
-                  {rule.isLocked ? 'Prerequisites to Unlock' : 'Prerequisites'}
-                </h4>
-                <div class="prereq-list">
-                  {#each prereqs as prereq}
-                    <button
-                      class="prereq-item prereq-item-clickable"
-                      onclick={() => navigateToPrereq(prereq.id)}
-                      title="View {prereq.title}"
-                    >
-                      <div class="prereq-item-header">
-                        <span class="prereq-dot" style="background-color: {prereq.color}"></span>
-                        <span class="prereq-title">{prereq.title}</span>
-                        <span class="prereq-status" style="color: {prereq.color}"
-                          >{prereq.srsState}</span
-                        >
-                        <span class="prereq-arrow">›</span>
-                      </div>
-                      <div class="prereq-bar-track">
-                        <div
-                          class="prereq-bar-fill"
-                          style="width: {prereq.percent}%; background-color: {prereq.color}"
-                        ></div>
-                      </div>
-                    </button>
-                  {/each}
-                </div>
               </div>
-            {/if}
-
-            {#if canTestOut}
-              <div class="test-out-section">
-                <div class="test-out-divider"></div>
-                <p class="test-out-hint">
-                  All prerequisites mastered! You can test out of this rule by answering 9 out of 10
-                  questions correctly.
-                </p>
-                <button class="test-out-btn" onclick={() => startTestOut(rule.grammarRule.id)}>
-                  Test Out of {rule.grammarRule.title}
-                </button>
+            {:else}
+              <div class="modal-elo-section">
+                <div class="modal-elo-header"><span>Status: {levelText}</span></div>
               </div>
-            {/if}
-
-            {#if testOutError}
-              <p class="test-out-error">{testOutError}</p>
             {/if}
 
             <div class="modal-details">
-              <p class="modal-desc">
-                {rule.grammarRule.description || 'No description available.'}
-              </p>
-              {#if rule.grammarRule.guide}
-                <div class="grammar-guide markdown-body">
-                  {@html marked(rule.grammarRule.guide)}
+              {#if vocab.vocabulary.partOfSpeech}
+                <div class="modal-detail-row">
+                  <span class="detail-label">POS:</span>
+                  <span>{vocab.vocabulary.partOfSpeech}</span>
+                </div>
+              {/if}
+              {#if vocab.vocabulary.partOfSpeech?.toLowerCase() === 'noun' && vocab.vocabulary.gender}
+                <div class="modal-detail-row">
+                  <span class="detail-label">Gender:</span>
+                  <span>{vocab.vocabulary.gender}</span>
+                </div>
+              {/if}
+              {#if vocab.vocabulary.plural}
+                <div class="modal-detail-row">
+                  <span class="detail-label">Plural:</span>
+                  <span>{vocab.vocabulary.plural}</span>
+                </div>
+              {/if}
+              {#if (vocab.vocabulary as any).meaning}
+                <div class="modal-detail-row">
+                  <span class="detail-label">Meaning:</span>
+                  <span>{(vocab.vocabulary as any).meaning}</span>
                 </div>
               {/if}
             </div>
           </div>
-        {:else if grammarModalPhase === 'testing'}
-          <h3 class="modal-title">Test Out: {rule.grammarRule.title}</h3>
+        {:else if selectedModalItem.type === 'grammar'}
+          {@const rule = selectedModalItem.data}
+          {@const prereqs = getPrerequisiteProgress(rule)}
+          {@const allPrereqsMastered =
+            prereqs.length === 0 || prereqs.every((p: any) => p.srsState === 'MASTERED')}
+          {@const canTestOut = !rule.isLocked && rule.srsState !== 'MASTERED' && allPrereqsMastered}
 
-          <div class="modal-body">
-            {#if testOutLoading}
-              <div class="test-loading">
-                <div class="test-loading-spinner"></div>
-                <p>Generating questions…</p>
-              </div>
-            {:else if testOutError && !testOutQuestions}
-              <div class="test-error-state">
-                <p>{testOutError}</p>
-                <button class="test-retry-btn" onclick={() => startTestOut(rule.grammarRule.id)}
-                  >Try Again</button
-                >
-              </div>
-            {:else if testOutQuestions}
-              {@const q = testOutQuestions[testOutCurrentIndex]}
-              {@const lastScore = testOutScores[testOutScores.length - 1]}
+          <!-- Back navigation -->
+          {#if grammarModalPhase !== 'detail' || modalStack.length > 1}
+            <button class="modal-back-btn" onclick={goBack}>
+              ←
+              {#if grammarModalPhase !== 'detail'}
+                Back to Details
+              {:else}
+                {modalStack[modalStack.length - 2]?.data?.grammarRule?.title || 'Back'}
+              {/if}
+            </button>
+          {/if}
 
-              <div class="test-progress-header">
-                <span class="test-q-count"
-                  >Question {testOutCurrentIndex + 1} / {testOutTotalQuestions}</span
-                >
-                <span class="test-score-preview">{testOutPassedCount} correct so far</span>
-              </div>
-              <div class="test-progress-bar-track">
-                <div
-                  class="test-progress-bar-fill"
-                  style="width: {(testOutCurrentIndex / testOutTotalQuestions) * 100}%"
-                ></div>
+          {#if grammarModalPhase === 'detail'}
+            <h3 class="modal-title">{rule.grammarRule.title}</h3>
+
+            <div class="modal-body">
+              <div class="modal-elo-section">
+                <div class="modal-elo-header">
+                  <span>Status: {rule.srsState}</span>
+                  {#if !rule.isLocked}
+                    <span class="modal-elo-score" style="color: {selectedModalItem.color}"
+                      >ELO {Math.ceil(rule.eloRating)}</span
+                    >
+                  {/if}
+                </div>
+                {#if !rule.isLocked}
+                  <div class="elo-progress-track">
+                    <div
+                      class="elo-progress-fill"
+                      style="width: {selectedModalItem.eloPercent}%; background-color: {selectedModalItem.color}"
+                    ></div>
+                  </div>
+                {/if}
               </div>
 
-              <div class="test-question-card">
-                <p class="test-sentence">{q.sentence}</p>
-                <p class="test-context">{q.context}</p>
-              </div>
+              {#if prereqs.length > 0}
+                <div class="prereq-section">
+                  <h4 class="prereq-heading">
+                    {rule.isLocked ? 'Prerequisites to Unlock' : 'Prerequisites'}
+                  </h4>
+                  <div class="prereq-list">
+                    {#each prereqs as prereq}
+                      <button
+                        class="prereq-item prereq-item-clickable"
+                        onclick={() => navigateToPrereq(prereq.id)}
+                        title="View {prereq.title}"
+                      >
+                        <div class="prereq-item-header">
+                          <span class="prereq-dot" style="background-color: {prereq.color}"></span>
+                          <span class="prereq-title">{prereq.title}</span>
+                          <span class="prereq-status" style="color: {prereq.color}"
+                            >{prereq.srsState}</span
+                          >
+                          <span class="prereq-arrow">›</span>
+                        </div>
+                        <div class="prereq-bar-track">
+                          <div
+                            class="prereq-bar-fill"
+                            style="width: {prereq.percent}%; background-color: {prereq.color}"
+                          ></div>
+                        </div>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
 
-              <div class="test-options">
-                {#each q.options as option, i}
-                  <button
-                    class="test-option"
-                    class:option-correct={testOutAnsweredCurrent && i === q.correctIndex}
-                    class:option-incorrect={testOutAnsweredCurrent &&
-                      i === testOutSelectedAnswer &&
-                      i !== q.correctIndex}
-                    class:option-disabled={testOutAnsweredCurrent &&
-                      i !== q.correctIndex &&
-                      i !== testOutSelectedAnswer}
-                    onclick={() => handleTestAnswer(i)}
-                    disabled={testOutAnsweredCurrent}
-                  >
-                    <span class="option-letter">{String.fromCharCode(65 + i)}</span>
-                    <span class="option-text">{option}</span>
+              {#if canTestOut}
+                <div class="test-out-section">
+                  <div class="test-out-divider"></div>
+                  <p class="test-out-hint">
+                    All prerequisites mastered! You can test out of this rule by answering 9 out of
+                    10 questions correctly.
+                  </p>
+                  <button class="test-out-btn" onclick={() => startTestOut(rule.grammarRule.id)}>
+                    Test Out of {rule.grammarRule.title}
                   </button>
+                </div>
+              {/if}
+
+              {#if testOutError}
+                <p class="test-out-error">{testOutError}</p>
+              {/if}
+
+              <div class="modal-details">
+                <p class="modal-desc">
+                  {rule.grammarRule.description || 'No description available.'}
+                </p>
+                {#if rule.grammarRule.guide}
+                  <div class="grammar-guide markdown-body">
+                    {@html marked(rule.grammarRule.guide)}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {:else if grammarModalPhase === 'testing'}
+            <h3 class="modal-title">Test Out: {rule.grammarRule.title}</h3>
+
+            <div class="modal-body">
+              {#if testOutLoading}
+                <div class="test-loading">
+                  <div class="test-loading-spinner"></div>
+                  <p>Generating questions…</p>
+                </div>
+              {:else if testOutError && !testOutQuestions}
+                <div class="test-error-state">
+                  <p>{testOutError}</p>
+                  <button class="test-retry-btn" onclick={() => startTestOut(rule.grammarRule.id)}
+                    >Try Again</button
+                  >
+                </div>
+              {:else if testOutQuestions}
+                {@const q = testOutQuestions[testOutCurrentIndex]}
+                {@const lastScore = testOutScores[testOutScores.length - 1]}
+
+                <div class="test-progress-header">
+                  <span class="test-q-count"
+                    >Question {testOutCurrentIndex + 1} / {testOutTotalQuestions}</span
+                  >
+                  <span class="test-score-preview">{testOutPassedCount} correct so far</span>
+                </div>
+                <div class="test-progress-bar-track">
+                  <div
+                    class="test-progress-bar-fill"
+                    style="width: {(testOutCurrentIndex / testOutTotalQuestions) * 100}%"
+                  ></div>
+                </div>
+
+                <div class="test-question-card">
+                  <p class="test-sentence">{q.sentence}</p>
+                  <p class="test-context">{q.context}</p>
+                </div>
+
+                <div class="test-options">
+                  {#each q.options as option, i}
+                    <button
+                      class="test-option"
+                      class:option-correct={testOutAnsweredCurrent && i === q.correctIndex}
+                      class:option-incorrect={testOutAnsweredCurrent &&
+                        i === testOutSelectedAnswer &&
+                        i !== q.correctIndex}
+                      class:option-disabled={testOutAnsweredCurrent &&
+                        i !== q.correctIndex &&
+                        i !== testOutSelectedAnswer}
+                      onclick={() => handleTestAnswer(i)}
+                      disabled={testOutAnsweredCurrent}
+                    >
+                      <span class="option-letter">{String.fromCharCode(65 + i)}</span>
+                      <span class="option-text">{option}</span>
+                    </button>
+                  {/each}
+                </div>
+
+                {#if testOutAnsweredCurrent}
+                  <div
+                    class="test-feedback"
+                    class:feedback-correct={lastScore}
+                    class:feedback-incorrect={!lastScore}
+                  >
+                    <span class="feedback-icon">{lastScore ? '✓' : '✗'}</span>
+                    <div class="feedback-content">
+                      <span class="feedback-label"
+                        >{lastScore
+                          ? 'Correct!'
+                          : `Incorrect — correct answer: ${q.options[q.correctIndex]}`}</span
+                      >
+                      <p class="feedback-explanation">{q.explanation}</p>
+                    </div>
+                  </div>
+                  {@const wrongSoFar = testOutScores.filter((s) => !s).length}
+                  <button class="test-next-btn" onclick={nextTestQuestion}>
+                    {testOutCurrentIndex >= testOutTotalQuestions - 1 || wrongSoFar >= 2
+                      ? 'See Results →'
+                      : 'Next Question →'}
+                  </button>
+                {/if}
+              {/if}
+            </div>
+          {:else if grammarModalPhase === 'results'}
+            {@const endedEarly =
+              testOutScores.filter((s) => !s).length >= 2 &&
+              testOutScores.length < testOutTotalQuestions}
+            <h3 class="modal-title">Results: {rule.grammarRule.title}</h3>
+
+            <div class="modal-body">
+              <div
+                class="results-score-display"
+                class:results-pass={testOutPassed}
+                class:results-fail={!testOutPassed}
+              >
+                <span class="results-number">{testOutPassedCount}/{testOutScores.length}</span>
+                <span class="results-label">correct</span>
+              </div>
+
+              <div class="score-dots">
+                {#each testOutScores as correct}
+                  <span
+                    class="score-dot"
+                    class:dot-correct={correct}
+                    class:dot-incorrect={!correct}
+                  >
+                    {correct ? '✓' : '✗'}
+                  </span>
                 {/each}
               </div>
 
-              {#if testOutAnsweredCurrent}
-                <div
-                  class="test-feedback"
-                  class:feedback-correct={lastScore}
-                  class:feedback-incorrect={!lastScore}
-                >
-                  <span class="feedback-icon">{lastScore ? '✓' : '✗'}</span>
-                  <div class="feedback-content">
-                    <span class="feedback-label"
-                      >{lastScore
-                        ? 'Correct!'
-                        : `Incorrect — correct answer: ${q.options[q.correctIndex]}`}</span
-                    >
-                    <p class="feedback-explanation">{q.explanation}</p>
+              {#if testOutPassed}
+                <p class="results-message results-pass-msg">
+                  You've demonstrated mastery of {rule.grammarRule.title}!
+                </p>
+                {#if testOutMasteryDone}
+                  <div class="mastery-confirmed">
+                    <span>✓ Marked as Mastered!</span>
                   </div>
-                </div>
-                {@const wrongSoFar = testOutScores.filter((s) => !s).length}
-                <button class="test-next-btn" onclick={nextTestQuestion}>
-                  {testOutCurrentIndex >= testOutTotalQuestions - 1 || wrongSoFar >= 2
-                    ? 'See Results →'
-                    : 'Next Question →'}
-                </button>
-              {/if}
-            {/if}
-          </div>
-        {:else if grammarModalPhase === 'results'}
-          {@const endedEarly =
-            testOutScores.filter((s) => !s).length >= 2 &&
-            testOutScores.length < testOutTotalQuestions}
-          <h3 class="modal-title">Results: {rule.grammarRule.title}</h3>
-
-          <div class="modal-body">
-            <div
-              class="results-score-display"
-              class:results-pass={testOutPassed}
-              class:results-fail={!testOutPassed}
-            >
-              <span class="results-number">{testOutPassedCount}/{testOutScores.length}</span>
-              <span class="results-label">correct</span>
-            </div>
-
-            <div class="score-dots">
-              {#each testOutScores as correct}
-                <span class="score-dot" class:dot-correct={correct} class:dot-incorrect={!correct}>
-                  {correct ? '✓' : '✗'}
-                </span>
-              {/each}
-            </div>
-
-            {#if testOutPassed}
-              <p class="results-message results-pass-msg">
-                You've demonstrated mastery of {rule.grammarRule.title}!
-              </p>
-              {#if testOutMasteryDone}
-                <div class="mastery-confirmed">
-                  <span>✓ Marked as Mastered!</span>
-                </div>
-              {:else}
-                <button
-                  class="master-confirm-btn"
-                  onclick={() => submitMastery(rule.grammarRule.id)}
-                  disabled={testOutMastering}
-                >
-                  {testOutMastering ? 'Saving…' : 'Mark as Mastered →'}
-                </button>
-              {/if}
-            {:else}
-              <p class="results-message results-fail-msg">
-                {#if endedEarly}
-                  Test ended early — 2 wrong answers means passing is no longer possible. Keep
-                  practicing and try again!
                 {:else}
-                  You need at least 9/10 correct to test out. Keep practicing and try again!
+                  <button
+                    class="master-confirm-btn"
+                    onclick={() => submitMastery(rule.grammarRule.id)}
+                    disabled={testOutMastering}
+                  >
+                    {testOutMastering ? 'Saving…' : 'Mark as Mastered →'}
+                  </button>
                 {/if}
-              </p>
-              <div class="results-actions">
-                <button class="results-retry-btn" onclick={() => startTestOut(rule.grammarRule.id)}>
-                  Try Again
-                </button>
-                <button class="results-back-btn" onclick={goBack}> Back to Details </button>
-              </div>
-            {/if}
+              {:else}
+                <p class="results-message results-fail-msg">
+                  {#if endedEarly}
+                    Test ended early — 2 wrong answers means passing is no longer possible. Keep
+                    practicing and try again!
+                  {:else}
+                    You need at least 9/10 correct to test out. Keep practicing and try again!
+                  {/if}
+                </p>
+                <div class="results-actions">
+                  <button
+                    class="results-retry-btn"
+                    onclick={() => startTestOut(rule.grammarRule.id)}
+                  >
+                    Try Again
+                  </button>
+                  <button class="results-back-btn" onclick={goBack}> Back to Details </button>
+                </div>
+              {/if}
 
-            {#if testOutError}
-              <p class="test-out-error">{testOutError}</p>
-            {/if}
-          </div>
+              {#if testOutError}
+                <p class="test-out-error">{testOutError}</p>
+              {/if}
+            </div>
+          {/if}
         {/if}
-      {/if}
+      </div>
     </div>
-  </div>
+  {/if}
 {/if}
 
 <style>
