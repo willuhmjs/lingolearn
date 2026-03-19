@@ -842,21 +842,11 @@
             </div>
           </div>
         {/if}
-      </div>
 
-      <StreakCard
-        currentStreak={$page.data.user?.currentStreak ?? 0}
-        longestStreak={data.longestStreak ?? 0}
-        streakFreezes={data.streakFreezes ?? 0}
-        totalXp={data.totalXp ?? 0}
-        studiedToday={data.studiedToday ?? false}
-      />
-    </div>
-
-    <!-- MEMORY HEALTH (collapsible) -->
-    {#if data.retentionStats && data.retentionStats.totalReviewed > 0}
-      {@const rs = data.retentionStats}
-      <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 300 }}>
+        <!-- MEMORY HEALTH (collapsible) -->
+        {#if data.retentionStats && data.retentionStats.totalReviewed > 0}
+          {@const rs = data.retentionStats}
+          <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 300 }}>
         <button
           class="accordion-toggle"
           onclick={() => (showMemoryHealth = !showMemoryHealth)}
@@ -1010,23 +1000,23 @@
             </div>
           </div>
         {/if}
-      </section>
-    {/if}
+          </section>
+        {/if}
 
-    <!-- LEARNING INSIGHTS (collapsible) -->
-    {#if totalVocab > 0}
-      {@const urgent = data.urgentItems ?? []}
-      {@const errors = data.errorTypeCounts ?? {}}
-      {@const coverage = data.grammarCoverage}
-      {@const errorLabels: Record<string, string> = {
-			wrong_case: 'Wrong Case',
-			wrong_tense: 'Wrong Tense',
-			wrong_gender: 'Wrong Gender',
-			spelling: 'Spelling',
-			word_order: 'Word Order',
-			vocabulary_gap: 'Vocabulary Gap'
-		}}
-      <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 400 }}>
+        <!-- LEARNING INSIGHTS (collapsible) -->
+        {#if totalVocab > 0}
+          {@const urgent = data.urgentItems ?? []}
+          {@const errors = data.errorTypeCounts ?? {}}
+          {@const coverage = data.grammarCoverage}
+          {@const errorLabels: Record<string, string> = {
+            wrong_case: 'Wrong Case',
+            wrong_tense: 'Wrong Tense',
+            wrong_gender: 'Wrong Gender',
+            spelling: 'Spelling',
+            word_order: 'Word Order',
+            vocabulary_gap: 'Vocabulary Gap'
+          }}
+          <section class="accordion-card" in:fly={{ y: 16, duration: 400, delay: 400 }}>
         <button
           class="accordion-toggle"
           onclick={() => (showInsights = !showInsights)}
@@ -1388,16 +1378,16 @@
             </div>
           </div>
         {/if}
-      </section>
-    {/if}
+          </section>
+        {/if}
 
-    <!-- LEARNING INTELLIGENCE (collapsible, power users) -->
-    {#if data.sessionEma !== undefined}
-      {@const ad = data}
-      <section
-        class="accordion-card accordion-technical"
-        in:fly={{ y: 16, duration: 400, delay: 500 }}
-      >
+        <!-- LEARNING INTELLIGENCE (collapsible, power users) -->
+        {#if data.sessionEma !== undefined}
+          {@const ad = data}
+          <section
+            class="accordion-card accordion-technical"
+            in:fly={{ y: 16, duration: 400, delay: 500 }}
+          >
         <button
           class="accordion-toggle"
           onclick={() => (showIntelligence = !showIntelligence)}
@@ -1777,11 +1767,21 @@
             </div>
           </div>
         {/if}
-      </section>
-    {/if}
+          </section>
+        {/if}
+      </div>
 
-    <!-- SOCIAL -->
-    <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
+      <div class="right-col">
+        <StreakCard
+          currentStreak={$page.data.user?.currentStreak ?? 0}
+          longestStreak={data.longestStreak ?? 0}
+          streakFreezes={data.streakFreezes ?? 0}
+          totalXp={data.totalXp ?? 0}
+          studiedToday={data.studiedToday ?? false}
+        />
+
+        <!-- SOCIAL -->
+        <section class="social-section" in:fly={{ y: 16, duration: 400, delay: 450 }}>
       <h2 class="social-heading">
         <svg
           viewBox="0 0 24 24"
@@ -1987,7 +1987,9 @@
           </div>
         {/if}
       </div>
-    </section>
+        </section>
+      </div>
+    </div>
   </div>
 
   {#if confirmRemoveFriendshipId !== null}
@@ -2366,20 +2368,27 @@
   /* ── Stats + Streak layout ── */
   .stats-streak-layout {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr 320px;
     gap: 1.25rem;
     align-items: start;
     margin-bottom: 1.5rem;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 960px) {
     .stats-streak-layout {
       grid-template-columns: 1fr;
     }
   }
 
-  /* ── Recommended words strip ── */
+  /* ── Left / Right columns ── */
   .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+
+  .right-col {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -2582,7 +2591,6 @@
     border-radius: var(--radius-xl, 1rem);
     box-shadow: var(--shadow-duo);
     border: 2px solid var(--card-border, #e5e7eb);
-    margin-bottom: 1rem;
     overflow: hidden;
   }
 
@@ -2626,9 +2634,13 @@
   }
 
   .accordion-meta {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #64748b;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    max-width: 180px;
   }
 
   :global(html[data-theme='dark']) .accordion-meta {
@@ -4572,15 +4584,9 @@
 
   .retention-kpi-row {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 1rem;
     margin-bottom: 1.5rem;
-  }
-
-  @media (min-width: 640px) {
-    .retention-kpi-row {
-      grid-template-columns: repeat(4, 1fr);
-    }
   }
 
   .retention-kpi {
@@ -4614,14 +4620,14 @@
 
   .retention-charts-row {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.25rem;
     margin-bottom: 1.5rem;
   }
 
   @media (min-width: 768px) {
     .retention-charts-row {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     }
   }
 
@@ -5539,14 +5545,14 @@
 
   /* ── Social section ──────────────────────────────────────────── */
   .social-section {
-    margin-top: 2rem;
+    margin-top: 0;
   }
 
   .social-heading {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 800;
     color: var(--text-color, #111827);
-    margin: 0 0 1rem;
+    margin: 0 0 0.75rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -5565,13 +5571,7 @@
   .social-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .social-grid {
-      grid-template-columns: 1fr 1fr;
-    }
+    gap: 1rem;
   }
 
   .social-card-title {
