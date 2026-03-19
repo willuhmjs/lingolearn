@@ -403,6 +403,10 @@
     margin-top: 0.15rem;
   }
 
+  .freeze-buy-row :global(button) {
+    min-width: 6rem;
+  }
+
   .xp-cost {
     display: flex;
     align-items: center;

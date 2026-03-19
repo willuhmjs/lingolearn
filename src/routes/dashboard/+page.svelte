@@ -2388,7 +2388,8 @@
 
   .rec-section {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .rec-header {
@@ -3487,11 +3488,20 @@
       margin-bottom: 1rem;
     }
 
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .header-actions :global(.btn-duo),
+    .header-actions :global(.btn-live),
+    .header-actions :global(.btn-assignment),
     .dashboard-header .btn-duo {
       width: 100%;
       box-sizing: border-box;
       padding: 0.75rem 1rem;
       font-size: 0.9rem;
+      justify-content: center;
     }
 
     .summary-card {
@@ -3543,6 +3553,63 @@
 
     .qstat-label {
       font-size: 0.65rem;
+    }
+
+    .accordion-toggle {
+      padding: 0.875rem 1rem;
+    }
+
+    .accordion-meta {
+      display: none;
+    }
+
+    .accordion-body {
+      padding: 1rem;
+    }
+
+    .rec-section {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .rec-row {
+      flex-wrap: nowrap;
+      overflow-x: visible;
+    }
+
+    .modal-content {
+      padding: 2rem 1.25rem 1.5rem;
+      width: 95%;
+    }
+
+    .social-invite-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .social-btn-copy {
+      align-self: flex-start;
+    }
+
+    .bandit-arm-row {
+      grid-template-columns: 4.5rem 1fr 2rem 2.5rem;
+    }
+
+    .variance-row {
+      grid-template-columns: 1fr 2rem 2.5rem 2.5rem;
+    }
+
+    .bar-row {
+      grid-template-columns: 3.5rem 1fr 2rem;
+    }
+
+    .algo-section {
+      padding: 0;
+    }
+
+    .due-soon-banner {
+      max-width: 100%;
     }
   }
 
