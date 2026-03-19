@@ -65,7 +65,12 @@
 
   <!-- Longest streak -->
   {#if longestStreak > 0}
-    <p class="streak-best">Best: {longestStreak} days</p>
+    <p class="streak-best" title="Personal best: {longestStreak} days">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="best-icon">
+        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+      </svg>
+      {longestStreak}
+    </p>
   {/if}
 
   <div class="divider" aria-hidden="true"></div>
@@ -214,18 +219,22 @@
   }
 
   .streak-best {
-    font-size: 0.72rem;
-    color: var(--text-muted);
+    font-size: 0.8rem;
+    color: var(--color-warning);
     margin: 0 0 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-weight: 800;
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
     background: var(--link-hover-bg);
     padding: 0.2rem 0.6rem;
     border-radius: var(--radius-full);
+  }
+
+  .best-icon {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex-shrink: 0;
   }
 
   .divider {
@@ -238,7 +247,7 @@
   .freeze-section {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 1rem;
   }
 
   .freeze-label-row {
