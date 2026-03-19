@@ -309,13 +309,17 @@
     class="modal-backdrop"
     transition:fade={{ duration: 200 }}
     onclick={() => (showClassModal = false)}
+    onkeydown={(e) => e.key === 'Escape' && (showClassModal = false)}
+    role="presentation"
   >
     <div
       class="modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="class-modal-title"
+      tabindex="-1"
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
     >
       <div class="modal-header">
         <h2 id="class-modal-title">Select a Class</h2>

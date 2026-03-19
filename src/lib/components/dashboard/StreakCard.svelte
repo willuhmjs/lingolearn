@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { toastSuccess, toastError } from '$lib/utils/toast';
   import Button from '../Button.svelte';
@@ -23,8 +24,8 @@
   const MAX_FREEZES = 5;
 
   let isBuying = $state(false);
-  let localFreezes = $state(streakFreezes);
-  let localXp = $state(totalXp);
+  let localFreezes = $state(untrack(() => streakFreezes));
+  let localXp = $state(untrack(() => totalXp));
 
   $effect(() => {
     localFreezes = streakFreezes;

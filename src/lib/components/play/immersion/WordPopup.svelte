@@ -43,7 +43,11 @@
             ? ' (das)'
             : ''}
     </div>
-    {#each [...new Map((r.meanings || []).map( (m: any) => [`${m.partOfSpeech}|${m.value}`, m] )).values()].slice(0, 3) as m}
+    {@const meanings = (r.meanings || []) as { partOfSpeech?: string; value: string }[]}
+    {@const dedupedMeanings = [
+      ...new Map(meanings.map((m) => [`${m.partOfSpeech}|${m.value}`, m])).values()
+    ].slice(0, 3)}
+    {#each dedupedMeanings as m}
       <div class="word-popup-meaning">
         {#if m.partOfSpeech}<span class="word-popup-pos">{m.partOfSpeech}</span>{/if}
         {m.value}

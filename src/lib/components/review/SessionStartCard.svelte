@@ -89,7 +89,7 @@
     color: #93c5fd;
   }
 
-  .start-session-btn {
+  :global(.start-session-btn) {
     width: 100%;
     max-width: 220px;
     padding-top: 1rem;
@@ -98,7 +98,7 @@
     margin-bottom: 0.5rem;
   }
 
-  .btn-skip {
+  :global(.btn-skip) {
     display: block;
     margin: 0.75rem auto 0;
     background: none;
@@ -113,15 +113,15 @@
     transition: color 0.15s;
   }
 
-  .btn-skip:hover {
+  :global(.btn-skip:hover) {
     color: #64748b;
   }
 
-  :global(html[data-theme='dark']) .btn-skip {
+  :global(html[data-theme='dark'] .btn-skip) {
     color: #94a3b8;
   }
 
-  :global(html[data-theme='dark']) .btn-skip:hover {
+  :global(html[data-theme='dark'] .btn-skip:hover) {
     color: #cbd5e1;
   }
 </style>

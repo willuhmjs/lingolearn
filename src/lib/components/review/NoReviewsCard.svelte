@@ -117,14 +117,4 @@
     justify-content: center;
     flex-wrap: wrap;
   }
-
-  .btn-secondary {
-    background: transparent;
-    border: 2px solid var(--card-border, #e2e8f0);
-    color: var(--text-color, #0f172a);
-  }
-
-  .btn-secondary:hover {
-    background: var(--card-border, #e2e8f0);
-  }
 </style>

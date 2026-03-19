@@ -656,12 +656,8 @@
     margin-top: 2rem;
   }
 
-  .submit-btn {
-    width: 100%;
-  }
-
   @media (max-width: 768px) {
-    .btn-duo {
+    :global(.btn-duo) {
       width: 100%;
       box-sizing: border-box;
     }

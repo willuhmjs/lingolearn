@@ -113,6 +113,7 @@
         class="keyboard-panel"
         role="toolbar"
         aria-label="Special characters"
+        tabindex="-1"
         onkeydown={handleToolbarKeydown}
       >
         <button

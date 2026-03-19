@@ -1174,10 +1174,6 @@
     animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  :global(html[data-theme='dark']) {
-    /* Variables now loaded from variables.css */
-  }
-
   :global(html[data-theme='dark'] .info-card),
   :global(html[data-theme='dark'] .password-card),
   :global(html[data-theme='dark'] .theme-card),

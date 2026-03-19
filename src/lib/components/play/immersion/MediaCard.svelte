@@ -174,8 +174,4 @@
   :global(html[data-theme='dark']) .destination-desc {
     color: #34d399;
   }
-
-  .template-container {
-    /* Container for templates */
-  }
 </style>
