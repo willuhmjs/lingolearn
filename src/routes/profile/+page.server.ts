@@ -160,13 +160,13 @@ export const actions: Actions = {
       if (!currentPassword) {
         return fail(400, { error: 'Current password is required' });
       }
-      const match = await bcrypt.compare(currentPassword, user.passwordHash);
+      const match = await bcrypt.compare(currentPassword, decrypt(user.passwordHash));
       if (!match) {
         return fail(400, { error: 'Incorrect current password' });
       }
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = encrypt(await bcrypt.hash(newPassword, 10));
 
     await prisma.user.update({
       where: { id: locals.user.id },

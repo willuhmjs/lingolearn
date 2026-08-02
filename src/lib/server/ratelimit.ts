@@ -6,8 +6,8 @@ export const apiRateLimiter = new RateLimiter({
 });
 
 export const authRateLimiter = new RateLimiter({
-  IP: [5, 'm'], // 5 requests per minute per IP
-  IPUA: [10, 'm']
+  IP: [60, 'm'], // 60 requests per minute per IP
+  IPUA: [120, 'm']
 });
 
 // Daily token quota (aiQuota.ts) is now the primary budget guard for AI routes.

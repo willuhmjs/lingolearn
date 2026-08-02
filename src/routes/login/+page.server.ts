@@ -4,6 +4,7 @@ import type { PageServerLoad, Actions } from './$types';
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { getSiteSettings } from '$lib/server/settings';
+import { decrypt } from '$lib/server/crypto';
 
 export const load: PageServerLoad = async () => {
   const settings = await getSiteSettings();
@@ -34,7 +35,8 @@ export const actions: Actions = {
       return fail(400, { error: 'Invalid credentials' });
     }
 
-    const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
+    const decryptedHash = decrypt(user.passwordHash);
+    const passwordsMatch = await bcrypt.compare(password, decryptedHash);
     if (!passwordsMatch) {
       return fail(400, { error: 'Invalid credentials' });
     }
