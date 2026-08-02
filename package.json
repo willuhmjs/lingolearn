@@ -70,5 +70,14 @@
     "svelte-french-toast": "2.0.0-alpha.0",
     "sveltekit-rate-limiter": "^0.7.0",
     "zod": "^4.3.6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "esbuild",
+      "prisma"
+    ]
   }
 }
