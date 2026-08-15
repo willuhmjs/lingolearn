@@ -11,17 +11,20 @@ import { articles } from './articles';
 import { frenchGrammarRules } from './grammar';
 import type { LanguageSeedData } from '../seed-types';
 
+// Most entries in these files don't set partOfSpeech explicitly (unlike the
+// German/Spanish/Italian vocab files), so it's defaulted here per category —
+// otherwise the placement quiz can't filter distractors by part of speech.
 const allVocab = [
-  ...articles,
-  ...verbs,
-  ...nouns,
-  ...adverbs,
-  ...adjectives,
-  ...conjunctions,
-  ...prepositions,
-  ...pronouns,
-  ...particles,
-  ...interjections
+  ...articles.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'article' })),
+  ...verbs.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'verb' })),
+  ...nouns.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'noun' })),
+  ...adverbs.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'adverb' })),
+  ...adjectives.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'adjective' })),
+  ...conjunctions.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'conjunction' })),
+  ...prepositions.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'preposition' })),
+  ...pronouns.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'pronoun' })),
+  ...particles.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'particle' })),
+  ...interjections.map((v: any) => ({ ...v, partOfSpeech: v.partOfSpeech ?? 'interjection' }))
 ];
 
 export const seedData: LanguageSeedData = {

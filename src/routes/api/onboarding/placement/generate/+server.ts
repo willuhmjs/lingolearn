@@ -323,6 +323,7 @@ Make the content feel authentic — like something that would actually appear in
 Then create EXACTLY 3 multiple-choice comprehension questions in English about the content.
 Each question must have exactly 4 options (A, B, C, D) and one correct answer.
 Mix question types: at least one about the main idea, one about specific details, and one about vocabulary in context.
+All 4 options for a given question must be the same type of thing, similar length, and equally specific/plausible (e.g. four dates, four prices, four people mentioned, four plausible one-sentence summaries) — never make the correct option obviously stand out by being more detailed, more generic, or the only one that fits common sense without having read the text.
 
 Respond with ONLY valid JSON in this exact shape:
 {
@@ -353,7 +354,13 @@ Write ONE multiple-choice question that tests this grammar concept.
 - Present a sentence with a blank or ask which form is correct.
 - Write in English for the question stem, use ${langName} for the answer options.
 - Provide exactly 4 options; only one is correct.
-- Make the distractors plausible (common mistakes learners make).
+- All 4 options must be the same word/phrase varied only by the grammar point being
+  tested (e.g. different conjugations, genders, or cases of the same lemma) — never
+  mix in unrelated vocabulary, since a learner could otherwise spot the answer by
+  recognizing which option is a real word rather than by knowing the grammar rule.
+- Each distractor must be a genuine mistake a learner at this level would plausibly
+  make (wrong ending, wrong agreement, wrong case/tense), not something a native
+  speaker or search of the raw text would immediately reject as nonsensical.
 
 Respond with ONLY valid JSON:
 {
@@ -419,16 +426,29 @@ export async function POST({ request, locals }: RequestEvent) {
     targetVocab = sample(vocabWithMeaning, Math.min(numQuestions, vocabWithMeaning.length));
   }
 
-  // We pick a pool of potential distractors for wrong options.
-  const distractorPool = vocabWithMeaning
-    .filter((v) => !targetVocab.find((t) => t.id === v.id))
-    .slice(0, 30); // Increased pool size for more variety
+  // Candidate pool for wrong options — every other word at this level, not just
+  // a fixed slice of the most frequent ones (that made the same ~30 words recur
+  // as distractors for the whole round).
+  const nonTargetVocab = vocabWithMeaning.filter((v) => !targetVocab.find((t) => t.id === v.id));
 
   // Build vocab MC questions entirely from DB — no LLM needed.
   const vocabQuestions = targetVocab.map((vocab) => {
     const correctMeaning = vocab.meanings[0].value;
-    // Pick 3 wrong meanings from distractors
-    const distractors = sample(distractorPool, 3).map((d) => d.meanings[0].value);
+    const correctMeaningNormalized = correctMeaning.trim().toLowerCase();
+
+    // Restrict distractors to the same part of speech as the target word so a
+    // learner can't spot the correct answer just by shape (e.g. the only noun
+    // among three verbs), and never offer a distractor whose meaning duplicates
+    // the correct answer. Fall back to any part of speech if there aren't
+    // enough matches (e.g. sparse categories like articles/particles).
+    const isUsableDistractor = (v: (typeof nonTargetVocab)[number]) =>
+      v.meanings[0].value.trim().toLowerCase() !== correctMeaningNormalized;
+    const samePos = nonTargetVocab.filter(
+      (v) => v.partOfSpeech === vocab.partOfSpeech && isUsableDistractor(v)
+    );
+    const distractorCandidates = samePos.length >= 3 ? samePos : nonTargetVocab.filter(isUsableDistractor);
+
+    const distractors = sample(distractorCandidates, 3).map((d) => d.meanings[0].value);
     const options = [...distractors, correctMeaning];
     // Shuffle options
     for (let i = options.length - 1; i > 0; i--) {
