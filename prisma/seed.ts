@@ -11,6 +11,20 @@ const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+// Mirrors CefrService.mapRankToCefr (src/lib/server/cefrService.ts) — duplicated
+// rather than imported because the production image only ships src/lib/frequency
+// and src/lib/languages, not src/lib/server (which also pulls in $env/dynamic/private,
+// unresolvable outside the SvelteKit build). Keep thresholds in sync with srsConfig.ts.
+function mapRankToCefr(rank: number | null): string {
+  if (rank === null) return 'C2';
+  if (rank <= 1000) return 'A1';
+  if (rank <= 2500) return 'A2';
+  if (rank <= 5000) return 'B1';
+  if (rank <= 10000) return 'B2';
+  if (rank <= 20000) return 'C1';
+  return 'C2';
+}
+
 // ---------------------------------------------------------------------------
 // Shared seeding helpers
 // ---------------------------------------------------------------------------
@@ -26,6 +40,7 @@ async function seedVocabulary(
       where: { lemma: v.lemma, languageId: langId }
     });
     const frequency = getFrequencyRank(v.lemma, langName) ?? estimateFrequencyRank(v.lemma);
+    const cefrLevel = mapRankToCefr(frequency);
     if (existing) {
       await client.vocabulary.update({
         where: { id: existing.id },
@@ -35,6 +50,7 @@ async function seedVocabulary(
           gender: v.gender as any,
           plural: v.plural,
           frequency,
+          cefrLevel,
           meanings: {
             create: v.meaning ? [{ value: v.meaning, partOfSpeech: v.partOfSpeech }] : []
           }
@@ -49,6 +65,7 @@ async function seedVocabulary(
           gender: v.gender as any,
           plural: v.plural,
           frequency,
+          cefrLevel,
           languageId: langId,
           meanings: {
             create: v.meaning ? [{ value: v.meaning, partOfSpeech: v.partOfSpeech }] : []
@@ -192,14 +209,16 @@ export async function runSeed(client: PrismaClient = prisma, override: boolean =
     for (let i = 0; i < vocab.length; i += BATCH) {
       const batch = vocab.slice(i, i + BATCH);
       await Promise.all(
-        batch.map((v) =>
-          client.vocabulary.update({
+        batch.map((v) => {
+          const frequency = getFrequencyRank(v.lemma, lang.name) ?? estimateFrequencyRank(v.lemma);
+          return client.vocabulary.update({
             where: { id: v.id },
             data: {
-              frequency: getFrequencyRank(v.lemma, lang.name) ?? estimateFrequencyRank(v.lemma)
+              frequency,
+              cefrLevel: mapRankToCefr(frequency)
             }
-          })
-        )
+          });
+        })
       );
       updated += batch.length;
       process.stdout.write(`\r    Updated ${updated}/${vocab.length}`);
