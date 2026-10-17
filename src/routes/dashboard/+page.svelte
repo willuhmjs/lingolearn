@@ -3333,8 +3333,8 @@
     color: #f1f5f9;
   }
   .grammar-list {
-    background: #1e293b;
-    border: 2px solid #334155;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border);
     border-radius: 1rem;
     overflow: hidden;
   }
@@ -3346,7 +3346,7 @@
     padding: 0.85rem 1rem;
     background: none;
     border: none;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--card-border);
     cursor: pointer;
     text-align: left;
     transition: background 0.15s;
@@ -3356,7 +3356,7 @@
     border-bottom: none;
   }
   .grammar-list-row:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--link-hover-bg);
   }
   .grammar-list-row.locked {
     opacity: 0.5;
@@ -3381,13 +3381,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #e2e8f0;
+    color: var(--text-color);
   }
   .grammar-list-level {
     font-size: 0.65rem;
     font-weight: 800;
-    background: #334155;
-    color: #94a3b8;
+    background: var(--link-hover-bg);
+    color: var(--text-muted);
     padding: 0.15rem 0.45rem;
     border-radius: 0.35rem;
     flex-shrink: 0;
@@ -3401,7 +3401,7 @@
   }
   .grammar-list-chevron {
     flex-shrink: 0;
-    color: #475569;
+    color: var(--text-muted);
   }
   .grammar-web-container {
     position: relative;

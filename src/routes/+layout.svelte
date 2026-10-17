@@ -237,7 +237,8 @@
           {#if user.hasOnboarded}
             <a
               href="/dashboard"
-              class="nav-item {$page.url.pathname.startsWith('/dashboard') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/dashboard') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/dashboard') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/dashboard') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -264,7 +265,8 @@
             </a>
             <a
               href="/play"
-              class="nav-item {$page.url.pathname.startsWith('/play') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/play') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/play') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/play') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -278,7 +280,8 @@
             </a>
             <a
               href="/classes"
-              class="nav-item {$page.url.pathname.startsWith('/classes') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/classes') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/classes') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/classes') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -297,7 +300,8 @@
             </a>
             <a
               href="/dictionary"
-              class="nav-item {$page.url.pathname.startsWith('/dictionary') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/dictionary') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/dictionary') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/dictionary') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -314,7 +318,8 @@
             </a>
             <a
               href="/review"
-              class="nav-item {$page.url.pathname.startsWith('/review') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/review') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/review') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/review') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -355,7 +360,8 @@
           {#if !user.hasOnboarded}
             <a
               href="/onboarding"
-              class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/onboarding') ? 'page' : undefined}
+              class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}"
+              aria-current={$page.url.pathname.startsWith('/onboarding') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -397,7 +403,8 @@
         {:else}
           <a
             href="/login"
-            class="nav-item {$page.url.pathname.startsWith('/login') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/login') ? 'page' : undefined}
+            class="nav-item {$page.url.pathname.startsWith('/login') ? 'active' : ''}"
+            aria-current={$page.url.pathname.startsWith('/login') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"
@@ -414,7 +421,8 @@
           </a>
           <a
             href="/signup"
-            class="nav-item signup-link {$page.url.pathname.startsWith('/signup') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/signup') ? 'page' : undefined}
+            class="nav-item signup-link {$page.url.pathname.startsWith('/signup') ? 'active' : ''}"
+            aria-current={$page.url.pathname.startsWith('/signup') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"
@@ -552,7 +560,8 @@
           </form>
           <a
             href="/profile"
-            class="nav-item {$page.url.pathname.startsWith('/profile') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/profile') ? 'page' : undefined}
+            class="nav-item {$page.url.pathname.startsWith('/profile') ? 'active' : ''}"
+            aria-current={$page.url.pathname.startsWith('/profile') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"

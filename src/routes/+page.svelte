@@ -52,8 +52,8 @@
   </div>
   <p class="subtitle">
     Your AI-powered platform to master new languages. Start with
-    <strong>German</strong>, <strong>Spanish</strong>, or <strong>French</strong> — personalized
-    lessons, instant feedback, and progress tracking.
+    <strong>German</strong>, <strong>Spanish</strong>, or <strong>French</strong> — personalized lessons,
+    instant feedback, and progress tracking.
   </p>
   <div class="actions">
     <a href="/signup" class="btn-duo btn-primary">Start Learning</a>
@@ -268,7 +268,7 @@
 
   .features {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
     padding: 2rem 1rem;
     margin-top: 1rem;
