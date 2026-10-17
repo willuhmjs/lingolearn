@@ -71,7 +71,6 @@
     font-family: inherit;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    outline: none;
     border: 2px solid transparent;
     box-sizing: border-box;
   }
@@ -122,7 +121,7 @@
   .loading-spinner {
     width: 1.25rem;
     height: 1.25rem;
-    border: 2.5px solid rgba(255, 255, 255, 0.3);
+    border: 2.5px solid color-mix(in srgb, currentColor 30%, transparent);
     border-radius: 50%;
     border-top-color: currentColor;
     animation: spin 0.8s linear infinite;

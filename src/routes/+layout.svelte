@@ -10,6 +10,11 @@
   import { theme } from '$lib/theme.svelte';
   import { vocabModal } from '$lib/stores/vocabModal.svelte';
   import '$lib/styles/variables.css';
+  import '@fontsource/nunito/400.css';
+  import '@fontsource/nunito/600.css';
+  import '@fontsource/nunito/700.css';
+  import '@fontsource/nunito/800.css';
+  import '@fontsource/nunito/900.css';
 
   let { data, children } = $props();
   let user = $derived(data.user);
@@ -197,11 +202,9 @@
 <svelte:head>
   <link rel="icon" href={favicon} />
   <title>LingoLearn</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-    rel="stylesheet"
-  />
 </svelte:head>
+
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <div
   class="app-container"
@@ -234,7 +237,7 @@
           {#if user.hasOnboarded}
             <a
               href="/dashboard"
-              class="nav-item {$page.url.pathname.startsWith('/dashboard') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/dashboard') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/dashboard') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -261,7 +264,7 @@
             </a>
             <a
               href="/play"
-              class="nav-item {$page.url.pathname.startsWith('/play') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/play') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/play') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -275,7 +278,7 @@
             </a>
             <a
               href="/classes"
-              class="nav-item {$page.url.pathname.startsWith('/classes') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/classes') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/classes') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -294,7 +297,7 @@
             </a>
             <a
               href="/dictionary"
-              class="nav-item {$page.url.pathname.startsWith('/dictionary') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/dictionary') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/dictionary') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -311,7 +314,7 @@
             </a>
             <a
               href="/review"
-              class="nav-item {$page.url.pathname.startsWith('/review') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/review') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/review') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -331,6 +334,7 @@
               class="nav-item mobile-only-nav {$page.url.pathname.startsWith('/profile')
                 ? 'active'
                 : ''}"
+              aria-current={$page.url.pathname.startsWith('/profile') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -351,7 +355,7 @@
           {#if !user.hasOnboarded}
             <a
               href="/onboarding"
-              class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}"
+              class="nav-item {$page.url.pathname.startsWith('/onboarding') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/onboarding') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -374,6 +378,7 @@
               class="nav-item admin-link desktop-only-nav {$page.url.pathname.startsWith('/admin')
                 ? 'active'
                 : ''}"
+              aria-current={$page.url.pathname.startsWith('/admin') ? 'page' : undefined}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -392,7 +397,7 @@
         {:else}
           <a
             href="/login"
-            class="nav-item {$page.url.pathname.startsWith('/login') ? 'active' : ''}"
+            class="nav-item {$page.url.pathname.startsWith('/login') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/login') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"
@@ -409,7 +414,7 @@
           </a>
           <a
             href="/signup"
-            class="nav-item signup-link {$page.url.pathname.startsWith('/signup') ? 'active' : ''}"
+            class="nav-item signup-link {$page.url.pathname.startsWith('/signup') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/signup') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"
@@ -547,7 +552,7 @@
           </form>
           <a
             href="/profile"
-            class="nav-item {$page.url.pathname.startsWith('/profile') ? 'active' : ''}"
+            class="nav-item {$page.url.pathname.startsWith('/profile') ? 'active' : ''}" aria-current={$page.url.pathname.startsWith('/profile') ? 'page' : undefined}
           >
             <svg
               viewBox="0 0 24 24"
@@ -697,10 +702,9 @@
 
     <header class="desktop-topbar">
       <button
-        class="nav-item theme-toggle-btn"
+        class="theme-toggle-btn"
         onclick={theme.cycle}
         aria-label={theme.current === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-        style="border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; width: auto; height: auto;"
       >
         {#if theme.current === 'light'}
           <svg
@@ -755,7 +759,7 @@
       {/if}
     </header>
 
-    <main class="main-content">
+    <main class="main-content" id="main-content" tabindex="-1">
       {@render children()}
     </main>
 
@@ -835,7 +839,6 @@
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     text-decoration: none;
-    outline: none;
     user-select: none;
   }
 
@@ -855,28 +858,17 @@
   }
 
   :global(.btn-secondary) {
-    background-color: #e5e5e5;
-    color: #4b5563;
+    background-color: var(--btn-neutral-bg);
+    color: var(--btn-neutral-text);
     border-color: transparent;
-    box-shadow: 0 4px 0 #c8c8c8;
+    box-shadow: 0 4px 0 var(--btn-neutral-shadow);
   }
   :global(.btn-secondary:hover) {
-    background-color: #d4d4d4;
+    background-color: var(--btn-neutral-bg-hover);
   }
   :global(.btn-secondary:active) {
     transform: translateY(4px);
-    box-shadow: 0 0 0 #c8c8c8;
-  }
-  :global(html[data-theme='dark'] .btn-secondary) {
-    background-color: #334155;
-    color: #cbd5e1;
-    box-shadow: 0 4px 0 #1e293b;
-  }
-  :global(html[data-theme='dark'] .btn-secondary:hover) {
-    background-color: #3d4f63;
-  }
-  :global(html[data-theme='dark'] .btn-secondary:active) {
-    box-shadow: 0 0 0 #1e293b;
+    box-shadow: 0 0 0 var(--btn-neutral-shadow);
   }
 
   :global(.btn-ai) {
@@ -928,7 +920,7 @@
   }
 
   :global(.back-nav:hover) {
-    background: #f1f5f9;
+    background: var(--link-hover-bg);
     border-color: #94a3b8;
   }
 
@@ -991,7 +983,7 @@
   :global(.card h2) {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--text-color, #111827);
+    color: var(--text-color);
     margin: 0 0 1.25rem;
   }
 
@@ -1007,12 +999,8 @@
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--text-color);
     margin-bottom: 0.375rem;
-  }
-
-  :global(html[data-theme='dark'] .form-group label) {
-    color: #cbd5e1;
   }
 
   :global(.form-group input),
@@ -1036,12 +1024,12 @@
   :global(.form-group select:focus),
   :global(.form-group textarea:focus) {
     outline: none;
-    border-color: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
   }
 
   :global(.submit-btn) {
-    background-color: #22c55e;
+    background-color: var(--color-success);
     color: white;
     border: none;
     padding: 0.625rem 1.25rem;
@@ -1055,7 +1043,7 @@
   }
 
   :global(.submit-btn:hover) {
-    background-color: #16a34a;
+    background-color: var(--color-success-hover);
   }
 
   :global(.submit-btn:disabled) {
@@ -1084,14 +1072,10 @@
 
   :global(.tabs) {
     display: flex;
-    background: #f1f5f9;
+    background: var(--link-hover-bg);
     padding: 0.5rem;
     border-radius: 1rem;
     gap: 0.5rem;
-  }
-
-  :global(html[data-theme='dark'] .tabs) {
-    background: #1e293b;
   }
 
   :global(.tab-btn) {
@@ -1100,7 +1084,7 @@
     font-weight: 700;
     font-size: 1rem;
     font-family: inherit;
-    color: #64748b;
+    color: var(--text-muted);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -1108,26 +1092,16 @@
   }
 
   :global(.tab-btn:hover) {
-    color: #1e293b;
-    background: #e2e8f0;
-  }
-
-  :global(html[data-theme='dark'] .tab-btn:hover) {
-    color: #f8fafc;
-    background: #334155;
+    color: var(--text-color);
+    background: var(--card-border);
   }
 
   :global(.tab-btn.active) {
-    background: white;
-    color: #3b82f6;
+    background: var(--card-bg);
+    color: var(--color-primary);
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.1),
       0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-
-  :global(html[data-theme='dark'] .tab-btn.active) {
-    background: #0f172a;
-    color: #60a5fa;
   }
 
   @keyframes float {
@@ -1228,7 +1202,7 @@
   .brand {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #2563eb;
+    color: var(--brand-color);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -1252,7 +1226,7 @@
     align-items: center;
     gap: 1rem;
     text-decoration: none;
-    color: #4b5563;
+    color: var(--text-color);
     font-weight: 700;
     font-size: 1rem;
     padding: 0.75rem 1rem;
@@ -1270,14 +1244,8 @@
 
   .nav-item:hover,
   .nav-item.active {
-    color: #1cb0f6;
-    background-color: var(--link-hover-bg, #ddf4ff);
-  }
-
-  :global(html[data-theme='dark']) .nav-item:hover,
-  :global(html[data-theme='dark']) .nav-item.active {
-    color: #60a5fa;
-    background-color: #2a303c;
+    color: var(--brand-color-alt);
+    background-color: var(--link-hover-bg);
   }
 
   .nav-item:active {
@@ -1373,14 +1341,8 @@
 
   .dropdown-item:hover,
   .dropdown-item.active {
-    background-color: var(--link-hover-bg, #ddf4ff);
-    color: #1cb0f6;
-  }
-
-  :global(html[data-theme='dark']) .dropdown-item:hover,
-  :global(html[data-theme='dark']) .dropdown-item.active {
-    background-color: #2a303c;
-    color: #60a5fa;
+    background-color: var(--link-hover-bg);
+    color: var(--brand-color-alt);
   }
 
   .lang-flag {
@@ -1394,7 +1356,7 @@
   .check-icon {
     width: 1.25rem !important;
     height: 1.25rem !important;
-    color: #1cb0f6;
+    color: var(--brand-color-alt);
   }
 
   .dropdown-divider {
@@ -1409,13 +1371,8 @@
   }
 
   .add-language-item:hover {
-    color: #1cb0f6;
-    background-color: var(--link-hover-bg, #ddf4ff);
-  }
-
-  :global(html[data-theme='dark']) .add-language-item:hover {
-    background-color: #2a303c;
-    color: #60a5fa;
+    color: var(--brand-color-alt);
+    background-color: var(--link-hover-bg);
   }
 
   .add-lang-icon {
@@ -1425,20 +1382,20 @@
   }
 
   .signup-link {
-    background-color: #22c55e;
+    background-color: var(--color-success);
     color: #ffffff !important;
     font-weight: 800;
-    box-shadow: 0 4px 0 #16a34a;
+    box-shadow: 0 4px 0 var(--color-success-hover);
   }
 
   .signup-link:hover {
-    background-color: #4ade80 !important;
+    filter: brightness(1.08);
     color: #ffffff !important;
   }
 
   .signup-link:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #16a34a;
+    box-shadow: 0 2px 0 var(--color-success-hover);
   }
 
   .logout-form {
@@ -1451,13 +1408,13 @@
     border: none;
     cursor: pointer;
     font-family: inherit;
-    color: #ff4b4b;
+    color: var(--color-danger);
     text-align: left;
   }
 
   .logout-btn:hover {
-    color: #ea2b2b;
-    background-color: #ffedef;
+    color: var(--color-danger-hover);
+    background-color: color-mix(in srgb, var(--color-danger) 8%, transparent);
   }
 
   .admin-link {
@@ -1497,6 +1454,26 @@
     align-items: center;
     padding: 0.5rem 1.5rem;
     gap: 0.5rem;
+  }
+
+  .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+
+  .theme-toggle-btn:hover {
+    color: var(--brand-color-alt);
+    background-color: var(--link-hover-bg);
   }
 
   .mobile-header {
@@ -1546,12 +1523,35 @@
     height: 100%;
   }
 
+  /* Skip link — visually hidden until focused via keyboard */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 200;
+    padding: 0.75rem 1.25rem;
+    background: var(--card-bg);
+    color: var(--brand-color);
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+  }
+
+  .main-content:focus {
+    outline: none;
+  }
+
   .site-footer {
     padding: 1.5rem 1rem;
     text-align: center;
     font-size: 0.85rem;
-    color: #9ca3af;
-    border-top: 1px solid var(--card-border, #e5e7eb);
+    color: var(--text-muted);
+    border-top: 1px solid var(--card-border);
     margin-top: auto;
   }
 
@@ -1576,18 +1576,18 @@
   }
 
   .footer-links a {
-    color: #6b7280;
+    color: var(--text-muted);
     text-decoration: none;
     transition: color 0.15s;
   }
 
   .footer-links a:hover {
-    color: #2563eb;
+    color: var(--brand-color);
     text-decoration: underline;
   }
 
   .footer-dot {
-    color: #d1d5db;
+    color: var(--card-border);
   }
 
   /* Responsive Design for smaller screens */
@@ -1719,7 +1719,7 @@
       gap: 0.5rem;
       font-size: 1.25rem;
       font-weight: 800;
-      color: #2563eb;
+      color: var(--brand-color);
       text-decoration: none;
       min-width: 0;
       flex: 1;

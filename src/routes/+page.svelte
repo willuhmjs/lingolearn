@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-  <title>LingoLearn - Master Languages with AI</title>
+  <title>LingoLearn — Master Languages with AI</title>
   <meta
     name="description"
     content="AI-powered language learning platform. Learn German, Spanish, French, and more."
@@ -52,12 +52,12 @@
   </div>
   <p class="subtitle">
     Your AI-powered platform to master new languages. Start with
-    <strong>German</strong>, <strong>Spanish</strong>, or <strong>French</strong> — personalized lessons,
-    instant feedback, and progress tracking.
+    <strong>German</strong>, <strong>Spanish</strong>, or <strong>French</strong> — personalized
+    lessons, instant feedback, and progress tracking.
   </p>
   <div class="actions">
-    <a href="/signup" class="btn btn-primary">Start Learning</a>
-    <a href="/login" class="btn btn-secondary">Login</a>
+    <a href="/signup" class="btn-duo btn-primary">Start Learning</a>
+    <a href="/login" class="btn-duo btn-secondary">Log in</a>
   </div>
 
   <div class="supported-languages">
@@ -141,7 +141,7 @@
   <div class="cta-content">
     <h2>Ready to start your language journey?</h2>
     <p>Join LingoLearn today and master your next language with AI-guided lessons.</p>
-    <a href="/signup" class="btn btn-primary cta-btn">Create Free Account</a>
+    <a href="/signup" class="btn-duo btn-primary cta-btn">Create Free Account</a>
   </div>
 </section>
 
@@ -165,7 +165,7 @@
   h1 {
     font-size: 3.25rem;
     font-weight: 800;
-    color: #111827;
+    color: var(--text-color);
     margin-bottom: 0.25rem;
     line-height: 1.2;
     display: flex;
@@ -179,7 +179,7 @@
     display: inline-flex;
     align-items: baseline;
     gap: 0.15em;
-    color: #2563eb;
+    color: var(--brand-color-alt);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateY(0);
     opacity: 1;
@@ -196,7 +196,7 @@
 
   .lang-label {
     font-size: 0.9rem;
-    color: #6b7280;
+    color: var(--text-muted);
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -210,7 +210,7 @@
 
   .subtitle {
     font-size: 1.2rem;
-    color: #4b5563;
+    color: var(--text-muted);
     line-height: 1.7;
     margin-bottom: 2rem;
     max-width: 600px;
@@ -218,12 +218,8 @@
     margin-right: auto;
   }
 
-  :global(html[data-theme='dark']) .subtitle {
-    color: #94a3b8;
-  }
-
   .subtitle strong {
-    color: #2563eb;
+    color: var(--brand-color);
     font-weight: 700;
   }
 
@@ -232,46 +228,7 @@
     justify-content: center;
     gap: 1rem;
     margin-bottom: 2.5rem;
-  }
-
-  .btn {
-    display: inline-block;
-    padding: 0.85rem 2rem;
-    font-size: 1.05rem;
-    font-weight: 600;
-    border-radius: 0.6rem;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-
-  .btn:active {
-    transform: scale(0.95);
-  }
-
-  .btn-primary {
-    background-color: #22c55e;
-    color: #ffffff;
-    border: 1px solid transparent;
-    box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.35);
-  }
-
-  .btn-primary:hover {
-    background-color: #16a34a;
-    border-color: transparent;
-    box-shadow: 0 6px 20px 0 rgba(22, 163, 74, 0.45);
-    transform: scale(1.05) translateY(-2px);
-  }
-
-  .btn-secondary {
-    background-color: var(--card-bg, #ffffff);
-    color: var(--text-color, #374151);
-    border: 1px solid var(--card-border, #d1d5db);
-  }
-
-  .btn-secondary:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
-    transform: scale(1.05) translateY(-2px);
+    flex-wrap: wrap;
   }
 
   .supported-languages {
@@ -283,7 +240,7 @@
 
   .supported-label {
     font-size: 0.8rem;
-    color: #9ca3af;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-weight: 600;
@@ -292,6 +249,8 @@
   .lang-badges {
     display: flex;
     gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .lang-badge {
@@ -299,18 +258,12 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.4rem 1rem;
-    background: #eff6ff;
-    color: #1e40af;
-    border-radius: 2rem;
+    background: color-mix(in srgb, var(--brand-color) 10%, transparent);
+    color: var(--brand-color);
+    border-radius: var(--radius-full);
     font-size: 0.9rem;
     font-weight: 600;
-    border: 1px solid #bfdbfe;
-  }
-
-  :global(html[data-theme='dark']) .lang-badge {
-    background: #1e3a5f;
-    color: #93c5fd;
-    border-color: #1e40af;
+    border: 1px solid color-mix(in srgb, var(--brand-color) 25%, transparent);
   }
 
   .features {
@@ -325,13 +278,11 @@
   }
 
   .feature-card {
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     padding: 2rem;
-    border-radius: 0.75rem;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
     text-align: center;
     transition:
       transform 0.2s,
@@ -340,25 +291,19 @@
 
   .feature-card:hover {
     transform: translateY(-4px);
-    box-shadow:
-      0 12px 24px -4px rgba(0, 0, 0, 0.12),
-      0 4px 8px -2px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-lg);
   }
 
   .feature-card h3 {
     font-size: 1.2rem;
-    color: var(--text-color, #111827);
+    color: var(--text-color);
     margin-bottom: 0.75rem;
   }
 
   .feature-card p {
-    color: #6b7280;
+    color: var(--text-muted);
     line-height: 1.5;
     font-size: 0.95rem;
-  }
-
-  :global(html[data-theme='dark']) .feature-card p {
-    color: #94a3b8;
   }
 
   .how-it-works {
@@ -371,7 +316,7 @@
   .section-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-color, #111827);
+    color: var(--text-color);
     margin-bottom: 2.5rem;
   }
 
@@ -386,20 +331,15 @@
     align-items: flex-start;
     gap: 1.5rem;
     text-align: left;
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--card-border, #e5e7eb);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     padding: 1.5rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
-  }
-
-  :global(html[data-theme='dark']) .step-item {
-    background: var(--card-bg, #1e293b);
-    border-color: var(--card-border, #334155);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
 
   .step-number {
-    background: #2563eb;
+    background: var(--brand-color);
     color: white;
     width: 40px;
     height: 40px;
@@ -414,24 +354,20 @@
 
   .step-content h4 {
     font-size: 1.25rem;
-    color: var(--text-color, #111827);
+    color: var(--text-color);
     margin-bottom: 0.5rem;
     margin-top: 0;
   }
 
   .step-content p {
-    color: #4b5563;
+    color: var(--text-muted);
     line-height: 1.6;
     margin: 0;
   }
 
-  :global(html[data-theme='dark']) .step-content p {
-    color: #94a3b8;
-  }
-
   .cta-section {
-    background-color: var(--card-bg, #f3f4f6);
-    border-top: 2px solid var(--card-border, #e5e7eb);
+    background-color: var(--card-bg);
+    border-top: 2px solid var(--card-border);
     padding: 5rem 1rem;
     text-align: center;
     margin-top: 4rem;
@@ -445,18 +381,14 @@
   .cta-content h2 {
     font-size: 2.25rem;
     font-weight: 800;
-    color: var(--text-color, #111827);
+    color: var(--text-color);
     margin-bottom: 1rem;
   }
 
   .cta-content p {
     font-size: 1.15rem;
-    color: #4b5563;
+    color: var(--text-muted);
     margin-bottom: 2rem;
-  }
-
-  :global(html[data-theme='dark']) .cta-content p {
-    color: #94a3b8;
   }
 
   .cta-btn {
