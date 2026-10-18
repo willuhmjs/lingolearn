@@ -3,14 +3,14 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned: unpinned pnpm drifts and breaks --frozen-lockfile)
+RUN npm install -g pnpm@12.14.0
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --config.dangerously-allow-all-builds=true
+# Install dependencies (build-script allowlist lives in pnpm-workspace.yaml)
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
@@ -23,10 +23,10 @@ FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@12.14.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --prod --frozen-lockfile --config.dangerously-allow-all-builds=true
+RUN pnpm install --prod --frozen-lockfile
 
 # Final production image
 FROM node:22-alpine
@@ -34,7 +34,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Install pnpm and tsx for runtime needs
-RUN npm install -g pnpm tsx
+RUN npm install -g pnpm@12.14.0 tsx
 
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules
@@ -47,8 +47,10 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/src/lib/frequency ./src/lib/frequency
 COPY --from=builder /app/src/lib/languages ./src/lib/languages
 
-# Generate Prisma client using locally installed prisma (fast, no download)
-RUN pnpm prisma generate
+# Generate Prisma client using the lockfile-pinned prisma binary invoked directly
+# (pnpm 12 resolves bare `pnpm prisma` / `pnpm exec prisma` from the registry when no
+# lockfile is present, silently upgrading to latest inside the image - do not use here)
+RUN ./node_modules/.bin/prisma generate
 
 # Expose port
 EXPOSE 3000

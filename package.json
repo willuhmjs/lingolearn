@@ -71,11 +71,5 @@
     "svelte-french-toast": "2.0.0-alpha.0",
     "sveltekit-rate-limiter": "^0.7.0",
     "zod": "^4.3.6"
-  },
-  "allowScripts": {
-    "@prisma/engines@7.4.2": true,
-    "bcrypt@6.0.0": true,
-    "esbuild@0.27.3": true,
-    "prisma@7.4.2": true
   }
 }
